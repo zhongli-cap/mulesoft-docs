@@ -135,7 +135,8 @@ Note that details in code snippet are abbreviated so as to highlight batch commi
 
 * You cannot share a transaction between a batch step and a batch commit that exists within the step. Any transaction that the batch step starts, ends before the batch commit begins processes. In other words, a transaction cannot cross the barrier between a batch step and the batch commit it contains.
 
-== Example
+
+== Examples
 
 This example uses batch processing to address a use case in which the contents of a comma-separated value file (CSV) of leads – comprised of names, birthdays and email addresses – must be uploaded to Salesforce. To avoid duplicating any leads, the batch job checks to see if a lead exists before uploading data to Salesforce.
 
@@ -175,57 +176,145 @@ If you copy and paste the code into your instance of Studio, be sure to enter yo
 [source, xml, linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
- 
-<mule xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.7.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:context="http://www.springframework.org/schema/context" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
 http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
-http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd
-http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd">
- 
-    <sfdc:config name="Salesforce" username="username" password="password" securityToken="SpBdsf98af9tTR3m3YVcm4Y5q0y0R" doc:name="Salesforce">
-        <sfdc:connection-pooling-profile initialisationPolicy="INITIALISE_ONE" exhaustedAction="WHEN_EXHAUSTED_GROW"/>
-    </sfdc:config>
- 
-    <data-mapper:config name="new_mapping_grf" transformationGraphPath="new_mapping.grf" doc:name="DataMapper"/>
-    <data-mapper:config name="new_mapping_1_grf" transformationGraphPath="new_mapping_1.grf" doc:name="DataMapper"/>
-    <data-mapper:config name="leads_grf" transformationGraphPath="leads.grf" doc:name="DataMapper"/>
-    <data-mapper:config name="csv_to_lead_grf" transformationGraphPath="csv-to-lead.grf" doc:name="DataMapper"/>
- 
-    <batch:job max-failed-records="1000" name="Create Leads" doc:name="Create Leads">
-        <batch:threading-profile poolExhaustedAction="WAIT"/>
-        <batch:input>
-            <file:inbound-endpoint path="src/test/resources/input" moveToDirectory="src/test/resources/output" responseTimeout="10000" doc:name="File"/>
-            <data-mapper:transform config-ref="csv_to_lead_grf" doc:name="CSV to Lead"/>
-        </batch:input>
- 
-        <batch:process-records>
-            <batch:step name="lead-check" doc:name="Lead Check">
-                <enricher source="#[payload.size() &gt; 0]" target="#[recordVars['exists']]" doc:name="Message Enricher">
-                    <sfdc:query config-ref="Salesforce" query="dsql:SELECT Id FROM Lead WHERE Email = '#[payload[&quot;Email&quot;]]'" doc:name="Find Lead"/>
-                </enricher>
-            </batch:step>
-            <batch:step name="insert-lead"  doc:name="Insert Lead" accept-expression="#[recordVars['exists']]">
-                <logger message="Got Record #[payload], it exists #[recordVars['exists']]" level="INFO" doc:name="Logger"/>
-                <batch:commit size="200" doc:name="Batch Commit">
-                    <sfdc:create config-ref="Salesforce" type="Lead" doc:name="Insert Lead">
-                        <sfdc:objects ref="#[payload]"/>
-                    </sfdc:create>
-                </batch:commit>
-            </batch:step>
-            <batch:step name="log-failures" accept-policy="ONLY_FAILURES" doc:name="Log Failures">
-                <logger message="Got Failure #[payload]" level="INFO" doc:name="Log Failure"/>
-            </batch:step>
-        </batch:process-records>
- 
-        <batch:on-complete>
-            <logger message="#[payload.loadedRecords] Loaded Records #[payload.failedRecords] Failed Records" level="INFO" doc:name="Log Results"/>
-        </batch:on-complete>
-    </batch:job>
+http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+
+    <sfdc:config doc:name="Salesforce" name="Salesforce" username="username" password="password" securityToken="devToken">
+        <sfdc:connection-pooling-profile exhaustedAction="WHEN_EXHAUSTED_GROW" initialisationPolicy="INITIALISE_ONE"/>
+    </sfdc:config>
+
+    <batch:job max-failed-records="1000" name="CreateLeadsBatch">
+        <batch:threading-profile poolExhaustedAction="WAIT"/>
+        <batch:input>
+            <file:inbound-endpoint doc:name="Poll CSV files" moveToDirectory="src/main/resources/output" path="src/main/resources/input" pollingFrequency="10000" responseTimeout="10000"/>
+            <dw:transform-message doc:name="Transform CSV to Maps" metadata:id="7bff9652-407a-4479-9e4a-6f82f57ec3f6">
+                <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload map {
+	Company    : $.Company,
+	Email      : $.Email,
+	FirstName  : $.FirstName,
+	LastName   : $.LastName
+}]]></dw:set-payload>
+            </dw:transform-message>
+
+        </batch:input>
+        <batch:process-records>
+            <batch:step name="LeadExistsStep">
+                <enricher doc:name="Message Enricher" source="#[payload.size() > 0]" target="#[recordVars['exists']]">
+                    <sfdc:query config-ref="Salesforce" doc:name="Find Lead" query="dsql:SELECT Id FROM Lead WHERE Email = '#[payload[&quot;Email&quot;]]'"/>
+                </enricher>
+            </batch:step>
+            <batch:step accept-expression="#[!recordVars['exists']]" name="LeadInsertStep">
+                <logger doc:name="Log the lead" level="INFO" message="Got Record #[payload], it exists #[recordVars['exists']]"/>
+                <batch:commit doc:name="Batch Commit" size="200">
+                    <sfdc:create config-ref="Salesforce" type="Lead" doc:name="Insert Lead">
+                        <sfdc:objects ref="#[payload]"/>
+                    </sfdc:create>
+                </batch:commit>
+            </batch:step>
+            <batch:step accept-policy="ONLY_FAILURES" name="LogFailuresStep">
+                <logger doc:name="Log Failure" level="INFO" message="Got Failure #[payload]"/>
+            </batch:step>
+        </batch:process-records>
+        <batch:on-complete>
+            <logger doc:name="Log Results" level="INFO" message="#[payload.loadedRecords] Loaded Records #[payload.failedRecords] Failed Records"/>
+        </batch:on-complete>
+    </batch:job>
 </mule>
 ----
 ....
 ------
+
+[TIP]
+Since Mule 3.8, you can now expose the grouped records payloads and record variables from within the Batch commit block as variables that you can handle using the Mule Expression Language (MEL).
+
+Following the example above, by simply adding a For Each scope with an expression component containing the expression: `record.recordVars['sfdcld'] = payload.wrapped.id`, you can automatically get a variable called `record` that will hold a reference to one of the aggregated records.
+
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:example_batch2.png[example_batch2]
+....
+[tab,title="XML Editor"]
+....
+[source, xml, linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:context="http://www.springframework.org/schema/context" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+
+    <sfdc:config doc:name="Salesforce" name="Salesforce" password="JT4695tg/" securityToken="3rf27OXQ76MI9Bc27lMmQ8QLG" username="fernando.mujica@mulesoft.com">
+        <sfdc:connection-pooling-profile exhaustedAction="WHEN_EXHAUSTED_GROW" initialisationPolicy="INITIALISE_ONE"/>
+    </sfdc:config>
+
+    <batch:job max-failed-records="1000" name="CreateLeadsBatch">
+        <batch:threading-profile poolExhaustedAction="WAIT"/>
+        <batch:input>
+            <file:inbound-endpoint doc:name="Poll CSV files" moveToDirectory="src/main/resources/output" path="src/main/resources/input" pollingFrequency="10000" responseTimeout="10000"/>
+            <dw:transform-message doc:name="Transform CSV to Maps" metadata:id="7bff9652-407a-4479-9e4a-6f82f57ec3f6">
+                <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload map {
+	Company    : $.Company,
+	Email      : $.Email,
+	FirstName  : $.FirstName,
+	LastName   : $.LastName
+}]]></dw:set-payload>
+            </dw:transform-message>
+
+        </batch:input>
+        <batch:process-records>
+            <batch:step name="LeadExistsStep">
+                <enricher doc:name="Message Enricher" source="#[payload.size() > 0]" target="#[recordVars['exists']]">
+                    <sfdc:query config-ref="Salesforce" doc:name="Find Lead" query="dsql:SELECT Id FROM Lead WHERE Email = '#[payload[&quot;Email&quot;]]'"/>
+                </enricher>
+            </batch:step>
+            <batch:step accept-expression="#[!recordVars['exists']]" name="LeadInsertStep">
+                <logger doc:name="Log the lead" level="INFO" message="Got Record #[payload], it exists #[recordVars['exists']]"/>
+                <batch:commit doc:name="Batch Commit" size="200">
+                    <sfdc:create config-ref="Salesforce" type="Lead" doc:name="Insert Lead">
+                        <sfdc:objects ref="#[payload]"/>
+                    </sfdc:create>
+                    <foreach doc:name="For Each">
+                        <expression-component doc:name="Expression"><![CDATA[record.recordVars['sfdcld'] = payload.wrapped.id]]></expression-component>
+                    </foreach>
+                </batch:commit>
+            </batch:step>
+            <batch:step accept-policy="ONLY_FAILURES" name="LogFailuresStep">
+                <logger doc:name="Log Failure" level="INFO" message="Got Failure #[payload]"/>
+            </batch:step>
+        </batch:process-records>
+        <batch:on-complete>
+            <logger doc:name="Log Results" level="INFO" message="#[payload.loadedRecords] Loaded Records #[payload.failedRecords] Failed Records"/>
+        </batch:on-complete>
+    </batch:job>
+</mule>
+----
+....
+------
+
+
+Note that this approach is only valid if the following assumptions are met:
+. The commit size matches the amount of aggregated records.
+. There is a direct correlation between the aggregated records and the items in the list.
+
+And although this is valid for most use cases, if you need to access random records, we expose a variable called _records_. This is a random access list accessible all across the commit block.
+
 
 == See Also
 
