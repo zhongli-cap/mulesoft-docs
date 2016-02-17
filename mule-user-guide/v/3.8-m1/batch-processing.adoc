@@ -57,7 +57,8 @@ A *batch job* is a top-level element in Mule which exists outside all Mule flows
 
 A batch job contains one or more *batch steps* which, in turn, contain any number of message processors that act upon records as they move through the batch job. During batch processing, you can use *record-level variables* (`recordVars`) and MEL expressions to enrich, route or otherwise act upon records.
 
-A batch job executes when triggered by either a *batch executor* in a Mule flow or a *message source* in a batch-accepting input; when triggered, Mule creates a new *batch job instance*. When all records have passed through all batch steps, the batch job instance ends and the *batch job result* is summarized in a report to indicate which records succeeded and which failed during processing.
+A batch job executes when triggered by either a *batch executor* in a Mule flow or a *message source* in a batch-accepting input. +
+When triggered, Mule will create a new *batch job instance* for you if you don't assign a custom job instance Id to your batch job. When all records have passed through all batch steps, the batch job instance ends and the *batch job result* is summarized in a report to indicate which records succeeded and which failed during processing.
 
 Access link:/mule-user-guide/v/3.8-m1/batch-processing-reference[Batch Processing Reference] for more information.
 ====
@@ -111,6 +112,49 @@ The only element you cannot use in batch processing is a *request-response inbou
     ...
 </flow>
 ----
+
+[IMPORTANT]
+====
+Since 3.8-m1, Mule allows you to configure specific block sizes for each batch job and custom job instance Ids.
+====
+=== Custom batch Job instance Id
+
+You can now use a Mule expression to specify a unique identifier for each batch job by passing a *Job Instance Id* attribute that takes a MEL expression. +
+Please note that constant values are not allowed for batch jobs and if the MEL expression returns a previously seen value, an exception will be thrown and the job instance will not be created.
+
+If you don't set a job instance Id; by default Mule will auto generate a unique identifier.
+
+In order to guarantee uniqueness, you can set the Job Id to take server date through the MEL expression: +
+`#['Job From ' + server.dateTime.format('dd/MM/yy hh:mm:ss') + '.' ]`.
+
+This will name the execution instance [green]`Job From 15/01/16 05:23:12`.
+
+=== Batch configurable block sizes
+Due to performance reasons, batch records are, by default, queued and scheduled in blocks of 100 records before executing the job.
+After 3.8-m1, Mule allows you to configure the block size in the batch job properties tab.
+This does not only lightens the amount of I/O requests, but also helps us keep a block:thread relationship, instead of a queue:thread relation to improve performance.
+
+For most use cases, the default value of 100 records per block should work. However, if you need to process really heavy payloads, then queueing a hundred records will demand a large amount of working memory and it will be more convenient to lower the block size of this job.
+On the other hand, if you have many tasks with really small payload size, then setting a larger block size will improve your batch job time without sacrificing working memory load.
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:batchJobProperties.png[batchJobProperties]
+....
+[tab,title="XML Editor"]
+....
+[source, xml, linenums]
+----
+<batch:job name="Batch3">
+    <batch:job name="demo-batch" job-instance-id="#['Job From ' + server.dateTime.format('dd/MM/yy hh:mm:ss') + '.' ]" block-size="50">
+</batch:job>
+----
+....
+------
+
+
 
 === Batch Processing Phases
 

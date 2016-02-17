@@ -1,7 +1,7 @@
 = API Auto-Discovery
 :keywords: apikit, endpoint, auto-discovery, gateway, api, cloud
 
-When creating or modifying an API project in Anypoint Studio, you can set up your API's inbound endpoint to be automatically discovered and registered in your Anypoint Platform for APIs organization.
+hen creating or modifying an API project in Anypoint Studio, you can set an application to be automatically discovered and registered to one or more APIs in your Anypoint Platform for APIs organization.
 
 The automatic discovery and registration of your API on the Anypoint Platform occurs when you deploy the applications to an API Gateway that is paired with your Anypoint Platform organization. While you can also register your APIs using the Anypoint Platform web application or its API, the API auto-discovery feature gives you an additional option for registering API endpoints quickly and efficiently. It's particularly useful when you're regularly deploying new versions of the same API, saving you from the effort of having to type the same information into the Web application every time and minimizing the risk of human error.
 
@@ -22,7 +22,7 @@ To enable auto-discovery of an application's endpoints you must:
 
 === API Gateway Version 2.0 and Newer
 
-The `api-platform-gw` Global Element contains the information you need to register your API in the Anypoint Platform, and it references the flow to register.
+The `api-platform-gw` Global Element contains the information you need to register your API in the Anypoint Platform, and it references the flow to register. New in version 2.0 and newer is the `flowRef` attribute of the `api-platform-gw:api` component. This replaces the `api-ref` element that was removed in version 2.0. See the xref:flowrefex[flowRef example] for more information.
 
 [source, xml, linenums]
 ----
@@ -33,7 +33,7 @@ The `api-platform-gw` Global Element contains the information you need to regis
 </api-platform-gw:api>
 ----
 
-*Global element:*
+==== api-platform-gw:api Global Element
 
 [width="100%",cols="30a,70a",options="header"]
 |===
@@ -41,19 +41,20 @@ The `api-platform-gw` Global Element contains the information you need to regis
 |*api-platform-gw:api* |A global element which declares essential information about the service version necessary for the automatic registration of the service version and/or its endpoints in the Anypoint Platform for APIs.
 |===
 
-*Attributes:*
+==== api-platform-gw Attributes
 
 [width="100%",cols="33a,33a,33a",options="header"]
 |===
 |Attribute |Required |Description
-|*id* |Yes |The ID of the global element, which you reference in the `api-ref` attribute in your endpoint.
+|*id* |Yes |The bean ID of the element. This value is not propogated to the platform.
 |*apiName* |Yes |The friendly API name.
 |*version* |Yes |The version number.
-|*flowRef* |Yes |A reference to the main flow of your project. It triggers the agent to "discover" this flow and use it when performing the auto-registration.
-|*create* |No | enables/disables the automatic creation of APIs in the autodiscovery process. If false or not present, the API will still be tracked by the Anypoint Platform if it already exists. If it doesn't already exist, the application won't communicate with the platform. This attribute exists only as of version 2.1.0.
+|*flowRef* |Yes |A reference to the main flow of your project. It triggers the agent to "discover" this flow and use it when performing the auto-registration. See the xref:flowrefex[flowRef example].
+|*apikitRef* |No |A reference to the APIkit configuration. Used to upload the RAML file to Anypoint Platform after API registration completes.
+|*create* |No | enables/disables the automatic creation of APIs in the auto-discovery process. If false or not present, the API is still tracked by the Anypoint Platform if it already exists. If it doesn't already exist, the application won't communicate with the platform. This attribute exists only as of version 2.1.0.
 |===
 
-*Nested elements:*
+==== api-platform-gw Nested Elements
 
 [width="100%",cols="34a,33a,33a",options="header"]
 |===
@@ -61,6 +62,37 @@ The `api-platform-gw` Global Element contains the information you need to regis
 |*api-platform-gw:description* |No |A description of the API.
 |*api-platform-gw:tag* |No |Tags are searchable metadata in the Anypoint Platform for APIs web application and API.
 |===
+
+[[flowrefex]]
+==== flowRef Example
+
+Instead of referencing auto-discovery from the flow, now the auto-discovery component references the flow.
+
+[source, xml, linenums]
+----
+<apikit:proxy-config name="proxy-config" raml="![p['raml.location']]" disableValidations="true"/>
+
+    <api-platform-gw:api apiName="![p['api.name']]" version="![p['api.version']]" apikitRef="proxy-config" flowRef="proxy">
+        <api-platform-gw:description>![p['api.description']]</api-platform-gw:description>
+    </api-platform-gw:api>
+----
+
+
+==== Auto-Discovery Behavior
+
+When you deploy applications to an API Gateway paired with the Anypoint Platform for APIs, the agent performs the following steps to auto-discover and register your service version and/or endpoints in the Anypoint Platform for APIs.
+
+The agent only initiates auto-discovery if prompted to do so by the existence of an `api-platform-gw:api` element in the application.
+
+The following diagram illustrates the process for a project containing an `api-platform-gw:api` element:
+
+image:api-auto-discovery-v2.png[api-auto-discovery-v2]
+
+After your API is registered in the Anypoint Platform for APIs via auto-discovery, your API version and its endpoint 
+functions the same as any other API version or endpoint registered via other means. You can edit, update, or delete 
+applications via the Anypoint Platform for APIs web application or its API. If the API Gateway instance running 
+the API goes offline or you stop the underlying application, the API and endpoints remains in the Anypoint Platform 
+for APIs, but the endpoints are untracked by the agent.
 
 ....
 [tab,title="Older Versions"]
@@ -81,12 +113,12 @@ If you're using an API Gateway version older than 1.3 and you're using the APIki
 
 If your application is an *APIkit project*, you can use the `apikit:config` global element to implement auto-discovery.
 
-[source, xml, linenums]
+[source, xml]
 ----
 <apikit:config name="myAPI" raml="myAPI.raml"/>
 ----
 
-*Global element:*
+==== apikit Global Element
 
 [width="100%",cols="30a,70a",options="header"]
 |===
@@ -94,7 +126,7 @@ If your application is an *APIkit project*, you can use the `apikit:config` glob
 |*apikit:config* |A global element which retrieves essential information from the API's RAML about the service version necessary for the automatic registration of the service version and/or its endpoints in the Anypoint Platform for APIs.
 |===
 
-*Attributes:*
+==== apikit Attributes
 
 [width="100%",cols="34a,33a,33a",options="header"]
 |===
@@ -145,7 +177,7 @@ Use the following structure for your auto-discovery code.
 </api-platform-gw:api>
 ----
 
-*Global element:*
+==== api-platform-gw Global Element
 
 [width="100%",cols="30a,70a",options="header"]
 |===
@@ -153,17 +185,17 @@ Use the following structure for your auto-discovery code.
 |*api-platform-gw:api* |A global element which declares essential information about the service version necessary for the automatic registration of the service version and/or its endpoints in the Anypoint Platform for APIs.
 |===
 
-*Attributes:*
+==== api-platform-gw Attributes
 
 [width="100%",cols="34a,33a,33a",options="header"]
 |===
 |Attribute |Required |Description
-|*id* |Yes |The ID of the global element, which you reference in the api-ref attribute in your endpoint.
+|*id* |Yes |A bean-id that is no longer in use. This was referenced by the legacy register-as component.
 |*apiName* |Yes |The friendly API name.
 |*version* |Yes |The version number.
 |===
 
-*Nested elements:*
+==== api-platform-gw Nested elements
 
 [width="100%",cols="34a,33a,33a",options="header"]
 |===
@@ -183,7 +215,7 @@ You must now reference that global element in the inbound endpoint that you wish
 </http:inbound-endpoint> 
 ----
 
-*Nested elements:*
+*Nested Elements:*
 
 [width="100%",cols="30a,70a",options="header"]
 |===
@@ -200,6 +232,19 @@ You must now reference that global element in the inbound endpoint that you wish
 |*apikit-ref* |References the `apikit:config` global element that includes the information that the agent needs to register the API and/or endpoint.
 |===
 
+== Auto-Discovery Behavior
+
+When you deploy applications to an API Gateway paired with the Anypoint Platform for APIs, the agent performs the following steps to auto-discover and register your service version and/or endpoints in the Anypoint Platform for APIs.
+
+First, the agent only initiates auto-discovery if prompted to do so by the existence of an `api-platform-gw:register-as` nested element in the inbound endpoint of the application.
+
+image:autodiscoveryyesorno.png[autodiscoveryyesorno.png]
+
+Once the auto-discovery process is initiated, the agent evaluates the information provided in the `api-platform-gw:api` or `apikit-config` global element and executes a series of checks and steps. The following diagram illustrates the process for a project with an endpoint containing an `api-platform-gw:api` nested element:
+
+image:nonRAMLAutoD.png[nonRAMLAutoD]
+
+Once it is registered in the Anypoint Platform for APIs via auto-discovery, your API version and its endpoint functions the same as any other API version or endpoint registered via other means. You can edit, update, or delete them via the Anypoint Platform for APIs web application or its API. If the API Gateway instance running the API goes offline or you stop the underlying application, the API and endpoints remain in the Anypoint Platform for APIs, but the endpoints are untracked by the agent.
 ....
 ------
 
@@ -275,23 +320,11 @@ You must now reference that global element in the inbound endpoint that you wish
 ....
 ------
 
-== Auto-Discovery Behavior
 
-When you deploy applications to an API Gateway paired with the Anypoint Platform for APIs, the agent will perform the following steps to auto-discover and register your service version and/or endpoints in the Anypoint Platform for APIs.
-
-First, the agent only initiates auto-discovery if prompted to do so by the existence of an `api-platform-gw:register-as` nested element in the inbound endpoint of the application:
-
-image:autodiscoveryyesorno.png[autodiscoveryyesorno]
-
-Once the auto-discovery process is initiated, the agent evaluates the information provided in the  `api-platform-gw:api`  or `apikit-config` global element and executes a series of checks and steps. The following diagram illustrates the process for a project with an endpoint containing an `api-platform-gw:api` nested element:
-
-image:nonRAMLAutoD.png[nonRAMLAutoD]
-
-Once it is registered in the Anypoint Platform for APIs via auto-discovery, your API version and its endpoint functions the same as any other API version or endpoint registered via other means. You can edit, update, or delete them via the Anypoint Platform for APIs web application or its API. If the API Gateway instance running the API goes offline or you stop the underlying application, the API and endpoints will remain in the Anypoint Platform for APIs, but the endpoints will be untracked by the agent.
 
 == Cloud API Gateway Behavior
 
-If you deploy an API or proxy with auto-registration to the Anypoint Platform for APIs via a cloud API gateway, CloudHub automatically replaces `0.0.0.0`:$\{http.port} in your endpoint with <YourUniqueDomain>.cloudhub.io and sends this endpoint URL to the Anypoint Platform for APIs to be displayed and tracked by the agent.
+If you deploy an API or proxy with auto-registration to the Anypoint Platform for APIs via a cloud API gateway, CloudHub automatically replaces `0.0.0.0`:${http.port} in your endpoint with <YourUniqueDomain>.cloudhub.io and sends this endpoint URL to the Anypoint Platform for APIs to be displayed and tracked by the agent.
 
 If your endpoint runs over HTTP, use the variable `http.port` in its address, if your endpoint runs over HTTPS, use the variable `https.port` instead.
 
@@ -306,8 +339,12 @@ For Gateway versions older than 1.3, if you deploy an API or proxy to the Anypoi
 
 * Keep in mind that API auto-discovery works for the registration of _new_ APIs, API versions, and/or endpoints. If the API already exists, the agent does not compare the name, description, tags, or any other information contained in the global element for updates.
 * Once you have registered new APIs or versions using this method, visit the Anypoint Platform for APIs and add the necessary API Version Owner permissions so that users who need to access the API Version Details page for this API version can get there. Note that only Organization Administrators or other API Version Owners can give users API Version Owner permissions to an API version.
-* Set up your endpoints so that their host is `0.0.0.0` instead of the default localhost.
+* Set up your endpoints so that their host is `0.0.0.0` instead of to localhost.
 
 == See Also
 
 * Once you've added your auto-discovery code to your APIkit project or API proxy application, link:/anypoint-platform-for-apis/deploying-your-api-or-proxy[deploy it to an API Gateway].
+* link:https://www.mulesoft.com/webinars[MuleSoft Webinars]
+* link:http://forums.mulesoft.com[MuleSoft's Forums]
+* link:https://www.mulesoft.com/support-and-services/mule-esb-support-license-subscription[MuleSoft Support]
+* mailto:support@mulesoft.com[Contact MuleSoft]
