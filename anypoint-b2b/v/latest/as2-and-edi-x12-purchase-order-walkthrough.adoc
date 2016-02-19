@@ -3,16 +3,16 @@
 
 === Audience
 
-This document is aimed at a technical audience possessing basic knowledge of link:/mule-user-guide/v/3.7/datamapper-user-guide-and-reference[DataMapper], link:http://modusintegration.github.io/mule-connector-as2/[AS2 Connector], link:/anypoint-b2b/x12-module[X12 Module], and Anypoint Platform.
+This document is intended for a technical audience with basic knowledge of link:/mule-user-guide/v/3.7/datamapper-user-guide-and-reference[DataMapper], link:http://modusintegration.github.io/mule-connector-as2/[AS2 Connector], link:/anypoint-b2b/x12-module[X12 Module], and Anypoint Platform.
 
 === Prerequisites
 
 * Anypoint Studio with Mule Server 3.7.x EE runtime
-* AS2 Connector 2.x, B2B Connector 1.x, and X12 Module 1.x installed
+* AS2 Connector 2.x, Partner Manager Connector 1.x, and X12 Module 1.x installed
 * Anypoint Platform account
 * Amazon S3 bucket for AS2 and EDI file storage (optional)
 
-=== Attachments
+=== Walkthrough Resources
 
 * link:_attachments/as2-x12-walkthrough.zip[as2-x12-walkthrough.zip]
 * link:_attachments/as2-x12-po.xml[as2-x12-po.xml]
@@ -34,9 +34,9 @@ To run this example follow the steps below:
 
 == Introduction
 
-This example shows how to leverage Anypoint Partner Manager to manage and track B2B processes. The goal is to develop a
+This example shows how to use Anypoint Partner Manager to manage and track B2B processes. The goal is to develop a
 Mule application, representing a customer, that transforms an XML purchase order read from the filesystem to an X12 850
-and sends it to a supplier over AS2. The supplier returns an X12 997 to an AS2 endpoint the application is listening on
+and sends it to a supplier over AS2. The supplier returns an X12 997 to an AS2 endpoint on which the application is listening
 in order to inform the customer whether the 850 was accepted or rejected. Anypoint Partner Manager manages and records
 all B2B exchanges while the actual files exchanged are stored on an Amazon S3 bucket.
 
@@ -45,19 +45,25 @@ image:B2B_AS2EDI_01.png[B2B_AS2EDI_01]
 == Partnership Set Up
 
 The first stage of the solution is to create a partnership in Anypoint Partner Manager between your organization and the
-supplier. A partnership identifies who your partner is, and establishes the parameters in which B2B data is exchanged
-between you and your partner. Furthermore, it allows this data to be tracked and viewed from Anypoint Partner Manager.
+supplier.
+
+A partnership:
+
+* Identifies your partner
+* Establishes the parameters by which B2B data is exchanged between you and your partner
+* Allows this data to be tracked and viewed from Anypoint Partner Manager
 
 === Create Partnership
 
 . Login into Anypoint Partner Manager.
-. Click *Trading Partners* found on the left hand side menu.
-. Press *New Partner* on the upper right hand side corner.
+. On the left menu, click *Trading Partners*.
+. In the upper right corner, click *New Partner* .
 . Enter _My Supplier_ as *Company Name* and press *Save*.
 
-With a partnership in place, we can configure the partner's AS2 and X12 identities in addition to setting the runtime
-parameters in which the AS2 Connector and X12 Module operate when sending to the supplier or receiving from said
-supplier.
+With a partnership in place, you can:
+
+* Configure the partner's AS2 and X12 identities
+* Set the runtime parameters with which the AS2 Connector and X12 Module operate when sending to the supplier or receiving from that supplier.
 
 == Set up AS2
 
@@ -79,7 +85,7 @@ value is the AS2-From header you want to send to a partner in an AS2 request.
 
 . Return to the home organization settings and open the *X12* settings. Select *ZZ* from the *Interchange ID qualifier*
 drop-down list. Enter _MOUNTAINOUT_ in the *Interchange ID* text box.
-. Return to the *Trading Partners* page and select *My Supplier* from your list of partners. Click the *X12* format settings found on the left hand side menu.
+. Return to the *Trading Partners* page and select *My Supplier* from the list of partners. Click the *X12* format settings found on the left hand side menu.
 . In the *Inbound* section, fill in the fields as shown in the table below: 
 +
 [cols=",",]
@@ -112,39 +118,38 @@ drop-down list. Enter _MOUNTAINOUT_ in the *Interchange ID* text box.
 
 == Mule Project Set Up
 
-The next stage of the solution is to develop a Mule application that transforms an XML purchase order read from the filesystem to an X12 850 and sends it to the supplier over AS2. The supplier returns an X12 997 to an AS2 endpoint the application is listening on in order to inform the customer whether the 850 was accepted or rejected. The application is split into two parts:
+The next stage of the solution is to develop a Mule application that transforms an XML purchase order read from the filesystem to an X12 850 and sends it to the supplier over AS2. The supplier returns an X12 997 to an AS2 endpoint the application is listening on in order to inform the customer whether the 850 was accepted or rejected. The application consists of two parts:
 
 * A customer part that sends an 850 and receives a 997.
 
-* A mock supplier that permits us to test the application without any external dependencies.
+* A mock supplier that permits testing of the application without any external dependencies.
 
 Each part has its own Mule configuration file.
 
-* Launch Anypoint Studio and create a new Mule project.
-* Rename the initial Mule configuration file created by Studio to _customer.xml_ .
-* Create a new Mule configuration file and name it _mock-supplier_.
+. Launch Anypoint Studio and create a new Mule project.
+. Rename the initial Mule configuration file created by Studio to _customer.xml_ .
+. Create a new Mule configuration file and name it _mock-supplier_.
 +
 image:B2B_AS2EDI_10.png[B2B_AS2EDI_10]
 
 == Customer Connector Configs
 
-In this section, go through the next steps to create the customer’s connector configs in the customer Mule config file before proceeding to build the customer flows.
+In this section, create the customer’s connector configs in the customer Mule config file before building the customer flows.
 
-=== Create B2B Connector Config
+=== Create Partner Manager Connector Config
 
-The B2B Connector acts like a bridge between Mule and Anypoint Partner Manager. It enables the management of AS2
+The Partner Manager Connector acts as a bridge between Mule and Anypoint Partner Manager. It enables the management of AS2
 Connector and the X12 module in addition to the recording of B2B exchanges.
 
 . Click the *Global Elements* view. Go to *Create* > *Connector Configuration* > *B2B: Basic Configuration* . If you
 have an Amazon S3 bucket available, you should go instead to *Create*  > *Connector Configuration* >
-*B2B: Amazon S3 File Storage*. The latter configuration type allows the B2B Connector to persist X12 documents
+*B2B: Amazon S3 File Storage*. The latter configuration type allows the Partner Manager Connector to persist X12 documents
 and AS2 message content to Amazon S3.
-. Enter your secret API key which is obtained from your home organization’s *Company* settings page in Anypoint Partner
-Manager:
+. Enter your secret API key. To obtain a key, go to your home organization’s *Company* settings page in Anypoint Partner Manager:
 +
 image:B2B_AS2EDI_13.png[B2B_AS2EDI_13]
 +
-Remember, the home organization settings is accessed by clicking on the home organization settings link on the upper
+The home organization settings are accessed by clicking on the home organization settings link on the upper
 right corner, next to the home icon:
 +
 image:B2B_AS2EDI_11.png[B2B_AS2EDI_11]
@@ -155,19 +160,19 @@ image:B2B_AS2EDI_12.png[B2B_AS2EDI_12]
 
 === Create HTTP Global Endpoints
 
-In this step, you can add the HTTP global endpoints required by the AS2 Connector to shuttle messages across the wire.
+In this step, you add the HTTP global endpoints required by the AS2 Connector to shuttle messages across the wire.
 
 . Inside *Global Elements*, go to *Create* > *Connector Endpoints* > *HTTP*. Name the endpoint _receive-http-endpoint_ and ensure that it has configured an HTTP connector.
 . Repeat the previous step, however, set the endpoint name for this step to _send-http-endpoint_.
 . Set the *Port* attribute for _receive-http-endpoint_  to _8081_ while for _send-http-endpoint_ enter the placeholder _${as2.http.port}_. We use a placeholder for the destination port since it’s injected at runtime by Anypoint’s B2B service.
-. Set the *Host* attribute for _send-http-endpoint_ to the placeholder _${as2.http.host}_. The destination hostname is as well injected at runtime.
+. Set the *Host* attribute for _send-http-endpoint_ to the placeholder _${as2.http.host}_. The destination hostname is also injected at runtime.
 
 === Create AS2 Connector Configs
 
-. Remain in the *Global Elements* view to create two AS2 Connector configs by going to *Create* >
+. Remain in the *Global Elements* view to create two AS2 Connector configurations by going to *Create* >
 *Connector Configuration* > *AS2: Partner Manager Configuration*. Name them _send-as2-config_ and _receive-as2-config_.
 . Select *EDI_X12* from the *Standard* drop-down list.
-. Bind _send-as2-config_ and _receive-as2-config_ to _send-http-endpoint_ and _receive-http-endpoint_, respectively. Consult the link:/anypoint-b2b/as2-connector-2.0.0-rc[AS2 Connector 2.0.0] documentation for further information about configuring the AS2 Connector.
+. Bind _send-as2-config_ and _receive-as2-config_ to _send-http-endpoint_ and _receive-http-endpoint_, respectively. See link:anypoint-b2b/as2-connector[AS2 Connector 2.0.0] for further information about configuring the AS2 Connector.
 
 === Create X12 Module Config
 
