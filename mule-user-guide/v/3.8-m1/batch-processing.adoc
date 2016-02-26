@@ -120,14 +120,40 @@ Since 3.8-m1, Mule allows you to configure specific block sizes for each batch j
 === Custom batch Job instance Id
 
 You can now use a Mule expression to specify a unique identifier for each batch job by passing a *Job Instance Id* attribute that takes a MEL expression. +
-Please note that constant values are not allowed for batch jobs and if the MEL expression returns a previously seen value, an exception will be thrown and the job instance will not be created.
+Note that constant values are not allowed for batch jobs and if the MEL expression returns a previously seen value, an exception will be thrown and the job instance will not be created.
+If you don't set a job instance Id; by default Mule will auto generate an UUID to identify your job instance.
 
-If you don't set a job instance Id; by default Mule will auto generate a unique identifier.
+The log of a process without a job instance Id looks like this:
+
+[source]
+----
+Created instance 20ae8500-d1a7-11e5-af90-6003089b5498 for batch job contacts-to-SFDCBatch
+com.mulesoft.module.batch.engine.DefaultBatchEngine: Starting input phase
+com.mulesoft.module.batch.engine.DefaultBatchEngine: Input phase completed
+com.mulesoft.module.batch.engine.queue.BatchQueueLoader: Starting loading phase for instance '20ae8500-d1a7-11e5-af90-6003089b5498' of job 'contacts-to-SFDCBatch'
+com.mulesoft.module.batch.engine.queue.BatchQueueLoader: Finished loading phase for instance 20ae8500-d1a7-11e5-af90-6003089b5498 of job contacts-to-SFDCBatch. 3 records were loaded
+com.mulesoft.module.batch.engine.DefaultBatchEngine: Started execution of instance '20ae8500-d1a7-11e5-af90-6003089b5498' of job 'contacts-to-SFDCBatch'
+com.mulesoft.module.batch.DefaultBatchStep: Step Insert_SFDC finished processing all records for instance 20ae8500-d1a7-11e5-af90-6003089b5498 of job contacts-to-SFDCBatch
+----
+
+The UUID generated for this job instance is `20ae8500-d1a7-11e5-af90-6003089b5498`. As you can tell, it's not a human readable identifier making it hard to correlate to an actual execution and considering you could be running multiple jobs at the same time, this ID is not meaningful at all.
 
 In order to guarantee uniqueness, you can set the Job Id to take server date through the MEL expression: +
 `#['Job From ' + server.dateTime.format('dd/MM/yy hh:mm:ss') + '.' ]`.
 
-This will name the execution instance [green]`Job From 15/01/16 05:23:12`.
+This will name the execution instance `Job From 15/01/16 05:23:12`.
+
+[source]
+----
+com.mulesoft.module.batch.engine.DefaultBatchEngine: Created instance Job From 15/01/16 05:23:12 for batch job contacts-to-SFDCBatch
+com.mulesoft.module.batch.engine.DefaultBatchEngine: Starting input phase
+com.mulesoft.module.batch.engine.DefaultBatchEngine: Input phase completed
+com.mulesoft.module.batch.engine.queue.BatchQueueLoader: Starting loading phase for instance 'Job From 15/01/16 05:23:12' of job 'contacts-to-SFDCBatch'
+com.mulesoft.module.batch.engine.queue.BatchQueueLoader: Finished loading phase for instance Job From 15/01/16 05:23:12 of job contacts-to-SFDCBatch. 3 records were loaded
+com.mulesoft.module.batch.engine.DefaultBatchEngine: Started execution of instance 'Job From 15/01/16 05:23:12' of job 'contacts-to-SFDCBatch'
+----
+
+As you can see, the logs of a properly identified instance is much more easier to read.
 
 === Batch configurable block sizes
 Due to performance reasons, batch records are, by default, queued and scheduled in blocks of 100 records before executing the job.
