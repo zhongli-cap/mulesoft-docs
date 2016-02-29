@@ -43,6 +43,12 @@ Within a Mule application, batch processing stands on its own as an independent 
 
 image:batch_main3.png[batch_main3]
 
+On a traditional on-line processing model, each request is usually mapped to a worker thread. +
+Regardless of the processing type (either synchronous, asynchronous, one-way, request-response or even if the requests are temporarily buffered before being processed), servers usually end up in this 1:1 relationship between a request and a running thread.
+
+But when it comes to a batch job, all records are first stored in a persistent queue before the link:https://docs.mulesoft.com/mule-user-guide/v/3.8-m1/batch-processing#process[processing phase] begins, so this traditional threading model wouldn't apply.
+Check our *Basic Anatomy* section below to learn more about how batch processing works different than a regular threading model.
+
 == Basic Anatomy
 
 This section explores the basic anatomy of the batch processing construct in Mule, and how its parts work together to process batches of data in an application.
@@ -80,7 +86,19 @@ The heart of Mule's batch processing functionality lies within the *batch job*. 
     </flow>
 ----
 
-Batch jobs process *records* which are individual pieces into which Mule splits a large or streaming message. Where a Mule flow processes messages, a Mule batch job processes records.
+Batch jobs process *records* which are individual pieces into which Mule splits a large or streaming message. Where a Mule flow processes messages, a Mule batch job processes records. +
+Since Batch was designed to work with millions of records, we need to store them in a persistent storage queue. However, consider having 1 million records to place in a queue for a 3 step batch job. You might be seeing at 3 million I/O operations to take an re-queue each record as it moves through the link:https://docs.mulesoft.com/mule-user-guide/v/3.8-m1/batch-processing#batch-processing-phases[job's phases].
+In order to overcome this performance repercussion, batch records are, by default, queued and scheduled in blocks of 100 records before executing the job. This does not only lightens the amount of I/O requests, but also helps us keep a block:thread relationship, instead of a queue:thread relation to improve operation's load. +
+The default configuration assigns 16 threads to each job. Therefore, in a default configured batch job:
+
+. Each of those threads is given a block of 100 records.
+. Each thread iterates through that block processing each record.
+. Each block is queued back and the process continues.
+
+Consider, however, that in order to process 16 records in parallel, you need enough memory to move a grand total of 1600 records from a persistent storage into RAM, so always keep in mind that this performance enhancement entails working memory.
+
+[TIP]
+You can change the amount of threads per job in the _threading-profile_ element.
 
 Each batch step in a batch job contains message processors which act upon a record to transform, route, enrich or otherwise process data contained within it. By leveraging the functionality of existing Mule message processors, the batch processing construct offers a lot of flexibility in terms of how a batch job processes records; see example below. (Note that details in code snippet are abbreviated so as to highlight batch elements.)
 
@@ -90,6 +108,7 @@ Each batch step in a batch job contains message processors which act upon a reco
 
 The only element you cannot use in batch processing is a *request-response inbound connector.* Otherwise, you are free to leverage any and all Mule message processors to build your batch processing flow.
 ====
+
 
 [source, xml, linenums]
 ----
@@ -115,11 +134,30 @@ The only element you cannot use in batch processing is a *request-response inbou
 
 [IMPORTANT]
 ====
-Since 3.8-m1, Mule allows you to configure specific block sizes for each batch job and custom job instance Ids.
+As an improvement for batch job features, since version 3.8-m1, Mule allows you to configure specific block sizes for each batch job and custom job instance Ids.
 ====
+
+=== Batch configurable block sizes
+After 3.8-m1, Mule allows you to configure the block size in the batch job properties tab.
+
+The standard model of 16 threads, with 100 records per batch job works for most use cases. +
+However, let's consider three use cases where you might need to increase or decrease the block size:
+
+. Let's assume you have only 200 records process through a batch job. With the standard size of 100 block size, you'll only have 2 records being processed in parallel at any given time. +
+If you hit it with less than 101, then your processing becomes sequential.
+. If you need to process really heavy payloads, then queueing a hundred records will demand a large amount of working memory. +
+Consider a batch job that needs to process images, and let's take an average image size of 3MB. You'll then have 100 blocks with payloads of 3Mb, being processed in 16 threads. Hence your default threading-profile setting would require around 4.6GB of working memory just to keep the blocks in memory. +
+In these cases, set a lower block size to distribute each payload through more jobs and lessen the load of your available memory.
+. On the other hand, consider having 5 million records with payloads so small, that you could actually fit blocks of 500 in your memory without problems. Setting a larger block size will improve your batch job time without sacrificing working memory load.
+
+By configuring a new block size in the properties tab, you can overcome all the use cases mentioned above.
+In order to take full advantage of this feature, you need to understand how the block sizes affects your batch job. Running comparative tests with different values and testing performance will definitely help you finding an optimum block size before moving this change into production.
+
+Remember that modifying this value is optional, and if you apply no changes, you'll always have a default value of 100 records per block.
+
 === Custom batch Job instance Id
 
-You can now use a Mule expression to specify a unique identifier for each batch job by passing a *Job Instance Id* attribute that takes a MEL expression. +
+You can use a Mule expression to specify a unique identifier for each batch job by passing a *Job Instance Id* attribute that takes a MEL expression. +
 Note that constant values are not allowed for batch jobs and if the MEL expression returns a previously seen value, an exception will be thrown and the job instance will not be created.
 If you don't set a job instance Id; by default Mule will auto generate an UUID to identify your job instance.
 
@@ -155,14 +193,7 @@ com.mulesoft.module.batch.engine.DefaultBatchEngine: Started execution of instan
 
 As you can see, the logs of a properly identified instance is much more easier to read.
 
-=== Batch configurable block sizes
-Due to performance reasons, batch records are, by default, queued and scheduled in blocks of 100 records before executing the job.
-After 3.8-m1, Mule allows you to configure the block size in the batch job properties tab.
-This does not only lightens the amount of I/O requests, but also helps us keep a block:thread relationship, instead of a queue:thread relation to improve performance.
-
-For most use cases, the default value of 100 records per block should work. However, if you need to process really heavy payloads, then queueing a hundred records will demand a large amount of working memory and it will be more convenient to lower the block size of this job.
-On the other hand, if you have many tasks with really small payload size, then setting a larger block size will improve your batch job time without sacrificing working memory load.
-
+The batch job properties tab, now looks like this:
 [tabs]
 ------
 [tab,title="Studio Visual Editor"]
@@ -179,6 +210,7 @@ image:batchJobProperties.png[batchJobProperties]
 ----
 ....
 ------
+
 
 
 
