@@ -1,27 +1,16 @@
 = Application Deployment
 :keywords: deploy, esb, amc, cloudhub, on premises, on premise
 
-== Starting Mule
+== Start a Mule Runtime
 
-Start mule by running `<MULE_HOME>/bin/mule` or starting Mule as a service. By default, applications in the `<MULE_HOME>/apps` directory will be deployed. You can also designate specific applications to start (separated by the colon - **:**) and Mule 3.0 will respect the order when starting the applications. In this scenario, only the applications specified will be started.
+Start mule by running `<MULE_HOME>/bin/mule` or starting Mule as a service. By default, all applications in the `<MULE_HOME>/apps` directory will be deployed. 
 
-Start Mule by specifying an app to run:
+== Application Hot Deployment
 
-[source, code, linenums]
-----
-mule -app foo
-----
-
-where `foo` is a Mule app at `$MULE_HOME/apps/foo`.
-
-From this moment, Mule checks every three seconds for the `$MULE_HOME/apps/foo/mule-config.xml` updates. One can update the application jar contents and touch/modify this file to have Mule reload the config and class modifications.
-
-== Deploying Applications
-
-Mule applications, either zipped or exploded can be dropped into **$MULE_HOME/apps**. If Mule is already running, the application will be deployed dynamically.
+Mule applications, either zipped or exploded can be dropped into **$MULE_HOME/apps**. If Mule runtime is already started, the application will be deployed dynamically.
 
 [NOTE]
-All applications in Mule are unpacked at runtime and original zip removed. This means, e.g. that dropping a zip file into 'apps' dir will create a new folder with the same name (sans 'zip' extension) and delete the zip.
+All applications in Mule are unpacked at runtime and the original zip is removed. This means, e.g. that dropping a zip file into the 'apps' dir will create a new folder with the same name (sans 'zip' extension) and delete the zip.
 
 A successful app deployment is confirmed by:
 
@@ -30,6 +19,27 @@ A successful app deployment is confirmed by:
 * An anchor file created for a running app, e.g. `$MULE_HOME/apps/stockTrader-anchor.txt`
 
 If you wish to store your applications in a different location, you can do this on Unix-based systems by creating a symlink to your application directory from `$MULE_HOME/apps`
+
+== Start a Mule Runtime and Deploy Specific Applications
+
+You can also include the **-app** flag when you start a Mule runtime to designate specific applications to start (separated by the colon - **:**). 
+
+For example:
+
+[source, code, linenums]
+----
+mule -app foo
+----
+
+where `foo` is a Mule application at `$MULE_HOME/apps/foo`.
+In this case the Mule runtime will respect the specified order when starting the applications, and only the applications specified will be started.
+
+[source, code, linenums]
+----
+mule -app first:second
+----
+
+where `first` and `second` are both Mule application folders in `$MULE_HOME/apps/`.
 
 == Undeploying Applications
 
@@ -41,7 +51,11 @@ It is recommended one doesn't delete the application folder directly, but rather
 
 E.g. if the `stockTrader` app is running (app folder is there as well as the `$MULE_HOME/apps/stockTrader-anchor.txt` file, just delete the anchor file to have the app removed from the Mule instance at runtime. Application folder will be removed once the app terminates.
 
-== Updating Applications at Runtime
+== Application Hot Redeployment
+
+After a Mule application is deployed into a Mule runtime, the Mule runtime polls the `$MULE_HOME/apps` folder every three seconds for any updates to `$MULE_HOME/apps/<appname>/mule-config.xml` (or any config.resources file specified in an application's mule-deploy.properties file). You can update or replace the application folder contents and touch/modify the application's configuration file to have Mule reload the config and automatically re-deploy the application.
+
+== Hot Deploying Application Updates at Runtime
 
 Updating a Mule application at runtime can be a complex change involving class modifications, endpoint modifications (e.g. changing ports, etc), as well as reconfigured flows. As a result, any application update does a graceful app shutdown under the hood and reconfigures itself. In practice, this is pretty transparent to the user and happens within seconds.
 
@@ -49,9 +63,26 @@ There are several ways an application can be updated:
 
 * By dropping the modifications over an existing exploded app folder and touching the 'master' configuration file (`mule-config.xml` in app root by default).
 
-* By dropping a new *zipped* version of the app into `$MULE_HOME/apps` dir. Mule will detect this as an existing app update and will ensure a clean redeployment of the app. Note that any modifications to the old app folder are discarded - the new app folder is a clean exploded application from a zip.
+* By dropping a new *zipped* version of the app into `$MULE_HOME/apps` dir (with the same name). Mule will detect this as an existing app update and will ensure a clean redeployment of the app. Note that any modifications to the old app folder are discarded - the new app folder is a clean exploded application from a zip.
 
 As you see, both integrate pretty well with existing build tools, the preference for one over another really depends on established development practices only.
+
+Updating a Mule application at runtime can be a complex change involving class modifications, endpoint modifications (e.g. changing ports, etc), as well as reconfigured flows. As a result, any application update does a graceful app shutdown under the hood and reconfigures itself. In practice, this is pretty transparent to the user and happens within seconds.
+
+There are several ways an application can be updated:
+
+* By dropping the modifications over an existing exploded app folder and touching the 'master' configuration file (`mule-config.xml` in app root by default).
+
+* By dropping a new *zipped* version of the app into `$MULE_HOME/apps` dir (with the same name). Mule will detect this as an existing app update and will ensure a clean redeployment of the app. Note that any modifications to the old app folder are discarded - the new app folder is a clean exploded application from a zip.
+
+As you see, both integrate pretty well with existing build tools, the preference for one over another really depends on established development practices only.
+
+[NOTE]
+Hot redeployment can be dangerous in a production environment. It may be safer to undelopy the production application first, then replace the Mule application deployable archive. For some application changes, such as modified files in the application's classpath, you may also need to restart the Mule runtime before deploying the new application version.  
+
+
+
+
 
 == Sharing Resources
 
