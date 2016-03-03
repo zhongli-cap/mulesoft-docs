@@ -3,7 +3,7 @@
 
 You can configure what gets logged, where it gets logged, and how by editing a configuration file that sits in your project.
 
-Mule logs multiple messages and specific elements in your applications' flows, in order to help you debug and keep track of events. You can also include the link:/mule-user-guide/v/3.8-m1/logger-component-reference[`<logger>` Element] anywhere in a flow and set it up to output any message you want. By creating a configuration file, you can define what kinds of messages to log, in what way (asynchronously or synchronously), and where they get logged (such as to the console, to disk, to an endpoint or to a database).
+Mule logs multiple messages and specific elements in your applications' flows to help you debug and keep track of events. You can also include the link:/mule-user-guide/v/3.8-m1/logger-component-reference[`<logger>` Element] anywhere in a flow and set it up to output any message you want. By creating a configuration file, you can define what kinds of messages to log, in what way (asynchronously or synchronously), and where they get logged (such as to the console, to disk, to an endpoint or to a database).
 
 For logging, Mule ESB uses link:http://www.slf4j.org/[slf4j], which is a logging facade that discovers and uses a logging strategy from the classpath, such as link:http://logging.apache.org/log4j/2.x/[log4j2] or the JDK Logger. By default, Mule includes link:http://logging.apache.org/log4j/2.x/[log4j2], which is configured with a file called `log4j2.xml`.
 
@@ -127,7 +127,7 @@ Here’s the default configuration for the log4j2.xml file:
 [TIP]
 For more information on how to build this configuration file, refer to the link:http://logging.apache.org/log4j/2.x/manual/configuration.html[log4j 2 configuration guide]
 
-=== Exception Handling With Asynchronous Logging
+== Exception Handling With Asynchronous Logging
 
 If you're using asynchronous logging and experience a system crash that could have caused incomplete logs, there is an exception handler designed to help you in this situation. By default Mule registers an LMAX `ExceptionHandler` that logs any issues dumping log events to disk, to the console and to `logs/mule_ee.log`. Alternatively, you can provide your own exception handler by setting the system property `AsyncLoggerConfig.ExceptionHandler` to the canonical name of a class implementing the interface.
 
@@ -181,9 +181,9 @@ public class AsyncLoggerExceptionHandler implements ExceptionHandler
 
 Unfortunately, this is not a full solution, as ultimately there is a performance-reliability trade-off between asynchronous and synchronous logging. If the risk of loosing these log messages is a serious issue, then you have no choice but to configure your loggers to be synchronous. Notice that you’re not forced to choose between making all logging synchronous or all asynchronous, you can have a mix of both.
 
-=== Compatibility Considerations
+== log4j to log4j2 Migration
 
-As from Mule runtime 3.6.0, log4j was replaced by log4j2 as the backend tool for managing logging. This implies some backwards compatibility issues as the necessary configuration files in this new framework are different. Log4j2 allows for asynchronous logging, which wasn't previously available; Mule now implements asynchronous logging by default, as it implies a very substantial improvement in performance. Although Mule has a policy of not breaking backwards compatibility on minor releases, the extent of the improvement in performance brought by this change outweighed any inconveniences by far, and made it worthwhile to implement the change.
+As of Mule runtime 3.6.0, log4j was replaced by log4j2 as the backend tool for managing logging. This implies some backwards compatibility issues as the necessary configuration files in this new framework are different. Log4j2 allows for asynchronous logging, which wasn't previously available; Mule now implements asynchronous logging by default, as it implies a very substantial improvement in performance. Although Mule has a policy of not breaking backwards compatibility on minor releases, the extent of the improvement in performance brought by this change outweighed any inconveniences by far, and made it worthwhile to implement the change.
 
 Migrated applications from versions of Mule that are older than 3.6.0 but use the default logging settings don't experience any issues and keep working as normal (except that logging is asynchronous). For applications that are older than 3.6.0 and do include a custom logging configuration file – both with .xml and .properties extensions – this file isn't recognized anymore; in these cases, logging is managed according to the default settings.
 
@@ -193,11 +193,11 @@ link:https://www.mulesoft.com/support-and-services/mule-esb-support-license-subs
 
 It's highly encouraged that you implement slf4j as your logging mechanism, as the Mule project is standardized on the use of _slf4j 1.7.7_ .  Nevertheless, other APIs are also supported, and slf4j bridges are included in the Mule distribution to make sure that regardless of the framework you choose, log4j2 ends up handling every log event with a centralized configuration. In such a case, you must make sure not to package any logging library on your applications/extensions to avoid classpath issues between such libraries and the bridge that link to slf4j.
 
-=== Configuration Reloading
+== Configuration Reloading
 
 By default, Mule polls modified config files every 60 seconds to check for changes. If any of those files have changed, the logger config is modified on the fly. You can customize this interval by setting the `monitorInterval` attribute in the root element (check link:http://logging.apache.org/log4j/2.x/manual/[log4j 2 manual] for further reference).
 
-=== Making the HTTP Connector More Verbose
+== Making the HTTP Connector More Verbose
 
 To debug projects that use the new link:/mule-user-guide/v/3.8-m1/http-connector[HTTP connector] you may find it useful to make the logging more verbose than usual and track all of the behavior of both the `http-listener` and `http-request` connectors on your project. To activate this mode, you must make the following addition to your log4j2.xml configuration file:
 
@@ -207,9 +207,31 @@ To debug projects that use the new link:/mule-user-guide/v/3.8-m1/http-connector
 <AsyncLogger name="org.asynchttpclient" level="DEBUG"/>
 ----
 
-=== Controlling Logging from JMX
+== Controlling Logging from JMX
 
 You can expose a manager's logging configuration over JMX by configuring a log4j2 JMX agent in your Mule configuration file. See link:/mule-user-guide/v/3.8-m1/jmx-management[JMX Management] for more information.
+
+////
+DOCS-1136:
+////
+
+== Request and Response Logging for SOAP
+
+One of the most common requirements during development is to be able to log both request and response, raw, for web services calls, especially for SOAP calls.
+
+To handle this:
+
+. In Anypoint Studio, copy the link:_attachments/cxf.xml[cxf.xml] file to `src/main/resources` for your project.
+. Open the `log4j2.xml` file in `src/main/resources` and add the `org.apache.cxf` > INFO statement to the CXF section:
++
+[source,xml,linenums]
+----
+<!-- CXF is used heavily by Mule for web services -->
+<AsyncLogger name="org.apache.cxf" level="WARN"/>
+<AsyncLogger name="org.apache.cxf" level="INFO"/>
+----
++
+. Save your project.
 
 == Troubleshooting Logging
 
