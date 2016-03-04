@@ -136,6 +136,86 @@ Note that details in code snippet are abbreviated so as to highlight batch commi
 
 * You cannot share a transaction between a batch step and a batch commit that exists within the step. Any transaction that the batch step starts, ends before the batch commit begins processes. In other words, a transaction cannot cross the barrier between a batch step and the batch commit it contains.
 
+=== Mutable Records Inside Commit Blocks
+
+In previous versions of Mule, the commit block exposed only the grouped record’s payload and didn't allow you to change those payloads nor to retrieve the associated link:/mule-user-guide/v/3.8-m1/record-variable[record variables].
+Now, Mule allows you to access the grouped records' payloads and variables from within the Batch commit block and process them using the Mule Expression Language (MEL).
+
+==== Sequential Access
+
+You can persistently go over the aggregated records' payloads in a sequential order and store them as record variables to then replace, manipulate, or store the data during the link:/mule-user-guide/v/3.8-m1/batch-processing#process[process phase] of your batch job.
+
+In this case, by adding a link:/mule-user-guide/v/3.8-m1/foreach[Foreach Scope] the user iterates trough the records in a fixed size commit block, and through an link:/mule-user-guide/v/3.8-m1/expression-component-reference[Expression Component Reference] modifies the payload, and creates a record variable for each collected record.
+
+[source,mxl,linenums]
+----
+<batch:step name="commitStep">
+<batch:commit size="10">
+	<foreach>
+		<expression-component>
+			record.payload = 'foo';
+			record.recordVars['marco'] = 'polo';
+		</expression-component>
+	</foreach>
+</batch:commit>
+</batch:step>
+----
+
+Additionally you can use apply this for streaming commits:
+
+[source,xml,linenums]
+----
+<batch:step name="commitStep">
+	<batch:commit streaming="true">
+	    <foreach>
+			<expression-component>
+				record.payload = 'foo';
+				record.recordVars['marco'] = 'polo';
+			</expression-component>
+		</foreach>
+	</batch:commit>
+</batch:step>
+----
+
+The sequential access method consorts with this assuming that:
+
+. The commit size matches the amount of aggregated records.
+. There is a direct correlation between the aggregated records and the items in the list.
+
+==== Random Access
+
+In case you need to access random records without the need of iterating, we expose a variable called _records_, which is a random access list that is accessible across the commit block.
+
+[NOTE]
+The _counter_ variable is an immutable list used by `Foreach` to keep track of the iteration.
+
+You can carry out the same result as the example above by specifying an arbitrary index number for the _records_ list instead of sequentially access each record:
+
+[source,xml,linenums]
+----
+<batch:step name="commitStep">
+    <batch:commit size="10">
+		<foreach>
+        	<expression-component>
+        		records[0].payload = 'foo';
+        	 	records[0].recordVars['marco'] = 'polo';
+        	</expression-component>
+		</foreach>
+    </batch:commit>
+</batch:step>
+----
+
+As long as you are able to handle list indexes, you can discretionary access every record within the Commit block.
+
+
+[TIP]
+====
+Due to memory restrictions, random access is not supported for streaming commits.
+
+The record payloads for random access are exposed as an `immutable List` and since streaming commits implies having access to the entire set of records, without a fixed commit size we can't guaranteed that all records will fit in memory.
+
+When streaming commits, always use the sequential access method.
+====
 
 == Examples
 
@@ -233,16 +313,8 @@ payload map {
 ....
 ------
 
-Following the example above, assume that you would like to log the generated Salesforce ID of each commit. In previous versions of Mule, the commit block exposed only the grouped record’s payload and didn't allow you to change those payloads nor to access, either for read nor write, the associated record variables.
-Now you can expose the grouped records' payloads and record variables from within the Batch commit block as variables that you can process using the Mule Expression Language (MEL).
-
-You can access them either sequentially or randomly (both methods are explained below).
-
-=== Sequential Access
-
-To get the generated Salesforce ID for our commit, you can add a link:/mule-user-guide/v/3.8-m1/foreach[Foreach Scope] with an link:/mule-user-guide/v/3.8-m1/expression-component-reference[Expression Component Reference] containing this expression: + `record.recordVars['sfdcld'] = payload.wrapped.id`
-
-You can automatically get a variable called `record` to hold a reference to one of the aggregated records.
+Following the example above, assume that you would like to log the generated Salesforce ID of each commit.
+You can use the <<Sequential Access>> method with a Foreach scope containing the expression: + `record.recordVars['sfdcld'] = payload.wrapped.id'. This automatically gets you a variable called `record` to hold a reference to one of the aggregated records.
 
 [tabs]
 ------
@@ -314,30 +386,8 @@ payload map {
 ....
 ------
 
-
-=== Random Access
-
-The sequential access method is only valid if:
-
-. The commit size matches the amount of aggregated records.
-. There is a direct correlation between the aggregated records and the items in the list.
-
-Although this is valid for most use cases, you might need to access random records, and for that we expose a variable called _records_, which is a random access list that is accessible across the commit block.
-As long as you are able to handle list indexes, you can randomly access every record within the Commit block.
-
-Using this method, you can get the generated Salesforce ID, by using the _counter_ variable to access the correct record.
-The expression in the `Expression component` should be:
-
-[source]
-----
-records[counter-1].recordVars['sfdcId'] = payload.wrapped.id
-----
-
-[NOTE]
-The _counter_ variable is used by `Foreach` to keep track of the iteration.
-
-
-Additionally, you can try, for example, to modify the payload of the first record by simply referencing it from a new Expression component outside the Foreach scope:
+Furthermore, you can try to modify the payload of the first record by simply referencing it using <<Random Access>> from a new Expression component outside the Foreach scope.
+The `Expression component` should be:
 
 [source, xml, linenums]
 ----
@@ -352,15 +402,6 @@ This only modifies the payload of the second record, and if you check your `Logg
 LoggerMessageProcessor: {FirstName=John, LastName=Doe, Email=john.doe@texasComp.com, Phone=096548763}
 LoggerMessageProcessor: New payload for the second record
 ----
-
-[TIP]
-====
-When streaming commits, always consider using the sequential access method.
-
-Due to memory restrictions, the random access to records method is not supported for streaming commits.
-The record payloads are exposed as an `immutable List` and since streaming commits give access to the entire set of records, we presume they won't fit in memory.
-====
-
 
 == See Also
 
