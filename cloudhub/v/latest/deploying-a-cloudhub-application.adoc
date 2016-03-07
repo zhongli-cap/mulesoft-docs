@@ -160,9 +160,45 @@ These application properties can be used inside your Mule configuration. For exa
 </spring:bean>
 ----
 
-If you also have the same properties set in a mule-app.properties file inside your application, the application property settings in CloudHub override mule-app.properties when your application is deployed.
+==== Overriding Properties in CloudHub vs. On-Premises Mule Runtimes
+
+Just like with on-premises Mule runtime deployments, applications deployed to CloudHub can still bundle their own property placeholder or secure property placeholder files inside the deployable archive file and these properties will be substituted into the application when the application is started. With an on-premises Mule runtime, there are several ways to override property values bundled inside the application. 
+
+1. You can configure an external location to add property placeholder or secure property placeholder files to override properties.
+
+2. You you can set Java system environment variables at deployment time to override properties. 
+
+To use the second option, with an on-premises server you could deploy your application with the following command: 
+
+[source, code]
+----
+mule -Dsecret.key=toSecretPassword -Denv=prod -Ddb.password=secretPassword -app myApp.zip
+----
+
+In this case all the values typed into the command would only be stored in memory, they are never stored in any file. 
+
+With CloudHub, these techniques to override properties need to be modified. 
+
+The first approach is difficult to translate to CloudHub: when an application is deployed into CloudHub it is harder to write override properties files into the file system. 
+
+The second approach is much easier to translate to CloudHub: the Properties tab does allow you to specify Java system environment variables which will function in the same way as adding environment variables when you deploy to an on-premises server. 
+
+If you also have any property names set in a mule-app.properties file inside your application or in bundled property placeholder files, then when your application is deployed, any entries in the CloudHub Properties tab with the same name will override the matching value bundled with the application. 
+
+[Note] 
+It is possible to change the behavior of the application to not allow CloudHub properties to override properties bundled with the deployable archive. You do this by changing options in the Property Placeholder element in the Mule application. See link:http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/beans/factory/config/PropertyPlaceholderConfigurer.html[Spring documentation on Property Placeholder options] for more information on non-default property placeholder options. 
+
+==== Overriding Secure Properties
 
 Note that you can flag application properties as secure so that their values are not visible to users at runtime or passed between the server and the console. See link:/cloudhub/secure-application-properties[Secure Application Properties] for more information.
+
+Your CloudHub application can still bundle secure property placeholder files which can contain encrypted property values. If a property name is listed with the secure.properties entry (either in mule-app.properties, in another properties file, or if you enter it into the Properties tab), then once the application is deployed, the value of this secure property will be obfuscated in the CloudHub Properties tab, and in fact the value is only stored in the Mule worker's memory and is never stored in any files, nor is it ever passed between any machines (including the CloudHub Console). 
+
+This secure behavior allows you to replace a hidden secure property value with a new decrypted value, and once the application is deployed, this new value will override the encrypted value stored in the application's secure property placeholder. Just like the encrypted value stored in the secure property placeholder file, this new value is only stored in the Mule runtime's memory. It is never stored in any file and is never passed between any other servers, including the CloudHub Console. The new value is also hidden once the application is deployed and can never be viewed again. 
+
+This means that when you override a secure property in the CloudHub application's Properties tab, the values never need to be encrypted. In this scenario, securing the values of sensitive properties is reduced to controlling which operators have access to those values when they deploy or redeploy the secure application. 
+
+For example, if a production application needs to update the database user and password stored in two properties named db.user and db.password, then an operator would enter this new db.user and db.password into the CloudHub application's properties tab and then Start or Restart the application. This allows the new application to upgrade this secure login information with zero downtime. Once all dependant applications are migrated, the old account could be decomissioned. 
 
 === Insight Tab
 
@@ -232,3 +268,5 @@ If an error occurs and the application cannot be deployed, the application statu
 
 * You can also deploy applications directly from link:/cloudhub/hello-world-on-cloudhub[Anypoint Studio] or the link:/cloudhub/command-line-tools[Command Line Tools]. A complete set of link:/cloudhub/cloudhub-api[REST APIs] are also available for deployment.
 * link:/cloudhub/managing-cloudhub-applications[Managing CloudHub Applications] contains more information on how to manage your CloudHub application, make changes, scale workers, and perform other application management tasks.
+* link:/configuring-properties[Configuring Properties] contains more information on property placeholders and how system environment variables are used in on-premises Mule runtime deployments. 
+
