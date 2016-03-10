@@ -11,7 +11,7 @@ For example, batch processing is particularly useful when working with the follo
 
 * Integrating data sets, small or large, streaming or not, to parallel process records.
 
-* Synchronizing data sets between business applications, such as syncing contacts between Netsuite and Salesforce, effecting "near real-time"data integration.
+* Synchronizing data sets between business applications, such as syncing contacts between NetSuite and Salesforce and causing "near real-time" data integration.
 
 * Extracting, transforming and loading (ETL) information into a target system, such as uploading data from a flat file (CSV) to Hadoop.
 
@@ -43,6 +43,12 @@ Within a Mule application, batch processing stands on its own as an independent 
 
 image:batch_main3.png[batch_main3]
 
+On a traditional on-line processing model, each request is usually mapped to a worker thread. +
+Regardless of the processing type (either synchronous, asynchronous, one-way, request-response, or even if the requests are temporarily buffered before being processed), servers usually end up in a 1:1 relationship between a request and a running thread.
+
+When it comes to a batch job, all records are first stored in a persistent queue before the link:/mule-user-guide/v/3.8-m1/batch-processing#process[processing phase] begins, so the traditional threading model wouldn't apply.
+See <<Basic Anatomy>> for more information on how batch processing differs from the regular threading model.
+
 == Basic Anatomy
 
 This section explores the basic anatomy of the batch processing construct in Mule, and how its parts work together to process batches of data in an application.
@@ -58,12 +64,12 @@ A *batch job* is a top-level element in Mule which exists outside all Mule flows
 A batch job contains one or more *batch steps* which, in turn, contain any number of message processors that act upon records as they move through the batch job. During batch processing, you can use *record-level variables* (`recordVars`) and MEL expressions to enrich, route or otherwise act upon records.
 
 A batch job executes when triggered by either a *batch executor* in a Mule flow or a *message source* in a batch-accepting input. +
-When triggered, Mule will create a new *batch job instance* for you if you don't assign a custom job instance Id to your batch job. When all records have passed through all batch steps, the batch job instance ends and the *batch job result* is summarized in a report to indicate which records succeeded and which failed during processing.
+When triggered, Mule creates a new *batch job instance* for you if you don't assign a custom job instance Id to your batch job. When all records have passed through all batch steps, the batch job instance ends and the *batch job result* is summarized in a report to indicate which records succeeded and which failed during processing.
 
 Access link:/mule-user-guide/v/3.8-m1/batch-processing-reference[Batch Processing Reference] for more information.
 ====
 
-The heart of Mule's batch processing functionality lies within the *batch job*. In an application, the batch job element exists outside the context of any regular Mule flow. It is a block of code which contains one or more *batch steps* which, as the label implies, process items step-by-step in a sequential order. Batch steps all fall within the *Process Phase* of batch processing (more on <<Batch Processing Phases>> below).
+The heart of Mule's batch processing functionality lies within the *batch job*. In an application, the batch job element exists outside the context of any regular Mule flow. It is a block of code containing one or more *batch steps* which, as the label implies, process items step-by-step in a sequential order. Batch steps all fall within the *Process Phase* of batch processing (more on <<Batch Processing Phases>> below).
 
 [source, xml, linenums]
 ----
@@ -80,7 +86,19 @@ The heart of Mule's batch processing functionality lies within the *batch job*. 
     </flow>
 ----
 
-Batch jobs process *records* which are individual pieces into which Mule splits a large or streaming message. Where a Mule flow processes messages, a Mule batch job processes records.
+Batch processing provides record I/O for large or streamed Mule messages. +
+Since Batch was designed to work with millions of records, they need to be stored in a persistent storage queue. However, consider having 1 million records to place in a queue for a 3 step batch job. At least three million I/O operations occur as Mule takes and requeues each record as it moves through the link:/mule-user-guide/v/3.8-m1/batch-processing#batch-processing-phases[job's phases].
+To improve performance, Mule queues and schedules batch records in blocks of 100 records (default). This lessens the amount of I/O requests and improves an operation's load. +
+The default configuration assigns 16 threads to each job. Therefore, in a default configured batch job:
+
+. Each of those threads is given a block of 100 records.
+. Each thread iterates through that block processing each record.
+. Each block is queued back and the process continues.
+
+In this example, performance requires having enough available memory to process the 16 records in parallel, which means moving 1600 records from persistent storage into RAM. The larger your records and their quantity, the more available memory you need for batch processing.
+
+[TIP]
+You can change the amount of threads per job in the _threading-profile_ element.
 
 Each batch step in a batch job contains message processors which act upon a record to transform, route, enrich or otherwise process data contained within it. By leveraging the functionality of existing Mule message processors, the batch processing construct offers a lot of flexibility in terms of how a batch job processes records; see example below. (Note that details in code snippet are abbreviated so as to highlight batch elements.)
 
@@ -90,6 +108,7 @@ Each batch step in a batch job contains message processors which act upon a reco
 
 The only element you cannot use in batch processing is a *request-response inbound connector.* Otherwise, you are free to leverage any and all Mule message processors to build your batch processing flow.
 ====
+
 
 [source, xml, linenums]
 ----
@@ -115,28 +134,65 @@ The only element you cannot use in batch processing is a *request-response inbou
 
 [IMPORTANT]
 ====
-Since 3.8-m1, Mule allows you to configure specific block sizes for each batch job and custom job instance Ids.
+As an improvement for batch job features, since version 3.8-m1, Mule allows you to configure specific block sizes for each batch job and custom job instance IDs.
 ====
-=== Custom batch Job instance Id
 
-You can now use a Mule expression to specify a unique identifier for each batch job by passing a *Job Instance Id* attribute that takes a MEL expression. +
-Please note that constant values are not allowed for batch jobs and if the MEL expression returns a previously seen value, an exception will be thrown and the job instance will not be created.
+=== Batch Configurable Block Sizes
 
-If you don't set a job instance Id; by default Mule will auto generate a unique identifier.
+After 3.8-m1, Mule allows you to configure the block size in the batch job properties tab.
+
+The standard model of 16 threads, with 100 records per batch job works for most use cases. +
+However, consider three use cases where you might need to increase or decrease the block size:
+
+* Assume you have 200 records to process through a batch job. With the default 100-record block size, Mule can only process two records in parallel at a time. If you request fewer than 101 records, then your processing becomes sequential. If you need to process really heavy payloads, then queueing a hundred records demands a large amount of working memory.
+
+* Consider a batch job that needs to process images, and an average image size of 3 MB. You then have 100 blocks with payloads of 3 MB, being processed in 16 threads. Hence your default threading-profile setting would require around 4.6 GB of working memory just to keep the blocks in queue. You should set a lower block size to distribute each payload through more jobs and lessen the load on your available memory.
+
+* Suppose having 5 million records with payloads so small that you can fit blocks of 500 records in your memory without problems. Setting a larger block size improves your batch job time without sacrificing working memory load.
+
+By configuring a new block size in the properties tab, you can overcome all these use cases. To take full advantage of this feature, you need to understand how the block sizes affect your batch job. Running comparative tests with different values and testing performance helps you find an optimum block size before moving this change into production.
+
+Remember that modifying this value is optional. If you apply no changes, the default value is 100 records per block.
+
+=== Custom Batch Job Instance ID
+
+You can use a Mule expression to specify a unique identifier for each batch job by passing a *Job Instance Id* attribute that takes a MEL expression. +
+Note that constant values are not allowed for batch jobs and if the MEL expression returns a previously seen value, Mule throws an exception and does not create the job instance.
+If you don't set a job instance ID, Mule auto generates a UUID to assign to your instance.
+
+The log of a process without a job instance Id looks like this:
+
+[source, source, linenums]
+----
+Created instance 20ae8500-d1a7-11e5-af90-6003089b5498 for batch job contacts-to-SFDCBatch
+com.mulesoft.module.batch.engine.DefaultBatchEngine: Starting input phase
+com.mulesoft.module.batch.engine.DefaultBatchEngine: Input phase completed
+com.mulesoft.module.batch.engine.queue.BatchQueueLoader: Starting loading phase for instance '20ae8500-d1a7-11e5-af90-6003089b5498' of job 'contacts-to-SFDCBatch'
+com.mulesoft.module.batch.engine.queue.BatchQueueLoader: Finished loading phase for instance 20ae8500-d1a7-11e5-af90-6003089b5498 of job contacts-to-SFDCBatch. 3 records were loaded
+com.mulesoft.module.batch.engine.DefaultBatchEngine: Started execution of instance '20ae8500-d1a7-11e5-af90-6003089b5498' of job 'contacts-to-SFDCBatch'
+com.mulesoft.module.batch.DefaultBatchStep: Step Insert_SFDC finished processing all records for instance 20ae8500-d1a7-11e5-af90-6003089b5498 of job contacts-to-SFDCBatch
+----
+
+The UUID generated for this job instance is `20ae8500-d1a7-11e5-af90-6003089b5498`. As you can tell, it's not a human readable identifier making it hard to correlate to an actual execution and considering you could be running multiple jobs at the same time, this ID is not meaningful at all.
 
 In order to guarantee uniqueness, you can set the Job Id to take server date through the MEL expression: +
 `#['Job From ' + server.dateTime.format('dd/MM/yy hh:mm:ss') + '.' ]`.
 
-This will name the execution instance [green]`Job From 15/01/16 05:23:12`.
+This names the execution instance `Job From 15/01/16 05:23:12`.
 
-=== Batch configurable block sizes
-Due to performance reasons, batch records are, by default, queued and scheduled in blocks of 100 records before executing the job.
-After 3.8-m1, Mule allows you to configure the block size in the batch job properties tab.
-This does not only lightens the amount of I/O requests, but also helps us keep a block:thread relationship, instead of a queue:thread relation to improve performance.
+[source, source, linenums]
+----
+com.mulesoft.module.batch.engine.DefaultBatchEngine: Created instance Job From 15/01/16 05:23:12 for batch job contacts-to-SFDCBatch
+com.mulesoft.module.batch.engine.DefaultBatchEngine: Starting input phase
+com.mulesoft.module.batch.engine.DefaultBatchEngine: Input phase completed
+com.mulesoft.module.batch.engine.queue.BatchQueueLoader: Starting loading phase for instance 'Job From 15/01/16 05:23:12' of job 'contacts-to-SFDCBatch'
+com.mulesoft.module.batch.engine.queue.BatchQueueLoader: Finished loading phase for instance Job From 15/01/16 05:23:12 of job contacts-to-SFDCBatch. 3 records were loaded
+com.mulesoft.module.batch.engine.DefaultBatchEngine: Started execution of instance 'Job From 15/01/16 05:23:12' of job 'contacts-to-SFDCBatch'
+----
 
-For most use cases, the default value of 100 records per block should work. However, if you need to process really heavy payloads, then queueing a hundred records will demand a large amount of working memory and it will be more convenient to lower the block size of this job.
-On the other hand, if you have many tasks with really small payload size, then setting a larger block size will improve your batch job time without sacrificing working memory load.
+The logs of a properly identified instance are easier to read.
 
+The batch job properties tab, now looks like this:
 [tabs]
 ------
 [tab,title="Studio Visual Editor"]
@@ -153,8 +209,6 @@ image:batchJobProperties.png[batchJobProperties]
 ----
 ....
 ------
-
-
 
 === Batch Processing Phases
 
@@ -212,7 +266,7 @@ See <<Complete Code Example>> for more detail.
 The second phase, *Load and Dispatch*, is _implicit_ and performs all the "behind the scenes" work to create a batch job instance. Essentially, this is the phase during which Mule turns a serialized message payload into a collection of records for processing as a batch. You don't need to configure anything for this activity to occur, though it is useful to understand the tasks Mule completes during this phase.
 
 . Mule sends the message payload through a collection splitter. This first step triggers the creation of a new batch job instance.
-. Mule creates a persistent queue which it associates to the new batch job instance. A *batch job instance* is an occurrence in a Mule application resulting from the execution of a batch job in a Mule flow; it exists for as long as it takes to process each record in a batch. (What's the difference between a batch job and a batch job instance?)
+. Mule creates a persistent queue and associates it to the new batch job instance. A *batch job instance* is an occurrence in a Mule application resulting from the execution of a batch job in a Mule flow; it exists for as long as Mule processes each record in a batch.
 . For each item generated by the splitter, Mule creates a record and stores it in the queue. (This is an "all or nothing" activity – Mule either successfully generates and queues a record for _every_ item, or the whole message fails during this phase.)
 . Mule presents the batch job instance, with all its queued-up records, to the first batch step for processing. 
 
@@ -220,7 +274,9 @@ The second phase, *Load and Dispatch*, is _implicit_ and performs all the "behin
 
 In the third phase, *Process*, Mule begins asynchronous processing of the records in the batch. Within this _required_ phase, each record moves through the message processors in the first batch step, then is sent back to the original queue while it waits to be processed by the second batch step and so on until every record has passed through every batch step. Only one queue exists and records are picked out of it for each batch step, processed, and then sent back to it; each record keeps track of what stages it has been processed through while it sits on this queue. Note that a batch job instance _does not_ wait for all its queued records to finish processing in one batch step before pushing any of them to the next batch step. Queues are persistent.
 
-Mule persists a list of all records as they succeed or fail to process through each batch step. If a record should fail to be processed by a message processor in a batch step, Mule can simply continue processing the batch, skipping over the failed record in each subsequent batch step. (Refer to the <<Handling Failures During Batch Processing>> section for more detail.) At the end of this phase, the batch job instance completes and, therefore, ceases to exist.
+Mule persists a list of all records as they succeed or fail to process through each batch step. If a record should fail to be processed by a message processor in a batch step, Mule can simply continue processing the batch, skipping over the failed record in each subsequent batch step. (Refer to the <<Handling Failures During Batch Processing>> section for more detail.)
+
+At the end of this phase, the batch job instance completes and, therefore, ceases to exist.
 
 image:batch+diagram.jpeg[batch+diagram]
 
@@ -324,7 +380,7 @@ Though defined in context above, it's worth elaborating upon the terms *batch j
 
 * A *batch job* is the top-level element in an application in which Mule processes a message payload as a batch of records. The term batch job is inclusive of all four phases of processing: Input, Load and Dispatch, Process, and On Complete.
 
-* A *batch job instance* is an occurrence in a Mule application resulting from the execution of a batch job in a Mule flow; Mule creates the batch job instance in the <<Load and Dispatch>>, and persists eternally.
+* A *batch job instance* is an occurrence in a Mule application whenever a Mule flow executes a batch job. Mule creates the batch job instance in the <<Load and Dispatch>> phase.
 ====
 
 == Triggering Batch Jobs
@@ -429,17 +485,16 @@ From time to time, when processing a batch job, a Mule message processor in a ba
 
 By default, Mule's batch jobs follow the first error handling option which halts processing as soon as Mule encounters a single record-level error. However, you can use a *batch job attribute* and batch step *accept expression* to explicitly configure the batch job to handle failures according to the second or third above-listed options. The table below describes how to configure the batch job attribute to customize error handling.
 
-[cols=",",options="header"]
+[cols="30a,40a,30a",options="header"]
 |===
 |Failed Record Handling Option 2+^|Batch Job
-|
-|*Attribute* |*Value*
-|Stop processing upon encountering the first failed record
-|`max-failed-records`|`0`
-|Continue processing indefinitely, regardless of the number of failed records
-|`max-failed-records` |`-1`
-|Continue processing until reaching maximum number of failed records
-|`max-failed-records` |`integer`
+| | *Attribute* | *Value*
+| Stop processing upon encountering the first failed record
+| `max-failed-records`|`0`
+| Continue processing indefinitely, regardless of the number of failed records
+| `max-failed-records` |`-1`
+| Continue processing until reaching maximum number of failed records
+| `max-failed-records` | `integer`
 |===
 
 [source, xml]
