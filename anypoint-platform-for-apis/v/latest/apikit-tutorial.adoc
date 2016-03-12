@@ -3,6 +3,25 @@
 
 The tutorial outlined in this document demonstrates the functionality of APIkit, and how you can use it to build REST APIs. After setting yourself up to meet a few development environment prerequisites, you can step through the quick tutorial to build yourself a working API.
 
+This tutorial helps you to create a simple REST API using Anypoint Studio with APIkit and a provided RAML file. The REST API exposes simple information about the contents of vending machines located in various locations. At the end of this tutorial, you have a fully-functional API which you can run in Anypoint Studio, and with which you can interact via the Web console.
+
+This tutorial helps you understand how to perform the tasks involved in created interface-first REST API with APIkit. These tasks are:
+
+* Create a new Studio project, importing the RAML file into Studio which defines the API's interface.
+* Generate the main flow, backend flows, and exception strategy mappings that form the foundation of your API project in Studio.
+* Configure the Mule flow.
+* Run the project in Studio.
+* Access the console, then submit test calls to the API.
+
+== Use Cases
+
+This tutorial is based on a scenario involiving a vending machine provider, SnackVendor, that needs to track the contents of all the vending machines deployed in the state of California. To better manage their resources, want to send drivers out only to replenish the stock of the vending machines that are running low on content. Within the context of this scenario, they have two use cases to manage with an API:
+
+* As a vending machine, to update the central database every time I sell an item
+* As a Stock Specialist, to find out if a machine is low on stock
+
+The API that SnackVendor builds must meet the needs of both users: it must enable vending machines to update a central database, and it must also allow Stock Specialists to determine if a machine is running low on supplies.
+
 == Assumptions
 
 This document assumes you are familiar with some of the design decisions and requirements for creating a REST API. It assumes you are familiar with link:/mule-fundamentals/v/3.7/first-30-minutes-with-mule[Anypoint Studio] and that you have a basic understanding of link:https://en.wikipedia.org/wiki/Representational_state_transfer[REST] as a Web service paradigm. Further, it assumes that you have read link:/anypoint-platform-for-apis/apikit-basic-anatomy[APIkit Basic Anatomy] which offers an overview of its functionality.
@@ -13,15 +32,14 @@ This tutorial uses the specialized *Gateway Runtime*, which you can download and
 
 The Mule Runtime beta version 3.8.0-M1 can also be used in this tutorial. As of 3.8, the both the Mule Runtime and the Gateway Runtime are merged into one.
 
-
 [WARNING]
 If the version of Studio you are using is older than *Anypoint Studio May 2014*, link:http://www.mulesoft.com/platform/mule-studio[download and install the latest GA version] to continue.
 
 Also note that, if you're using the Gateway Runtime, some Studio components are not available for use in your flows. This is because the functionality of this runtime is limited to API platform specific capabilities.
 
-== Download and Install the Gateway Runtime
+== Downloading and Installing the Gateway Runtime
 
-If you wish to install the Gateway Runtime, follow the steps below:
+To install the Gateway Runtime, follow the steps below:
 
 . In Studio, Select *Help* > *Install New Software*
 +
@@ -31,131 +49,12 @@ image:install+new+software.jpeg[install+new+software]
 +
 `http://studio.mulesoft.org/r4/api-gateway/`
 +
-image:install+new+software2.jpeg[install+new+software2]
+image:install+new+software2.png[install+new+software2]
 +
-. A table displays the different available elements in that update site, select the *API Gateway Runtime* to download it, then click *Next*.
+. A table displays the different available elements in that update site, select one of the *API Gateway Runtime* versions to download it. For example, select the latest version, and then click *Next*.
 . Follow through the rest of the wizard, accepting the terms and conditions. The gateway runtime downloads and installs, and Studio needs to restart when done.
 
-
-== Tutorial 
-
-[cols=",",]
-|===
-|*Tutorial Description* |This tutorial helps you to create a simple REST API using Anypoint Studio with APIkit and a provided RAML file. The REST API exposes simple information about the contents of vending machines located in various locations.
-|*End Result* |At the end of this tutorial, you have a fully-functional API which you can run in Anypoint Studio, and with which you can interact via the Web console.
-|*Learning Outcome* |This tutorial helps you understand the underlying, 5-step process for creating an interface-first REST API with APIkit.
-|===
-
-=== Use Cases
-
-A vending machine provider, SnackVendor, needs to track the contents of all the vending machines they have deployed in various locations throughout the state of California. To better manage their resources, they only want to send drivers out to replenish the stock of the vending machines that are running low on content. Within the context of this scenario, they have two use cases to manage with an API, centering on two different users:
-
-. As a vending machine, I want to be able to update the central database every time I sell an item.
-. As a Stock Specialist, I want to be able to find out if a machine is low on stock.
-
-The API that SnackVendor builds must meet the needs of both users: it must enable vending machines to update a central database, and it must also allow Stock Specialists to determine if a machine is running low on supplies.
-
-=== Macro Procedures
-
-. Create a new Studio project, importing the RAML file into Studio which defines the API's interface.
-. Generate the main flow, backend flows, and exception strategy mappings that form the foundation of your API project in Studio.
-. Configure a few details in the Mule flows.
-. Run the project in Studio.
-. Access the console, then submit test calls to the API.
-
-=== Micro Procedures
-
-Before diving into the procedures listed above, it's worth pausing to take a look at the link:http://raml.org[RAML] file. While required for this quick tutorial, it is not the purpose of this tutorial to describe how to use RESTful API Modeling Language (RAML) to build an API interface. Although the micro procedures included in this tutorial do not describe how to define an API using RAML, it is worth briefly examining the contents of the RAML file so as to understand the structure from which Anypoint Studio generates flows.
-
-There are two main parts that form the whole of an API definition in RAML:
-
-* The *Root* section of the API definition contains API metadata and definitions of reusable definitions
-* The *Body* section defines the resource-action pairings (that is, resources and methods) the API exposes to consumers
-
-The table below briefly describes the elements within the Root and Body of the example link:_attachments/api.raml[api.raml] file. This table does not describe _all_ elements of a RAML API definition, but does list several in use within the example. Access the full link:https://github.com/raml-org/raml-spec[RAML spec] for more details.
-
-[cols=",",options="header"]
-|===
-|Elements |Description |Example
-3+|*ROOT*
-|`title` +
- `baseUri` +
- `version` +
- `mediaType` +
- `documentation`
-|Offers information about the API (such as metadata), including the name and version of the API, its location (baseUri), media type, and documentation that describes the API in plain language.
-|`title: Remote Vending API
-version: v1.0
-baseUri: http://remote-vending/api
-mediaType: application/json`
-3+|*BODY*
-|resource
-|Defines the entity which houses the information to be retrieved, added, updated or deleted. Preceded by a forward slash "/".
-.2+|`/sales:
-  type: collection
-  post:
-    body:
-      example:
-        {
-            "machineId" : "ZX4102",
-            "trayId" : "A1",
-            "dateAndTime" : "2013-10-22 16:17:00",
-            "exchange" : {
-                "value" : "450",
-                "in" : "500",
-                "out" : "50"
-            }
-        }`
-|action
-|Nested within a resource, the action defines the method through which the information can be accessed or manipulated. In other words, it identifies the GET, POST, PUT or DELETE method that acts upon the resource.
-|`schemas`
-|Describes criteria against which requests to the API are validated. Schemas are resource-action pairing specific. Each `schemas` definition describes the expected input or output for a particular kind of call – GET, POST – to a particular resource.
-|`schemas:
-  - postsale:
-      {
-        "$schema": "http://json-schema.org/draft-04/schema#",
-        "type" : "object",
-        "properties" : {
-          "machineId" : "string",
-          "trayId" : "string",
-          "dateAndTime" : "string",
-          "exchange" : {
-            "type" : "object",
-            "properties" : {
-              "value" : "integer",
-              "in" : "integer",
-              "out" : "integer"
-            }`
-|`resourceTypes`
-|Defines a "template" definition of a *resource* that can be referenced by any specific resource definition in the API. Referencing a type within a resource definition obviates the need for repetitively defining every detail of every resource.
-|`resourceTypes:
-  - collection:
-      type: base
-      post:
-        body:
-          schema: post-\<<resourcePathName  !singularize>>  # e.g. post-sale
-        responses:
-          201:
-            description: Created!
-            headers:
-              Location:
-                description: uri of new resource
-                type: string
-                required: true`
-|`traits`
-|Defines a "template" definition of an *action* (i.e. method) that can be referenced by any specific action definition in the API. Referencing a trait within an action definition obviates the need for repetitively defining every detail of every action.
-|`traits:
-  - filterable:
-      queryParameters:
-        stockLevel:
-          displayName: Stock Level
-          description: Percentage of trays with stock items in them.
-          type: string
-          required: false
-          example: stockLevel=20`
-|===
-
-==== Creating a New Project
+== Creating a New Project
 
 . Download the example link:_attachments/api.raml[api.raml] file to your local drive.
 +
@@ -170,15 +69,15 @@ If you're using the Gateway Runtime, certain Studio components are not available
 +
 . Check *Add APIkit components*. In the *RAML file* field, click the `...` icon and then `Browse Files` to then search your local drive for the `api.raml` file. +
 +
-image:new+project.jpeg[new+project] +
+image:new+project.png[new+project] +
 +
 . Click *Finish*. Studio launches the new project for you and opens a new flow on a fresh canvas. Notice that Studio creates a new hierarchy of folders labeled, `src/main/api`, into which it inserts the RAML file you imported.
 +
 image:apikitt-pe.png[apikitt-pe]
 
-==== Generating Flows
+== About Generated Flows
 
-When you click *Finish* to open your new project, magic happens! Studio uses the imported RAML file to automatically generate the following items, each of which are described in more detail below.
+When you click *Finish* to open your new project, Studio uses the imported RAML file to  generate the following items, each of which are described in more detail below.
 
 * A *Main flow* with an HTTP Listener, an APIkit Router, and an exception strategy reference
 * Skeletal *Backend flows*, one for each resource-action pairing in the RAML file
@@ -283,10 +182,16 @@ Studio generates several global *exception strategy mappings* that the Main flow
 ....
 ------
 
-==== Configuring Details
+== Configuring the Mule Flow
 
-. In the main flow, double-click the *APIkit Router* to open its properties editor in the console. In the APIkit Router properties, notice that you have the option of using a drop-down menu to adjust the *Router configuration*. Because you used Studio to auto-generate a skeletal structure of the backend flows that supports the requests sent to your API, you need not use this feature to customize the mapping between resource, action and backend flow; Studio has defined the mapping for you automatically. Read more details on link:/anypoint-platform-for-apis/apikit-beyond-the-basics[custom mapping].
-. In the main flow, double-click the *HTTP connector* to open its properties editor in the console, Click on the *edit* icon next to the Connector Configuration to edit its global configuration element. Notice that Studio has populated the *Host* and *Port* fields with default values. Change the default value of these as well as the *Base Path* to match the baseUri in the RAML file: 'http://localhost:8081/remote-vending/api/*''
+The *APIkit Router* requires no configuration because you used Studio to generate a skeletal structure of the backend flows that supports the requests sent to your API. Studio defines the mapping for you using link:/anypoint-platform-for-apis/apikit-beyond-the-basics[custom mapping].
+
+. In the main flow, double-click the *HTTP connector* to open its properties editor in the console.
+. Click the green *+* icon next to the Connector Configuration to edit its global configuration element.
+. Change the default value of the *Host* and *Port* fields to localhost and 8081, respectively.
+. Change the value of the *Base Path* to match the baseUri in the RAML file:
++
+`remote-vending/api/*`
 +
 
 [tabs]
@@ -305,11 +210,8 @@ image:apikit-tutorial-httpsetup.png[apikitt-http]
 ------
 
 . *Save* your APIkit project.
-+
-[NOTE]
-In the "real world", you would adjust the contents of each Backend flow to perform the activities necessary to actually retrieve, update, add or delete information from the resource. For example, a Backend flow might call a database to acquire data about the contents of a vending machine. However, in this tutorial, in the interest of time, it is easier to simply use the generated, mock activities a Backend flow might perform in order to demonstrate functionality.
 
-==== Running the Project and Testing with the Console
+== Running and Testing the Project
 
 . Right-click the project name in the *Project Explorer*, then select *Run As* > *Mule Application*. Studio deploys the project. 
 . The *APIkit Console* launches below the canvas, displaying the resource-action pairs exposed by the API (see below). 
@@ -349,6 +251,98 @@ As outlined above, the API in this tutorial addresses two use cases for SnackVen
 *action:* `get`
 
  |*flow name:* `get:/machines/{machine}:apiConfig`
+|===
+
+== Examining the RAML
+
+Examining the contents of the RESTful API Modeling Language (RAML) link:http://raml.org[RAML] file to understand the structure from which Anypoint Studio generates flows.
+
+Two main parts form the whole of an API definition in RAML:
+
+* The *Root* section of the API definition contains API metadata and definitions of reusable definitions
+* The *Body* section defines the resource-action pairings (that is, resources and methods) the API exposes to consumers
+
+The table below briefly describes the elements within the Root and Body of the example link:_attachments/api.raml[api.raml] file. This table does not describe _all_ elements of a RAML API definition, but does list several in use within the example. Access the full link:https://github.com/raml-org/raml-spec[RAML spec] for more details.
+
+[width="100%",cols="20a,40a,40a",options="header"]
+|===
+|Elements |Description |Example
+3+|*ROOT*
+|`title` +
+ `baseUri` +
+ `version` +
+ `mediaType` +
+ `documentation`
+|Offers information about the API (such as metadata), including the name and version of the API, its location (baseUri), media type, and documentation that describes the API in plain language.
+|`title: Remote Vending API
+version: v1.0
+baseUri: http://remote-vending/api
+mediaType: application/json`
+3+|*BODY*
+|resource
+|Defines the entity which houses the information to be retrieved, added, updated or deleted. Preceded by a forward slash "/".
+.2+|`/sales:
+  type: collection
+  post:
+    body:
+      example:
+        {
+            "machineId" : "ZX4102",
+            "trayId" : "A1",
+            "dateAndTime" : "2013-10-22 16:17:00",
+            "exchange" : {
+                "value" : "450",
+                "in" : "500",
+                "out" : "50"
+            }
+        }`
+|action
+|Nested within a resource, the action defines the method through which the information can be accessed or manipulated. In other words, it identifies the GET, POST, PUT or DELETE method that acts upon the resource.
+|`schemas`
+|Describes criteria against which requests to the API are validated. Schemas are resource-action pairing specific. Each `schemas` definition describes the expected input or output for a particular kind of call – GET, POST – to a particular resource.
+|`schemas:
+  - postsale:
+      {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "type" : "object",
+        "properties" : {
+          "machineId" : "string",
+          "trayId" : "string",
+          "dateAndTime" : "string",
+          "exchange" : {
+            "type" : "object",
+            "properties" : {
+              "value" : "integer",
+              "in" : "integer",
+              "out" : "integer"
+            }`
+|`resourceTypes`
+|Defines a "template" definition of a *resource* that can be referenced by any specific resource definition in the API. Referencing a type within a resource definition obviates the need for repetitively defining every detail of every resource.
+|`resourceTypes:
+  - collection:
+      type: base
+      post:
+        body:
+          schema: post-\<<resourcePathName  !singularize>>  # e.g. post-sale
+        responses:
+          201:
+            description: Created!
+            headers:
+              Location:
+                description: uri of new resource
+                type: string
+                required: true`
+|`traits`
+|Defines a "template" definition of an *action* (i.e. method) that can be referenced by any specific action definition in the API. Referencing a trait within an action definition obviates the need for repetitively defining every detail of every action.
+|`traits:
+  - filterable:
+      queryParameters:
+        stockLevel:
+          displayName: Stock Level
+          description: Percentage of trays with stock items in them.
+          type: string
+          required: false
+          example: stockLevel=20`
 |===
 
 == See Also
