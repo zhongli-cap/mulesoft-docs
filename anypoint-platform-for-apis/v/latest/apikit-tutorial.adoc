@@ -1,13 +1,11 @@
 = APIkit Tutorial
 :keywords: apikit, raml, gateway, runtime, tutorial, api
 
-The tutorial outlined in this document demonstrates the functionality of APIkit, and how you can use it to build REST APIs. After setting yourself up to meet a few development environment prerequisites, you can step through the quick tutorial to build yourself a working API.
+This tutorial shows you how to build REST APIs using APIkit. In Anypoint Studio, you create the API based on RAML file. The API exposes information about the contents of vending machines in various locations. You run the API in Anypoint Studio and use the Web console.
 
-This tutorial helps you to create a simple REST API using Anypoint Studio with APIkit and a provided RAML file. The REST API exposes simple information about the contents of vending machines located in various locations. At the end of this tutorial, you have a fully-functional API which you can run in Anypoint Studio, and with which you can interact via the Web console.
+These main tasks you perform in this tutorial are:
 
-This tutorial helps you understand how to perform the tasks involved in created interface-first REST API with APIkit. These tasks are:
-
-* Create a new Studio project, importing the RAML file into Studio which defines the API's interface.
+* Create a new Studio project, importing the RAML file, which defines the API's interface, into Studio.
 * Generate the main flow, backend flows, and exception strategy mappings that form the foundation of your API project in Studio.
 * Configure the Mule flow.
 * Run the project in Studio.
@@ -15,69 +13,76 @@ This tutorial helps you understand how to perform the tasks involved in created 
 
 == Use Cases
 
-This tutorial is based on a scenario involiving a vending machine provider, SnackVendor, that needs to track the contents of all the vending machines deployed in the state of California. To better manage their resources, want to send drivers out only to replenish the stock of the vending machines that are running low on content. Within the context of this scenario, they have two use cases to manage with an API:
+This tutorial is based on a scenario involving a vending machine provider, SnackVendor, that needs to track the contents of all the vending machines deployed in the state of California. To better manage their resources, SnackVendor wants to send drivers out only to replenish the stock of the vending machines that are running low on content. The API addresses two use cases:
 
-* As a vending machine, to update the central database every time I sell an item
-* As a Stock Specialist, to find out if a machine is low on stock
-
-The API that SnackVendor builds must meet the needs of both users: it must enable vending machines to update a central database, and it must also allow Stock Specialists to determine if a machine is running low on supplies.
+* Vending machine updates: to update the central database on each sale
+* Inventory tracking: to find out if a machine is low on stock
 
 == Assumptions
 
-This document assumes you are familiar with some of the design decisions and requirements for creating a REST API. It assumes you are familiar with link:/mule-fundamentals/v/3.7/first-30-minutes-with-mule[Anypoint Studio] and that you have a basic understanding of link:https://en.wikipedia.org/wiki/Representational_state_transfer[REST] as a Web service paradigm. Further, it assumes that you have read link:/anypoint-platform-for-apis/apikit-basic-anatomy[APIkit Basic Anatomy] which offers an overview of its functionality.
+This document assumes you are familiar with the following things:
+
+* The basics of creating a REST API and some understanding of link:https://en.wikipedia.org/wiki/Representational_state_transfer[REST] as a Web service paradigm.
+* link:/mule-fundamentals/v/3.7/first-30-minutes-with-mule[Anypoint Studio]
+*  link:/anypoint-platform-for-apis/apikit-basic-anatomy[APIkit Basic Anatomy]
 
 == Prerequisites
 
-This tutorial uses the specialized *Gateway Runtime*, which you can download and install following instructions below. Nevertheless, you can also use any regular Mule runtime (as long as it's version *3.5.0* or newer) and perform the same steps identically.
-
-The Mule Runtime beta version 3.8.0-M1 can also be used in this tutorial. As of 3.8, the both the Mule Runtime and the Gateway Runtime are merged into one.
+This tutorial requires the *Gateway Runtime* that you install in the next section or a Mule runtime version *3.5.0* or later. The Mule Runtime beta version 3.8.0-M1 can also be used. As of 3.8, the both the Mule Runtime and the Gateway Runtime are merged into one.
 
 [WARNING]
 If the version of Studio you are using is older than *Anypoint Studio May 2014*, link:http://www.mulesoft.com/platform/mule-studio[download and install the latest GA version] to continue.
 
-Also note that, if you're using the Gateway Runtime, some Studio components are not available for use in your flows. This is because the functionality of this runtime is limited to API platform specific capabilities.
+If you're using the Gateway Runtime, some Studio components are not available for use in your flows. The functionality of this runtime is limited to API platform specific capabilities.
 
 == Downloading and Installing the Gateway Runtime
 
-To install the Gateway Runtime, follow the steps below:
+To install the Gateway Runtime, follow these steps:
 
-. In Studio, Select *Help* > *Install New Software*
+. In Studio, select *Help* > *Install New Software*
 +
 image:install+new+software.jpeg[install+new+software]
 +
-. In the field labeled *Work with*, copy the following update site address to the field and press Return. Note: The URL also works as `http://`... +
+. In the field labeled *Work with*, copy the following update site address to the field and press Return. The URL also works as `http://`... +
 +
 `http://studio.mulesoft.org/r4/api-gateway/`
 +
+The available elements for updating the site appear.
++
 image:install+new+software2.png[install+new+software2]
 +
-. A table displays the different available elements in that update site, select one of the *API Gateway Runtime* versions to download it. For example, select the latest version, and then click *Next*.
-. Follow through the rest of the wizard, accepting the terms and conditions. The gateway runtime downloads and installs, and Studio needs to restart when done.
+. Select one of the *API Gateway Runtime* versions to download the version. For example, select the latest version, and then click *Next*.
+. Follow through the rest of the wizard, and accept the terms and conditions.
++
+The gateway runtime downloads and installs, and Studio needs to restart when done.
 
 == Creating a New Project
+
+To create a new project:
 
 . Download the example link:_attachments/api.raml[api.raml] file to your local drive.
 +
 [NOTE]
-While necessary to create an APIkit API, it is not the purpose of this tutorial to describe how to use *RESTful API Modeling Language (RAML)* to build an API interface. Access link:http://raml.org[RAML.org] and the detailed link:https://github.com/raml-org/raml-spec[RAML spec] to learn how to use RAML to build an API interface.
+While necessary to create an APIkit API, it is not the purpose of this tutorial to describe how to use *RESTful API Modeling Language (RAML)* to build an API interface. For more information, see  link:http://raml.org[RAML.org] and link:https://github.com/raml-org/raml-spec[RAML spec].
 +
 . Under the *File* menu, select *New* > *Mule Project*.
-. In the *New Mule Project* wizard, enter a *Name* for your project, then alter the *Server Runtime*, if you wish. (APIkit projects function with both on premises and CloudHub runtimes, as well as the Gateway runtime)
+. In the *New Mule Project* wizard, enter a *Name* for your project, then alter the *Server Runtime*, if you want.
 +
-[NOTE]
-If you're using the Gateway Runtime, certain Studio components are not available. This is because the functionality of this runtime is limited to API platform specific capabilities.
+APIkit projects function with both on-premises and CloudHub runtimes, as well as the Gateway runtime.
 +
-. Check *Add APIkit components*. In the *RAML file* field, click the `...` icon and then `Browse Files` to then search your local drive for the `api.raml` file. +
+. Check *Add APIkit components*. In the *RAML file* field, click the `...` icon and then `Browse Files` to  search your local drive for the `api.raml` file. +
 +
 image:new+project.png[new+project] +
 +
-. Click *Finish*. Studio launches the new project for you and opens a new flow on a fresh canvas. Notice that Studio creates a new hierarchy of folders labeled, `src/main/api`, into which it inserts the RAML file you imported.
+. Click *Finish*.
++
+Studio launches the new project and opens a new flow on a fresh canvas. Studio creates a hierarchy of folders labeled, `src/main/api`, into which it inserts the RAML file you imported.
 +
 image:apikitt-pe.png[apikitt-pe]
 
 == About Generated Flows
 
-When you click *Finish* to open your new project, Studio uses the imported RAML file to  generate the following items, each of which are described in more detail below.
+When you click *Finish* to open your new project, Studio uses the imported RAML file to generate the following items.
 
 * A *Main flow* with an HTTP Listener, an APIkit Router, and an exception strategy reference
 * Skeletal *Backend flows*, one for each resource-action pairing in the RAML file
@@ -112,7 +117,7 @@ Note that APIkit also supports Jetty endpoints. If you wish to use Jetty, manual
 
 Studio generates *Backend flows* for each resource-action pairing in the RAML file, each pre-populated with one or more message processors.
 
-* Notice that the name of each flow corresponds to the resource-action pairing. For example, the flow named `get:/machines:apiConfig` maps to the resource `/machines` and its nested `get:` action.
+The name of each flow corresponds to the resource-action pairing. For example, the flow named `get:/machines:apiConfig` maps to the resource `/machines` and its nested `get:` action.
 * Further, notice that each flow contains message processors which perform "mock" activities based upon the content of the *example* *response* included with each resource-action pairing in the RAML file. 
 
 When initially generated, the message processors in each backend flow are configured to accept requests and mock the expected action upon a resource. For example, the message processors in the auto-generated `get:/machines:apiConfig` flow simply set a property on the message, then set the payload of a message to display a hard-coded list of vending machines (according the example in the RAML file) to the caller. 
@@ -232,7 +237,7 @@ image:apikit-response.png[apikit-response]
 
 === Use Cases Covered in the Tutorial
 
-As outlined above, the API in this tutorial addresses two use cases for SnackVendor. The table below lists those use cases, the corresponding API resource-action pairing that users can call, and the backend flows that perform the actions.
+As mentioned earlier, the API in this tutorial addresses two use cases for SnackVendor. The table below lists those use cases, the corresponding API resource-action pairing that users can call, and the backend flows that perform the actions.
 
 [width="100%",cols="25%,25%,25%,25%",options="header",]
 |===
@@ -255,14 +260,14 @@ As outlined above, the API in this tutorial addresses two use cases for SnackVen
 
 == Examining the RAML
 
-Examining the contents of the RESTful API Modeling Language (RAML) link:http://raml.org[RAML] file to understand the structure from which Anypoint Studio generates flows.
+Examine the contents of the RESTful API Modeling Language (RAML) link:http://raml.org[RAML] file to understand the structure from which Anypoint Studio generates flows.
 
-Two main parts form the whole of an API definition in RAML:
+Two main parts form the API definition in RAML:
 
 * The *Root* section of the API definition contains API metadata and definitions of reusable definitions
 * The *Body* section defines the resource-action pairings (that is, resources and methods) the API exposes to consumers
 
-The table below briefly describes the elements within the Root and Body of the example link:_attachments/api.raml[api.raml] file. This table does not describe _all_ elements of a RAML API definition, but does list several in use within the example. Access the full link:https://github.com/raml-org/raml-spec[RAML spec] for more details.
+The following table briefly describes the elements within the Root and Body of the example link:_attachments/api.raml[api.raml] file. This table does not describe _all_ elements of a RAML API definition, but does list several in use within the example. Access the full link:https://github.com/raml-org/raml-spec[RAML spec] for more details.
 
 [width="100%",cols="20a,40a,40a",options="header"]
 |===
