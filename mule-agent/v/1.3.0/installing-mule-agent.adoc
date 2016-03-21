@@ -33,32 +33,47 @@ Download the link:http://mule-agent.s3.amazonaws.com/1.3.0/mule-agent-1.3.0.zip[
 +
 [TIP]
 ====
-The agent zip file contains these 3 files - the `amc_setup` files install the Mule agent plugin.
+The agent zip file contains these 3 files.  
 
 * `amc_setup` - Mac and Linux installation file
 * `amc_setup.bat` - Windows installation file
 * `agent-setup-<version>.jar` - Called by the installation files
 ====
 +
-. Run the installation file that matches your OS via the command line.
+. Depending on your OS, run `amc_setup` or `amc_setup.bat` on the command line to install the Mule agent plugin.
 
-The installed Mule agent works correctly with Mule and API Gateway runtimes versions that include the agent in the distribution.
+The installed Mule agent works correctly with Mule and API Gateway runtimes versions that already include the Mule agent in the distribution.
+
+== Installation Options
+
+Run `./amc_setup --help` to see installation options.
+
+
 
 == Running the Updater
 
-If you already had a previous version of the agent registered, then all you have to do is run the update script, no need to register the newer version.
+After downloading the Mule agent zip file, determine if you can simply update an existing Mule agent installation. 
 
-After downloading the Mule agent zip file:
+Compatible Mule and API Gateway runtimes ship with an older version of the `amc_setup` script. If you already ran an older version of this script which installed an earlier version of the Mule agent (in which case there should be a `mule_agent.yml` configuration file in the `$MULE_HOME/conf folder`), then follow these steps to keep your existing Mule agent configuration and modifications:
 
-. Stop Mule or the API Gateway runtime. You can stop Mule with the `./bin stop` command or by killing the process. Restart Mule with the `./bin start` command. For information on starting and stopping API Gateway, see link:/anypoint-platform-for-apis/configuring-an-api-gateway[Configuring an API Gateway].
+. Stop Mule or the API Gateway runtime. You can stop Mule with the `./bin stop` command or by killing the process.
 . Unzip the `mule-agent-[VERSION].zip` to the `$MULE_HOME/bin` folder.
 . Run `./amc_setup -U` to update the agent version. If you are using Windows, run: `amc_setup.bat -U`.
+. Restart Mule with the `$MULE_HOME/bin/./mule restart` command.
+
+[NOTE]
+For information on starting and stopping API Gateway, see link:/anypoint-platform-for-apis/configuring-an-api-gateway[Configuring an API Gateway].
 
 === Agent Update Process
 
-. Back up the current version of the agent (everything under `$MULE_HOME/plugins/MULE_AGENT_PLUGIN_FOLDER`) within `$MULE_HOME/tools` folder.
-. Update agent libs under `$MULE_HOME/plugins/MULE_AGENT_PLUGIN_FOLDER/lib`
-. Keep modules under `$MULE_HOME/plugins/MULE_AGENT_PLUGIN_FOLDER/lib/modules` unchanged. All custom modules added to the agent that are not included in the agent distribution should be installed in this folder.
+The amc_setup script makes the following changes to your Mule runtime installation:
+
+. Backs up the current version of the agent:
+** Everything under `$MULE_HOME/plugins/MULE_AGENT_PLUGIN_FOLDER` is archived into  `$MULE_HOME/tools/mule-agent-backup.zip`. 
+** Any custom modules you have installed (usually located in `$MULE_HOME/plugins/MULE_AGENT_PLUGIN_FOLDER/lib/modules`) are archived into  `$MULE_HOME/tools/mule-agent-modules-backup.zip`. 
+. Updates agent libs under `$MULE_HOME/plugins/MULE_AGENT_PLUGIN_FOLDER/lib`
+. Keeps the current `$MULE_HOME/conf/mule-agent.yml` configuration file. 
+. Keeps modules under `$MULE_HOME/plugins/MULE_AGENT_PLUGIN_FOLDER/lib/modules` unchanged (all custom modules added to the agent that are not included in the agent distribution should be installed in this folder).
 . No reregistration is needed after the process is done, just restart the Mule or API Gateway instance.
 
 == Installing from a Software Distribution
@@ -83,14 +98,17 @@ Download the agent and follow the steps in the previous <<Installing the Agent 
 |Parameter|Description
 
 |`-H`
-|Configures the Mule agent to connect to the Runtime Manager. This option requires a token (provided by the Runtime Manager console) and a name for the Mule server as you want it to appear in the Runtime Manager. For example:
+|Configures the Mule agent to create a hybrid management connection with a Runtime Manager. This option requires a token (provided by the Runtime Manager Console) and a name for the Mule server as you want it to appear in the Runtime Manager. For example:
 
-[source,yaml]
+[source,Console]
 ----
 -H <token> myserver
 ----
 
 To obtain the token, you need to use the *Add Server* option in the Runtime Manager. Once you have the token, copy-paste it as the `-H` parameter for your agent installation command.
+
+[WARNING]
+It is not supported to register a Mule runtime with both an older link:/mule-management-console/[Mule Management Console (MMC)] and a link:/cloudhub/cloudhub-and-runtime-manager[Runtime Manager]. If the Mule runtime is currently managed in MMC, you should first unregister the Mule runtime with MMC before running the `amc_setup -H` script. 
 
 For details, see the *Add a Server* section in link:/cloudhub/managing-applications-and-servers-in-the-cloud-and-on-premises[Managing Applications and Servers in the Cloud and On Premises.]
 
@@ -192,7 +210,7 @@ If you wish to use the Agent to send data from the Runtime Manager to Splunk, an
 
 At startup, the Mule agent reads its configuration from the file `$MULE_HOME/conf/mule-agent.yml`. You must manually add, then edit this file with your installation's configuration parameters.
 
-[source,yaml]
+[source,yaml, linenums]
 ----
 muleInstanceUniqueId: validId
 organizationId: organizationId

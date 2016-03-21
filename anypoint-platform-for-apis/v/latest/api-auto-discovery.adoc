@@ -1,19 +1,14 @@
 = API Auto-Discovery
 :keywords: apikit, endpoint, auto-discovery, gateway, api, cloud
 
-hen creating or modifying an API project in Anypoint Studio, you can set an application to be automatically discovered and registered to one or more APIs in your Anypoint Platform for APIs organization.
+Auto-discovery is the capability of Anypoint Studio to create and register an API in Anypoint Platform for APIs. Using auto-discovery ensures that the Runtime Manager manages the API in the following ways:
 
-The automatic discovery and registration of your API on the Anypoint Platform occurs when you deploy the applications to an API Gateway that is paired with your Anypoint Platform organization. While you can also register your APIs using the Anypoint Platform web application or its API, the API auto-discovery feature gives you an additional option for registering API endpoints quickly and efficiently. It's particularly useful when you're regularly deploying new versions of the same API, saving you from the effort of having to type the same information into the Web application every time and minimizing the risk of human error.
+* Tracks and shows the API status
+* Applies policies
+* Sends analytics
 
-[NOTE]
-Note that if you are applying auto-discovery code to an API that is not yet registered in the Anypoint Platform, you must be an Organization Administrator in order to see the registered API. If you are not one yourself, ask the Organization Administrator to give you API Version Owner permissions or add you to a custom role that includes those permissions for the API version that you created using auto-discovery.
+If an API is not registered on Anypoint Platform, you can create the API on Anypoint Platform by following the auto-discovery procedure in this document. Auto-discovery eliminates the need to link:/anypoint-platform-for-apis/creating-your-api-in-the-anypoint-platform[create the API manually] on Anypoint Platform.
 
-== Configuration
-
-To enable auto-discovery of an application's endpoints you must:
-
-. Create a global element to declare the details of the API version to be registered in the Anypoint Platform for APIs.
-. Insert a reference to the global element in your inbound endpoint.
 
 [tabs]
 ------
@@ -22,14 +17,80 @@ To enable auto-discovery of an application's endpoints you must:
 
 === API Gateway Version 2.0 and Newer
 
-The `api-platform-gw` Global Element contains the information you need to register your API in the Anypoint Platform, and it references the flow to register. New in version 2.0 and newer is the `flowRef` attribute of the `api-platform-gw:api` component. This replaces the `api-ref` element that was removed in version 2.0. See the xref:flowrefex[flowRef example] for more information.
+To set up an API for auto-discovery, you perform these tasks:
+
+* Install link:/anypoint-platform-for-apis/install-studio-gw[API Gateway Runtime from Studio].
+* Pair API Gateway with an Anypoint Platform organization by adding organization credentials.
+* Create a global element in Studio to configure API auto-discovery.
+
+Running the application in your API project in Studio triggers auto-discovery, and the API appears on the API Administration page in Anypoint Platform. 
+This procedure uses the API created in the link:/anypoint-platform-for-apis/apikit-tutorial[APIkit Tutorial] for example purposes. 
+
+To configure and trigger auto-discovery:
+
+. link:/anypoint-platform-for-apis/install-studio-gw[Install a current API Gateway Runtime]. For example, install API Gateway Runtime 2.2.0.
+. In a browser, log in to the Anypoint Platform as an administrator, click the gear icon at the top-right, and then select the *Organization* tab. 
++
+The client ID and client secret appear.
++
+. From the Anypoint Studio main menu, select *Anypoint Studio > Preferences > Anypoint Studio > Anypoint Platform for APIs*.
++
+The Preferences dialog for Anypoint Platform for APIs appears.
+. Copy the client ID and client secret from step 2 to *Client Credentials*.
++ 
+image:autodis-pairing.png[autodis-pairing]
++
+This action pairs API Gateway with your Anypoint Platform organization.
++
+. Click Validate to verify that the pairing succeeds.
++
+. Click OK.
+. In Project Explorer, select the app. For example, select `api.xml` in `src/main/app` that you created in the APIkit tutorial. 
+. On the Global Elements tab on the canvas, click *Create*.
++
+image:autodis-create-global.png[autodis-create-global]
++
+The *Choose Global Type* dialog appears.
++
+. Expand *Component configurations*, and select *API Autodiscovery*.
++
+image:autodis-choose-global.png[autodis-choose-global]
++
+The Global Element Properties - API Autodiscovery dialog appears.
++
+. Create a global element to declare the details of the API version you want Anypoint Platform to discover:
++
+* In *API Name*, type an arbitrary name, for example `vending`.
++
+This name will appear on the API Administration page in Anypoint Platform after your API is discovered.
++
+* In *API Id*, type an arbitrary Id, for example `vending`.
+* In *API Version*, type an arbitrary version identifier, for example `1.0development`.
+* In *Flow Name*, select the name of the main flow in your API from the drop-down. For example, select `api-main`, the APIkit tutorial main flow.
+* Check the option to automatically create an API if it doesn't exist.
+* In *APIkit Router Configuration*, click api-config from the drop-down in the case of the APIkit tutorial.
+* In *Description*, write some documentation about the API.
++
+image:auto-disc-conf.png[auto-disc-conf]
++
+* Click OK.
++
+. In Project Explorer, right-click the app, `api.xml` in this example, and select *Run As > Mule Application*.
++
+In a few moments, the API appears on the API Administration page of Anypoint Platform.
++
+image:autodisc-discovered.png[autodisc-discovered] 
++
+You need Organization Administrator or API Version Owner permissions to see a newly registered API in Anypoint Platform. 
+
+== About the Global Element
+
+The `api-platform-gw` Global Element contains the information you need to register your API in the Anypoint Platform, and it references the flow to register. New in version 2.0 is the `flowRef` attribute of the `api-platform-gw:api` component. This replaces the `api-ref` element that was removed in version 2.0. In this auto-discovery example that uses the APIkit tutorial, the Configuration XML contains the following code:
 
 [source, xml, linenums]
 ----
-<api-platform-gw:api id="myAPI" apiName="myAPI" version="1.0.0" flowRef="flow_api" create="true">
-   <api-platform-gw:description>This is a test API</api-platform-gw:description>
-   <api-platform-gw:tag>tag1</api-platform-gw:tag>
-   <api-platform-gw:tag>tag2</api-platform-gw:tag>
+<api-platform-gw:api apiName="vending" id="vending" version="1.0discovery" flowRef="api-main" create="true" apikitRef="api-config" doc:name="API Autodiscovery">
+   <api-platform-gw:description>Discover this API on Anypoint Platform and in my Organization.</api-platform-gw:description>
 </api-platform-gw:api>
 ----
 
@@ -38,7 +99,7 @@ The `api-platform-gw` Global Element contains the information you need to regis
 [width="100%",cols="30a,70a",options="header"]
 |===
 |Global Element |Description
-|*api-platform-gw:api* |A global element which declares essential information about the service version necessary for the automatic registration of the service version and/or its endpoints in the Anypoint Platform for APIs.
+|*api-platform-gw:api* |A global element which declares essential information about the API version necessary for the automatic registration of the API version and/or its endpoints in the Anypoint Platform for APIs.
 |===
 
 ==== api-platform-gw Attributes
@@ -46,10 +107,10 @@ The `api-platform-gw` Global Element contains the information you need to regis
 [width="100%",cols="33a,33a,33a",options="header"]
 |===
 |Attribute |Required |Description
-|*id* |Yes |The bean ID of the element. This value is not propogated to the platform.
+|*id* | No (2.0.2 and later) |The bean ID of the element. This value is not propogated to the platform.
 |*apiName* |Yes |The friendly API name.
 |*version* |Yes |The version number.
-|*flowRef* |Yes |A reference to the main flow of your project. It triggers the agent to "discover" this flow and use it when performing the auto-registration. See the xref:flowrefex[flowRef example].
+|*flowRef* |Yes |A reference to the main flow of your project. It triggers the agent to "discover" this flow and use it when performing the auto-registration. 
 |*apikitRef* |No |A reference to the APIkit configuration. Used to upload the RAML file to Anypoint Platform after API registration completes.
 |*create* |No | enables/disables the automatic creation of APIs in the auto-discovery process. If false or not present, the API is still tracked by the Anypoint Platform if it already exists. If it doesn't already exist, the application won't communicate with the platform. This attribute exists only as of version 2.1.0.
 |===
@@ -63,53 +124,61 @@ The `api-platform-gw` Global Element contains the information you need to regis
 |*api-platform-gw:tag* |No |Tags are searchable metadata in the Anypoint Platform for APIs web application and API.
 |===
 
-[[flowrefex]]
-==== flowRef Example
-
-Instead of referencing auto-discovery from the flow, now the auto-discovery component references the flow.
-
-[source, xml, linenums]
-----
-<apikit:proxy-config name="proxy-config" raml="![p['raml.location']]" disableValidations="true"/>
-
-    <api-platform-gw:api apiName="![p['api.name']]" version="![p['api.version']]" apikitRef="proxy-config" flowRef="proxy">
-        <api-platform-gw:description>![p['api.description']]</api-platform-gw:description>
-    </api-platform-gw:api>
-----
-
-
 ==== Auto-Discovery Behavior
-
-When you deploy applications to an API Gateway paired with the Anypoint Platform for APIs, the agent performs the following steps to auto-discover and register your service version and/or endpoints in the Anypoint Platform for APIs.
-
-The agent only initiates auto-discovery if prompted to do so by the existence of an `api-platform-gw:api` element in the application.
 
 The following diagram illustrates the process for a project containing an `api-platform-gw:api` element:
 
 image:api-auto-discovery-v2.png[api-auto-discovery-v2]
 
-After your API is registered in the Anypoint Platform for APIs via auto-discovery, your API version and its endpoint 
-functions the same as any other API version or endpoint registered via other means. You can edit, update, or delete 
-applications via the Anypoint Platform for APIs web application or its API. If the API Gateway instance running 
-the API goes offline or you stop the underlying application, the API and endpoints remains in the Anypoint Platform 
+After an API is registered in the Anypoint Platform for APIs using auto-discovery, the API version and its endpoint 
+function the same as any other API version or endpoint. Any update on the Anypoint Platform to platform-specific information, such as the version name, or to the RAML will not change the API deployed on the API Gateway. Changes do not take effect until you redeploy the API. If the API Gateway instance running 
+the API goes offline or you stop the underlying application, the API and endpoints remain in the Anypoint Platform 
 for APIs, but the endpoints are untracked by the agent.
 
 ....
 [tab,title="Older Versions"]
 ....
 
-=== API Gateway Version 1.3.2 or Older
+=== API Gateway Version 1.3.2 or Earlier
 
 ==== Creating the Global Element
 
-A Global Element contains the needed information for registering your API to the Anypoint Platform, Global Elements must then be referenced by one or more endpoints.
+A Global Element contains the necessary information for registering your API to the Anypoint Platform. Global Elements must then be referenced by one or more endpoints.
 
-As of version 1.3 of the API Gateway, if you need your endpoint to be tracked, then you must explicitly indicate the required information directly in the GE's attributes.
+As of version 1.3 of the API Gateway, if you need your endpoint to be tracked, explicitly indicate the required information directly in the global element attributes.
 
-[NOTE]
-If you're using an API Gateway version older than 1.3 and you're using the APIkit Studio extension, you can also reference the API's RAML definition file and let the auto-discovery feature retrieve details about your API from there. This can also be done in versions newer than 1.3, but when doing so, does not track that endpoint, so it's not recommended if you want to manage the endpoint.
+If you're using the APIkit Studio extension, you can reference the API's RAML definition file to trigger auto-discovery. You cannot subsequently manage the endpoint using this method, however.
 
-=== Gateway Versions Older Than 1.3
+=== API Gateway Version 1.3.2 or Earlier: Full Example
+
+[source, xml, linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xsi:schemaLocation="
+       http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+       http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+       http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd">
+ 
+    <api-platform-gw:api id="myAPI" apiName="myAPI" version="1.0.0">
+        <api-platform-gw:description>This is a test API</api-platform-gw:description>
+        <api-platform-gw:tag>tag1</api-platform-gw:tag>
+        <api-platform-gw:tag>tag2</api-platform-gw:tag>
+    </api-platform-gw:api>
+ 
+    <flow name="flow_api">
+        <http:inbound-endpoint host="localhost" port="${port}" path="api">
+            <api-platform-gw:register-as api-ref="myAPI" />
+        </http:inbound-endpoint>
+        <set-payload value="Test" />
+    </flow>
+</mule>
+----
+
+=== Gateway Versions Pre-1.3
 
 If your application is an *APIkit project*, you can use the `apikit:config` global element to implement auto-discovery.
 
@@ -135,7 +204,7 @@ If your application is an *APIkit project*, you can use the `apikit:config` glob
 |*raml* |Yes |Location of the API's RAML definition file.
 |===
 
-=== Example for Gateway Versions Older than 1.3
+=== Example for Gateway Versions Pre-1.3
 
 [source, xml, linenums]
 ----
@@ -248,102 +317,26 @@ Once it is registered in the Anypoint Platform for APIs via auto-discovery, your
 ....
 ------
 
-== Full Example
-
-[tabs]
-------
-[tab,title="Current Version"]
-....
-
-=== API Gateway Version 2.0 and Newer
-
-[source, xml, linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns="http://www.mulesoft.org/schema/mule/core"
-     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-     xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
-     xmlns:http="http://www.mulesoft.org/schema/mule/http"
-     xsi:schemaLocation="
-      http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-      http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-      http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd">
- 
-   <api-platform-gw:api id="myAPI" apiName="myAPI" version="1.0.0" flowRef="flow_api" create="true">
-       <api-platform-gw:description>This is a test API</api-platform-gw:description>
-       <api-platform-gw:tag>tag1</api-platform-gw:tag>
-       <api-platform-gw:tag>tag2</api-platform-gw:tag>
-   </api-platform-gw:api>
- 
-    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
- 
-   <flow name="flow_api">
-       <http:listener config-ref="HTTP_Listener_Configuration" path="api"/>
-       <set-payload value="Test" />
-   </flow>
-</mule>
-----
-
-....
-[tab,title="Older Versions"]
-....
-
-=== API Gateway Version 1.3.2 or Older
-
-[source, xml, linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
-      xmlns:http="http://www.mulesoft.org/schema/mule/http"
-      xsi:schemaLocation="
-       http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-       http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-       http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd">
- 
-    <api-platform-gw:api id="myAPI" apiName="myAPI" version="1.0.0">
-        <api-platform-gw:description>This is a test API</api-platform-gw:description>
-        <api-platform-gw:tag>tag1</api-platform-gw:tag>
-        <api-platform-gw:tag>tag2</api-platform-gw:tag>
-    </api-platform-gw:api>
- 
-    <flow name="flow_api">
-        <http:inbound-endpoint host="localhost" port="${port}" path="api">
-            <api-platform-gw:register-as api-ref="myAPI" />
-        </http:inbound-endpoint>
-        <set-payload value="Test" />
-    </flow>
-</mule>
-----
-
-....
-------
-
-
-
 == Cloud API Gateway Behavior
 
-If you deploy an API or proxy with auto-registration to the Anypoint Platform for APIs via a cloud API gateway, CloudHub automatically replaces `0.0.0.0`:${http.port} in your endpoint with <YourUniqueDomain>.cloudhub.io and sends this endpoint URL to the Anypoint Platform for APIs to be displayed and tracked by the agent.
+If you use the *Deploy to Anypoint Platform > Cloud* context menu to deploy an API or proxy with auto-discovery to the Anypoint Platform, CloudHub automatically replaces `0.0.0.0`:${http.port} in your endpoint with <YourUniqueDomain>.cloudhub.io and sends this endpoint URL to the Anypoint Platform for APIs to be displayed and tracked by the agent.
 
-If your endpoint runs over HTTP, use the variable `http.port` in its address, if your endpoint runs over HTTPS, use the variable `https.port` instead.
+If your endpoint runs over HTTP, use the variable `http.port` in its address. If your endpoint runs over HTTPS, use the variable `https.port` instead.
 
 == Load Balancer Behavior
 
 [WARNING]
-This consideration is only relevant if you're using an API Gateway version older than 1.3. If you're using API Gateway version 1.3 or newer, you don't need to worry about configuring your load balancer's endpoint at all.
-
-For Gateway versions older than 1.3, if you deploy an API or proxy to the Anypoint Platform for APIs via an on-premises API Gateway that employs an HTTP load balancer, you need to configure your load balancer endpoint in your API Gateway's wrapper.conf file and register it through autodiscovery. See link:/anypoint-platform-for-apis/setting-your-api-url[Setting Your API URL] for more details about configuring load balancers for your endpoints.
+If you're using an API Gateway version earlier than 1.3 and you deploy an API or proxy to the Anypoint Platform via an on-premises API Gateway that employs an HTTP load balancer, configure your load balancer endpoint in your API Gateway's wrapper.conf file and register it through auto-discovery. See link:/anypoint-platform-for-apis/setting-your-api-url[Setting Your API URL] for more details about configuring load balancers for your endpoints.
 
 == Best Practices
 
-* Keep in mind that API auto-discovery works for the registration of _new_ APIs, API versions, and/or endpoints. If the API already exists, the agent does not compare the name, description, tags, or any other information contained in the global element for updates.
-* Once you have registered new APIs or versions using this method, visit the Anypoint Platform for APIs and add the necessary API Version Owner permissions so that users who need to access the API Version Details page for this API version can get there. Note that only Organization Administrators or other API Version Owners can give users API Version Owner permissions to an API version.
-* Set up your endpoints so that their host is `0.0.0.0` instead of to localhost.
+* API auto-discovery registers _new_ APIs, API versions, and/or endpoints. If the API already exists, the agent does not compare the name, description, tags, or any other information contained in the global element for updates.
+* After you have registered new APIs or versions using this method, visit the Anypoint Platform and add the necessary API Version Owner permissions so that users who need to access the API Version Details page for this API version can get there. Only Organization Administrators or other API Version Owners can give users API Version Owner permissions to an API version.
+* Set the endpoints host to `0.0.0.0` instead of localhost.
 
 == See Also
 
-* Once you've added your auto-discovery code to your APIkit project or API proxy application, link:/anypoint-platform-for-apis/deploying-your-api-or-proxy[deploy it to an API Gateway].
+* After you've added your auto-discovery code to your APIkit project or API proxy application, link:/anypoint-platform-for-apis/deploying-your-api-or-proxy[deploy it to an API Gateway].
 * link:https://www.mulesoft.com/webinars[MuleSoft Webinars]
 * link:http://forums.mulesoft.com[MuleSoft's Forums]
 * link:https://www.mulesoft.com/support-and-services/mule-esb-support-license-subscription[MuleSoft Support]

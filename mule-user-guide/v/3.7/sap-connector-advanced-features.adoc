@@ -3,9 +3,9 @@
 :imagesdir: ./_images
 :toc: macro
 :toc-title: Contents
-:toclevels: 3
+:toclevels: 2
 
-The SAP Connector provides a wide range of functionalities, beyond the basic ones already described in the link:/mule-user-guide/v/3.7/sap-connector[SAP Documentation]. The present document will help you harness the full potential of your SAP Mule application.
+The SAP Connector provides a wide range of functionalities, beyond the basic ones already described in the link:/mule-user-guide/v/3.7/sap-connector[SAP Connector Documentation]. The present document will help you harness the full potential of your SAP Mule application.
 
 toc::[]
 
@@ -22,6 +22,7 @@ toc::[]
 . link:#tid-handler[TID Handler Configuration]
 	.. link:#default-in-memory-tid[Default In-memory TID Store]
 	.. link:#jdbc-object-store-tid[JDBC-based Mule Object Store TID Store]
+	.. link:#tid-with-mel[Retrieve TID with a MEL expression]
 . link:#transactions[Transactions]
 	.. link:#srfc-stateful[sRFC Stateful]
 	.. link:#srfc-stateful-bapi[sRFC Stateful BAPI Transaction]
@@ -52,7 +53,7 @@ IMPORTANT: The key names for these properties must *match* those expected by the
     </spring:bean>
 ----
 
-As stated before, these properties can be used inside the Connector or Endpoint elements by *referencing a Spring Bean* that contains a map with the extended attributes. This can be done by configuring the `*jcoClientExtendedProperties-ref*` (inbound and outbound) or `*jcoServerExtendedProperties-ref*` (inbound only):
+These properties can be used inside the connector or endpoint elements by *referencing a Spring Bean* that contains a map with the extended attributes. This can be done by configuring the `*jcoClientExtendedProperties-ref*` (inbound and outbound) or `*jcoServerExtendedProperties-ref*` (inbound only):
 
 [source, xml, linenums]
 ----
@@ -504,10 +505,10 @@ The inbound endpoint represents a bigger challenge when configuring your applica
 
 ==== SAP-Side Functionality
 
-The SAP Connector is based on JCo Server functionality. JCo Server connects a gateway on the SAP side that is responsible for:
+The SAP Connector is based on JCo Server functionality. JCo Server connects a gateway on the SAP side that is responsible for the following:
 
 . Load balancing requests to the SAP inbound endpoint.
-. In case of transactional RFCs (rfcType is tRFC or qRFC), starting the transaction and making sure it doesn't send the same request to multiple inbound endpoints (and thus avoiding duplicate requests in more than one cluster node.)
+. In the case of transactional RFCs (rfcType is tRFC or qRFC), starting the transaction and making sure the same request is not sent to multiple inbound endpoints, thus avoiding duplicate requests from more than one cluster node.
 
 ==== Configuring the SAP Inbound Endpoint for HA
 
@@ -515,7 +516,7 @@ When configuring multiple SAP inbound endpoints in an HA configuration, remember
 
 Also, recall that in HA configurations the *payload should be serializable*. To ensure this is done, configure the inbound endpoint to output XML. In Mule 3.6.0, this is easily achieved with the `*outputXml*` attribute set to `*true*`. In previous versions, you needed to configure a global transformer.
 
-==== Mule 3.6.0 and higher
+==== Mule 3.6.0 and Newer
 
 [source, xml, linenums]
 ----
@@ -566,7 +567,7 @@ Also, recall that in HA configurations the *payload should be serializable*. To 
     jcoPeakLimit="${sap.jcoPeakLimit}"/>
  
 <!-- SAP Transformer -->
-<sap:object-to-xml name="sap-object-to-xml" xmlVersion="2" />
+<sap:object-to-xml name="sap-object-to-xml" />
  
 <!-- Flow -->
 <flow>
@@ -770,6 +771,52 @@ CREATE TABLE saptids
     context TEXT
 );
 ----
+
+[[tid-with-mel]]
+=== Retrieve TID Using a MEL Expression
+
+When sending or retrieving IDocs, depending on the use case you may be required to obtain the IDoc number. Since the interchange of IDocs is inherently asynchronous, the only information that SAP and Mule share is the *Transaction IDs*.
+
+The Transaction ID has been added as a new property to the Mule Message to satisfy the requirement that a Transaction ID be provided to get an IDoc number. This enhancement allows the customer to call RFC-enabled Function Modules on SAP in order to retrieve the IDoc number. These RFC-enabled Function Modules are:
+
+* `INBOUND_IDOCS_FOR_TID`
+
+* `OUTBOUND_IDOCS_FOR_TID`
+
+Use the following MEL expression to extract the value of the TID:
+
+[source]
+----
+#[message.outboundProperties.sapTid]
+----
+
+Below are two simple examples for inbound and outbound calls:
+
+[source, xml, linenums]
+----
+<!-- INBOUND | Receive IDoc -->
+<sap:inbound-endpoint type="idoc" rfcType="trfc" outputXml="true"
+    jcoGwHost="${sap.jcoGwHost}" jcoProgramId="${sap.jcoProgramId}"
+    jcoGwService="${sap.jcoGwService}" jcoConnectionCount="${sap.jcoConnectionCount}" ...>
+    		<!-- transaction config -->
+            <sap:mule-object-store-tid-store>
+               <jdbc:object-store name="jdbcObjectStore" ... />
+            </sap:mule-object-store-tid-store>
+        </sap:inbound-endpoint>
+<logger message="#[message.outboundProperties.sapTid]" level="INFO" doc:name="Logger"/>
+
+
+<!-- OUTBOUND | Send IDoc -->
+<sap:outbound-endpoint type="idoc" rfcType="trfc" outputXml="true" ...>
+	<!-- transaction config -->
+	<sap:transaction action="BEGIN_OR_JOIN"/>
+</sap:outbound-endpoint>
+<logger message="#[message.outboundProperties.sapTid]" level="INFO" doc:name="Logger"/>
+----
+
+
+[NOTE]
+The TID feature is only available since SAP Connector 2.2.8.
 
 [[transactions]]
 == Transactions
