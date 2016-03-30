@@ -1,0 +1,93 @@
+= DataWeave Flat File Schemas
+:keywords: studio, anypoint, esb, transform, transformer, format, aggregate, rename, split, filter convert, xml, json, csv, pojo, java object, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping, flat file, schema
+
+#*_Enterprise_*#
+
+When defining the input of a link:/mule-user-guide/v/3.7/dataweave[Transform Message element] as of type "flat file", you must provide a schema that describes the required structure.
+
+[NOTE]
+Note that *CSV* structures must be defined not through the 'Flat File' type but through the 'CSV' type, which offers a simple editor to create a schema through the UI.
+
+Future versions of DataWeave will include an internal editor to allow you to construct a Flat File schema through a simple UI. For this beta release of Anypoint Studio, though, you must provide an explicit schema to allow DataWeave to parse flat file formats. This format will also be more flexible and support simpler structures in future releases.
+
+Schemas must be written in Flat File Schema Language, with a .ffs extension. This language is very similar to EDI Schema Language (ESL), which is also accepted by the Studio component. 
+
+[TIP]
+For more in detail look at EDI Schemas, see link:/anypoint-b2b/edi-schema-language-reference[EDI Schema Language Reference]
+
+Below is a sample FFS file:
+
+[source, txt, linenums]
+----
+form: FIXEDWIDTH
+structures:
+- id: 'CompanyContacts'
+  name: Company contact information
+  tagStart: 0
+  tagLength: 1
+  data:
+  - groupId: 'ITEM'
+    usage: O
+    count: '>1'
+    items:
+    - { idRef: 'COMPANY', position: '1', usage: M }
+    - { idRef: 'CONTACT', position: '2', usage: M, count: '>1' }
+segments:
+- id: 'COMPANY'
+  tag: '0'
+  name: Company Information Record
+  values:
+  - { idRef: 'CompanyName', position: 1, usage: M }
+  - { idRef: 'IndustryCode', position: 2, usage: M }
+  - { idRef: 'Address', position: 3, usage: O }
+  - { idRef: 'City', position: 4, usage: O }
+  - { idRef: 'State', position: 5, usage: O }
+  - { idRef: 'Zip', position: 6, usage: O }
+  - { idRef: 'Phone', position: 7, usage: O }
+- id: 'CONTACT'
+  tag: '1'
+  name: Contact Person Record
+  values:
+  - { idRef: 'FirstName', position: 1, usage: M }
+  - { idRef: 'LastName', position: 2, usage: M }
+  - { idRef: 'Title', position: 3, usage: M }
+  - { idRef: 'Email', position: 4, usage: O }
+  - { idRef: 'Address', position: 5, usage: O }
+  - { idRef: 'City', position: 6, usage: O }
+  - { idRef: 'State', position: 7, usage: O }
+  - { idRef: 'Zip', position: 8, usage: O }
+  - { idRef: 'Phone', position: 9, usage: O }
+  - { idRef: 'Extension', position: 10, usage: O }
+  - { idRef: 'EffectiveDate', position: 11, usage: M }
+elements:
+  - { id: 'CompanyName', name: 'Company Name', type: AN, minLength: 0, maxLength: 20 }
+  - { id: 'IndustryCode', name: 'Industry Classification Code', type: N0, minLength: 0, maxLength: 6 }
+  - { id: 'Address', name: 'Street Address', type: AN, minLength: 0, maxLength: 20 }
+  - { id: 'City', name: 'City', type: AN, minLength: 0, maxLength: 12 }
+  - { id: 'State', name: 'State', type: AN, minLength: 0, maxLength: 2 }
+  - { id: 'Zip', name: 'Zip Code', type: N0, minLength: 0, maxLength: 5 }
+  - { id: 'Phone', name: 'Phone Number', type: N0, minLength: 0, maxLength: 10 }
+  - { id: 'FirstName', name: 'First Name', type: AN, minLength: 0, maxLength: 10 }
+  - { id: 'LastName', name: 'Last Name', type: AN, minLength: 0, maxLength: 15 }
+  - { id: 'Title', name: 'Title', type: AN, minLength: 0, maxLength: 15 }
+  - { id: 'Email', name: 'Email Address', type: AN, minLength: 0, maxLength: 20 }
+  - { id: 'Extension', name: 'Phone Extension', type: N0, minLength: 0, maxLength: 5 }
+  - { id: 'EffectiveDate', name: 'Effective Date', type: DT, minLength: 0, maxLength: 8 }
+----
+
+Note that the file is comprised of three sections:
+
+* *Structures*: lets you define data structures. In this case, one single structure is provided that includes a single COMPANY item followed by one or more CONTACT items.
+* *Segments*: References the elements that will exist within each of the items of the structure. In this case, it the elements on the COMPANY and CONTACT items, what position they occupy, and wether their usage is mandatory (M) or optional (O)
+* *Elements*: Defines each of the elements referenced within the segments section. It also specifies wether the data is of type alphanumeric (AN) or numeric (N0), and the minimum and maximum lengths for each.
+
+Below is an example file that fits the schema defined above. Note that it features two differnt types of rows: Companies (tagged '0') and Contacts (tagged '1').
+
+[source, txt, linenums]
+----
+0Acme Corp.          123456127 Mega Way        Los Angles  CA900262135551212
+1George    Sam            President      president@acme.corp                                   00000000000000020151130
+1Sally     Smith          V.P. Sales     sallys@acme.corp                                      00000000000000020151210
+0Ardvark Enterprises 1341335 Pikes Place       Seattle     WA980262065552341
+1Jane      Jones          CEO            janiejones@ardvark.co                                 00000000000000020140812
+----

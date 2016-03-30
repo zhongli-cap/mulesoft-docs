@@ -2,6 +2,7 @@
 
 The `mule-maven-plugin` allows you to deploy Mule applications to different kinds of servers: Standalone (both Community and Enterprise), clustered, Anypoint Runtime Manager and CloudHub. It is part of the framework for developing Mule applications with Maven, an overview of which you can find in link:/mule-user-guide/v/3.7/using-maven-with-mule[Using Maven with Mule]. The most important capabilities provided by the plugin are running integration tests, and deploying applications to different environments.
 
+
 The plugin allows you to:
 
 * Deploy a Mule application to a local standalone server
@@ -11,6 +12,10 @@ The plugin allows you to:
 * Deploy Mule applications to a local cluster
 
 The plugin supports both Community and Enterprise editions.
+
+[TIP]
+As an alternative to using the Maven Plugin for deploying applications to the Runtime Manager, you may also use the link:/cloudhub/runtime-manager-api[Runtime Manager API].
+
 
 == Prerequisites
 
@@ -93,7 +98,7 @@ This example will also trigger the default deploy goal of the maven-deploy-plugi
 
 == Deploying to Anypoint Runtime Manager
 
-You can deploy your application to a running ARM server, serverGroup or cluster. You need to provide the ARM credentials and configure the target name.
+You can deploy your application to a running Runtime Manager server, serverGroup or cluster. You need to provide the Runtime Manager credentials and configure the target name.
 
 TIP: For a list and description of the parameters used in the examples, see <<Full List of Parameters, below>>.
 
@@ -123,7 +128,7 @@ TIP: For a list and description of the parameters used in the examples, see <<Fu
 </plugin>
 ----
 
-For a list and description of the parameters employed, see <<ARM>>.
+For a list and description of the parameters employed, see <<Runtime Manager>>.
 
 == Deploying to CloudHub
 
@@ -156,6 +161,38 @@ To deploy your application to CloudHub:
 ----
 
 For a list and description of the parameters employed, see <<CloudHub>>.
+
+=== Selecting Your Business Group
+
+In CloudHub and Anypoint Runtime Manager deployments, you can select a Business Group other than your root organization. In the example below, the plugin is configured to deploy to the `devops` business group, which resides under the `engineering` business group.
+
+Business group names within a hierarchy are separated by a backslash (\). If the name of your business group includes a backslash, escape it with preceding backslash. For example, to select `\group2` under `\group1`: `\group1\\group2`.
+
+[source,xml]
+----
+<plugin>
+    <groupId>org.mule.tools.maven</groupId>
+    <artifactId>mule-maven-plugin</artifactId>
+    <configuration>
+        <deploymentType>cloudhub</deploymentType>
+        <muleVersion>${mule.version}</muleVersion>
+        <username>${username}</username>
+        <password>${password}</password>
+        <applicationName>my-application</applicationName>
+        <environment>Production</environment>
+        <businessGroup>engineering\devops</businessGroup>
+    </configuration>
+    <executions>
+        <execution>
+            <id>deploy</id>
+            <phase>deploy</phase>
+            <goals>
+                <goal>deploy</goal>
+            </goals>
+        </execution>
+    </executions>
+</plugin>
+----
 
 == Using a Mule Server Instead of Downloading Mule Dependency
 
@@ -474,6 +511,40 @@ When true, `skip` causes plugin execution to be skipped. This property works wit
 </plugin>
 ----
 
+== Anypoint Runtime Manager On Prem TLS errors
+
+When trying to connect to a an On Premises installation of Anypoint Runtime Manager, the plugin validates certificates for that server. If you haven't installed the server certificates in your trust store, you will see an SSL error. To avoid this problem you can run the plugin in an insecure mode. In this way, the security validations will be skipped. You can use the *armInsecure* tag or the *arm.insecure* system property. See the configuration example below:
+
+[source,xml,linenums]
+----
+<plugin>
+    <groupId>org.mule.tools.maven</groupId>
+    <artifactId>mule-maven-plugin</artifactId>
+    <configuration>
+        <deploymentType>arm</deploymentType>
+        <muleVersion>${mule.version}</muleVersion>
+        <username>${username}</username>
+        <password>${password}</password>
+        <applicationName>my-application</applicationName>
+        <environment>Production</environment>
+        <uri>https://anypoint.mulesoft.local</uri>
+        <armInsecure>true</armInsecure>
+    </configuration>
+    <executions>
+        <execution>
+            <id>deploy</id>
+            <phase>deploy</phase>
+            <goals>
+                <goal>deploy</goal>
+            </goals>
+        </execution>
+    </executions>
+</plugin>
+----
+
+[WARNING]
+Enabling insecure connection is a very risky practice. You shouldn't use this unless you know what you are doing and your On Premises installation is isolated in a local network.
+
 == Full List of Parameters
 
 The following tables list all available parameters that you can use. Parameters are grouped by the element or configuration that you can use them for, such as *Standalone*, *Cluster*, etc.
@@ -502,7 +573,7 @@ The following tables list all available parameters that you can use. Parameters 
 |`libs`|External JARs to be added to `<MULE_HOME>/user/lib`, i.e. `<lib>${basedir}/activemq-core.jar</lib>`.
 |===
 
-=== ARM
+=== Runtime Manager
 |===
 |Parameter|Description
 |`application`|The application's filepath. If not specified, the result of the Maven build is used as the default.
@@ -526,8 +597,8 @@ The following tables list all available parameters that you can use. Parameters 
 |`uri`|Anypoint platform URI, by default `anypoint.mulesoft.com`.
 |`region`|Region where you want your worker(s) to be created.
 |`workers`|Number of workers to create.
-|`workerType`|Size of the worker(s).
-|`properties`|Cloudhub properties to configure.
+|`workerType`|Size of the worker(s) specified as one of: *Micro* (0.1 vCores), *Small* (0.2 vCores), *Medium* (1 vCores), *Large* (2 vCores), *xLarge* (4 vCores). Note that the value is case sensitive. Example: `<workerType>Small</workerType>`
+|`properties`|Cloudhub properties to configure. Each nested element inside `<properties>` will be considerated a property name and its value will be its text. Example: `<properties> <key1>value1</key1> <anotherKey>this is a value</anotherKey> </properties>` will create two properties in the CloudHub console: `key1=value` and `anotherKey=this is a value`. Note that properties specified here will override existing properties for this application in CloudHub.
 |===
 
 === Agent
@@ -537,3 +608,18 @@ The following tables list all available parameters that you can use. Parameters 
 |`applicationName`|The application name to use for the deployment. If not specified, the value of `artifactName` is used.
 |`uri`|Local URI where the agent is listening.
 |===
+
+=== Skipping Maven Deployment
+
+Executing deploy phase will also trigger the default deploy goal of the maven-deploy-plugin. If you are not deploying to a Maven repository as part of your build, you can prevent the plugin execution by using:
+
+[source,xml]
+----
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-deploy-plugin</artifactId>
+  <configuration>
+    <skip>true</skip>
+  </configuration>
+</plugin>
+----
