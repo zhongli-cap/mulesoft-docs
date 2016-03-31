@@ -32,33 +32,31 @@ For the purpose of this documentation we are going to assume we are testing the 
 [source, xml, linenums]
 .Test code
 ----
-<spring:bean id="jdbcDataSource" class="org.enhydra.jdbc.standard.StandardDataSource" destroy-method="shutdown">
-  <spring:property name="driverName" value="${db.driver}" />
-  <spring:property name="url" value="${db.url}" />
-  <spring:property name="user" value="${db.user}" />
-  <spring:property name="password" value="${db.password}" />
-</spring:bean>
+<spring:beans>
+        <spring:bean id="jdbcDataSource" class="org.enhydra.jdbc.standard.StandardDataSource" destroy-method="shutdown">
+            <spring:property name="driverName" value="${db.driver}"/>
+            <spring:property name="url" value="${db.url}"/>
+            <spring:property name="user" value="${db.user}"/>
+            <spring:property name="password" value="${db.password}"/>
+        </spring:bean>
+    </spring:beans>
 
-<jdbc:connector name="jdbcConnectorInbound" dataSource-ref="jdbcDataSource">
-  <jdbc:query key="lookupJob" value="SELECT * FROM jobtitlelookup WHERE jobtitleid = #[variable:jobid]" />
-</jdbc:connector>
+    <db:generic-config name="Generic_Database_Configuration" dataSource-ref="jdbcDataSource" doc:name="Generic Database Configuration"/>
+    <flow name="testDbFlow">
+        <db:select config-ref="Generic_Database_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[SELECT * FROM jobtitlelookup WHERE jobtitleid = #[variable:jobid]]]></db:parameterized-query>
+        </db:select>
 
-<flow name="exampleFlow">
-
-  <jdbc:outbound-endpoint connector-ref="jdbcConnectorInbound" queryKey="lookupJob" exchange-pattern="request-response" />
-
-  <choice>
-    <when expression="#[payload.size()>0]">
-      <set-payload value="#[payload[0].get('jobtitle')]"/>
-    </when>
-    <otherwise>
-      <set-payload value="#['HIR']"/>
-    </otherwise>
-  </choice>
-
-  <set-variable value="job" variableName="#[payload]"/>
-
-</flow>
+        <choice doc:name="Choice">
+            <when expression="#[payload.size()&gt;0]">
+                <set-payload value="#[payload[0].get('jobtitle')]" doc:name="Set Payload"></set-payload>
+            </when>
+            <otherwise>
+                <set-payload value="#['HIR']" doc:name="Set Payload"></set-payload>
+            </otherwise>
+        </choice>
+        <set-variable value="job" variableName="#[payload]" doc:name="Variable"></set-variable>
+    </flow>
 ----
 
 === Defining the Database Server

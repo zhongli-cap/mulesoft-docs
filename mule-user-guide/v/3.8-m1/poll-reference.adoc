@@ -7,7 +7,7 @@ While some connectors, such as link:/mule-user-guide/v/3.8-m1/http-connector[HT
 
 == Prerequisites
 
-This document assumes that you are familiar with the link:/mule-fundamentals/v/3.7/anypoint-studio-essentials[Visual Editor in Anypoint Studio] that you can use to create applications in Studio. Further, this document references link:/mule-fundamentals/v/3.7/global-elements[Global Elements] and the category of message processors known as link:/mule-user-guide/v/3.8-m1/scopes[scopes].  Review link:/mule-fundamentals/v/3.7/anypoint-studio-essentials[Anypoint Studio Essentials] to learn more about developing with Mule ESB's graphical user interface.
+This document assumes that you are familiar with the link:/mule-fundamentals/v/3.7/anypoint-studio-essentials[Visual Editor in Anypoint Studio] that you can use to create applications in Studio. Further, this document references link:/mule-fundamentals/v/3.7/global-elements[Global Elements] and the category of message processors known as link:/mule-user-guide/v/3.8-m1/scopes[scopes].  Review link:/mule-fundamentals/v/3.7/anypoint-studio-essentials[Anypoint Studio Essentials] to learn more about developing with Mule ESB's graphical user interface. Also review link:/mule-fundamentals/v/3.8-m1/anypoint-exchange#accessing-the-exchange-s-public-content[Anypoint Exchange] for how to locate and install a connector using Exchange.
 
 == Configuring a Poll Wrapper
 
@@ -24,27 +24,32 @@ image:poll_scope.png[poll_scope]
 +
 image:poll_connector.png[poll_connector]
 +
-. Configure the Twitter Connector.
+. Configure the Twitter Connector:
+.. Click the green plus sign to the right of *Connector Configuration*:
 +
-image:twitter.png[twitter]
+image:poll-twitter-properties.png[poll-twitter-properties]
 +
-[width="100%",cols="34%,33%,33%",options="header",]
-|===
-|Attribute |Value |Description
-|Operation a|
-----
-Get user timeline by screen name
-----
-
-|Captures recent tweets by a particular Twitter user
-|Screen Name |`MuleSoft` |Return tweets by the official MuleSoft account. You can use any Twitter account you want.
-|config reference a|
-----
-Twitter
-----
-
-|You must create a Twitter connector as a link:/mule-fundamentals/v/3.7/global-elements[global element] to reference here. For your Twitter connector, you need a Twitter developer account.
-|===
+.. Log into link:https://www.twitter.com[twitter.com] and sign in. If you don't have a Twitter account, create one.
+.. Change your browser location to https://apps.twitter.com.
+.. Click *Create New App*. You need to specify an app name, description, web site URL, a callback URL, and agree to their developer agreement. You can use `http://www.example.com` for both the web site URL and callback URL as placeholders until you have actual URLs (if you plan to make your app available to others).
+.. Click the *Keys and Access Tokens* tab, and click *Create my access token*.
+.. Copy the following credentials from your Twitter API application page to the Twitter connector configuration:
++
+image:poll-twitter-config.png[poll-twitter-config]
++
+** Consumer Key
+** Consumer Secret
+** Access Token
+** Access Token Secret
+. Click *Test Connection* to ensure your credentials are correct.
+. Click *OK*.
+. In the Twitter properties screen, click the drop-down menu for *Operation* and:
++
+`Get user timeline by screen name`
++
+. Set the *Screen Name* to `MuleSoft`. You can leave the remainder of the settings at their default values:
++
+image:twitter.png[Twitter connector properties settings]
 +
 . Add more message processors to your flow to perform specific business logic after polling for data. The example below uses a link:/mule-user-guide/v/3.8-m1/logger-component-reference[logger] component. This logger uses the link:/mule-user-guide/v/3.8-m1/mule-expression-language-mel[MEL] expression `#[payload]` to log the message payload collected by the Twitter connector every 1000 milliseconds.
 +
@@ -78,27 +83,27 @@ image:poll_flow.png[poll_flow]
 |===
 +
 [cols=",,,",options="header",]
-|===============
+|===
 |Attribute name |Value |Description |XML
 |*screenName* |string |Twitter account to return tweets from. In this example, the official MuleSoft account; you can use any valid Twitter account. |`screenName="MuleSoft"`
 |*config-ref* |string |You must create a Twitter connector as a link:/mule-fundamentals/v/3.7/global-elements[global element] to reference here. For your Twitter connector, you need a Twitter developer account. |`config-ref=` `"Twitter"`
 |*doc:name* |string | *(Studio only.)* Name of the poll scope as it displays in your application. |`doc:name=` `"Twitter"`
-|===============
+|===
 . Add more message processors to your flow to perform specific business logic after polling for data. The example below uses a link:/mule-user-guide/v/3.8-m1/logger-component-reference[logger] component. This logger uses the link:/mule-user-guide/v/3.8-m1/mule-expression-language-mel[MEL] expression `#[payload]` to log the message payload collected by the Twitter connector every 1000 milliseconds.
 +
 [cols=",,",options="header",]
-|==================
+|===
 |Element |Description |Sample XML
 |*logger* |Logs the message payload. |`<logger message=` `"#[payload]"` `level=` `"INFO"` ` doc:name=` `"Logger"` `/>`
-|==================
+|===
 +
 [width="100%",cols="34%,33%,33%",options="header",]
-|=================
+|===
 |Attribute name |Value |Description
 |*message* |string or link:/mule-user-guide/v/3.8-m1/mule-expression-language-mel[Mule expression] |The content that logs to console. In this case, the Mule Expression `#[payload]` outputs the message payload.
 |*level* |string, one of ERROR, WARN, INFO, DEBUG, or TRACE |The priority level of the notification, in this case `INFO`.
 |*doc:name* |string | *(Studio only)* Name of the logger component as it  appears in your application.
-|=================
+|===
 
 ....
 ------
@@ -192,20 +197,40 @@ If you define a value in the optional "`Object Store`" poll attribute, Mule sea
 
 === List of Watermark Attributes
 
-[width="100%",cols="20%,20%,20%,20%,20%",options="header",]
-|================
-|Attributes |XML element |Req'd? |Default |Description
-|*Variable Name* |`variable` |x |- |Identifies both the *object store key* that Mule uses to store the watermark, and the name of the *flowVars* where Mule exposes the watermark value to the user.
-|*Default Expression* |`default-expression` |x |- |If Mule cannot locate the object store key it uses the default expression to generate a value. This is useful for the first run of the flow.
-|*Update Expression* |`update-expression` |  |Value of the variable attribute. |Mule uses the result of this expression to update the watermark once flow execution is complete. Use this expression as an alternative to a selector in case you need to follow a more complex logic.
-|*Selector* |`selector` |  |- a|
-The criteria Mule uses to pick the next value for the flowVars. There are four available selectors: MIN, MAX, FIRST, and LAST. +
-If you use this attribute, you must also provide a value for Selector Expression.
+[cols="20a,80a",options="header"]
+|===
+|Attribute |Description
+|*Variable Name* |Identifies both the *object store key* that Mule uses to store the watermark, and the name of the *flowVars* where Mule exposes the watermark value to the user.
 
-|*Selector Expression* |`selector-expression` |  |- |Mule executes this expression on every object returned by the Poll. The Selector then collects the returned values and picks one according to the chosen criteria. +
-If you use this attribute, you must also provide a value for the Selector.
-|*Object Store* |`object-store-ref` |  |The default user object store. |A reference to the object store in which you wish to store the watermarks.
-|================
+*XML Element*: `variable` +
+*Required?*: Yes +
+*Default*: None
+|*Default Expression* |If Mule cannot locate the object store key it uses the default expression to generate a value. This is useful for the first run of the flow.
+
+*XML Element*: `default-expression` +
+*Required?*: Yes +
+*Default*: None
+|*Update Expression* |Mule uses the result of this expression to update the watermark once flow execution is complete. Use this expression as an alternative to a selector in case you need to follow a more complex logic.
+
+*XML Element*: `update-expression` +
+*Required?*: No +
+*Default*: Value of the variable attribute.
+|*Selector* |The criteria Mule uses to pick the next value for the flowVars. There are four available selectors: MIN, MAX, FIRST, and LAST. If you use this attribute, you must also provide a value for Selector Expression.
+
+*XML Element*: `selector` +
+*Required?*: No +
+*Default*: None
+|*Selector Expression* |Mule executes this expression on every object returned by the Poll. The Selector then collects the returned values and picks one according to the chosen criteria. If you use this attribute, you must also provide a value for the Selector.
+
+*XML Element*: `selector-expression` +
+*Required?*: No +
+*Default*: None
+|*Object Store* |The default user object store. A reference to the object store in which you wish to store the watermarks.
+
+*XML Element*: `object-store-ref` +
+*Required?*: No +
+*Default*: None
+|===
 
 === Configuring Polling with Watermarks
 
@@ -216,136 +241,138 @@ If you use this attribute, you must also provide a value for the Selector.
 
 . Follow the steps above to create a flow that polls Twitter for data every 1000 milliseconds, then logs the message payload.
 +
-image:poll_flow.png[poll_flow]
-
-. Click to flow name bar to select the *flow*, then, in the properties editor, set the *Processing Strategy* to *synchronous*.
+image:poll-twitter-flow.png[poll-twitter-flow]
++
+. Click the flow name bar to select the *flow*, and in the properties editor, set the *Processing Strategy* to *synchronous*.
 +
 [WARNING]
 All flows use an asynchronous processing strategy by default. If you do not set the processing strategy to *synchronous*, polling with watermarks does not work!
 +
 image:synchronous.png[synchronous]
-
-. Configure the *Since Id* attribute of the Twitter connector according to the table below.
 +
-image:watermark.png[watermark]
+. Click the Twitter connector and set *Since Id* to: +
 +
-[width="100%",cols="34%,33%,33%",options="header",]
-|=======
-|Attribute |Value |Description
-|*Since Id* |`#[flowVars['lastID']]` |Instructs the connector to return only those tweets with an ID greater than the value of the `lastID` variable. `lastID` is a flow variable that Mule creates, then updates every time the poll runs.
-|=======
-. Select the *poll* scope, then edit its properties according to the table below.
+`#[flowVars['lastID']]`
++
+This value for the attribute instructs the connector to return only those tweets that have an ID greater than the value of the `lastID` variable. `lastID` is a flow variable that Mule creates, then updates every time the poll runs.
++
+image:poll-since-id-attribute.png[poll-since-id-attribute]
++
+. Select the *poll* scope, and edit its properties according to the table below.
 +
 image:watermark_enable.png[watermark_enable]
 +
-[width="100%",cols="25%,25%,25%,25%",options="header",]
-|========
-|Attribute |Value |Description |XML
-|*Fixed Frequency Scheduler* |1000 |Run the Poll every 1000 milliseconds. | 
-|*Start Delay* |0 |Delays polling by 0 milliseconds | 
-|*Time Unit* |MILLISECONDS |Use milliseconds as unit for the frequency and delay settings | 
-|*Enable Watermark* |true |Enable using the  Watermark | 
-|*Variable Name* |`lastID` |Mule creates two variables:
+[width="100%",cols="20a,80a",options="header",]
+|===
+|Attribute |Description
+|*Fixed Frequency Scheduler* |Run the Poll every 1000 milliseconds.
+
+*Value*: `1000`
+|*Start Delay* |Delays polling by 0 milliseconds.
+
+*Value*: `0`
+|*Time Unit* |Use milliseconds as unit for the frequency and delay settings.
+
+*Value*: `MILLISECONDS`
+|*Enable Watermark* |Enable using the  Watermark.
+
+*Value*: `true`
+|*Variable Name* |Mule creates two variables:
+
 • A persistent object store variable with the provided name
 • A flow variable that the Twitter Connector references in its `sinceID` filter.
-a|
-[source, code]
+
+*Value*: `lastID` +
+*XML*: +
+
+[source]
 ----
 variable="lastID"
 ----
 
-|*Default Expression* |-1 |The value that `lastID` uses the first time Mule executes the poll, or whenever the watermark can't be found. a|
-[source, code]
+|*Default Expression* |The value that `lastID` uses the first time Mule executes the poll, or whenever the watermark can't be found.
+
+*Value*: `-1` +
+*XML*: +
+
+[source]
 ----
 default-expression="-1"
 ----
 
-|*Selector* |FIRST |Pick the FIRST value returned by the Selector Expression to update the `lastID` variable each time the flow execution completes. In this case, it takes the ID of the first tweet in the generated output (that is, the most recent one). a|
-[source, code]
+|*Selector* |Pick the FIRST value returned by the Selector Expression to update the `lastID` variable each time the flow execution completes. In this case, it takes the ID of the first tweet in the generated output (that is, the most recent one).
+
+*Value*: `FIRST` +
+*XML*: +
+
+[source]
 ----
 selector="FIRST"
 ----
 
-|*Selector expression* |`#[payload.id]` |Return the ID of each object in the generated output, this value is passed on to the Selector. a|
-[source, code]
+|*Selector expression* |Return the ID of each object in the generated output, this value is passed on to the Selector.
+
+*Value*: `#[payload.id]` +
+*XML*: +
+
+[source]
 ----
 selector-expression="#[payload.id]"
 ----
 
-|*Update Expression* |- |Not needed. Selector and Selector Expression are being used. a|
-|========
+|*Update Expression* |Not needed. Selector and Selector Expression are being used.
+|===
 
 ....
 [tab,title="XML Editor or Standalone"]
 ....
 
 . Follow the steps above to create a flow that polls Twitter for data every 1000 milliseconds, then logs the message payload.
-. In the flow, set the value of the *`processingStrategy`* attribute to *`synchronous`*. 
+. In the flow, set the value of the *processingStrategy* attribute to *synchronous*. 
 +
 [TIP]
 All flows use an asynchronous processing strategy by default. If you do not set the processing strategy to *synchronous*, polling with watermarks does not work!
 +
-[source, xml, linenums]
+[source, xml]
 ----
 <flow name="test1" doc:name="test1" processingStrategy="synchronous">
 ----
-
-. Within the `poll` scope, add a `watermark` child element according to the table below.   
 +
-[cols=",,",options="header",]
-|==================
-|Element |Description |Sample XML
-|*watermark* |Keeps a persistent record of the last element that was processed, or the last time a sync was performed |`<watermark variable="lastID" default-expression="-1" selector="FIRST" selector-expression="#[payload.id]"/> `
-|==================
-
-.  Add attributes to the `watermark` child element according to the table below.
+. Within the `poll` scope, add a `watermark` child element with this value:
 +
-[source, xml, linenums]
+[source, xml]
 ----
 <watermark variable="lastID" default-expression="-1" selector="FIRST" selector-expression="#[payload.id]"/>
 ----
 +
-[width="100%",cols="25%,25%,25%,25%",options="header",]
-|====
-|Attribute name |Value |Description |Sample XML
-|*variable* |string |Mule creates two variables: • A persistent object store variable with the provided name • A flow variable that the Twitter Connector references in its  `sinceID` filter. a|
-[source, code]
-----
-variable= "lastID"
-----
-
-|*default-expression* |integer |The value that `lastID` uses the first time Mule executes the poll, or whenever the watermark can't be found. a|
-[source, code]
-----
-default -expression= "-1"
-----
-
-|*Selector* |FIRST |Pick the FIRST value returned by the Selector Expression to update the `lastID` variable each time the flow execution completes. In this case, it's the ID of the first tweet in the generated output (that is, the most recent one). a|
-[source, code]
-----
-selector="FIRST"
-----
-
-|*Selector expression* |`#[payload.id]` |Return the ID of each object in the generated output, this value is passed on to the Selector. a|
-[source, code]
-----
-selector-expression="#[payload.id]"
-----
-
-|====
-
-. Configure the *Since Id* attribute of the Twitter connector according to the table below.
+This keeps a persistent record of the last element that was processed, or the last time a sync was performed.
 +
-[width="100%",cols="25%,25%,25%,25%",options="header",]
-|============
-|Attribute |Value |Description |Sample XML
-|*sinceId* |string or Mule expression |Instructs the connector to return only those tweets with an ID greater than the value of the `lastID` variable. `lastID` is a flow variable that Mule creates, then updates every time the poll runs. a|
-[source, code]
+. Add attributes to the `watermark` child element:
++
+[source, xml]
 ----
-sinceId="#[flowVars['lastID']]"
+<watermark variable="lastID" default-expression="-1" selector="FIRST" selector-expression="#[payload.id]"/>
 ----
-|============
-
++
+.. `variable="lastID"` - String - Mule creates two variables: +
++
+** A persistent object store variable with the provided name.
+** A flow variable that the Twitter Connector references in its  `sinceID` filter.
++
+.. `default-expression= "-1"` - Integer - The value that `lastID` uses the first time Mule executes the poll, or whenever the watermark can't be found.
+.. `selector="FIRST"` - Pick the FIRST value returned by the Selector Expression to update the `lastID` variable each time the flow execution completes. In this case, it's the ID of the first tweet in the generated output (that is, the most recent one).
+.. `selector-expression="#[payload.id]"` - Return the ID of each object in the generated output, this value is passed on to the Selector.
+. Add `sinceId="#[flowVars['lastID']]"` to the Twitter connector statement:
++
+[source, xml]
+----
+<twitter:get-user-timeline-by-screen-name config-ref="Twitter__Configuration" screenName="MuleSoft" sinceId="#[flowVars['lastID']]" doc:name="Twitter"/>
+----
++
+The `sinceID` value is a string or Mule expression |Instructs the connector to return only those tweets with an ID greater than the value of the `lastID` variable. `lastID` is a flow variable that Mule creates, then updates every time the poll runs.
++
+The code for this section is:
++
 [source, xml, linenums]
 ----
 <flow name="test1" doc:name="test1" processingStrategy="synchronous">
@@ -364,7 +391,7 @@ sinceId="#[flowVars['lastID']]"
 
 [NOTE]
 ====
-Keep in mind that for this example to work, you must manually configure the following values of the global Twitter connector (` twitter:config` element):
+Keep in mind that for this example to work, you must manually configure the following values of the global Twitter connector (`twitter:config` element):
 
 * accessKey
 * accessSecret
@@ -372,24 +399,23 @@ Keep in mind that for this example to work, you must manually configure the foll
 * consumerSecret
 ====
 
-[source, xml, linenums]
+[source,xml,linenums]
 ----
-<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:twitter="http://www.mulesoft.org/schema/mule/twitter" xmlns:http="http://www.mulesoft.org/schema/mule/http"
-xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
-xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.5.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/twitter http://www.mulesoft.org/schema/mule/twitter/2.4/mule-twitter.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
-  
-  <twitter:config name="Twitter" accessKey="xyz" accessSecret="xys" consumerKey="xyz" consumerSecret="xyz" doc:name="Twitter">
-        <twitter:connection-pooling-profile initialisationPolicy="INITIALISE_ONE" exhaustedAction="WHEN_EXHAUSTED_GROW"/>
-    </twitter:config>
-  
-    <flow name="test1" doc:name="test1" processingStrategy="synchronous">
-        <poll frequency="1000" doc:name="Poll">
-            <watermark variable="lastID" default-expression="-1" selector="FIRST" selector-expression="#[payload.id]"/>          
-            <twitter:get-user-timeline-by-screen-name config-ref="Twitter"      doc:name="Twitter" screenName="MuleSoft" sinceId="#[flowVars['lastID']]"/>
-        </poll>
-        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
-       
-    </flow>
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:twitter="http://www.mulesoft.org/schema/mule/twitter" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/twitter http://www.mulesoft.org/schema/mule/twitter/current/mule-twitter.xsd">
+    <twitter:config name="Twitter__Configuration" accessKey="<access_key>" accessSecret="<access_secret>" consumerKey="<consumer_key>" consumerSecret="<consumer_secret>" doc:name="Twitter: Configuration"/>
+    <flow name="pollFlow">
+        <poll doc:name="Poll">
+            <twitter:get-user-timeline-by-screen-name config-ref="Twitter__Configuration" screenName="MuleSoft" doc:name="Twitter"/>
+        </poll>
+        <logger level="INFO" doc:name="Logger"/>
+    </flow>
 </mule>
 ----
 
@@ -397,22 +423,22 @@ xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.
 
 As described above, the watermark element includes two ways to update the flow variable (`flowVars`) every time flow execution completes:
 
-* set an expression in the attribute `update-expression`
-* set an expression in the attribute `selector-expression`, and a criteria in `selector`
+* Set an expression in the attribute `update-expression`
+* Set an expression in the attribute `selector-expression`, and a criteria in `selector`
 
 However, neither of these options support exception handling strategies; you may wish to add more complex logic rules to the process of updating the flow variable. To do so, you can use other message processors in your flow to set the flow variable using custom logic.
 
 Add code, such as the example below, into a Java class, wrapping your extra custom logic around it. 
 
-[source, code]
+[source]
 ----
 #[flowVars['lastModifiedID']] = #[payload.id]
 ----
 
-[WARNING]
-If you are using custom logic to update the `flowVars`, **ensure that the radio button for `update-expression` is selected, but that the field is left empty**. If the `update-expression` attribute has a value, Mule stores new watermark information on the `flowVars` according to that attribute, overwriting any custom logic you may have defined for updating the variable.
+[CAUTION]
+If you use custom logic to update the `flowVars`, click the radio button for `update-expression`, but leave the field empty. If the `update-expression` attribute has a value, Mule stores new watermark information on the `flowVars` according to that attribute, and overwrites any custom logic you may have defined for updating the variable.
 
-The image below displays a sample flow which updates the flowVars using custom logic; note the empty `update-expression` attribute.
+The image below displays a sample flow that updates the flowVars using custom logic; note the empty `update-expression` attribute.
 
 image:watermark-expcomplex.png[watermark-expcomplex]
 
@@ -428,10 +454,24 @@ The main difficulty when dealing with auto-paging connectors is that collection 
 [tab,title="Studio Visual Editor"]
 ....
 
-. Place an *auto-paging-enabled connector* inside a *poll* scope as in the previous examples. +
- image:ex11.png[ex11]
-
-. Configure the connector according to the following screenshot. Note that the query orders the output in ascending order of `LastModifiedDate` so that the last item in the list is the newest. This detail is critical.
+. Place an auto-paging-enabled connector, such as *Salesforce* inside a *poll* scope.
++
+image:ex11.png[ex11]
++
+. Configure the connector according to the following screenshot. Note that the query orders the output in ascending order of `LastModifiedDate` so that the last item in the list is the newest. This detail is critical. This screen sets the following values:
++
+** Display name: `Salesforce`
+** Config Reference: `Salesforce`
+** Operation: `Query`
+** Language: `DataSense Query Language`
+** Query Text: (combine into one line in the connector's field)
++
+[source,sql,linenums]
+----
+SELECT Email,FirstName,LastModifiedDate,LastName FROM Contact WHERE
+LastModifiedDate > #[flowVars['nextSync']] ORDER BY LastModifiedDate
+ASC LIMIT 100
+----
 +
 image:salesforce.png[salesforce]
 +
@@ -443,13 +483,13 @@ Configure the poll scope according to the table below. The watermark is a variab
 image:withselector.png[withselector]
 +
 [width="100%",cols="34%,33%,33%",options="header",]
-|==============
+|===
 |Attribute name |Description |Sample XML
 |*Variable Name* |The watermark is a variable named `lastUpdated` |`variable=` `"lastUpdated"`
 |*default-expression* |The default value of `lastUpdated` is the result of evaluating `#['YESTERDAY']`. |`default-expression=#['YESTERDAY']`
 |*Selector* |Criteria to pick which value to use, out of all of the ones in the collection |`selector="MAX"`
 |*Selector Expression* |Mule updates `lastUpdated` to the Maximum value in the collection of `#[payload['lastUpdated']]` |`selector-expression=#[payload['lastUpdated']]`
-|==============
+|===
 . Next, you need to process the output of the connector with an element that can handle collections, such as a `foreach` scope (for more information, see link:/mule-user-guide/v/3.8-m1/foreach[foreach]). The message processors set within the Foreach scope process each item in a collection individually, one at a time. While it iterates through the collection, it communicates with the poll scope, sending it the selector values so that the MAX can be picked.
 +
 [WARNING]

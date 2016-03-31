@@ -271,7 +271,7 @@ This example takes an XML list of books and outputs a JSON version of the same. 
 %input payload application/xml
 %output application/json
 ---
-$payload.bookstore.book map {
+payload.bookstore map {
     item: {
       type: "book",
     price: $.price[0] as :number,
@@ -1251,7 +1251,7 @@ invoice: {
             subtotal: $.unit_price * $.quantity * (1 - discount)
         }
     }) },
-    totals: using (subtotal = payload.invoice.items.*item reduce ((item, sum1 = 0) -> sum1 + (item.unit_price * item.quantity * (1 - discount)))) {
+    totals: using (subtotal = payload.invoice.items reduce ((item, sum1 = 0) -> sum1 + (item.unit_price * item.quantity * (1 - discount)))) {
         subtotal: subtotal,
         tax: (tax * 100) as :number { format: "##.#" } ++ "%",
         total: subtotal * (1 + tax)
@@ -1337,7 +1337,7 @@ In this example, the input contains sensitive information that should be removed
 %input payload application/xml
 %output application/xml
 ---
-users: { (payload.users.*user map {
+users: { (payload.users map {
      user: {
         personal_information: $.personal_information - "ssn",
         login_information: $.login_information - "password"
@@ -1418,7 +1418,7 @@ In this example, the input contains the same sensitive information as in the pre
 %input payload application/xml
 %output application/xml
 ---
-users: { (payload.users.*user map {
+users: { (payload.users map {
     user: {
        personal_information: $.personal_information mapObject {
             ($$): $ unless $$ ~= "ssn" otherwise "****"
@@ -1513,7 +1513,7 @@ This example takes in an XML file that is grouped separating two types of elemen
 %input payload application/xml
 %output application/dw
 ---
-classrooms: payload.school.teachers.*teacher groupBy $.subject mapObject ((teacherGroup, subject) -> {
+classrooms: payload.school.teachers groupBy $.subject mapObject ((teacherGroup, subject) -> {
     class: {
       name: subject,
       teachers: { (teacherGroup map {
@@ -1522,7 +1522,7 @@ classrooms: payload.school.teachers.*teacher groupBy $.subject mapObject ((teach
             lastName: $.lastName
         }
       }) },
-      attendees: { (payload.school.students.*student filter ($.*hobby contains subject) map {
+      attendees: { (payload.school.students filter ($.*hobby contains subject) map {
         attendee: {
           name: $.name,
           lastName: $.lastName
@@ -1653,8 +1653,8 @@ payload map {
     (emptySeats: $) when $$ as :string == 'availableSeats',
     (airline: $) when $$ as :string == 'airlineName',
     (($$):$) when ($$ as :string !='availableSeats') and ($$ as :string != 'airlineName')
-  }  
-) 
+  }
+)
 }
 ----
 
