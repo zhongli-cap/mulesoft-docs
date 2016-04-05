@@ -2,8 +2,6 @@
 :keywords:connector, endpoint, oracle, ebusiness, ebs, pl/sql
 :imagesdir: _images
 
-_Premium_
-
 == Introduction
 
 Anypoint Connector for Oracle E-Business Suite (EBS) provides real-time connectivity to query and update Oracle EBS using web services and message queues. The connector has been developed for the Oracle EBS v12.1.x. For more information about Oracle EBS, visit link:http://www.oracle.com/us/products/applications/ebusiness/overview/index.html[Oracle site].
@@ -27,7 +25,7 @@ Because of how closely the connector is coupled with Oracle EBS, this document a
 [TIP]
 A definition and detailed explanation of the Oracle EBS terms and concepts used here are freely available in the Oracle documentation set of your Oracle installation.
 
-This document assumes you are familiar with Mule, link:/mule-user-guide/v/3.8-m1/anypoint-connectors[Anypoint Connectors], and link:/mule-fundamentals/v/3.7/anypoint-studio-essentials[Anypoint Studio Essentials]. To increase your familiarity with Studio, consider completing one or more link:/mule-fundamentals/v/3.7/basic-studio-tutorial[Anypoint Studio Tutorials]. Further, this page assumes that you have a basic understanding of link:/mule-fundamentals/v/3.7/elements-in-a-mule-flow[Mule flows] and link:/mule-fundamentals/v/3.7/global-elements[Mule Global Elements].
+This document assumes you are familiar with Mule, link:/mule-user-guide/v/3.8-m1/anypoint-connectors[Anypoint Connectors], and link:/mule-fundamentals/v/3.8-m1/anypoint-studio-essentials[Anypoint Studio Essentials]. To increase your familiarity with Studio, consider completing one or more link:/mule-fundamentals/v/3.8-m1/basic-studio-tutorial[Anypoint Studio Tutorials]. Further, this page assumes that you have a basic understanding of link:/mule-fundamentals/v/3.8-m1/elements-in-a-mule-flow[Mule flows] and link:/mule-fundamentals/v/3.8-m1/global-elements[Mule Global Elements].
 
 To use the Oracle EBS connector, you must have the following:
 
@@ -72,7 +70,7 @@ The following sections describe how to install and configure the MuleSoft Oracle
 
 === Installing
 
-You can install a connector in Anypoint Studio using the instructions in link:/mule-fundamentals/v/3.7/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Installing a Connector from Anypoint Exchange]. 
+You can install a connector in Anypoint Studio using the instructions in link:/mule-fundamentals/v/3.8-m1/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Installing a Connector from Anypoint Exchange]. 
 
 To use the Oracle EBS connector in a production environment, you must have either:
 
@@ -104,7 +102,7 @@ image:javacheck.png[javacheck]
 
 == Configuring an Oracle EBS Global Element
 
-To use the Oracle EBS connector in your Mule application, you must configure a global Oracle EBS element that can be used by all the Oracle EBS connectors in the application (read more about link:/mule-fundamentals/v/3.7/global-elements[global elements]).
+To use the Oracle EBS connector in your Mule application, you must configure a global Oracle EBS element that can be used by all the Oracle EBS connectors in the application (read more about link:/mule-fundamentals/v/3.8-m1/global-elements[global elements]).
 
 [tabs]
 ------
@@ -121,7 +119,7 @@ image:oracle_ebs_connector_config.png[oracle_ebs_connector_config]
 . Click *OK*.
 . Configure the parameters according to the instructions below.
 +
-image:oracle_ebs_global_element.png[oracle_ebs_global_element.png]
+image:oracle_ebs_global_element.png[oracle_ebs_global_element]
 +
 [width="100%",cols="50a,50a",options="header",]
 
@@ -218,11 +216,11 @@ Follow these steps to configure a Oracle EBS connector in your application:
 
 == Using the Connector
 
-Use the Oracle EBS connector as a message source if you wish to *subscribe to queues*, or as an operation-based connector, if your goal is to *invoke web service operations*.
+Use the Oracle EBS connector as a message source if you wish to *subscribe to queues*. If your goal is to *invoke web service operations*, use the connector as an outbound, operation-based connector.
 
 === Subscribing to a Queue or a Topic
 
-* To *subscribe to a queue or topic* (such as the XML Gateway Outbound queue or the Business Events topic), you need to drag the connector to the "Source" section of your flow. After doing so, and selecting a Connector Configuration, you will have to choose the queue/topic you wish to subscribe to, from the *Operation* dropdown.
+* To *subscribe to a queue or topic* (such as the XML Gateway Outbound queue or the Business Events topic), you need to drag the connector to the "Source" section of your flow. After doing so, and selecting a connector configuration, you have to choose the queue/topic you wish to subscribe to, from the *Operation* dropdown.
 
 . Create a new Mule project in Anypoint Studio.
 . Drag a new Flow scope element onto the canvas.
@@ -237,9 +235,82 @@ image:oracle_ebs_config_source_2.png[oracle_ebs_config_source_2]
 |*Field* |*Description*
 |*Display Name* |Enter a unique label for the connector in your application.
 |*Connector Configuration* |Connect to a global element linked to this connector. Global elements encapsulate reusable data about the connection to the target resource or service. Select the global Oracle EBS connector element that you just created.
-|*Operation* |Select the queue or topic you wish to subscribe to from the dropdown. In this example, we will select Business Events, but you could also pick XML Gateway Outbound.
+|*Operation* |Select the queue or topic you wish to subscribe to from the dropdown. In this example, we select Business Events, but you could also pick XML Gateway Outbound.
 |===
 . Click the blank space on the canvas to save your configurations.
+
+[NOTE]
+====
+To set *custom attributes* for a business event besides the default attributes, you need to add the attributes manually, and create a subscription to the event.
+====
+
+. First, *add attributes* to an Oracle EBS business event. You can even run a script in your PL/SQL client for the purpose of creating the custom key-value pairs representing the custom messages or event attributes you require.
+. *Subscribe to the event*. Follow the instructions below.
++
+////
+//link to KB article once ready
+[source,code,linenums]
+----
+CREATE OR REPLACE PROCEDURE xx_modify_event_parameters
+(
+p_subscription_guid IN RAW,
+              	p_event             IN OUT NOCOPY wf_event_t
+)  return varchar2 is
+l_plist   wf_parameter_list_t := p_event.getparameterlist ();
+	Begin
+
+    -- Add code for adding new attributes to the event list
+
+wf_event.addparametertolist (
+p_name => 'QUOTE_HEADER_ID',
+p_value => p_qte_header_rec.quote_header_id,
+p_parameterlist => l_plist
+);
+
+		RETURN 'SUCCESS';
+
+     EXCEPTION
+          WHEN OTHERS
+          THEN
+             wf_core.context (
+                'xxu_bes',
+                'inv_po_matching',
+                p_event.geteventname (),
+                p_subscription_guid
+             );
+             wf_event.seterrorinfo (p_event, 'ERROR');
+             RETURN 'ERROR';
+	End;
+----
+////
++
+. Now add a subscription to the event you assigned new attributes to.
+.. Navigate to the *Workflow Administrator Web Applications* responsibility. Choose the *Business Events* you would like to modify.
+.. Click the plus sign to add a subscription to an event.
++
+image:add-subscription.png[add subscrip plus sign]
++
+.. Click on *Create Subscription*.
++
+image:create-subscription.png[create subscription]
++
+. Provide appropriate values for each field. Find a description of the fields and values below, along with some screenshots of the workspace in which you configure these fields.
+.. *Subscriber*
+... *System* - Designate the system you need subscribed to the event
+.. *Triggering Event*
+... *Event Filter* - Enter the name of the business event that this subscription should be triggered by.
+.. *Execution Condition*
+... *Phase* - a value greater than or equal to 100 means the subscription fires in an asynchronous way. Enter "100" for this field.
+... Status - “Enabled”
+... Rule Data - “Message”
+... Action Type - "Custom"
++
+image:event-subscription-fields.png[event subscription fields]
++
+image:custom-event-subscription-fields.png[custom event subscription fields]
+
+At this point you should be set up to retrieve those custom attributes from the enqueued business events using the Oracle EBS connector.
+
 
 === Invoking a Web Service Operation
 
@@ -395,7 +466,7 @@ image:queryParamsDataWeave.png[queryParamsDataWeave]
 +
 . Save and run the project as a Mule Application.
 .. Open a browser and load the following URL: `http://localhost:8081/?user=<username>&password=<password>`, replacing the _<username>_ and _<password>_ placeholders with a set of credentials.
-.. You will see the response of the FND_WEB_SEC PL/SQL operation, informing you if the provided credentials are valid or invalid.
+.. You should see the response of the FND_WEB_SEC PL/SQL operation, informing you if the provided credentials are valid or invalid.
 
 ....
 [tab,title="XML Editor"]
@@ -450,8 +521,6 @@ http://xmlns.oracle.com/apps/fnd/soaprovider/plsql/fnd_web_sec/validate_login/
 
 ....
 ------
-
-
 
 == Business Events Use Case
 
@@ -543,7 +612,6 @@ http://www.mulesoft.org/schema/mule/oracle-ebs http://www.mulesoft.org/schema/mu
         <logger message="#[payload]" level="INFO" doc:name="Logger"/>
     </flow>
 </mule>
-
 ----
 
 ....
