@@ -1856,6 +1856,22 @@ Assigns a default value in case no value is found in the input field.
 }
 -----------------------------------------------------------------------
 
+=== Random
+
+Assigns a random value between 0 and 1
+
+.Transform
+[source,DataWeave, linenums]
+-----------------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+{
+  price: random * 1000
+}
+-----------------------------------------------------------------------
+
+
 === When or Otherwise
 
 The keyword *when* conditionally evaluates a part of your DataWeave code, depending on if an expression evaluates to true or to false. You can make a single line conditional, or enclose a whole section in curly brackets. In case the *when* expression evaluates to *false*, its corresponding part of the code is ignored, and the code that corresponds to the *otherwise* expression is executed.
@@ -2059,9 +2075,134 @@ ROOT: payload.root.*order mapObject (
 </ROOT>
 --------------------------------------------------------
 
+=== Contains
+
+Evaluates if an array or list contains in at least one of its indexes a value that validateso true and returns a boolean value. You can search for a literal value, or match a regex too.
+
+=== Using Contains on an Array
+
+You can evaluate if any value in an array matches a given condition:
+
+
+.Input
+[source,xml,linenums]
+--------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <order>
+      <items>155</items>
+    </order>
+    <order>
+      <items>30</items>
+    </order>
+    <order>
+      <items>15</items>
+    </order>
+    <order>
+      <items>5</items>
+    </order>
+    <order>
+      <items>4</items>
+      <items>7</items>
+    </order>
+    <order>
+      <items>1</items>
+      <items>3</items>
+    </order>
+    <order>
+        null
+    </order>
+</root>
+--------------------------------------------------------
+
+.Transform
+[source,DataWeave, linenums]
+-----
+%dw 1.0
+%output application/json
+---
+ContainsRequestedItem: payload.root.*order.*items contains "3"
+-----
+
+.Output
+[source,json,linenums]
+--------------------------------------------------------
+{
+  "ContainsRequestedItem": true
+}
+--------------------------------------------------------
+
+
+
+
+=== using Contains on a String
+
+You can also use contains to evaluate a substring from a larger string:
+
+
+.Input
+[source,xml,linenums]
+--------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <mystring>some string</mystring>
+</root>
+--------------------------------------------------------
+
+.Transform
+[source,DataWeave, linenums]
+-----
+%dw 1.0
+%output application/json
+---
+ContainsString: payload.root.mystring contains "me"
+-----
+
+.Output
+[source,json,linenums]
+--------------------------------------------------------
+{
+  "ContainsString": true
+}
+--------------------------------------------------------
+
+Instead of searching for a literal substring, you can also match it agains a regular expression:
+
+
+.Input
+[source,xml,linenums]
+--------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <mystring>A very long string</mystring>
+</root>
+--------------------------------------------------------
+
+.Transform
+[source,DataWeave, linenums]
+-----
+%dw 1.0
+%output application/json
+---
+ContainsString: payload.root.mystring contains /s[t|p]ring/`
+
+[
+-----
+
+.Output
+[source,json,linenums]
+--------------------------------------------------------
+{
+  "ContainsString": true
+}
+--------------------------------------------------------
+
+
+
+
 === AS (Type Coercion)
 
-Coerce the given value to the specified type.
+Coerce the given value to the specified type. DataWeave by default attempts to convert the type of a value before failing, so using this operator to convert is sometimes not required but still recommended.
 
 ==== Coerce to string
 
@@ -2120,6 +2261,35 @@ Any format pattern accepted by link:https://docs.oracle.com/javase/8/docs/api/ja
 }
 ----------------------------------------------------------------------
 
+===== Coerce a date to number
+
+When coercing a date to a number, there is an extra parameter you can add – 'unit' – to specify what unit of time to use,
+
+.Transform
+[source,DataWeave, linenums]
+----------------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+{
+  mydate1: |2005-06-02T15:10:16Z| as :number {unit: "seconds"},
+  mydate2: |2005-06-02T15:10:16Z| as :number {unit: "milliseconds"}
+}
+----------------------------------------------------------------------
+
+.Output
+[source, json,linenums]
+----------------------------------------------------------------------
+{
+  "mydate1": 1117725016,
+  "mydate2": 1117725016000
+}
+----------------------------------------------------------------------
+
+[NOTE]
+Only the values 'seconds' and 'milliseconds' are valid for using in the 'unit' parameter.
+
+
 ==== Coerce to date
 
 Date types can be coerced from string or number.
@@ -2165,6 +2335,39 @@ You can coerce your input into a custom object type of whatever class you want.
 
 [NOTE]
 Keep in mind that if the class name contains any '$' characters, they must be escaped with a backslash (\).
+
+
+=== Type Of
+
+Returns the type of a provided element (eg: '":string"' , '":number"' )
+
+
+.Input
+[source,json,linenums]
+----------------------------------------------------------------------
+{
+  "mystring":"a string"
+}
+----------------------------------------------------------------------
+
+.Transform
+[source,DataWeave, linenums]
+----------------------------------------------------------------------
+%dw 1.0
+%output application/json
+---
+isString: typeOf payload.mystring
+----------------------------------------------------------------------
+
+.Output
+[source,json,linenums]
+----------------------------------------------------------------------
+{
+  "isString": ":string"
+}
+----------------------------------------------------------------------
+
+
 
 === Flatten
 
@@ -2782,7 +2985,7 @@ Returns the provided string with every word starting with a capital letter and n
 
 === Dasherize
 
-Returns the provided string with every word separated by a dash. 
+Returns the provided string with every word separated by a dash.
 
 [NOTE]
 This function also sets all characters in the strng to lower case.
