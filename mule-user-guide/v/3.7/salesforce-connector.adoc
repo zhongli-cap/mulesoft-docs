@@ -424,19 +424,6 @@ Use as an outbound connector in your flow to push data into Salesforce. To use t
 
 ==== Basic Example
 
-////
-<flow name="SFDC-connector-outbound">
-        <file:inbound-endpoint path="s" moveToPattern="s" moveToDirectory="s" connector-ref="File1" responseTimeout="10000" doc:name="File"/>
-        <dw:transform-message doc:name="Transform Message">
-            <dw:set-payload><![CDATA[%dw 1.0
-%output application/java
----
-{
-}]]></dw:set-payload>
-        </dw:transform-message>
-        <sfdc:authorize config-ref="Salesforce__Basic_Authentication" display="s" doc:name="Salesforce"/>
-    </flow>
-////
 image:sfdc-connector-outbound.png[sfdc_outbound]
 
 . *File connector* - accepts data from files, such as a CSV, into a flow.
@@ -449,63 +436,6 @@ You can also use a Salesforce connector in a link:/mule-user-guide/v/3.7/batch-p
 ====
 
 ==== Outbound Batch Example
-////
-<?xml version="1.0" encoding="UTF-8"?>
-
-<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans"  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
-http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
-http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd
-http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
-http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
-    <sfdc:config name="Salesforce" username="username" password="password" securityToken="SpBdsf98af9tTR3m3YVcm4Y5q0y0R" doc:name="Salesforce">
-        <sfdc:connection-pooling-profile initialisationPolicy="INITIALISE_ONE" exhaustedAction="WHEN_EXHAUSTED_GROW"/>
-    </sfdc:config>
-
-    <data-mapper:config name="new_mapping_grf" transformationGraphPath="new_mapping.grf" doc:name="DataMapper"/>
-    <data-mapper:config name="new_mapping_1_grf" transformationGraphPath="new_mapping_1.grf" doc:name="DataMapper"/>
-    <data-mapper:config name="leads_grf" transformationGraphPath="leads.grf" doc:name="DataMapper"/>
-
-    <batch:job max-failed-records="1000" name="Create Leads" >
-        <batch:threading-profile poolExhaustedAction="WAIT"/>
-        <batch:input>
-            <file:inbound-endpoint path="src/test/resources/input" moveToDirectory="src/test/resources/output" responseTimeout="10000" doc:name="File"/>
-            <dw:transform-message doc:name="CSV to Lead">
-                <dw:set-payload><![CDATA[%dw 1.0
-%output application/java
----
-{
-}]]></dw:set-payload>
-            </dw:transform-message>
-        </batch:input>
-
-        <batch:process-records>
-            <batch:step name="lead-check" >
-                <enricher source="#[payload.size() &gt; 0]" target="#[recordVars['exists']]" doc:name="Message Enricher">
-                    <sfdc:query config-ref="Salesforce" query="dsql:SELECT Id FROM Lead WHERE Email = '#[payload[&quot;Email&quot;]]'" doc:name="Find Lead"/>
-                </enricher>
-            </batch:step>
-            <batch:step name="insert-lead"   accept-expression="#[recordVars['exists']== false]">
-                <logger message="Got Record #[payload], it exists #[recordVars['exists']]" level="INFO" doc:name="Logger"/>
-                <batch:commit size="200" doc:name="Batch Commit">
-                    <sfdc:create config-ref="Salesforce" type="Lead" doc:name="Insert Lead">
-                        <sfdc:objects ref="#[payload]"/>
-                    </sfdc:create>
-                </batch:commit>
-            </batch:step>
-            <batch:step name="log-failures" accept-policy="ONLY_FAILURES" >
-                <logger message="Got Failure #[payload]" level="INFO" doc:name="Log Failure"/>
-            </batch:step>
-        </batch:process-records>
-
-        <batch:on-complete>
-            <logger message="#[payload.loadedRecords] Loaded Records #[payload.failedRecords] Failed Records" level="INFO" doc:name="Log Results"/>
-        </batch:on-complete>
-    </batch:job>
-</mule>
-////
-
 
 image:example_batch.png[example_batch]
 
@@ -517,22 +447,7 @@ image:example_batch.png[example_batch]
 Use the connector in conjunction with a link:/mule-user-guide/v/3.7/poll-reference[Poll Scope] in a flow to pull data from Salesforce into your application. To use the connector in this capacity, you must first place a *Poll scope* element at the beginning of your flow, then place a Salesforce connector within the poll scope (see image directly below).
 
 ==== Basic Inbound Example
-////
-<flow name="SFDC-connector-inbound">
-        <poll doc:name="Poll">
-            <sfdc:authorize config-ref="Salesforce__Basic_Authentication" display="s" doc:name="Salesforce"/>
-        </poll>
-        <dw:transform-message doc:name="Transform Message">
-            <dw:set-payload><![CDATA[%dw 1.0
-%output application/java
----
-{
-}]]></dw:set-payload>
-        </dw:transform-message>
-        <file:outbound-endpoint path="s" outputPattern="s" connector-ref="File" responseTimeout="10000" doc:name="File"/>
-    </flow>
-</mule>
-////
+
 image:poll_inbound.png[poll_inbound]
 
 . *Poll scope* - regularly polls for data to extract.
@@ -545,48 +460,6 @@ You can also use a poll-wrapped Salesforce connector at the beginning of a link:
 
 ==== Inbound Batch Example
 
-////
-<?xml version="1.0" encoding="UTF-8"?>
-
-<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
-http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
-http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
-    <http:request-config name="HTTP_Request_Configuration" host="s" port="s" doc:name="HTTP Request Configuration"/>
-    <batch:job name="sfdc-poll-batch-process">
-        <batch:input>
-            <poll doc:name="Poll">
-                <sfdc:authorize config-ref="Salesforce__Basic_Authentication" display="s" doc:name="Salesforce"/>
-            </poll>
-        </batch:input>
-        <batch:process-records>
-            <batch:step name="Step1">
-                <session-variable-transformer doc:name="Session Variable"/>
-                <dw:transform-message doc:name="Transform Message">
-                    <dw:set-payload><![CDATA[%dw 1.0
-%output application/java
----
-{
-}]]></dw:set-payload>
-                </dw:transform-message>
-            </batch:step>
-            <batch:step name="Step2">
-                <logger level="INFO" doc:name="Logger"/>
-                <http:request config-ref="HTTP_Request_Configuration" path="s" method="s" doc:name="HTTP"/>
-            </batch:step>
-        </batch:process-records>
-        <batch:on-complete>
-            <logger level="INFO" doc:name="Logger"/>
-        </batch:on-complete>
-    </batch:job>
-</mule>
-
-////
 image:sfdc-inbound-batch.png[example_batch_input1]
 
 . *Poll scope* - regularly polls for data to extract.
@@ -599,31 +472,6 @@ Use as an inbound connector, without wrapping in a poll scope, to stream data fr
 [NOTE]
 Studio automatically converts the connector to *Salesforce (Streaming)* mode. Technically, this is still the same connector, but it accesses *Salesforce's Streaming API* meaning that the _only_ operation the converted connector can perform is *Subscribe to topic* (that is, subscribe to PushTopic).
 
-////
-<?xml version="1.0" encoding="UTF-8"?>
-
-<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:smtp="http://www.mulesoft.org/schema/mule/smtp" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
-http://www.mulesoft.org/schema/mule/smtp http://www.mulesoft.org/schema/mule/smtp/current/mule-smtp.xsd
-http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
-http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
-    <flow name="SFDC-streaming-inbound">
-        <sfdc:subscribe-topic config-ref="Salesforce__Basic_Authentication" topic="s" doc:name="Salesforce (Streaming)"/>
-        <dw:transform-message doc:name="Transform Message">
-            <dw:set-payload><![CDATA[%dw 1.0
-%output application/java
----
-{
-}]]></dw:set-payload>
-        </dw:transform-message>
-        <smtp:outbound-endpoint host="localhost" responseTimeout="10000" doc:name="SMTP"/>
-    </flow>
-</mule>
-////
 image:sfdc-streaming-inbound.png[sfdc-streaming-inbound]
 
 . *Poll scope* - regularly polls for data to extract.
