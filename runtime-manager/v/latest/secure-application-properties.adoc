@@ -1,0 +1,92 @@
+= Secure Application Properties
+:keywords: cloudhub, jdbc, security
+
+image:cloudhub-logo.png[cloudhub]
+
+CloudHub supports *secure application properties*, where the name of a property is visible in the console, but the value is not displayed or retrievable by a user. CloudHub resolves the property at runtime without exposing the sensitive information.
+
+[NOTE]
+Application properties are a feature that is currently only available for setting via the Runtime Manager UI for applications deployed to CloudHub workers. For applications that you deploy via the Runtime Manager to local servers, these can be set up via an 'application.properties' file bundled with your application zip file. See link:/runtime-manager/cloudhub-and-mule[CloudHub and Mule] for more details.
+
+== Overview
+
+Application Properties are variables that act as placeholders in your Mule application, and which are set in your Mule server at runtime. The Mule server supplies the values for the variables using information you configure in the Runtime Manager console when you deploy an application or update an existing application in the configuration tab.
+
+
+The .zip file of the application you deploy to CloudHub can bundle secure property placeholder files which can contain encrypted property values. If a property name is listed with the 'secure.properties' entry (either in 'mule-app.properties', in another properties file, or if you enter it into the Properties tab in the Runtime Manager console), then once the application is deployed, the value of this secure property will be obfuscated in the Runtime Manager Properties tab. In fact the value is only stored in the Mule worker's memory and is never stored in any files, nor is it ever passed between any machines (including the Runtime Manager Console).
+
+
+== Use Case
+
+
+For example, you can configure a JDBC connector where the username is set to `${dbUsername}` and the password is set to `${dbPassword}`. In the Runtime Manager console, you can set these two properties as application properties, as shown below.
+
+image:dbproperties.png[dbproperties]
+
+For sensitive information, you may wish to flag these properties as secure so that, after they are entered and saved in the Runtime Manager console, their values are neither visible in the console nor passed between the console and the CloudHub server.
+
+== Creating Secure Application Properties
+
+To create secure application properties:
+
+. Identify the property names that you wish to secure in your `mule-app.properties` file by listing them as `secure.properties`. In the example below, there are four total properties used in the application (lines 1-4 below), which have been defined in the mule-app.properties file with values for local testing (optional). Line 5 flags two of the properties as secure. 
++
+.mule-app.properties
+[source,json, linenums]
+----
+1. http.port=8081
+2. username=testuser
+3. password=testpass123
+4. birthdate=01/01/2015
+5. secure.properties=password, birthdate
+----
++
+. Deploy the Mule application to CloudHub. 
+. Enter your application properties as you normally would. 
++
+image:dbproperties2.png[dbproperties2]
++
+. Commit your deployment or update. Once your application is deployed, navigate to the Deployment tab and check the application properties. The values for all properties that you had marked as secured are now no longer visible to you or any other user. In the example below, birthdate and password are secured, but username is not.
++
+image:dbproperties3.png[dbproperties3]
++
+. Note that, once the values are committed and the application is uploaded, the secured properties are never displayed on the console, nor sent and received between the console and the CloudHub server. There is no way to retrieve the property, once set. It can, however, be overwritten with a new value. So, if you need to update a value, type a new value into the field, as shown below.
++
+image:dbproperties4.png[dbproperties4]
++
+Once an application is deployed with secured properties, CloudHub maintains the security flag for those properties. Even if you edit your application file to remove the `secure.properties` definitions from your `mule-app.properties` file and then upload that edited application file to CloudHub, CloudHub maintains the security of the properties previously flagged as secure.
+
+[NOTE]
+====
+*Copying Secure Environment Variables between Sandboxes*
+
+Note that when moving applications between link:/anypoint-platform-administration/managing-cloudhub-environments[sandboxes], secured application property values will _not_ be copied to the new environment. For all secured application properties, the name of the property will be copied, but the value will be left blank. 
+====
+
+== Overriding Secure Properties
+
+This secure behavior allows you to replace a hidden secure property value with a new decrypted value, and once the application is deployed, this new value will override the encrypted value stored in the application's secure property placeholder. Just like the encrypted value stored in the secure property placeholder file, this new value is only stored in the Mule runtime's memory. It is never stored in any file and is never passed between any other servers, including the Runtime Manager Console. The new value is also hidden once the application is deployed and can never be viewed again.
+
+This means that when you override a secure property in the CloudHub application's Properties tab, the values never need to be encrypted. In this scenario, securing the values of sensitive properties is reduced to controlling which operators have access to those values when they deploy or redeploy the secure application.
+
+For example, if a production application needs to update the database user and password stored in two properties named db.user and db.password, then an operator would enter this new db.user and db.password into the CloudHub application's properties tab and then Start or Restart the application. This allows the new application to upgrade this secure login information with zero downtime. Once all dependant applications are migrated, the old account could be decomissioned.
+
+
+== See Also
+
+* link:/runtime-manager/deploying-to-cloudhub[Deploy to CloudHub]
+* link:/runtime-manager/managing-deployed-applications[Managing Deployed Applications]
+* link:/runtime-manager/managing-cloudhub-applications[Managing CloudHub Applications]
+* Read more about what link:/runtime-manager/cloudhub[CloudHub] is and what features it has
+* link:/runtime-manager/developing-a-cloudhub-application[Developing a CloudHub Application]
+* link:/runtime-manager/cloudhub-and-mule[CloudHub and Mule]
+* link:/runtime-manager/cloudhub-architecture[CloudHub architecture]
+* link:/runtime-manager/monitoring-applications[Monitoring Applications]
+* link:/runtime-manager/cloudhub-fabric[CloudHub Fabric]
+* link:/runtime-manager/managing-queues[Managing Queues]
+* link:/runtime-manager/managing-schedules[Managing Schedules]
+* link:/runtime-manager/managing-application-data-with-object-stores[Managing Application Data with Object Stores]
+* link:/runtime-manager/cloudhub-cli[Command Line Tools]
+* link:/runtime-manager/virtual-private-cloud[Virtual Private Cloud]
+* link:/runtime-manager/penetration-testing-policies[Penetration Testing Policies]
+* link:/runtime-manager/secure-data-gateway[Secure Data Gateway]
