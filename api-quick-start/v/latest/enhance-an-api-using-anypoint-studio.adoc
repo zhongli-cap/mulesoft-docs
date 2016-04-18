@@ -5,7 +5,6 @@ This section covers how to enhance the T-Shirt API you created earlier in Anypoi
 * Consume a WSDL web service
 * Error checking
 
-
 == Consume a Web Service
 
 This section covers how to enhance the RAML API to replace a legacy SOAP-based service. The operations in WSDL of the legacy service align with the RAML resources of your API in the Studio project.
@@ -14,9 +13,10 @@ To consume a web service:
 
 . On the first flow, click the HTTP Connector, which opens the properties editor for the Connector below the canvas.
 . Next to the *Connector Configuration* field, click image:Edit-16x16.gif[Edit-16x16] to set the properties for the global connector element.
-. Change the port value from the default 8081 to `${http.port}`.
+. Change the port value from the default 8081 to `${http.port}` and the _All Interfaces [0.0.0.0] (Default)_ host to `${http.host}`.
 +
-This expression makes the port value equal to the value of the `http.port` property in the `mule-app.properties` file at runtime. WHY?
+This expression makes the port value equal to the values of `http.port` and `http.host` properties in the `mule-app.properties` file at runtime. +
+This is a regular good practice to keep consistency along your application configuration. Using properties instead of raw values saves you the work of remembering in which global configuration you configured certain values, and as your applications grow more complex, setting your configuration values in one _properties_ file allows you to replicate the updated value to al relevant global configurations.
 +
 . In the package explorer, double-click `mule-app.properties` in the `src/main/app` folder.
 +
@@ -24,6 +24,7 @@ The `mule-app.properties` file opens.
 . Add the following line, and then save the change:
 +
 `http.port=8081`
+`http.host=0.0.0.0`
 +
 . In the *get:/products:api-config* flow, delete *Set Payload*. Select the *Set Payload* element, and click *Delete* on the context menu.
 . Drag the *link:/mule-user-guide/v/3.7/web-service-consumer[Web Service Consumer]* connector from the palette to the empty *Process* section of the flow.
@@ -45,7 +46,7 @@ image:WSC+configured.png[WSC+configured]
 +
 Studio populates the Operation drop-down by inference from the WSDL.
 +
-. Repeat steps 6 - 7 for the *get:/orders/{orderId}/status:t-shirt-config* and *post:/orders:t-shirt-config* flows.
+. Repeat steps 6 - 7 for the *get:/orders/status:t-shirt-config* and *post:/orders:t-shirt-config* flows.
 . Repeat step 10 for these flows, but instead of ListInventory, select TrackOrder (item 3 on the drop-down) and OrderTShirt (item 2 on the drop-down), for the respective flows.
 +
 Your flows now call the Web service, generating requests using the XML message structures required by this Web service.
@@ -58,7 +59,7 @@ Messages to and from the Web Service Consumer are not in the required JSON forma
 . From the palette, drag the DataWeave transformer, labeled *Transform Message*, to the get and post resources flows. Include five instances of Transform Message in your project:
 +
 * One to the right of the Web Service Consumer in the *get:/products:api-config* flow
-* Two, one to the right and one to the left of the Web Service Consumer in the *get:/orders/{orderId}/status:t-shirt-config* flow
+* Two, one to the right and one to the left of the Web Service Consumer in the *get:/orders/status:t-shirt-config* flow
 * Two, one to the right and one to the left of the Web Service Consumer in the  *post:/orders:t-shirt-config*
 +
 image:other+flows+w+dw.png[other+flows+w+dw]
@@ -87,7 +88,7 @@ Use the following Dataweave expressions for the respective flows:
 }]
 ----
 +
-*get:/orders/{orderId}/status:t-shirt-config Transform Messaage on the left*
+*get:/orders/status:t-shirt-config Transform Messaage on the left*
 +
 [source,dataweave,linenums]
 ----
@@ -98,12 +99,12 @@ Use the following Dataweave expressions for the respective flows:
 {
   ns0#TrackOrder: {
     email: inboundProperties."http.query.params".email,
-    orderId: flowVars.orderId
+    orderId: inboundProperties."http.query.params".orderId
  }
 }
 ----
 +
-*get:/orders/{orderId}/status:t-shirt-configTransform Message on the right*
+*get:/orders/status:t-shirt-configTransform Message on the right*
 +
 [source,dataweave,linenums]
 ----
