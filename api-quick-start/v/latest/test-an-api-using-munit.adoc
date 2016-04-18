@@ -14,274 +14,14 @@ To do this, we employ link:/munit/v/1.2.0/index[MUnit], a _Mule application test
 For this example, we are using a few components to write the test. +
 Keep in mind that MUnit provides a full suite of integration and unit test capabilities. To learn more about its components and how to integrate MUnit with your continuous deployment environment, check the link:/munit/v/1.2.0/index[MUnit documentation].
 
-== Install MUnit
 
-MUnit is fully integrated with Anypoint Studio, allowing you to design your tests the same way you would design a Mule application in Studio. +
-To use it, you first need to install it in your current Studio version. +
+== Enhance Your Existing Test
 
-Go to `Help` / `Install New Software...` and click the `Add...` button. +
-Set the *Name:* field as `MUnit Update Site` and the *Location:* field as `http://studio.mulesoft.org/beta/r5/munit`
+This tutorials assumes that you link:/api-quick-start/import-an-api-into-anypoint-studio#generate-an-munit-test-suite-based-on-a-raml[generated an automatic MUnit test] when you imported your API into Anypoint Studio.
 
-Check *Munit* and *Munit Tools for Mule*, and click *Next* to complete the installation.
+Since now your application consumes the data from a web service, the payloads that this test asserts change to match the results served by the Web Service.
 
-After installation, restart your Studio.
-
-== Write Your Test
-
-MUnit Studio integration is mainly built around XML-based tests, so an MUnit test looks very similar to a Mule application.
-
-It is important to define the purpose of your test. In this tutorial, we are validating the payloads and http response codes returned by your exposed APIKit endpoint. +
-In other words, you are making sure that a `GET` request receives a `200` status code response, and that the payload of this response is the one you are expecting.
-
-To start writing your test, you should use the *MUnit Wizard*, which allows you to create a test for any flow or application in your Studio workspace.
-Go to *File* > *New* > *MUnit test*.
-It automatically loads the wizard displaying all your current flows:
-
-image:munit-wizard.png[munit-wizard]
-
-You can select a specific flow from your application, or you can select the whole application (t-shirt.xml) so the wizard automatically selects all the flows contained in it. +
-For this example, select *t-shirt.xml*. It is also recommended to change the _Test file name_ field to a more descriptive name for the test. For this example, change it to *t-shirt-test-suite*
-
-There are other ways to create custom tests in MUnit. If you are interested in learning more, consult our link:/munit/v/1.1.1/using-munit-in-anypoint-studio#creating-a-new-munit-test-in-studio[Using MUnit in Studio] article.
-
-The wizard creates a test for each flow as shown below:
-
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-image:initialblanktest.png[initialblanktest]
-....
-[tab,title="XML or Standalone Editor"]
-....
-[source,xml,linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
-http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
-    <munit:config name="munit" doc:name="MUnit configuration"/>
-    <spring:beans>
-        <spring:import resource="classpath:t-shirt.xml"/>
-    </spring:beans>
-    <munit:test name="t-shirt-test-suite-api-mainTest" description="Test">
-        <flow-ref name="api-main" doc:name="Flow-ref to api-main"/>
-    </munit:test>
-    <munit:test name="t-shirt-test-suite-get:/products:api-configTest" description="Test">
-        <flow-ref name="get:/products:api-config" doc:name="Flow-ref to get:/products:api-config"/>
-    </munit:test>
-    <munit:test name="t-shirt-test-suite-get:/orders/{orderId}/status:api-configTest" description="Test">
-        <flow-ref name="get:/orders/{orderId}/status:api-config" doc:name="Flow-ref to get:/orders/{orderId}/status:api-config"/>
-    </munit:test>
-    <munit:test name="t-shirt-test-suite-post:/orders:application/json:api-configTest" description="Test">
-        <flow-ref name="post:/orders:application/json:api-config" doc:name="Flow-ref to post:/orders:application/json:api-config"/>
-    </munit:test>
-</mule>
-
-----
-....
-
-------
-
-Pay attention to the _MUnit configuration_ global element:
-
-[source,xml,linenums]
-----
-<munit:config name="munit" doc:name="MUnit configuration"/>
-----
-
-Since usually you don’t need to enable inbound endpoints, the `mock-connectors` and `mock-inbounds` properties of your MUnit configuration are `true` by default. +
-But in this example, you are going to validate calls to an APIKit router, so you need to manually set those properties to `false`. +
-In the XML editor, you can type `mock-connectors="false" mock-inbounds="false"` resulting in:
-
-[source,xml,linenums]
-----
-<munit:config name="munit" doc:name="MUnit configuration" mock-connectors="false" mock-inbounds="false"/>
-----
-
-Or you can do this using the visul editor, going to the `Global Elements` tab of your MUnit suite, double-click your `MUnit configuration (Configuration)` global element, uncheck both options (`Mock Mule transport connectors` and `Mock Inbound endpoints`) and click *OK*.
-
-If you don't do this for this test, it will fail throwing the message: +
-`Flow endpoint is null, APIKIT requires a listener ref in each of it's flows`
-
-
-=== Understanding The Test Suite
-
-Your MUnit test consists of a configuration (`<munit:config>`), an import bean that imports the xml of your main application (`<spring:import>`) and a test for each of the flow of your Mule application (`<munit:test>`). +
-Take a few considerations before starting:
-
-. Since your goal is to validate the responses sent by your APIKit router, you are not going to need the `t-shirt-test-suite-api-mainTest` test, so remove it from your XML. +
-. Note that each `<munit:test>` contains a link:/mule-user-guide/v/3.8-m1/flow-reference-component-reference[Flow Reference Component Reference] (`<flow-ref>`) to the flow corresponding of each test. Since you are going to send requests directly to your APIKit router, you are not going to call each flow separately, so for this test, remove them as well.
-. Take into account the `description` field of each `<munit:test>`. It is  recommended to set a descriptive and useful description for the purpose of each test. As your application grows more complex, you need to know exactly which unit of your code each test evaluates. Your test should look like this:
-
-
-[tabs]
-------
-
-[tab,title="Studio Visual Editor"]
-....
-image:empty-tests-to-start-writing.png[empty-tests-to-start-writing]
-....
-[tab,title="XML or Standalone Editor"]
-....
-[source,xml,linenums]
-----
-<munit:config name="munit" doc:name="MUnit configuration" mock-connectors="false" mock-inbounds="false"/>
-<spring:beans>
-    <spring:import resource="classpath:t-shirt.xml"/>
-</spring:beans>
-
-<munit:test name="t-shirt-test-suite-get:/products:api-configTest" description="Validate the reponse code and payload of an empty get request">
-
-</munit:test>
-
-<munit:test name="t-shirt-test-suite-get:/orders/{orderId}/status:api-configTest" description="Validate teh response code and payload of a get request containing an orderId">
-
-</munit:test>
-
-<munit:test name="t-shirt-test-suite-post:/orders:application/json:api-configTest" description="Validate the response code and payload for posting an orders request">
-
-</munit:test>
-----
-....
-------
-
-=== Test The GET Method
-
-==== Configure a Global HTTP Request Element.
-
-To test the `GET` method response, we are using an link:/mule-user-guide/v/3.7/http-request-connector[HTTP Request Connector] to send a GET request to your APIKit router. To configure the HTTP Request connector, you first need to create a link:/mule-user-guide/v/3.7/http-request-connector#minimum-configuration-for-the-global-element[request global element] to point to your Mule application:
-
-[NOTE]
---
-While designing your application you defined a Mule property `http.port`. To avoid the configuring each port and host for the HTTP request connector, you should also include a property for your host (say `http.host`).
-Your mule-app.properties file should look like this:
-
-http.host=0.0.0.0 +
-http.port=8081
-
---
-
-[tabs]
-------
-
-[tab,title="Studio Visual Editor"]
-....
-image:createhttprequestglobalelement.png[createhttprequestglobalelement] +
-image:configurehttprequestglobalelement.png[configurehttprequestglobalelement]
-
-. Go to your _Test Suite_'s *Global Elements* tab \
-. Click the *Create* button
-. Filter by _http request_ and select the *HTTP Request Configuration*
-. Click *OK*
-. In the *Global Elements Properties* configuration wizard, click the *Browse* button in your _API configuration_ section.
-. Select the same `api.raml` from the classpath of your Mule Application. This automatically loads the configuration set in the raml file
-. For testing purposes, change the host and port the raml loads by default, to the same ones used in your Mule application. Note how the use of Mule Properties lets you handle this information in one file, and replicate it to all configurations. Also change the *Base Path* to `/api`.
-
-....
-[tab,title="XML or Standalone Editor"]
-....
-
-[source,xml,linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="${http.host}" port="${http.port}" basePath="/api" doc:name="HTTP Request Configuration">
-<http:raml-api-configuration location="api.raml"/>
-----
-
-Add the `<http:request-config>` element before your very first `<munit:test>`
-....
-------
-
-
-==== Design Your GET Method Test
-
-Start by using a link:/munit/v/1.2.0/set-message-processor[Set Message Procesor] to set an empty payload to send to your request:
-
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-image:setmessage.png[setmessage]
-
-. From the Mule Palette, drag and drop a link:/munit/v/1.2.0/set-message-processor[Set Message Procesor] to your test suite.
-. Double-click on the *Set Message Processor* to access its properties
-. Set the Payload to `#['']`.
-
-....
-[tab,title="XML or Standalone Editor"]
-....
-[source,xml,linenums]
-----
-<munit:set payload="#['']" doc:name="Set Message"/>
-----
-
-....
-------
-
-Now, use an link:/mule-user-guide/v/3.7/http-request-connector[HTTP Request Connector] to send this empty payload to your APIKit router
-
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-image:httpreqeustconfiguration.png[httpreqeustconfiguration]
-
-. Select and HTTP Connector from your Mule Palette
-. Drag and drop the connector next to the Set Message Connector and double click it
-. Note that the configuration for this connector is automatically loaded using the HTTP Request Global Configuration you configured earlier
-. From the *Path:* selector, click the down arrow and note that it allows you to select from all the possible paths to which you can send an HTTP request. Select */products*
-. Select a `GET` method
-....
-[tab,title="XML or Standalone Editor"]
-....
-<http:request config-ref="HTTP_Request_Configuration" path="/products" method="GET" doc:name="HTTP"/>
-....
-------
-
-As a first assertion, verify that the status code of the response is `200 (OK)`. To do so, use an link:/munit/v/1.2.0/assertion-message-processor#assert-true[Assert True] message processor.
-
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-image:asserttruetest.png[asserttruetest]
-
-. From the Mule Palette, filter using the `assert` word, and from all the Assert Message Processors, select *Assert True*
-. Drag and Drop the message processor next to your HTTP Message Processor and double click it to access its properties
-. As a _Test failure message_ use a phrase that MUnit can return in case the test fails. For example `the HTTP Status code is not correct!`
-. As a _Condition_, use a MEL Expression to set the required case to meet to pass the test.
-
-Remember that the http status code of every response is passed as an *Inbound Property* of link:/mule-fundamentals/v/3.8-m1/mule-message-structure[the Mule Message]. So, to verify the status code of the response, check that the message inbound property of the current message is 200:
-
-[source,MEL,linenums]
-----
-#[messageInboundProperty('http.status').is(eq(200))]
-----
-
-....
-[tab,title="XML or Standalone Editor"]
-....
-[source,xml,linenums]
-----
-<munit:assert-true message="The HTTP Status code is not correct!" condition="#[messageInboundProperty('http.status').is(eq(200))]" doc:name="Assert True"/>
-----
-
-The `message` value is a phrase that MUnit can return in case the test fails. For example `the HTTP Status code is not correct!`. +
-As a `Condition` value, use a MEL Expression to set the required case to meet to pass the test.
-
-Remember that the http status code of every response is passed as an *Inbound Property* of link:/mule-fundamentals/v/3.8-m1/mule-message-structure[the Mule Message]. So, to verify the status code of the response, check that the message inbound property of the current message is 200:
-
-[source,MEL,linenums]
-----
-#[messageInboundProperty('http.status').is(eq(200))]
-----
-
-....
-------
-
-Finally, verify that the payload returned by your application is the one you expect. +
-Based on the example in the previous tutorial, the response for an empty GET method for your application is:
+Run the t-shirt application from Studio and use the APIKit console to mock a GET request to products/. Note that it returns the following JSON response:
 
 [source,json,linenums]
 ----
@@ -319,38 +59,23 @@ Based on the example in the previous tutorial, the response for an empty GET met
 ]
 ----
 
-Save this JSON response as `getTestSample.json` in your classpath under */src/test/resources*:
+Save this raw JSON response as `getTestSample.json` in your classpath under */src/test/resources*:
 
 image:savejsonresponse.png[savejsonresponse]
 
-Now use an link:/munit/v/1.2.0/assertion-message-processor#assert-equals[Assert Equals Message Processor] to compare your expected payload response to your actual payload response:
-
-
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-
-image:assertpayloadresponse.png[assertpayloadresponse]
-
-. From the Mule Palette, filter using the `assert` word, and from all the Assert Message Processors, select *Assert Equals*
-. Drag and Drop the message processor next to your Assert True message processor and double click it to access its properties
-. As a *Test failure message* use a phrase that MUnit can return in case the test fails. For example `The response payload is not correct!`.
-. As an *Expected value*, use a MEL Expression to set the required payload value to meet to pass the test: `#[getResource('getTestSample.json').asString()]` +
-. As an *Actual value*, you expect the payload of the response so define it as `#[payload]`.
-
-You can match both MEL expressions or literal values. In this example, since you are asserting a whole JSON response, is better to load the expected response from an file within your classpath. So, when using a `getResource().asString()` expression, you are using the saved JSON response as an expected payload:
+In your automatically generated _test suite_, locate the `get:/products:t-shirt-config-200-application/json-FlowTest` test and double click in the link:/munit/v/1.2.0/assertion-message-processor#assert-equals[Assert Equals Message Processor] and replace your current expected value to a MEL expression that loads the expected response from a file located in your _classpath_:
 
 [source,MEL,linenums]
 ----
 #[getResource('getTestSample.json').asString()]
 ----
 
-[IMPORTANT]
---
-The file referenced in the `getResource()` expression needs to be in your classpath. You can't invoke external files using this expression.
---
 
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:assert-payload-equals-update-expected-payload.png[assert-payload-equals-update-expected-payload]
 ....
 [tab,title="XML or Standalone Editor"]
 ....
@@ -358,22 +83,15 @@ The file referenced in the `getResource()` expression needs to be in your classp
 ----
 <munit:assert-on-equals message="The response payload is not correct!" expectedValue="#[getResource('getTestSample.json').asString()]" actualValue="#[paylaod]" doc:name="Assert Equals"/>
 ----
-
-The `message` value is a phrase that MUnit can return in case the test fails. For example `The response payload is not correct!`. +
-As an `expectValue`, use a MEL expression to set the required payload value to meet to pass the test.
-As an `actualValue`, use a MEL expression to set the paylaod of the Mule Message: `#[paylaod]`
-
-
-You can match both MEL expressions or literal values. In this example, since you are asserting a whole JSON response, is better to load the expected response from an file within your classpath. So, when using a `getResource().asString()` expression, you are using the saved JSON response as an expected payload:
-
-[source,MEL,linenums]
-----
-#[getResource('getTestSample.json').asString()]
-----
+....
+------
 
 [IMPORTANT]
 --
 The file referenced in the `getResource()` expression needs to be in your classpath. You can't invoke external files using this expression.
 --
-....
-------
+
+Do the same with the _Assert Equals Message Processor_ in your `get:/orders/status:t-shirt-config-200-application/json-FlowTest` flow. +
+. Simulate an empty *POST* request with the query parameters `email` and `orderId` using the APIKit console rendered when you run your application
+. Save the generated raw response in your classpath under */src/test/resources* (name it `postTestSample.json`)
+. Use the same MEL expression to assert the payload against the expected one: `#[getResource('postTestSample.json').asString()]`.
