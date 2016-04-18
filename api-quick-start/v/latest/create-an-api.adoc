@@ -159,7 +159,7 @@ baseUri: http://server/api
 
 == Build a RAML File for an Existing API
 
-A typical use case is taking the link:http://tshirt-service.cloudhub.io/?wsdl[WSDL definition] of an existing SOAP API and building a RAML file around it in a legacy modernization project to move from SOAP to REST. The WSDL for the link:http://tshirt-service.cloudhub.io/?wsdl[T-shirt API] lists a set of operations that can be called. The operations act upon a resource: 
+A typical use case is taking the link:http://tshirt-service.cloudhub.io/?wsdl[WSDL definition] of an existing SOAP API and building a RAML file around it in a legacy modernization project to move from SOAP to REST. The WSDL for the link:http://tshirt-service.cloudhub.io/?wsdl[T-shirt API] lists a set of operations that can be called. The operations act upon a resource:
 
 * `ListInventory`
 * `OrderTshirt`
@@ -214,9 +214,9 @@ The procedure in this section adds the following things:
 * A status resource
 * Query parameters for querying the `status` resource using the requester email <<doesn't work>>
 
-To ensure that `POST` requests sent to the *`/order`* resource are valid, enforce a structure by using a schema. The schema and incoming requests are compared. A match ensures validity.
+To ensure that `POST` requests sent to the *`/orders`* resource are valid, enforce a structure by using a schema. The schema and incoming requests are compared. A match ensures validity.
 
-. Add a schema. 
+. Add a schema.
 +
 ----
 ...
@@ -281,59 +281,45 @@ To ensure that `POST` requests sent to the *`/order`* resource are valid, enfor
           }
 ----
 +
-. To the root of the API definition (not indented), below the schema, add the orderID resource, enclosed in curly brackets to indicate a variable resource.
+Below the schema, add the */status* resource:
 +
 ----
 ...
-/{orderId}/status:
-    displayName: status
-    get:
-      description: Get the status of an existing order
-      responses:
-        200:
-          body:
-            application/json:
-              example: |
-                {
-                  "orderId": "4321",
-                  "status": "Delivered",
-                  "size": "M"
-                }
-        400:
-          body:
-            application/json:
-              example: |
-                {
-                  "message": "The orderId doesn't match the specified e-mail"
-                }
+/status:
+  displayName: Status
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              {
+                "orderId": "4321",
+                "status": "Delivered",
+                "size": "M"
+              }
 ----
 +
-. At the same level on the tree structure as the operation `response` label, add a *queryParameters* element to the `GET` operation with the following attributes:
+. At the same level on the tree structure as the operation `responses` label, add a *queryParameters* element to the `GET` operation with the following attributes:
 +
 [source, yaml, linenums]
 ----
 queryParameters:
-        email:
-          description: Retrieve the status of an order with the same email that was used to place the order.
-          pattern: ^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$
-          required: true
+  orderId:
+    description: Provide a valid order Id.
+    pattern: (?:\d*)?\d+
+    required: true
+    example: "4321"
+  email:
+    description: Provide a valid email address.
+    pattern: ^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$
+    required: true
+    example: "max@mule.com"
 ----
 
 link:_attachments/t-shirt.raml[Download the entire RAML].
 
-== Simulate a GET Request on the Status of an Order
-
-After enhancing the API with the query parameters, the enhancement appears in the mockup:
-
-image:api-designer-resources.png[api-designer-resources]
-
-Use the mocking service and enter the email address as a query parameter to retrieve a particular order.
-
-image:Screenshot+2014-07-03+14.49.46.png[Screenshot+2014-07-03+14.49.46]
-
-By providing a valid email address, the request URL reflects the resource path appended to the `baseUri`. In response, you receive a status 200: success! 
 
 == Next
 
 Go to link:/api-quick-start/create-a-proxy-for-an-api[Create a Proxy].
-
