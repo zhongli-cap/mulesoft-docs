@@ -1,0 +1,73 @@
+= Anypoint MQ Acknowledgements Mode - DRAFT
+:keywords: mq, ack, exception, strategy, mode
+
+Anypoint MQ lets you determine how to process messages in Anypoint Studio using the MQ Connector. The acknowledgement mode lets you set these behaviors when an application receives a message from a queue:
+
+(Coming)
+
+////
+* *Manual* - An application sets its own outcomes for what to do when a message is available or not available.
+* *None* - An application receives a message and does no further processing.
+* *Auto* - An application uses an exception strategy to catch events that the MQ Connector generates.
+////
+
+
+== Creating an Acknowledge Flow in Anypoint Studio
+
+image:mq-ack-flow.png[MQ Acknowledgement Flow]
+
+== XML Code Example
+
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq" xmlns:context="http://www.springframework.org/schema/context" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+    <context:property-placeholder location="ackmodes.properties"/>
+
+    <anypoint-mq:config name="Anypoint_MQ_Configuration" doc:name="Anypoint MQ Configuration">
+        <anypoint-mq:provider url="https://mq-us-east-1.anypoint.mulesoft.com/api/v1" clientId="${mq.clientId}" clientSecret="${mq.clientSecret}"/>
+    </anypoint-mq:config>
+
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+
+    <flow name="autoHttp">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
+        <anypoint-mq:publish config-ref="Anypoint_MQ_Configuration" destination="auto" doc:name="Anypoint MQ"/>
+    </flow>
+
+    <flow name="autoMq">
+        <anypoint-mq:subscriber config-ref="Anypoint_MQ_Configuration" destination="auto" doc:name="Anypoint MQ" pollingTime="10000"/>
+        <component class="ackmodes.RandomError" doc:name="Java"/>
+        <logger level="ERROR" doc:name="Logger" message="Will ACK"/>
+        <choice-exception-strategy doc:name="holaChoice_Exception_Strategy">
+            <catch-exception-strategy doc:name="Catch Exception Strategy" when="exception.causedBy(UnsupportedOperationException)">
+                <logger message="Will ACK" level="ERROR" doc:name="Logger"/>
+            </catch-exception-strategy>
+            <rollback-exception-strategy doc:name="Rollback Exception Strategy">
+                <logger message="Will NACK" level="ERROR" doc:name="Logger"/>
+            </rollback-exception-strategy>
+        </choice-exception-strategy>
+    </flow>
+
+</mule>
+----
+
+
+== See Also
+
+* link:http://training.mulesoft.com[MuleSoft Training]
+* link:https://www.mulesoft.com/webinars[MuleSoft Webinars]
+* link:http://blogs.mulesoft.com[MuleSoft Blogs]
+* link:http://forums.mulesoft.com[MuleSoft's Forums]
+* link:https://www.mulesoft.com/support-and-services/mule-esb-support-license-subscription[MuleSoft Support]
+* mailto:support@mulesoft.com[Contact MuleSoft]
