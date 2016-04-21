@@ -12,7 +12,7 @@ A matcher does not receive parameters; rather, it's a parameter itself.
 
 The table bellow lists the available MUnit matchers.
 
-[cols=",,"]
+[cols=","]
 .MUnit Matcher Functions
 |===
 | Matcher Name | Description
@@ -66,7 +66,7 @@ The table bellow lists the available MUnit matchers.
 
 MUnit also offers some additional, rather specific, type of matchers. These matchers evaluate the _content_ of the parameter, not its type; even so, they do not evaluate by specific values.
 
-[cols=",,"]
+[cols=","]
 .MUnit Matcher Functions
 |===
 | Matchers Name | Description
@@ -83,34 +83,52 @@ MUnit also offers some additional, rather specific, type of matchers. These matc
 
 For the purposes of this document, we assume we are testing the following Mule code:
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:set-variable-munit-matcher.png[set-variable-munit-matcher]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.Code to be tested
 ----
 <flow name="exampleFlow">
-  <set-variable variableName="#['my_variable']" value="#['some_string]" doc:name="Variable"/>
+  <set-variable variableName="#['my_variable']" value="#['some_string']" doc:name="Variable"/>
 </flow>
 ----
+....
+------
 
-NOTE: MUnit matchers are _always_ used in combination with the Mocks, Throws, Spy, Verify and
-Assert message processors, but never on their own.
+NOTE: MUnit matchers are _always_ used in combination with the link:/munit/v/1.2.0/mock-message-processor[Mocks], link:/munit/v/1.2.0/spy-message-processor[Spy], link:/munit/v/1.2.0/verify-message-processor[Verify] and link:/munit/v/1.2.0/assertion-message-processor[Assert] message processors, but never on their own.
 
 === Using MUnit Matchers in a Mock Definition
 
 Used in combination with MUnit Matchers, the Mock message processor allows you to create mocks that match by information other than values, such as content type of a specific attribute. In the example below, the mock matches if and only if the content of the attribute `value` is of type `String`.
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:mock-munit-matchers.png[mock-munit-matchers]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.MUnit matchers - Mock example
 ----
 <mock:when messageProcessor="mule:set-variable">
   <mock:with-attributes>
     <mock:with-attribute whereValue="#['my_variable']" name="variableName"/>
-    <mock:with-attribute whereValue="#[anyString()]" name="value"/> //<1>
+    <mock:with-attribute whereValue="#[anyString()]" name="value"/>
   </mock:with-attributes>
 </mock:when>
 ----
-<1> The match is produced by the `anyString()` matcher.
+....
+------
 
-In the above example, the mock definition is triggered when the code being tested reaches the `set-payload` message processor, if and only if the content of attribute `value` is of type `String`, disregarding the actual string value.
+In the above example, the mock definition is triggered when the code being tested reaches the `set-variable` message processor, if and only if the content of attribute `value` is of type `String`, disregarding the actual string value.
 
 If not using a matcher, the only way to produce a match is to evaluate for the literal value. If the test code evolves and changes, chances are the contents of attribute `value` would also change, and your test would fail.
 
@@ -119,29 +137,46 @@ If not using a matcher, the only way to produce a match is to evaluate for the l
 Used in combination with MUnit Matchers, the Verify message processor allows you to verify when a message processor is called by matching information other than values, such as the content type of a specific attribute. In the example below, the verification is successful if and only if the `set-variable` message processor has set variable `my_variable`, of content type `String`.
 solve use cases like:
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:verify-definition.png[verify-definition]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.MUnit matchers - Mock example
 ----
 <mock:verify-call messageProcessor="mule:set-variable" times="1" doc:name="Verify Call">
   <mock:attributes>
     <mock:with-attribute whereValue="#['my_variable']" name="variableName"/>
-    <mock:attribute whereValue="#[anyString()]" name="value"/> //<1>
+    <mock:attribute whereValue="#[anyString()]" name="value"/>
   </mock:attributes>
 </mock:verify-call>
 ----
-<1> The match is produced by the `anyString()` matcher.
+
+....
+------
 
 === Using MUnit Matchers in Spy Definition
 
 Used in combination with MUnit Matchers, the Spy message processor allows you to spy message processors matched by information other than values, such as the content type of a specific attribute. In the example below, the message processor in the test code can be spied if and only if the `set-variable` message processor has set the variable `my_variable`, of content type `String`.
 
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:spy-with-assert-match.png[spy-with-assert-match]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.MUnit Matchers - Mock example
 ----
 <mock:spy messageProcessor="mule:set-payload" doc:name="Spy">
   <mock:with-attributes>
     <mock:with-attribute whereValue="#['my_variable']" name="variableName"/>
-    <mock:attribute whereValue="#[anyString()]" name="value"/> //<1>
+    <mock:attribute whereValue="#[anyString()]" name="value"/>
   </mock:with-attributes>
   <mock:assertions-before-call>
     <!-- Define actions -->
@@ -151,19 +186,33 @@ Used in combination with MUnit Matchers, the Spy message processor allows you to
   </mock:assertions-after-call>
 </mock:spy>
 ----
-<1> The match is produced by the `anyString()` matcher.
+....
+------
+
 
 === Using MUnit Matchers in an Assertion Definition
 
-You can greatly enhance the power of the Assert message processors when using them in conjunction with MUnit matchers, for example by validating that the content of a Mule message is of a specific type.
-
+You can greatly enhance the power of the Assert message processors when using them in conjunction with MUnit matchers, for example by validating that the content of a Mule message is of a specific type. +
 The example below validates that the content of a Mule message is a boolean.
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:assert-anyboolean-munit-matchers.png[assert-anyboolean-munit-matchers]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml]
-.MUnit Matchers - Assert payload example
 ----
-<munit:assert-true message="oops!" condition="#[valueOf(payload).is(anyBoolean())]" />
+<munit:test name="munit-test-suite-exampleFlowTest" description="Test">
+    <flow-ref name="exampleFlow" doc:name="Flow-ref to exampleFlow"/>
+    <munit:assert-true message="oops!" condition="#[valueOf(payload).is(anyBoolean())]" />
+</munit:test>
 ----
+....
+------
 
 Notice the content of the attribute `condition`:
 
@@ -174,25 +223,34 @@ valueOf(payload)    //<1>
 .is(anyBoolean())   //<2>
 ]
 ----
-<1> Create `ElementMatcher` for payload.
+<1> Creates an `ElementMatcher` for payload.
 <2> Run `anyBoolean()` MUnit matcher over the payload of the Mule message.
 
-In this example we first need to create an _ElementMatcher_ for the payload. Then, we can ask the `ElementMatcher` to run the `anyBoolean()` matcher over itself, by calling the method `is()`.
+In this example we first need to create an _ElementMatcher_ for the payload (*1*). Then, we can ask the `ElementMatcher` to run the `anyBoolean()` matcher over itself, by calling the method `is()` (*2*).
 
 ==== MUnit Matchers over Mule Message Properties
 
 If you wish to run assertions over Mule message properties and use MUnit matchers, you can use the `valueOf()` function. For instance:
 
-[source, xml]
-.MUnit Matchers - Assert invocation property example
-----
-<munit:assert-true message="oops!" condition="#[valueOf(flowVars['my_variable']).is(anyBoolean())]" />
-----
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:assert-variable-isboolean-munit-matcher.png[assert-variable-isboolean-munit-matcher]
+....
+[tab,title="XML or Standalone Editor"]
+....
+<munit:test name="munit-test-suite-exampleFlowTest" description="Test">
+        <flow-ref name="exampleFlow" doc:name="Flow-ref to exampleFlow"/>
+        <munit:assert-true message="oops!" condition="#[valueOf(flowVars['my_variable']).is(anyBoolean())]" />
+</munit:test>
+....
+------
 
 To make it easier to write this type of assertions, MUnit offers a another set of MEL functions that provide direct access for Mule message's properties `ElementMatcher`.
 
-[cols=",,"]
-.MUnit matchers - Message Property ElementMatcher builders
+[cols=","]
 |===
 |Function  |Description
 
@@ -215,11 +273,24 @@ To make it easier to write this type of assertions, MUnit offers a another set o
 
 With these functions you could change the example above to:
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:assert-invocation-property-example.png[assert-invocation-property-example]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.MUnit matchers - Assert invocation property example
 ----
-<munit:assert-true condition="#[messageInvocationProperty('my_variable').is(anyBoolean())]"/>
+<munit:test name="munit-test-suite-exampleFlowTest" description="Test">
+    <flow-ref name="exampleFlow" doc:name="Flow-ref to exampleFlow"/>
+    <munit:assert-true message="oops!" condition="#[messageInvocationProperty('my_variable').is(anyBoolean())]" doc:name="Assert True"/>
+</munit:test>
 ----
+....
+------
 
 == See Also
 
