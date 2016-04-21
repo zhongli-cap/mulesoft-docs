@@ -20,7 +20,7 @@ The Anypoint MQ connector provides global and local states for specifying how yo
 
 Lets you specify use the Studio Global Element Properties menu to specify a strategy for processing all messages in a flow. The global state provides these choices:
 
-* *AUTO* - The Anypoint MQ connector automatically sends an Ack or Nack at the end of a flow depending on whether the MQ connector detects a Catch Exception Strategy (ACK) or a Rollback Exception Strategy (NACK).
+* *AUTO* - The Anypoint MQ connector automatically sends an Ack or Nack at the end of a flow depending on whether the MQ connector detects a Catch Exception Strategy (ACK) or a Rollback Exception Strategy (NACK). See xref:autoflow[Creating an Auto Acknowledge Flow in Anypoint Studio] for an example.
 +
 There are two possible outcomes:
 +
@@ -43,8 +43,8 @@ There are two possible outcomes:
 </rollback-exception-strategy>
 ----
 +
-* *MANUAL* - An application indicates that it sends its own Ack or Nack using the Anypoint MQ connector local state. The MQ connector doesn't provide any actions automatically.
-* *NONE* - An application receives a message and the MQ connector immediately acknowledges and deletes the message. This state risks losing the message if it is not consumed correctly, but is typically used when there is a flow of constantly updating messages, such as a news feed where each subsequent message provides more detail on any messages that preceded the message. This state takes a risk, but makes coding easier.
+* *MANUAL* - An application indicates that it sends its own Ack or Nack using the Anypoint MQ connector local state. The MQ connector doesn't provide any actions automatically. See xref:manualflow[Creating a Manual Acknowledge Flow in Anypoint Studio] for an example.
+* *NONE* - An application receives a message and the MQ connector immediately acknowledges and deletes the message. This state risks losing the message if it is not consumed correctly, but is typically used when there is a flow of constantly updating messages, such as a news feed where each subsequent message provides more detail on any messages that preceded the message. This state takes a risk, but makes coding easier. See xref:noneflow[Creating a None Acknowledge Flow in Anypoint Studio] for an example.
 +
 You can set the global state in the *Acknowledgement Mode* field:
 +
@@ -58,8 +58,8 @@ You can set a local state using the Anypoint MQ connector's *Operation* field:
 
 image:mq-connector-ops.png[mq-connector-ops]
 
-
-== Creating the Auto Acknowledge Flow in Anypoint Studio
+[[autoflow]]
+== Creating an Auto Acknowledge Flow in Anypoint Studio
 
 If you are using the *auto* state, set a `choice-exception-strategy` and the Anypoint MQ connector automatically sends the ack or nack depending on what exception choices you make. The code that follows illustrates the use of the *auto* state.
 
@@ -74,9 +74,9 @@ In this example, are these two flows:
 +
 The Error handling section of the flow contains a Catch Exception Strategy to cause the MQ connector to send the ACK, and a Rollback Exception Strategy to cause the MQ connector to send the NACK.
 
-=== XML Flows
+=== Auto XML Code
 
-The XML for the flow is:
+The XML code for the Auto Acknowledgement Mode is:
 
 [source,xml,linenums]
 ----
@@ -122,15 +122,142 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 </mule>
 ----
 
-The next section explains how the exceptions are thrown using the Java testing program, `RandomError`, which is called in this statement:
+[NOTE]
+====
+Ensure that you set the Client ID (mq.clientId) and Client Secret (mq.clientSecret) values in a properties file. In this case, they are set in the /ackmodes/classes/ackmodes.properties file, which contains:
+
+[source,code,linenums]
+----
+
+# Contents of this file are not meant to be shared with the wide public
+
+mq.clientId=<Client_ID>
+mq.clientSecret=<Client_Secret>
+
+----
+====
+
+See xref:randomerror[Random Error Generator] for an explanation of how exceptions are thrown using a Java testing program, which is called in this statement:
 
 [source,xml]
 ----
 <component class="ackmodes.RandomError" doc:name="Java"/>
 ----
 
+[[manualflow]]
+== Creating a Manual Acknowledge Flow in Anypoint Studio
+
+In the manual flow, the choice-exception-strategy is also set as in the flow. In this case, the application uses individual Anypoint MQ connector instances with the operation set to either Ack or Nack depending on exceptions sent by the xref:randomerror[Random Error Java Class].
+
+image:mq-manual-flow.png[mq-manual-flow]
+
+=== Manual XML Code
+
+The XML code for the Manual Acknowledgement Mode is:
+
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq" xmlns:context="http://www.springframework.org/schema/context" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+    <http:listener-config name="HTTP_Listener_Configuration_manual" host="0.0.0.0" port="8082" doc:name="HTTP Listener Configuration"/>
+
+    <flow name="manualHttp">
+        <http:listener config-ref="HTTP_Listener_Configuration_manual" path="/" doc:name="HTTP"/>
+        <anypoint-mq:publish config-ref="Anypoint_MQ_Configuration" destination="manual" doc:name="Anypoint MQ"/>
+    </flow>
+
+    <flow name="manualMq">
+        <anypoint-mq:subscriber config-ref="Anypoint_MQ_Configuration" destination="manual" doc:name="Anypoint MQ" pollingTime="10000" acknowledgementMode="MANUAL"/>
+        <component class="ackmodes.RandomError" doc:name="Java"/>
+        <logger level="ERROR" doc:name="Logger" message="Will ACK"/>
+        <anypoint-mq:ack config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ"/>
+        <choice-exception-strategy doc:name="holaChoice_Exception_Strategy">
+            <catch-exception-strategy doc:name="Catch Exception Strategy" when="exception.causedBy(UnsupportedOperationException)">
+                <logger message="Will ACK" level="ERROR" doc:name="Logger"/>
+                <anypoint-mq:ack config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ"/>
+            </catch-exception-strategy>
+            <catch-exception-strategy doc:name="Rollback Exception Strategy">
+                <logger message="Will NACK" level="ERROR" doc:name="Logger"/>
+                <anypoint-mq:nack config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ"/>
+            </catch-exception-strategy>
+        </choice-exception-strategy>
+    </flow>
+
+</mule>
+----
+
+See xref:randomerror[Random Error Generator] for an explanation of how exceptions are thrown using a Java testing program, which is called in this statement:
+
+[source,xml]
+----
+<component class="ackmodes.RandomError" doc:name="Java"/>
+----
+
+[[noneflow]]
+== Creating a None Acknowledge Mode in Anypoint Studio
+
+You can set the None Acknowledgement Mode from the Anypoint MQ connector's Global Element Properties:
+
+image:mq-global-mode-set.png[mq-global-mode-set]
+
+In the NONE flow, the Anypoint MQ connector always sends an ACK no matter what occurs. The example that follows emphasizes this risk by using the Java class xref:randomerror[RandomError] to create possible exceptions, but ignores the exceptions and sends the ACK regardless:
+
+[source,xml,linenums]
+----
+<component class="ackmodes.RandomError" doc:name="Java"/>
+<logger level="ERROR" doc:name="Logger" message="Always ACKs as soon as a message is received"/>
+----
+
+image:mq-none-flow.png[mq-none-flow]
+
+Using this mode simplifies an application, but increases the risk. This mode is best when messages are constantly updating each other, such as in a news feed where details unfold in a news event. If an exception did occur, the next message would have a chance for obtaining the correct content.
+
+=== None XML Code
+
+The XML code for the None Acknowledgement Mode is:
+
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq" xmlns:context="http://www.springframework.org/schema/context" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+    <http:listener-config name="HTTP_Listener_Configuration_none" host="0.0.0.0" port="8083" doc:name="HTTP Listener Configuration"/>
+
+    <flow name="noneHttp">
+        <http:listener config-ref="HTTP_Listener_Configuration_none" path="/" doc:name="HTTP"/>
+        <anypoint-mq:publish config-ref="Anypoint_MQ_Configuration" destination="none" doc:name="Anypoint MQ"/>
+    </flow>
+
+    <flow name="noneMq">
+        <anypoint-mq:subscriber config-ref="Anypoint_MQ_Configuration" destination="none" doc:name="Anypoint MQ" pollingTime="10000" acknowledgementMode="NONE"/>
+        <component class="ackmodes.RandomError" doc:name="Java"/>
+        <logger level="ERROR" doc:name="Logger" message="Always ACKs as soon as a message is received"/>
+    </flow>
+
+</mule>
+----
+
 [[randomerror]]
-=== Random Error Generator
+== Random Error Generator
 
 The following Java test program generates random errors that you can use to test your application. This program gets a random integer between 0 and 100, and makes these choices depending on the value:
 
@@ -166,7 +293,6 @@ public class RandomError implements Callable {
 	}
 }
 ----
-
 
 == See Also
 
