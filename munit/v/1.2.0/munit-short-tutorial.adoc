@@ -4,7 +4,7 @@
 
 == Overview
 
-This simple, short tutorial takes you through the process of creating a series of MUnit tests, which are aimed at validating the behavior of a simple code example.
+This simple, short tutorial takes you through the process of creating a series of MUnit tests, which are aimed to validate the behavior of a simple code example.
 
 This tutorial uses only core components of Mule ESB. No Anypoint Connectors are used; however, you can easily apply what you learn here to Anypoint Connectors.
 
@@ -16,8 +16,16 @@ The sample code for this tutorial is fairly simple, but it uses some of Mule's m
 . It extracts data from the request to route a message through the application.
 . It decides how to create a response.
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:exampleFlow.png[exampleFlow]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.Production code - doc.xml
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 
@@ -70,11 +78,28 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
     </sub-flow>
 </mule>
 ----
+....
+------
 
 We analyze the above code by breaking it up into sections. The first section is the entry point of the application, which contains the HTTP listener in `exampleFlow`.
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:part-1.png[part-1]
+
+. Main Flow, `exampleFlow`.
+. Take data from the HTTP request.
+. Make call to `exampleFlow2` for further processing.
+. Make a decision based on the value of the invocation variable `my_variable`, which was set by `exampleFlow2`.
+. Creates `response payload 1`.
+. Creates `response payload 2`.
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.exampleFlow
 ----
 <flow name="exampleFlow">                                                                                                 //<1>
     <http:listener config-ref="HTTP_Listener_Configuration" path="/" allowedMethods="GET" doc:name="HTTP"/>
@@ -93,17 +118,34 @@ We analyze the above code by breaking it up into sections. The first section is 
     </choice>
 </flow>
 ----
+
 <1> Main Flow, `exampleFlow`.
 <2> Take data from the HTTP request.
 <3> Make call to `exampleFlow2` for further processing.
 <4> Make a decision based on the value of the invocation variable `my_variable`, which was set by `exampleFlow2`.
 <5> Creates `response payload 1`.
 <6> Creates `response payload 2`.
+....
+------
+
 
 The second part of the app, `exampleFlow2`, is basically for routing. It does not perform any real action over the message or its payload. Rather, it delegates that to two other subflows, based on the payload received as input.
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:part-2.png[part-2]
+
+. Evaluate the payload that enters the flow.
+. Make call to `exampleSub_Flow1`.
+. Make call to `exampleSub_Flow2`.
+
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.exampleFlow2
 ----
 <flow name="exampleFlow2">
     <choice doc:name="Choice">
@@ -116,14 +158,30 @@ The second part of the app, `exampleFlow2`, is basically for routing. It does no
     </choice>
 </flow>
 ----
+
 <1> Evaluate the payload that enters the flow.
 <2> Make call to `exampleSub_Flow1`.
 <3> Make call to `exampleSub_Flow2`.
+....
+------
+
 
 Finally we have the various subflows called `exampleSub_Flow<number>`, whose only task is to set a value for an _invocation_ variable named `my_variable`.
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:part-3.png[part-3]
+
+. Set `my_variable` to `var_value_1`.
+. Set `my_variable` to `var_value_2`.
+
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.exampleSub_Flow(s)
 ----
 <sub-flow name="exampleSub_Flow1">
     <set-variable variableName="my_variable" value="#['var_value_1']" doc:name="my_variable"/>    //<1>
@@ -136,13 +194,25 @@ Finally we have the various subflows called `exampleSub_Flow<number>`, whose onl
 <1> Set `my_variable` to `var_value_1`.
 <2> Set `my_variable` to `var_value_2`.
 
+....
+------
+
+
+
 == Creating Tests
 
 Below is the MUnit Test Suite file:
 
-[[testfile]]
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:full-test-example.png[full-test-example]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.MUnit Test Suite file - doc-test.xml
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 
@@ -248,12 +318,13 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
 
 </mule>
 ----
+....
+------
+
 
 In the sections below we break down and analyze the Test Suite file. When performing unit tests, it's always better to take a ground-up approach, first testing the building blocks of the code.
 
 TIP: Always test the building blocks of your code first, then test the more complex code.
-
-You can compare this to setting the pillars and ensuring that they hold, before building the rest of the bridge.
 
 We start by testing `exampleFlow2`.
 
@@ -270,15 +341,31 @@ Each MUnit test file _must_ contain the following three beans:
 
 These are shown in the snippet below:
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:must-global-elements.png[must-global-elements]
+image:must-import-bean.png[must-import-bean]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.MUnit Musts
 ----
+<!-- MUnit config -->
 <munit:config name="munit" doc:name="Munit configuration"/>
 
+<!-- The import section -->
 <spring:beans>
-    <spring:import resource="classpath:doc.xml"/>
+    <spring:import resource="classpath:demo.xml"/>
 </spring:beans>
 ----
+
+....
+------
+
+
 
 In the _import section_, we define the files needed for this test to run. This section usually includes the file containing the flows we want to test, and additional files required for the first file to work.
 
@@ -292,8 +379,16 @@ This flow contains a `choice` router, which provides two different paths that th
 
 NOTE: In a real application, always test all possible paths.
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:exampleFlow2.png[exampleFlow2]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.exampleFlow2
 ----
 <flow name="exampleFlow2">
   <choice doc:name="Choice">
@@ -306,11 +401,26 @@ NOTE: In a real application, always test all possible paths.
   </choice>
 </flow>
 ----
+....
+------
 
 We start with the first path.
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:break-first-test.png[break-first-test]
+
+. Define input message to be sent to the production flow `exampleFlow2`.
+. Make call to production code.
+. Validate success of the test by using a verification.
+
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.exampleFlow2 - First test case
 ----
 <munit:test name="doc-test-exampleFlow2Test1" description="Validate calls to sub flows are being done properly ">
   <munit:set payload="#['payload_1']" doc:name="Set Message payload == payload_1"/>                         //<1>
@@ -328,6 +438,9 @@ We start with the first path.
 <1> Define input message to be sent to the production flow `exampleFlow2`.
 <2> Make call to production code.
 <3> Validate success of the test by using a verification.
+
+....
+------
 
 This test looks fairly simple, but it has a few points to highlight.
 
@@ -359,8 +472,16 @@ the MUnit matcher `matchContains`.
 
 So far we have only tested one branch of `exampleFlow2`; we need to test the other one. To do that, we  add another test.
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:break-second-test.png[break-second-test]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.exampleFlow2 - Second test case
 ----
 <munit:test name="doc-test-exampleFlow2Test2" description="Validate calls to sub flows are being done properly ">
   <munit:set payload="#['payload_2']" doc:name="Set Message payload == payload_2"/>
@@ -374,13 +495,26 @@ So far we have only tested one branch of `exampleFlow2`; we need to test the oth
   </mock:verify-call>
 </munit:test>
 ----
+....
+------
 
-As you can see, this test is very similar to the first, except for one crucial change:
+This test is very similar to the first, except for one crucial change:
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:break-set-payload-2.png[break-set-payload-2]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
 ----
 <munit:set payload="#['payload_2']" doc:name="Set Message payload == payload_2"/>
 ----
+....
+------
 
 When we define the message to send to the production code, we are changing the payload in order to engage the other branch of the code. This may look obvious to experienced developers, but it is a common mistake.
 
@@ -392,8 +526,16 @@ The most complex flow in this application is the last flow, `exampleFlow`.
 
 This flow contains a `choice` router, which provides two different paths that the code can follow. As in the previous case, we  test both of them.
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:break-example-flow.png[break-example-flow]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.exampleFlow
 ----
 <flow name="exampleFlow">
   <http:listener config-ref="HTTP_Listener_Configuration" path="/" allowedMethods="GET" doc:name="HTTP"/>
@@ -412,12 +554,28 @@ This flow contains a `choice` router, which provides two different paths that th
 </flow>
 ----
 
+....
+------
+
 This flow contains an `http-listener`, but in order to show you different scenarios we are not going to call it. Since we are not calling the HTTP listener, we need to take a few other actions for this test to work properly.
 
 As with our first flow, here we start with the first path contained in the flow.
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:break-choice-test.png[break-choice-test]
+
+. Define mock for the set-payload message processor in `exampleFlow`.
+. Define mock for the call to `exampleFlow2`.
+. Make call to production code.
+. Validate success of the test by asserting the returned payload.
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.exampleFlow - First test case
 ----
 <munit:test name="doc-test-exampleFlow-unit-Test_1"
   description="Unit Test case asserting scenario 1">
@@ -445,17 +603,28 @@ As with our first flow, here we start with the first path contained in the flow.
   <munit:assert-payload-equals message="oops, wrong payload!" expectedValue="#['response_payload_1']" doc:name="Assert Payload"/> //<4>
 </munit:test>
 ----
+
 <1> Define mock for the set-payload message processor in `exampleFlow`.
 <2> Define mock for the call to `exampleFlow2`.
 <3> Make call to production code.
 <4> Validate success of the test by asserting the returned payload.
+....
+------
 
 The first thing to notice in this test is that we are defining _mocks_. Mocks are what allow you to isolate your flow, distinguishing it from third-party systems and any other flows in your application.
 
 The first mock we define is for the `set-payload` message processor. We do this because this message processor expects a certain set of inbound variables, but we won't send them in this test -- hence, for the code to succeed we need to mock the behavior of the `set-payload` message processor.
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:break-first-mock.png[break-first-mock]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.Mock set-payload
 ----
 <mock:when messageProcessor="mule:set-payload" doc:name="Mock">
   <mock:with-attributes>
@@ -464,13 +633,23 @@ The first mock we define is for the `set-payload` message processor. We do this 
   <mock:then-return payload="#[]"/>
 </mock:when>
 ----
+....
+------
 
 Notice that we are not actually returning a payload. The payload in the `set-payload` message processor is needed by `exampleFlow2`. In this unit test, we trust `exampleFlow2` to work as expected, and  mock it as well.
 
 TIP: When doing unit tests, you isolate your flow from third-party systems and other flows and trust they  work as expected. In turn, you must test each third-party system or flow with its own, specific test.
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:break-second-mock.png[break-second-mock]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.Mock exampleFlow2
 ----
 <mock:when messageProcessor="mule:flow" doc:name="Mock">
   <mock:with-attributes>
@@ -483,6 +662,9 @@ TIP: When doing unit tests, you isolate your flow from third-party systems and o
   </mock:then-return>
 </mock:when>
 ----
+....
+------
+
 
 If you've been reading this tutorial from the beginning, you already know that in MUnit you do not mock `flow-ref` message processors, you mock the flows that would be called by them (see <<flow-ref,above>>). That's what we're doing here, mocking `exampleFlow2` which was called from `exampleFlow`.
 
@@ -490,26 +672,63 @@ The purpose of `exampleFlow2` was to set the value of the invocation variable `m
 
 Now that our two mocks are in place, we run the production code:
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:break-flow-ref.png[break-flow-ref]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml]
 ----
 <flow-ref name="exampleFlow" doc:name="Flow-ref to exampleFlow"/>
 ----
+....
+------
 
 The only thing that remains to be done for this test is to define its success criteria. For the purposes of this example, we determine whether it was successful based on the payload returned by the flow.
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:break-assert-payload.png[break-assert-payload]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
 ----
 <munit:assert-payload-equals message="oops, wrong payload!"
  expectedValue="#['response_payload_1']"
  doc:name="Assert Payload"/> //<4>
 ----
+....
+------
 
 As you can see, we are validating that the payload returned is equal to that set by the first branch of the choice in the production code, that is, `response_payload_1`.
 
 Now we test the other branch.
 
+
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:break-mock-2.png[break-mock-2] +
+image:break-payload-2.png[break-payload-2]
+
+. *First difference with first branch*: When mocking `exampleFlow2`, we're telling it to return a variable with a different value: `var_value_2`. This should trigger the second branch of the choice.
+
+. *Second difference with first branch*: We are also changing the assertion, because the mock before the returned payload has changed. Hence the need to modify our success criteria.
+
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.exampleFlow - Second test case
 ----
 <munit:test name="doc-test-exampleFlow-unit-Test_2"
   description="Unit Test case asserting scenario 2">
@@ -537,29 +756,13 @@ Now we test the other branch.
 		expectedValue="#['response_payload_2']" doc:name="Assert Payload"/> //<2>
 </munit:test>
 ----
-<1> First difference with first branch.
-<2> Second difference with first branch.
 
-This test looks very similar, but as you can see there are two crucial differences, explained below.
+. *First difference with first branch*: When mocking `exampleFlow2`, we're telling it to return a variable with a different value: `var_value_2`. This should trigger the second branch of the choice
 
-First difference:
+. *Second difference with first branch*: We are also changing the assertion, because the mock before the returned payload has changed. Hence the need to modify our success criteria
 
-[source, xml]
-----
-<mock:invocation-property key="my_variable" value="#['var_value_2']"/>
-----
-
-When mocking `exampleFlow2`, we're telling it to return a variable with a different value: `var_value_2`. This should trigger the second branch of the choice.
-
-Second difference:
-
-[source, xml, linenums]
-----
-<munit:assert-payload-equals message="oops, wrong payload!"
-  expectedValue="#['response_payload_2']" doc:name="Assert Payload"/>
-----
-
-We are also changing the assertion, because the mock before the returned payload has changed. Hence the need to modify our success criteria.
+....
+------
 
 === Functional Testing
 
@@ -569,8 +772,15 @@ You may also want to do a _functional test_, that is, an end-to-end test. In our
 
 In previous tests, we mocked the first message processor of `exampleFlow` because it needed the message to contain specific values. Since we are not mocking anything now, we have to create that message.
 
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:break-first-functional-test.png[break-first-functional-test]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
-.exampleFlow - Functional test
 ----
 <munit:test name="doc-test-exampleFlow-functionalTest_1"
   description="Functional Test case asserting scenario 1">
@@ -585,21 +795,43 @@ In previous tests, we mocked the first message processor of `exampleFlow` becaus
       expectedValue="#['response_payload_1']" doc:name="Assert Payload"/>
 </munit:test>
 ----
+....
+------
 
 This test is very similar to the others for `exampleFlow`, without the mocks.
 
 Let's check again the implementation of `exampleFlow`, specifically the `set-payload`:
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:set-original-payload.png[set-original-payload]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
 ----
 <set-payload value="#[message.inboundProperties['http.query.params']['url_key']]"
   doc:name="Set Original Payload"/>
 ----
+....
+------
 
 The `set-payload` message processor is expecting the message to have a inbound property named `http.query.params`, which should be a map. The map should contain the key `url_key`.
 
 The code below shows how to create such a message:
 
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image:break-functional-set-payload.png[break-functional-set-payload]
+....
+[tab,title="XML or Standalone Editor"]
+....
 [source, xml, linenums]
 ----
 <munit:set payload="#['']" doc:name="Set Message url_key:payload_1">
@@ -609,6 +841,10 @@ The code below shows how to create such a message:
     </munit:inbound-properties>
 </munit:set>
 ----
+
+....
+------
+
 
 == Conclusion
 
