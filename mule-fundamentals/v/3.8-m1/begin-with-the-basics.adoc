@@ -18,7 +18,55 @@ Mule applications also make use of *global elements*, which are reusable chunks
 
 A Mule message consists of a *header* and a *payload*. The payload contains the message data, and the header contains metadata about the message in the form of *properties* and *variables*. Both properties and variables are key-value pairs that contain useful information about a message that help to get it where it's going. 
 
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+
 image:flow-1.png[flow-1]
+
+....
+[tab,title="XML Editor or Standalone"]
+....
+
+The XML code for this flow is as follows:
+
+[source,xml,linenum]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:cxf="http://www.mulesoft.org/schema/mule/cxf" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/cxf http://www.mulesoft.org/schema/mule/cxf/current/mule-cxf.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <file:connector name="File" writeToDirectory="/Users/me/Documents" autoDelete="true" streaming="true" validateConnections="true" doc:name="File"/>
+    <flow name="basicFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="Receive Order by HTTP"/>
+        <cxf:jaxws-service doc:name="Fulfillment Web Service - SOAP"/>
+        <custom-transformer class="basic.Fulfillment" doc:name="Process Order with Java"/>
+        <async doc:name="Async">
+            <dw:transform-message doc:name="Transform Message">
+                <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+}]]></dw:set-payload>
+    </dw:transform-message>
+    <file:outbound-endpoint path="/Users/me/Documents/Fulfillment" connector-ref="File" responseTimeout="10000" doc:name="Fulfillment File"/>
+  </async>
+ </flow>
+</mule>
+
+----
+
+....
+------
 
 Note: In this example, SOAP connectivity is implemented by the CXF component.
 
@@ -61,7 +109,7 @@ At runtime, Mule evaluates expressions while executing a flow to:
 * Set or manipulate a value in the message header or payload.
 * Perform an operation on information in the message, application, Mule instance, or server.
 
-[source, code, linenums]
+[source]
 ----
 #[message.inboundProperties.propertyName]
 ----
