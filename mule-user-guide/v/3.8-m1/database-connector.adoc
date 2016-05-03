@@ -1,5 +1,6 @@
 = Database Connector
 :keywords: database connector, jdbc, anypoint studio, esb, data base, connectors, mysql, stored procedure, sql, derby, oracle
+:imagesdir: ./_images
 
 The *Database connector* allows you to connect with almost any Java Database Connectivity (JDBC) relational database using a single interface for every case. The Database connector allows you to run diverse SQL operations on your database, including Select, Insert, Update, Delete, and even Stored Procedures.
 
@@ -31,8 +32,7 @@ To use a Database connector in your Mule application:
 However, to really take advantage of the design-time power of the connector, consider using it in conjunction with the following Mule features:
 
 * *DataSense*: When enabled, DataSense uses information in the query statement (configured within the Database connector) to automatically extract metadata about the message your application must deliver to, or can expect from, the database. By enabling this functionality (in the Global Database connector element), Mule does the heavy lifting of discovering the type of data you must send to, or be prepared to receive from the database. For more information, see link:/mule-user-guide/v/3.8-m1/datasense[DataSense].
-* *DataMapper*: When used in conjunction with a DataSense-enabled Database connector, DataMapper can automatically extract message metadata that you can use to visually map and/or transform to a different data format or structure. For example, if you configure a Database connector in your application, then drop a DataMapper after it, the DataMapper uses the information that DataSense extracted to pre-populate the input values for mapping, so that you only need to confirm (or adjust) the selections, then proceed to mapping to your desired output. In other words, DataSense makes sure that DataMapper _knows_ the data format and structure with which it must work so you don't have to figure it out manually. For more information, see link:/mule-user-guide/v/3.8-m1/datamapper-concepts[DataMapper Concepts]
-* *DataWeave*: Replacement for DataMapper. When used in conjunction with a DataSense-enabled Database connector, DataWeave can extract message metadata and transform to a different data format or structure. For more information, see link:/mule-user-guide/v/3.8-m1/dataweave[DataWeave].
+* *DataWeave*: -- _(replaces DataMapper)_ -- When used in conjunction with a DataSense-enabled database connector, DataWeave can extract message metadata and assist in transforming it to a different data format or structure. For more information, see link:/mule-user-guide/v/3.8-m1/dataweave[DataWeave].
 
 == Supported Operations
 
@@ -50,7 +50,7 @@ Additionally, you can run a TRUNCATE query on the database by selecting *Update*
 
 == Fields That Support MEL Expressions
 
-In Mule version 3.7 and newer, the following connector fields support MEL expressions. For a usage example, see <<Example MEL Expression Database URL, Example MEL Expression Database URL>>.
+In Mule version 3.7 and later, the following connector fields support MEL expressions. For a usage example, see <<Example MEL Expression Database URL, Example MEL Expression Database URL>>.
 
 [width="100%",cols="25,25,25,25",options="header"]
 |===
@@ -66,11 +66,22 @@ In Mule version 3.7 and newer, the following connector fields support MEL expres
 
 == Configuring a Database Connector
 
-The example below illustrates a very simple Mule application in Studio that meets the minimum configuration requirements: configured Database connector, configured Global Database connector, and installed database driver. Of course, the only one of these three required parts that is visible in the graphical representation of the application is the Database connector itself. 
+The example below illustrates a very simple Mule application in Studio that meets the minimum configuration requirements:
 
-image:db_example_flow.png[db_example_flow]
+* configured Database connector,
+* configured global Database connector element, and
+* installed database driver.
 
-To prepare an application to use a Database connector as in the example above, you must first add the database's driver to your Mule project, then configure, at minimum, the required parameters for the Database connector element and a Global Database connector element. The diagram and section below describe how to address these requirements.
+However, only one of these three required parts is visible in the graphical representation of the application is the Database connector itself. 
+
+image:basic-db-transform-to-file.png[basic-db-transform-to-file]
+
+* *Poll scope* - regularly polls for data
+* *Database connector* - connects and then submits a query to a database. For example, selects employee IDs
+* *Transform Message / Dataweave* - transforms data to what is expected to be output to the file
+* *File connector* - writes data to a file, such as a CSV
+
+To prepare an application to use a Database connector as in the example above, you must first add the database's driver to your Mule project, then configure, at minimum, the required parameters for the Database connector and a Global Database connector element. The diagram and section below describe how to address these requirements.
 
 image:modif_flowchart.png[modif_flowchart]
 
@@ -104,15 +115,15 @@ To add the database driver for a database engine supported out of the box:
 . Click the *Database* building block to open its properties editing window.
 . Click the green plus icon to the right of *Connector configuration* to create a database global element for this database connector:
 +
-image:plus.icon.point.png[plus.icon.point]
+image:add-db-config.png[add-db-config]
 +
-. Studio displays the Choose Global Type window, shown below. Select your supported database engine from the list, for example Oracle.
+. Studio displays the *Choose Global Type* window, shown below. Select your supported database engine from the list, for example Oracle.
 +
 image:choose.global.type.png[choose.global.type]
 +
 . Studio displays the *Global Element Properties* window, shown below. At the bottom of the window you find the *Required dependencies* section. Click *Add File* to add the `.jar` file for your database driver.
 +
-image:add.driver.oracle.png[add.driver.oracle]
+image:add-driver-oracle.png[add driver for oracle]
 +
 . Browse to and select the `.jar` file for your database driver. The driver is automatically added to the project.
 +
@@ -185,9 +196,9 @@ image:config_enable_DS.png[config_enable_DS]
 
 === Advanced Tab
 
-image:Advanced_GE.png[Advanced_GE]
+image:mysql-adv-tab.png[Advanced tab for mysql config]
 
-[width="99a",cols="30a,70a",options="header"]
+[width="100%",cols="30a,70a",options="header"]
 |===
 |*Attribute, Optional* |*Use*
 |*Use XA Transactions*
@@ -273,17 +284,15 @@ To install the database driver for a generic installation, follow the steps belo
 ------
 [tab,title="Studio Visual Editor"]
 ....
-. If you haven't already done so, download the driver for your particular database. For example, the driver for a MySQL database is available at link:http://dev.mysql.com/downloads/connector/j/[download Connector/j] online.  
-. Drag and drop the driver's .`jar` file from your local drive to the `root` folder in your project.
-. Add the `.jar` file to the build path of your project. Right click the project name, then select *Build Path* > *Configure Build Path…*
-. In the wizard that appears, click the *Libraries* tab, then click *Add Jars…*
-. Navigate to the `root` folder in your project, then select the `.jar` file for your database driver. 
-. Click *OK* to save, then *OK* to exit the wizard. Notice that your project now has a new folder named *Referenced Libraries* in which your database driver `.jar` resides. 
+. If you haven't already done so, download the driver for your particular database. For example, the driver for a MySQL database is available to link:http://dev.mysql.com/downloads/connector/j/[Download online].  
+. Drag and drop the driver `.jar` file from your local drive to the root folder in your project or add the `.jar` file to the build path of your project via the wizard by right-clicking the project name, selecting *Build Path* > *Configure Build Path…*.
+. In the wizard that appears, click the *Libraries* tab, then click *Add Jars…* (or *Add External Jars…*, depending on its location.
+. Click *OK* to save, then *OK* to exit the wizard. If referencing an external `.jar`, notice that your project now has a new folder named *Referenced Libraries* in which your database driver `.jar` resides. 
 
-image:pack_explorer.png[pack_explorer]
+image:referenced-libraries-in-proj.png[referenced-libraries-in-proj pack_explorer]
 
 ....
-[tab,title="XML Editor or Standalone"]
+[tab,title="XML Editor"]
 ....
 
 . If you haven't already done so, download the driver for your particular database. For example, the driver for a MySQL database is available for link:http://dev.mysql.com/downloads/connector/j/[download] online.  
@@ -306,7 +315,7 @@ After adding the database driver for a database engine not supported out of the 
 
 *Generic Database Configuration*
 
-image:global_elem-generic_DB-gral_tab.png[global_elem-generic_DB-gral_tab]
+image:generic-db-global-elem-props.png[generic-db-global-elem-props]
 
 [width="99a",cols"30a,70a",options="header"]
 |===
@@ -487,7 +496,7 @@ The following are optional attributes:
         	<db:in-param name="v2" type="INTEGER" value="2" />
         	<db:out-param name="total_value" type="INTEGER" />
         </db:stored-procedure>
-        
+
     </flow>
 ----
 
@@ -818,7 +827,7 @@ insert into accounts values (#[message.payload.?BillingCity], #[message.payload.
 ----
 
 * *Automatically adding a parameter for MySQL Database connections:* In this release of Mule, be aware that the Global Database Connector for MySQL automatically adds a parameter to the connection details to facilitate DataSense's ability to extract information about the data structure and format. The parameter is:  `generateSimpleParameterMetadata = true` This driver returns "`string`" as the type for each input parameter (such as could not be the real parameter type).
-* *Avoiding complex MEL expressions in SQL statements:* Because DataSense infers data structure based upon the query statement in a Database Connector, avoid using complex MEL expressions in the query statement, such as MEL expressions that involve functions. DataSense is only able to detect data structure from simple MEL expressions such as `#[payload.BillingCity]`, not `#[payload.get(0)]`.  If the latter, DataSense can only indicate to DataMapper that the structure of the data it is to receive or send is "unknown".
+* *Avoiding complex MEL expressions in SQL statements:* Because DataSense infers data structure based upon the query statement in a Database Connector, avoid using complex MEL expressions in the query statement, such as MEL expressions that involve functions. DataSense is only able to detect data structure from simple MEL expressions such as `\#[payload.BillingCity]`, not `#[payload.get(0)]`.  If the latter, DataSense can only indicate to Dataweave that the structure of the data it is to receive or send is "unknown".
 * *Enclosing named variables in quotes.* Variables in parameterized query statements should _not_ be enclosed in quotes. For example, a user should specify: 
 +
 [source,sql]
