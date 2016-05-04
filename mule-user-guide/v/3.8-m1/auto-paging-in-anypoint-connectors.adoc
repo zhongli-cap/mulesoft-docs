@@ -1,7 +1,7 @@
 = Auto-Paging in Anypoint Connectors
 :keywords: paging, auto paging, connectors, anypoint, studio, esb, collections
 
-When an Anypoint Connector in your flow produces output that is significantly large, processing it may cause significant performance delays in your application. To prevent this from happening, you can split the connector's output into several "pages" for more efficient processing. Within Mule this behavior in an Anypoint Connector is referred to as "auto-paging" because the connector automatically paginates its output to prevent memory issues. However, if memory use is not an issue, you can forgo any auto-paging configuration and simply treat the entire payload as a single unit.
+When an Anypoint Connector in your flow produces output that is significantly large, processing the load may cause significant performance delays in your application. To prevent this from happening, split the connector's output into several "pages" for more efficient processing. Within Mule this Anypoint Connector behavior is referred to as "auto-paging" because the connector automatically *_paginates_* its output to prevent memory issues. However, if memory use is not an issue, you can forgo any auto-paging configuration and simply treat the entire payload as a single unit.
 
 == Prerequisites
 
@@ -39,7 +39,7 @@ Learn how to link:/mule-user-guide/v/3.8-m1/installing-extensions[add connectors
 
 . Enter an integer in the *Fetch Size* field to indicate the batch size of objects in a "page". For example, set the Fetch Size to `50` to return information in batches of 50 objects. +
 +
-image:googlecontacts1.png[googlecontacts1]
+image:googlecalendarpagingex.png[googlecalendarpagingex]
 +
 [width="100%",cols=",",options="header"]
 |===
@@ -55,8 +55,8 @@ image:googlecontacts1.png[googlecontacts1]
 +
 [source,xml, linenums]
 ----
-<flow name="Flow1">
-    <google-contacts:get-groups config-ref="google" doc:name="paging" fetchSize="50"/>
+<flow name="for-screenshotsFlow">
+    <google-calendars:get-calendar-list config-ref="Google_Calendars" doc:name="Google Calendars Paging Example" fetchSize="50"/>
 </flow>
 ----
 +
@@ -79,31 +79,20 @@ When you use a connector that employs paging, Mule creates an iterator object th
 [tab,title="Studio Visual Editor"]
 ....
 . Drag an *HTTP* endpoint onto the canvas
-
 . Set its *Path* to `authenticate`. +
 Create a Connector Configuration element, set its host to *localhost* and its port to *8081*
-
-. Add a *Google Contacts* connector to the flow, then set its *Operation* to `Authorize.`
-
-. Create a *Google Contacts* *Global Element,* then configure its *Consumer Key* and *Consumer secret*.
-
+. Add a *Google Calendars* connector to the flow, then set its *Operation* to `Authorize.`
+. Create a *Google Calendars* *Global Element,* then configure its *Consumer Key* and *Consumer secret*.
 . Create a new flow with a new *HTTP* endpoint.
-
-. Set its *Path* to `get_contacts`.
-
-. Add a new *Google Contacts connector* in the new flow.
-
-. Set its *Operation* to `Get Contacts` and its *Fetch Size* to `50`.
-+
-image:googlecontacts2.png[googlecontacts2] +
-
+. Set its *Path* to `get_events`.
+. Add a new *Google Calendars* connector in the new flow.
+. Set its *Operation* to `Get Events` and its *Fetch Size* to `50`.
 . Add a *Foreach* *scope* after the Google Contacts connector.
-
 . Add a *Logger* inside the Foreach scope.
 +
-image:autopaging+flow.png[autopaging+flow]
+image:autopaging-with-google-calendars.png[autopaging google cal flow]
 
-When a message reaches the Google Contacts connector, the Logger outputs a separate message for each object. If there are more than 50 objects, Mule paginates the output.
+When a message reaches the Google Calendar connector, the Logger outputs a separate message for each object. If there are more than 50 objects, Mule paginates the output.
 ....
 [tab,title="XML Editor"]
 ....
@@ -115,43 +104,43 @@ When a message reaches the Google Contacts connector, the Logger outputs a separ
     <google-contacts:oauth-callback-config domain="localhost" path="auth" remotePort="8081"/>
 </google-contacts:config-with-oauth>
 ----
-
++
 . Create an *HTTP* connector and set the value of its *Path* to `authenticate`.
 +
 [source,xml, linenums]
 ----
-<http:listener config-ref="listener-config" path="authenticate" doc:name="HTTP Connector"/>
+<http:listener config-ref="HTTP_Listener_Configuration" path="authenticate" doc:name="HTTP"/>
 ----
-
++
 . Outside the flow, create a configuration element that matches the name referenced by the connector. Set the host to *localhost* and the port to **8081**.
 +
 [source,xml, linenums]
 ----
-<http:listener-config name="listener-config" host="localhost" port="8081"/>
+<http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" doc:name="HTTP Listener Configuration"/>
 ----
-
-. Add a *Google Contacts connector* setting its *operation* to `authorize.`
++
+. Add a *Google Calendars connector* setting its *operation* to `authorize`.
 +
 [source,xml, linenums]
 ----
 <google-contacts:authorize config-ref="Google_Contacts" doc:name="Google Contacts"/> 
 ----
-
-. Create a new flow with a new *HTTP* endpoint. Set the value of its *Path* to `get_contacts`, and reference the same configuration element as the other connector.
++
+. Create a new flow with a new *HTTP* endpoint. Set the value of its *Path* to `get_events`, and reference the same configuration element as the other connector.
 +
 [source,xml, linenums]
 ----
-<http:listener config-ref="listener-config" path="get_contacts" doc:name="HTTP Connector"/>
+<http:listener config-ref="HTTP_Listener_Configuration" path="get_events" doc:name="HTTP Connector"/>
 ----
-
-. Add a new *Google Contacts connector* in the new flow setting its *operation* to `get-contacts` and *fetchSize* to `50`.
++
+. Add a new *Google Contacts connector* in the new flow setting its *operation* to `get-events` and *fetchSize* to `50`.
 +
 [source,xml, linenums]
 ----
-<google-contacts:get-contacts config-ref="Google_Contacts" doc:name="Google Contacts" fetchSize="50"/>
+<google-calendars:get-events config-ref="Google_Calendars1" doc:name="Google Calendars Paging Example" fetchSize="50" calendarId="myCal"/>
 ----
-
-. After the Google Contacts connector, add a *Foreach* to the flow, then add a *Logger* as a child element inside Foreach element.
++
+. After the Google Calendars connector, add a *Foreach* to the flow, then add a *Logger* as a child element inside Foreach element.
 +
 [source,xml, linenums]
 ----
@@ -160,7 +149,25 @@ When a message reaches the Google Contacts connector, the Logger outputs a separ
 </foreach>
 ----
 
-When a message reaches the Google Contacts connector, the Logger outputs a separate message for each object. If there are more than 50 objects, Mule paginates the output. See below for a <<Complete Example>>.
+
+=== Final Flows
+
+[source,xml,linenums]
+----
+<flow name="authorizeAndAuthenticate">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="authenticate" doc:name="HTTP"/>
+    <google-calendars:authorize config-ref="Google_Calendars" doc:name="Google Calendars"/>
+</flow>
+<flow name="GoogleCalAutoPage">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="get_events" doc:name="HTTP"/>
+    <google-calendars:get-events config-ref="Google_Calendars" doc:name="Google Calendars Paging Example" fetchSize="50" calendarId="myCal"/>
+    <foreach doc:name="For Each">
+        <logger level="INFO" doc:name="Logger"/>
+    </foreach>
+</flow>
+----
+
+When a message reaches the Google Contacts connector, the Logger outputs a separate message for each object. If there are more than 50 objects, Mule paginates the output. See below for a complete example.
 ....
 ------
 
@@ -176,9 +183,13 @@ When working with paginated output in a flow, you can use MEL expressions to cal
 This function frees up the resources that auto-paging is using.
 |===
 
-== Complete Example
+== Another Paging Example
 
 You can call both the `size()` and the `close()` functions in any expression that supports MEL. The simple example below illustrates how to call `size()` in a logger so that it records the total amount of objects that the connector is outputting.
+
+The following example utilizes the *Google Contacts* connector.
+
+image:google-contacts-example-flow.png[google contacts flow]
 
 [source,xml, linenums]
 ----
@@ -198,7 +209,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         <google-contacts:authorize config-ref="Google_Contacts" doc:name="Google Contacts"/>
     </flow>
     <flow name="googleContactsTest" >
-        <http:listener config-ref="listener-config" path="get_contacts" doc:name="HTTP Connector"/>
+        <http:listener config-ref="listener-config" path="get_events" doc:name="HTTP Connector"/>
         <google-contacts:get-contacts config-ref="Google_Contacts" doc:name="Google Contacts" fetchSize="50"/>
         <logger message="#[payload.size()]" level="INFO" doc:name="Log_Size"/>
         <foreach doc:name="For Each">
