@@ -3,8 +3,8 @@
 
 There are two basic connector structures in Mule: 
 
-* *<<Operation-Based Connector Configuration, Operation-Based>>*, and 
-* *<<Endpoint-Based Connector Configuration, Endpoint-Based>>* structures.
+* *<<Configuring an Operation-Based Connector, Operation-Based>>*, and 
+* *<<Configuring an Endpoint-Based Connector, Endpoint-Based>>* structures.
 
 This document describes the general configuration for both of these types. For instructions on usage of a specific connector, consult your desired connector's documentation.
 ////
@@ -110,19 +110,36 @@ Each incoming message must follow the specific protocol supported by the receivi
 ------
 [tab,title="Studio Visual Editor"]
 ....
+
+The POP3 component is acting as the inbound endpoint in the example flow:
+
 image:connector_conf_inf_3.png[connector_conf_inf_3]
 ....
 [tab,title="XML Editor"]
 ....
 [source, xml, linenums]
 ----
-<http:request-config name="HTTP_Request_Configuration" host="localhost" port="8083" doc:name="HTTP Request Configuration"/>   
-    <flow name="exampleflow2" >
-        <pop3:inbound-endpoint host="localhost" user="${prod.user}" responseTimeout="10000" doc:name="POP3"/>
-        <set-payload doc:name="Set Payload" value="foo"/>
-        <http:request config-ref="HTTP_Request_Configuration" path="/" method="POST" doc:name="HTTP"/>
-        <logger level="INFO" doc:name="Logger" message="bar"/>
-    </flow>
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:jetty="http://www.mulesoft.org/schema/mule/jetty" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:pop3="http://www.mulesoft.org/schema/mule/pop3" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/jetty http://www.mulesoft.org/schema/mule/jetty/current/mule-jetty.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/pop3 http://www.mulesoft.org/schema/mule/pop3/current/mule-pop3.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <jetty:connector name="Jetty" configFile="a" resourceBase="a" doc:name="Jetty"/>
+    <http:request-config name="HTTP_Request_Configuration" host="a" port="a" basePath="a" doc:name="HTTP Request Configuration"/>
+    <pop3:connector name="POP3" backupFolder="a" moveToFolder="a" validateConnections="true" doc:name="POP3"/>
+    <flow name="exampleflowwithinboundendp">
+        <pop3:inbound-endpoint host="localhost" user="s" password="s" connector-ref="POP3" responseTimeout="10000" doc:name="POP3"/>
+        <set-payload doc:name="Set Payload"/>
+        <http:request config-ref="HTTP_Request_Configuration" path="s" method="s" doc:name="HTTP"/>
+        <logger level="INFO" doc:name="Logger"/>
+    </flow>
+</mule>
 ----
 ....
 ------
@@ -135,9 +152,11 @@ A special scope known as a *Composite Source Scope* allows you to encapsulate 
 ------
 [tab,title="Anypoint Studio Visual Editor"]
 ....
-image:connector_config_ref2.png[connector_config_ref2]
 
-Drag the Composite Source Scope onto the canvas from the palette, then drag the connectors into the Composite Source Scope processing block. The composite source then allows the each embedded connector to act as a temporary, non-exclusive message source when it receives an incoming message.
+There are two different message sources for this example flow, a *POP3* endpoint, and a *Jetty* endpoint.
+image:composite-source-flow.png[composite source flow]
+
+In Anypoint Studio Visual Editor you drag the *Composite Source* scope onto the canvas from your palette, then drag the connectors into the Composite Source scope processing block. The composite source then allows the each embedded connector to act as a temporary, non-exclusive message source when it receives an incoming message.
 ....
 [tab,title="XML Editor"]
 ....
@@ -163,13 +182,16 @@ Add a composite-source tag into your flow, then embed multiple connectors inside
 
 If an endpoint-based connector is not the first building block (i.e., the message source) in a flow, it is designated as an *outbound endpoint*, since it uses the specific transport channel it supports (such as SMTP, FTP, or JDBC) to dispatch messages to targets outside the flow, which can range from file systems to email servers to Web clients and can also include other Mule flows.
 
-In many cases, an *outbound endpoint* completes a flow by dispatching a fully processed message to its final, external destination. However, outbound endpoints don't always complete flow processing, because they can also exist in the middle of a flow, dispatching data to an external source, and also passing that (or some other data) to the next message processor in the flow.
+In many cases, an outbound endpoint completes a flow by dispatching a fully processed message to its final, external destination. However, outbound endpoints don't always complete flow processing, because they can also exist in the middle of a flow, dispatching data to an external source, and also passing that (or some other data) to the next message processor in the flow.
 
 [tabs]
 ------
 [tab,title="Anypoint Studio Visual Editor"]
 ....
-image:connector_config_ref_4.png[connector_config_ref_4]
+
+Here we can see there is a POP3 connector being used as an inbound endpoint, but additionally, note there is a POP3 connector configured in the middle of the process side of the flow, as an _outbound_ endpoint.
+
+image:outbound-endpoint-example-flow.png[outbound endpoint example flow]
 ....
 [tab,title="XML Editor"]
 ....
