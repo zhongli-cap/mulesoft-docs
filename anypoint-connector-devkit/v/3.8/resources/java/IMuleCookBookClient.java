@@ -5,7 +5,7 @@ import com.cookbook.tutorial.service.*;
 import java.util.List;
 
 /**
- * Created by Mulesoft.
+ * Created by MuleSoft.
  */
 public interface IMuleCookBookClient {
 
