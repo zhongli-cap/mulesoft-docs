@@ -30,7 +30,7 @@ The .NET connector version 1.0 is incompatible with version 2.0. Please refer to
 
 You can install a connector in Anypoint Studio using the instructions in link:/mule-fundamentals/v/3.7/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Installing a Connector from Anypoint Exchange].  
 
-== Example
+== Example Mule Application Using .NET Connector
 
 This example introduces the .NET Connector and shows you how to configure it to execute a method in a .NET assembly.
 
@@ -129,7 +129,7 @@ You will reference this global element when configuring the DotNet connector.
 ....
 . Drag an HTTP connector onto the canvas, then select it to open the properties editor console.
 . Add a new HTTP Listener Configuration global element:
-.. In *General Settings*, click the Add button:
+.. In *Basic Settings*, click the Add button:
 +
 image:connector-configuration.png[http listener connector config add button]
 +
@@ -144,23 +144,26 @@ image:connector-configuration.png[http listener connector config add button]
 |*Exchange Patterns* |request-response
 |*Display Name* |HTTP (or any other name you prefer)
 |===
-. Reference the HTTP Listener Configuration global element:
+. Reference the HTTP Listener Configuration global element you created in the previous step:
 +
 image:select-global-element.png[reference global element]
 . Drag a *Set payload* transformer onto the canvas, then select it to open the properties editor console.
 . Configure the required filter parameters as follows:
++
 [width="100%",cols=",",options="header"]
 |===
 |Field |Value
 |*Value* |`{ "name" : "bar", "lastName" :  "foo", "id" : 1, "myRide" : { "Model" : "Coupe", "Brand" : "GM", "Color" : { "Name" : "red", "RGB" : "123,220,213" } } }}`
 |*Display Name* |Set Payload (or any other name you prefer)
 |===
+
 +
+
 [NOTE]
 ====
 The string you enter in the *Value* field represents a serialized JSON object for a Person class, defined in Java:
 
-[source, code, linenums]
+[source, java, linenums]
 ----
 namespace Test.SampleComponent{ 
   public class Person
@@ -193,44 +196,39 @@ namespace Test.SampleComponent{ 
 }
 ----
 ====
-
-. Drag a *Transform Message* component from the palette, and place it into the canvas after the *Set Payload* transformer.
-
-. Configure the parameters as follows:
 +
-image:jsontoexecutecomplex.png[jsontoexecutecomplex]
+. Create a JSON sample file in your project named *input.json* and copy the following content into it for the DataWeave to use as example input.
 +
-[width="100%",cols=",",options="header"]
-|===
-|Field |Value
-|*Display Name* |JSON to ExecuteComplex (or any other name you prefer)
-2+|*Input*
-|*Type* |JSON
-|*From Example* |True (Check)
-|*Sample* |Enter the path to the input.json sample file.
-|===
-+
-. Before you run this application, create a JSON sample file in your project named *input.json* and copy the following content into it for Dataweave to use as example input.
 [source, code, linenums]
 ----
 "person" : { "name" : "bar", "lastName" :  "foo", "id" : 1, "myRide" : { "Model" : "Coupe", "Brand" : "GM", "Color" : { "Name" : "red", "RGB" : "123,220,213" }  } }}
 ----
++
+. Drag a *Transform Message* component from the palette, and place it into the canvas after the *Set Payload* transformer.
+. In the *Transform Message* component, click *Define metadata*.
++
+image:dotnet-connector-guide-9a049.png[example json referenced]
++
+. Click the "Add" button to enter a type id for the JSON sample file you are going to reference. This will be the label for your input.
+. Similarly define your output metadata back in the *Transform Message* properties editor if the metadata from the .NET connector has not already been sensed by DataSense.
+image:dotnet-connector-guide-2da72.png[transform message output section]
 . Drag the .NET connector onto the palette, then place it into the canvas after the set payload transformer. Configure the DotNet connector as shown below.
 +
 image:dotnet-connector-screen.png[dotnet-connector-screen]
+image:dotnet-connector-guide-21c12.png[dotnet connector properties]
 +
 [NOTE]
 ====
-The “Type” drop down is the .Net type that will be reflected upon to see which method it should call. The “Method” reference is the method on the type that was selected in the “Type” dropdown which will be invoked by the connector.
+The “Type” dropdown in the .NET connector properties is the .NET type that will be reflected upon to see which method it should call. The “Method” reference is the method on the type that was selected in the “Type” dropdown which will be invoked by the connector.
 ====
 +
 [width="100%",cols=",",options="header"]
 |===
 |Field |Value
 |*Operation* |Execute
-|*Method name* |Test.SampleComponent.Sample.ExecuteComplex(Test.SampleComponent.Person person) 
+|*Method* |Test.SampleComponent.Sample.ExecuteComplex(Test.SampleComponent.Person person) 
 |*Display Name* |DotNet Connector (or any other name you prefer)
-|*Config Reference* |Dot_Net_Resource_External_Assembly
+|*Connector Configuration* |DotNet_External_Assembly
 |===
 +
 [NOTE]
@@ -240,7 +238,8 @@ Note that the *Config Reference* field references the DotNet global element cr
 
 After completing the above steps, your application flow should look like this:
 
-image:complete-application-flow.png[complete-application-flow]
+image:dotnet-connector-guide-22ab1.png[dotnet connector example flow]
+
 ....
 [tab,title="XML Code"]
 ....
@@ -276,9 +275,8 @@ You are now ready to run the project! First, you can test run the application fr
 
 . Select *Run As* > *Mule Application*.
 
-. Fire up a browser and go to `http://localhost:8081/dotnet/?name=foo&age=10` to see the results.
-+
-image:run-application.png[run-application]
+. Fire up a browser and go to `http://localhost:8081/dotnet/?name=foo&age=10` to see the JSON response.
+
 
 === Step 6. About the Example Application
 
