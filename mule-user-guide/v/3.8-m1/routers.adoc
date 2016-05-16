@@ -20,7 +20,8 @@ Click a link in the Reference table below for details on a specific message proc
 |<<Async>> |Run a chain of message processors in a separate thread
 |<<Choice>> |Evaluates a message against specified criteria, then sends it to the first message processor that matches those criteria.
 |<<Collection Aggregator>> |Checks the group tag (known as a Correlation ID) attached to each message in a group to create a collection of messages which share the same Correlation ID.
-|<<Collection Splitter>> |Accepts a collection of messages (or parts of messages), splits them into individual messages, then sends each new message, in sequence, to the next message processor in a flow.
+|<<Collection Splitter>> |Accepts a collection of messages (or parts of messages), splits them into individual messages, then sends each new message, in sequence, to the next message 
+processor in a flow.
 |<<Custom Aggregator>> |Lets you write you own Java code to determine how messages are constructed and sent.
 |<<Custom Processor>> |A custom-written message processor
 |<<First Successful>> |Sends a message to the next message processor within a "circular" list of processor targets.
@@ -99,6 +100,17 @@ If the message payload is "foo" or "bar", the corresponding transformer is run. 
 
 link:/mule-user-guide/v/3.8-m1/choice-flow-control-reference[Read More]
 
+== Collection Splitter
+
+The Collection Splitter acts on messages whose payload is a Collection type. It sends each member of the collection to the next message processor as separate messages. You can specify the attribute `enableCorrelation` to determine whether a correlation ID is set on each individual message.
+
+Configuration for the Collection Splitter is as follows:
+
+[source, xml, linenums]
+----
+<collection-splitter enableCorrelation="IF_NOT_SET"/>
+----
+
 == Collection Aggregator
 
 The Collection Aggregator groups incoming messages that have matching group IDs before forwarding them. The group ID can come from the correlation ID or another property that links messages together, often this ID is first assigned when splitting a message with a Collection Splitter.
@@ -120,16 +132,14 @@ The Collection Aggregator pays attention to the following outbound properties in
 
 * MULE_CORRELATION_SEQUENCE is optional, and is added if you want to preserve the original order
 
-== Collection Splitter
+[NOTE]
+====
+This Aggregator and others makes use of two object stores, one that buffers the messages as they arrive, and another that keeps track of the completed collections. You can use the default built in object stores, or you can reference your own custom built link:/mule-user-guide/v/3.8-m1/mule-object-stores[Object Stores]. To do so, add the corresponding property to your aggregator element in XML and point to the location of the object store to use.
 
-The Collection Splitter acts on messages whose payload is a Collection type. It sends each member of the collection to the next message processor as separate messages. You can specify the attribute `enableCorrelation` to determine whether a correlation ID is set on each individual message.
+* 'event-groups-object-store-ref'  handles the buffer. This Object Store *must be partitionable*
+* 'processed-groups-object-store-ref' keeps track of finished collections. This Object Store must have a *max capacity* and an *expiration interval* set up to prevent it from overflowing.
+====
 
-Configuration for the Collection Splitter is as follows:
-
-[source, xml, linenums]
-----
-<collection-splitter enableCorrelation="IF_NOT_SET"/>
-----
 
 == Custom Aggregator
 
@@ -141,6 +151,14 @@ Configuration for a Custom Aggregator is as follows:
 ----
 <custom-aggregator failOnTimeout="true" class="com.mycompany.utils.PurchaseOrderAggregator"/>
 ----
+
+[NOTE]
+====
+This Aggregator and others makes use of two object stores, one that buffers the messages as they arrive, and another that keeps track of the completed collections. You can use the default built in object stores, or you can reference your own custom built link:/mule-user-guide/v/3.8-m1/mule-object-stores[Object Stores]. To do so, add the corresponding property to your aggregator element in XML and point to the location of the object store to use.
+
+* 'event-groups-object-store-ref'  handles the buffer. This Object Store *must be partitionable*
+* 'processed-groups-object-store-ref' keeps track of finished collections. This Object Store must have a *max capacity* and an *expiration interval* set up to prevent it from overflowing.
+====
 
 == Custom Processor
 
@@ -238,6 +256,21 @@ Configuration for this filter is as follows:
 
 Idempotent Secure Hash Message Filter also uses object stores, which are configured the same way as the Idempotent Message Filter. The optional `messageDigestAlgorithm` attribute determines the hashing algorithm that will be used. If this attribute is not specified, the default algorithm SHA-256 is used.
 
+== Message Chunk Splitter
+
+The Message Chunk Splitter allows you to split a single message into a number of fixed-length messages that will all be sent to the same message processor. It will split the message up into a number of smaller chunks according to the messageSize attribute that you configure for the router. The message is split by first converting it to a byte array and then splitting this array into chunks. If the message cannot be converted into a byte array, a RoutingException is raised.
+
+A message chunk splitter is useful if you have bandwidth problems (or size limitations) when using a particular transport.
+
+To put the chunked items back together again, you can use the <<Message Chunk Aggregator>>.
+
+Configuration for the Message Chunk Splitter is as follows:
+
+[source, xml, linenums]
+----
+<message-chunk-splitter messageSize="512"/>
+----
+
 == Message Chunk Aggregator
 
 After a splitter such as the <<Message Chunk Splitter>> splits a message into parts, the message chunk aggregator router reassembles those parts back into a single message. The aggregator uses the message's correlation ID to identify which parts belong to the same message.
@@ -255,20 +288,15 @@ The optional `expression-message-info-mapping` element allows you to identify th
 
 The Message Chunk Aggregator also accepts the `timeout` and `failOnTimeout` attributes as described under <<Collection Aggregator>>.
 
-== Message Chunk Splitter
+[NOTE]
+====
+This Aggregator and others makes use of two object stores, one that buffers the messages as they arrive, and another that keeps track of the completed collections. You can use the default built in object stores, or you can reference your own custom built link:/mule-user-guide/v/3.8-m1/mule-object-stores[Object Stores]. To do so, add the corresponding property to your aggregator element in XML and point to the location of the object store to use.
 
-The Message Chunk Splitter allows you to split a single message into a number of fixed-length messages that will all be sent to the same message processor. It will split the message up into a number of smaller chunks according to the messageSize attribute that you configure for the router. The message is split by first converting it to a byte array and then splitting this array into chunks. If the message cannot be converted into a byte array, a RoutingException is raised.
+* 'event-groups-object-store-ref'  handles the buffer. This Object Store *must be partitionable*
+* 'processed-groups-object-store-ref' keeps track of finished collections. This Object Store must have a *max capacity* and an *expiration interval* set up to prevent it from overflowing.
+====
 
-A message chunk splitter is useful if you have bandwidth problems (or size limitations) when using a particular transport.
 
-To put the chunked items back together again, you can use the <<Message Chunk Aggregator>>.
-
-Configuration for the Message Chunk Splitter is as follows:
-
-[source, xml, linenums]
-----
-<message-chunk-splitter messageSize="512"/>
-----
 
 == Message Filter
 

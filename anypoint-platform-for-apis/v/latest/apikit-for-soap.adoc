@@ -1,8 +1,6 @@
 = APIkit for SOAP
 :keywords: apikit, soap
 
-*_V. 0.8.0 BETA_*
-
 == Introduction
 
 As an interface between applications, an API's job is to open small windows in an internal system through which external systems can access particular bits of data and perform actions with the data. APIkit for SOAP makes it easier to implement a SOAP interface that enables external users to access your data, then integrate it with backend processes to function as an API.
@@ -22,6 +20,7 @@ This document assumes you are familiar with the creation and/or the understandin
 APIkit for SOAP only works on EE Mule.
 ====
 
+////
 == Download and Install APIkit for SOAP
 
 To install the APIkit for SOAP plugin:
@@ -46,18 +45,18 @@ As a relatively simple-to-use construct, there are three main parts of APIkit fo
 . Backend flows
 
 image:components-interface.png[components-interface.png]
+////
 
 === Interface
 
-The *interface* it’s defined by a WSDL file (the SOAP contract) that exposes a set of services (link:http://www.w3.org/TR/wsdl#_services[http://www.w3.org/TR/wsdl#_services]) to the world, where each one of them has a set of operations to interact with. For SOAP scenarios the underlying type of data is XML and it’s defined by schemas within the same WSDL file or by importing XSD files.
+The *interface* is defined by a WSDL file (the SOAP contract) that exposes a set of services (link:http://www.w3.org/TR/wsdl#_services[http://www.w3.org/TR/wsdl#_services]) to the world, where each one of them has a set of operations to interact with. For SOAP scenarios the underlying type of data is XML and it’s defined by schemas within the same WSDL file or by importing XSD files.
 
 === Main Flow
 
 The *main flow* manages 2 critical functions:
 
 . Exposes the SOAP API via HTTP.
-. Routes requests between the interface (defined by the WSDL) and the *backend flows*
-This is the flow where you can dispatch/route an incoming message to a specific flow by analyzing the HTTP request.
+. Routes requests between the interface (defined by the WSDL) and the *backend flows*. This is the flow where you can dispatch/route an incoming message to a specific flow by analyzing the HTTP request.
 
 === Backend Flow
 
@@ -89,7 +88,7 @@ image:new-apikit-soap-project.png[new-apikit-soap-project.png]
 +
 image:wsdl-resource.png[wsdl-resource.png, width="300"]
 +
-.  Right-click the canvas and run the app. Once deployed, you should be able to hit http://localhost:8081/tshirtService?wsdl and obtain the same WSDL file you selected when creating the Mule project.
+.  Right-click the canvas and run the app. Once deployed, you should be able to hit http://localhost:8081/TshirtService/TshirtServicePort?wsdl and obtain the same WSDL file you selected when creating the Mule project.
 APIkit for SOAP retrieves the full WSDL contract when hitting the exposed endpoint by the HTTP connector by adding `?wsdl` to the query parameters.
 
 === Hitting the Endpoint
@@ -99,7 +98,7 @@ By default, each generated flow has a payload that states the current operation 
 
 To get started:
 
-. Create a SoapUI project feeding the `http://localhost:8081/tshirtService?wsdl` URL:
+. Create a SoapUI project feeding the `http://localhost:8081/TshirtService/TshirtServicePort?wsdl` URL:
 +
 image:soapui-new-project.png[soapui-new-project.png]
 +
@@ -111,20 +110,31 @@ The result is the fault we mentioned before, as `OrderTshirt` doesn’t have a r
 +
 [source,xml,linenums]
 ----
-<soap:Fault xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
-    <faultcode>soap:Server</faultcode>
-    <faultstring>Operation [OrderTshirt:api-config] not implemented</faultstring>
-</soap:Fault>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+   <soap:Body>
+      <soap:Fault xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
+         <faultcode>soap:Server</faultcode>
+         <faultstring>Operation [OrderTshirt:/TshirtService/TshirtServicePort/api-config] not implemented</faultstring>
+      </soap:Fault>
+   </soap:Body>
+</soap:Envelope>
 ----
 +
 Let’s change that!
 +
 . Remove the “Set Payload” element of the flow `OrderTshirt:api-config`, and add a “Transform Message” component (look in the Studio’s palette toolbar). Once you focus on the component, the user interface displays the input and output for the current operation, `OrderTshirt` as input, and `OrderTshirtResponse` as output.
 +
-A simple transformation could be something like:
+When transforming to a SOAP payload output, remember to add the proper namespace to avoid a `soap:Server faultcode`. For this example, it should be:
++
+`%namespace ns0 http://mulesoft.org/tshirt-service/`
+So your output should look like this:
 +
 [source,xml,linenums]
 ----
+%dw 1.0
+%output application/xml
+%namespace ns0 http://mulesoft.org/tshirt-service/
+---
 {
   ns0#OrderTshirtResponse: {
     orderId: "I got a request from "
@@ -140,15 +150,15 @@ Once done, save the project and wait until it redeploys the whole Mule applicati
 . Use the same request, and see that the output has changed!
 +
 Now we have, for the same request as before, a new response:
-+
+
 [source,xml,linenums]
 ----
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <ns0:OrderTshirtResponse xmlns:ns0="http://mulesoft.org/tshirt-service">
-      <orderId>I got a request from John</orderId>
-    </ns0:OrderTshirtResponse>
-  </soap:Body>
+   <soap:Body>
+      <ns0:OrderTshirtResponse xmlns:ns0="http://mulesoft.org/tshirt-service/">
+         <orderId>I got a request from John</orderId>
+      </ns0:OrderTshirtResponse>
+   </soap:Body>
 </soap:Envelope>
 ----
 
@@ -176,20 +186,20 @@ To do so:
 +
 [source,xml,linenums]
 ----
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope
-  <soap:Body>
-    <ns0:OrderTshirtResponse xmlns:ns0="http://mulesoft.org/tshirt-service">
-      <orderId>I got a request from John, using the following auth header 987654321</orderId>
-    </ns0:OrderTshirtResponse>
-  </soap:Body>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+   <soap:Body>
+      <ns0:OrderTshirtResponse xmlns:ns0="http://mulesoft.org/tshirt-service/">
+         <orderId>I got a request from John, using the following auth header 987654321</orderId>
+      </ns0:OrderTshirtResponse>
+   </soap:Body>
 </soap:Envelope>
 ----
 +
-. If we want to add a header to the outgoing message to fulfill the expected contract, add a property in the “Transform message” by clicking on *Payload* > *Add new target* > *property* (from the drop down) and finally using the value `soap.APIUsageInformation` (as it’s the expected one by the contract if you see it in the metadata flow output tab.
-+
-image:adding-header-transform-message.gif[adding-header-transform-message.gif]
+. If we want to add a header to the outgoing message to fulfill the expected contract, add a property in the “Transform message” by clicking on the *Add new target* button, select *property* (from the drop down menu), and finally using the value `soap.APIUsageInformation` (as it’s the expected one by the contract), double-click the `apiCallsRemainin: _Integer_` and you see the header in the metadata flow output tab:
 +
 The transformation script should be something like the following:
++
+image:adding-header-transform-message.gif[adding-header-transform-message.gif]
 +
 [source,xml,linenums]
 ----
@@ -205,16 +215,16 @@ The transformation script should be something like the following:
 [source,xml,linenums]
 ----
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Header>
-    <ns0:APIUsageInformation xmlns:ns0="http://mulesoft.org/tshirt-service">
-      <apiCallsRemaining>10</apiCallsRemaining>
-    </ns0:APIUsageInformation>
-  </soap:Header>
-  <soap:Body>
-    <ns0:OrderTshirtResponse xmlns:ns0="http://mulesoft.org/tshirt-service">
-      <orderId>I got a request from John, using the following auth header 987654321</orderId>
-    </ns0:OrderTshirtResponse>
-  </soap:Body>
+   <soap:Header>
+      <ns0:APIUsageInformation xmlns:ns0="http://mulesoft.org/tshirt-service">
+         <apiCallsRemaining>10</apiCallsRemaining>
+      </ns0:APIUsageInformation>
+   </soap:Header>
+   <soap:Body>
+      <ns0:OrderTshirtResponse xmlns:ns0="http://mulesoft.org/tshirt-service/">
+         <orderId>I got a request from John, using the following auth header 987654321</orderId>
+      </ns0:OrderTshirtResponse>
+   </soap:Body>
 </soap:Envelope>
 ----
 +
@@ -278,12 +288,17 @@ image:transform-message-with-fault.png[transform-message-with-fault.png]
 ----
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
    <soap:Body>
-      <ns0:TshirtFault xmlns:ns0="http://mulesoft.org/tshirt-service">
+      <ns0:TshirtFault xmlns:ns0="http://mulesoft.org/tshirt-service/">
          <errorStuff>500</errorStuff>
       </ns0:TshirtFault>
    </soap:Body>
 </soap:Envelope>
 ----
+
+[TIP]
+--
+The *SOAP Fault* processor has generic faults and two types, "Soap Fault 1.1" and "Soap Fault 1.2". You can select any of these two options using any WSDL file, even for those where typed faults do not exist
+--
 
 === Updating Your WSDL File
 
@@ -293,7 +308,7 @@ At some point you might want to update your WSDL file by adding an operation, or
 +
 As modifying a WSDL file by hand is tricky, we have uploaded a modified link:_attachments/tshirt-modified.wsdl[tshirt-modified.wsdl] file for you to copy *its whole content* and paste it in tshirt2.wsdl (replacing all of tshirt2.wsdl's content by the new WSDL file).
 +
-. Right click in the project and click *Mule* > *Generate SOAP Flows*.
+. In your Package Explorer, Right click in the project and click *Mule* > *Generate SOAP Flows*.
 . A new flow is generated under the name of `DeleteOrder:api-config` as shown in the image.
 +
 image:generate-sources.png[generate-sources.png, width="300"]

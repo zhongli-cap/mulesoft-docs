@@ -169,11 +169,9 @@ a|[source,xml]
 
 A redelivery policy can be defined on an inbound endpoint. It is similar to the maximum redelivery counts that can be set on JMS brokers, and solves a similar problem: if an exception causes the read of a message to be rolled back over and over, how to avoid an infinite loop? Here's an example:
 
-[cols=","]
-|===
-|*MimeType Example*
 
-a|[source,xml, linenums]
+.MimeType Example
+[source,xml, linenums]
 ----
 <flow name ="syncFlow" processing-strategy="synchronous">
     <file:inbound-endpoint path="/tmp/file2ftp/ftp-home/dirk">
@@ -185,9 +183,22 @@ a|[source,xml, linenums]
     </file:inbound-endpoint>
     ...
 ----
-|===
+
 
 If something later in the flow throws an exception, the file won't be consumed, and is reprocessed. The idempotent-redelivery-policy ensures that it won't be reprocessed more then 3 times; after that, it's sent to `vm:error-queue`, where it can be handled as an error case.
+
+The redelivery policy uses an ObjectStore to keep track of a counter for the amount of attempts that have been done. Mule uses an internal ObjectStore by default, but you can set it up so that you use a custom one if you prefer. To change this ObjectStore, add am 'object-store-ref' property:
+
+.MimeType Example
+[source,xml, linenums]
+----
+        <idempotent-redelivery-policy maxRedeliveryCount="3" object-store-ref="src/main/app/myObjStore">
+            <dead-letter-queue>
+                <vm:outbound-endpoint path="error-queue" />
+            </dead-letter-queue>
+        </idempotent-redelivery-policy>
+----
+
 
 == Embedding Message Processors Inside an Endpoint
 

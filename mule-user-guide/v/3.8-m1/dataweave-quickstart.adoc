@@ -1,0 +1,498 @@
+= DataWeave Quickstart Guide
+:keywords: studio, anypoint, esb, transform, transformer, format, aggregate, rename, split, filter convert, xml, json, csv, pojo, java object, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping
+
+*_Enterprise_*
+
+image:dw-logo.png[dw]
+
+
+Using the Transform Message component on Anypoint Studio to leverage DataWeave language, you can powerfully expand your ability to connect anything to anything, regardless of the data type or structure. In this example you will connect a service that sends XML order requests to another that expects JSON inputs with different field names and data structure by using nothing but a simple drag and drop UI. Then you will dive deep into the more advanced features of the DataWeave language and process the output of anther request to carry out dynamic transformations that group and filter its contents.
+
+This quick start guide introduces key features of DataWeave, including:
+
+* How to transform types
+* How to use the graphical UI to easily map fields
+* How to preview your output data based on samples
+* How to navigate input instances using the map operation
+* How to apply simple operators such as filter and groupBy
+
+For more advanced examples that involve writing DataWeave code, see link:/mule-user-guide/v/3.8-m1/dataweave-examples[DataWeave Examples].
+
+== Example Overview
+
+[TIP]
+====
+To walk through the steps of this guide, you'll need to download and extract the contents of this file:
+
+link:_attachments/dw-quickstart-bundle.zip[dw-quickstart-bundle.zip]
+
+====
+
+Suppose that you want to send a REST request to a web service that places an order for a t-shirt, based on information you get from a sales tracking software you use (which outputs data in XML and in a different structure). The service you're sending requests to needs a JSON input with values for the following set of keys:
+
+* _size_
+* _email_
+* _name_
+* _address1_
+* _address2_ (optional)
+* _city_
+* _stateOrProvince_
+* _postalCode_
+* _country_
+
+The requirements of this service are described in a link:http://www.raml.org[RAML] file, which you can easily link to an HTTP connector so that the corresponding metadata is exposed to Studio at design time.
+
+In this example, suppose that the raw data that you get from your sales tracking software follows the structure of this sample XML file:
+
+
+[source, xml, linenums]
+----
+<?xml version='1.0' encoding='UTF-8'?>
+<order>
+  <product>
+    <price>5</price>
+    <model>Mulesoft Connect 2015</model>
+  </product>
+  <item_amount>3</item_amount>
+  <payment>
+    <payment-type>credit-card</payment-type>
+    <currency>USD</currency>
+    <installments>1</installments>
+  </payment>
+  <buyer>
+    <email>mike@hotmail.com</email>
+    <name>Michael</name>
+    <address>Koala Boulevard 314</address>
+    <city>San Diego</city>
+    <state>CA</state>
+    <postCode>1345</postCode>
+    <nationality>USA</nationality>
+  </buyer>
+  <shop>main branch</shop>
+  <salesperson>Mathew Chow</salesperson>
+</order>
+----
+
+In this example, the data you get as an input is not only in a different format from what you need to send out, you also need to pick out only a couple of the fields in it, rename them and even infer some values from others. You then need to select only a few of these fields, rename some, and assume a value for "size" (as it's not provided by the input).
+
+
+
+== Metadata Setup
+
+The Transform Message component picks up all of the available metadata about its input and output to help you build the transformation. It's always advisable to first set up other components on your flow before you configure the Transform Message component.
+
+. In Anypoint Studio click *File* > *New* > *Mule Project* to create a new project, give it whatever name you wish and click *Finish*.
+. Drag an link:/mule-user-guide/v/3.8-m1/http-connector[HTTP Connector] from the palette to your empty canvas, then a *Transform Message Component* and after it a third HTTP Connector.
++
+image::dataweave-quickstart-5a4cb.png[]
+
+
+
+. Click on the first HTTP Connector to open its properties editor, then click the green arrow icon to create a new configuration for it. Leave all of the fields in default and click *OK*.
++
+image::dataweave-quickstart-a56f0.png[]
+
+. In the *path* field write `place-order`. Once deployed, this will make the endpoint reachable through '0.0.0.0:8081/place-order'
+. Select the *Metadata* tab and click the *Set Metadata* button.
++
+image::dataweave-quickstart-702fd.png[]
+. Click the *Edit* icon that appears next to the Payload element
+. Click the green plus icon to add a new metadata type and name it 'XML-order-input'
++
+image::dataweave-quickstart-c8ae5.png[]
+. Select *XML* as the type, pick *example* and point it to the location of the `dw-tshirt-inputsample.xml` file, available in the bundle you downloaded <<Example Overview, at the start of this guide>>. Then click *Select* to use this Metadata type.
++
+image::dataweave-quickstart-26f37.png[]
+
+. Note that if you open the Transform Message component, the input section should show the fields that will be present in the incoming payload, this will come in handy later.
++
+image::dataweave-quickstart-4a1db.png[]
+
+
+. Click on the second HTTP connector to open its properties editor. Click the green plus sign to create a new configuration for it. In the RAML Location field, point to the `t-shirt.raml` file, available in the bundle you downloaded <<Example Overview, at the start of this guide>>. Then click *Ok*.
++
+image::dataweave-quickstart-6d4b7.png[]
+
+. Set the Path to */orders* and the Method to *POST*, picking out of the options described in the RAML you attached.
++
+image::dataweave-quickstart-3c9c7.png[]
+
+. Note that if you click on the Transform Message component, the output section now reflects the data structure that's described in the RAML file for POSTing to '/orders'.
++
+image::dataweave-quickstart-f39a5.png[]
+
+
+
+== Type Transformation
+
+In this example we're converting an XML input into a JSON output. As this difference is known in the metadata of both the input and output, this conversion is already implicitly carried out by DataWeave.
+
+Click on your Transform Message component. In the link:/mule-user-guide/v/3.8-m1/using-dataweave-in-studio#the-dataweave-text-editor[DataWeave text editor] replace the curly brackets '{}' for 'payload'.
+
+image::dataweave-quickstart-7c173.png[]
+
+This is the simplest transformation you can carry out, it replicates the input structure but changes the format from XML to JSON. Whatever exists in the payload – including any child elements at any depth – is transformed directly into JSON without changing any of its structure.
+
+
+== Mapping Fields
+
+The transformation explained in the previous section would be good enough if the application you want to send your requests to expected the same data structure as your input, only that in a different format. As this is not the case, you must instead build something out with the link:/mule-user-guide/v/3.8-m1/using-dataweave-in-studio#the-graphical-ui[graphical UI].
+
+. Undo the changes you did on the link:/mule-user-guide/v/3.8-m1/using-dataweave-in-studio#the-dataweave-text-editor[DataWeave text editor] in the prior section, so that the DataWeave body shows the default curly brackets '{}' instead of 'payload'.
++
+image::dataweave-quickstart-73b02.png[]
+
+. Use the GUI to create the actual mapping between the input and output fields. Simply click and drag a field in the input to a field in the output. Match the names in the output with names in the input that are identical. Do so as well for those that are similar:
+** `address` & `address1`
+** `state` & `stateOrProvince`
+** `nationality` & `country`.
+
++
+image::dataweave-quickstart-1984d.png[]
++
+`address2` and `size` in the output should remain unassigned.
+
+
+. Notice how each of these actions you perform doesn't only draw a connection in the UI, it also writes a line of DataWeave code in the Text Editor. By now your DataWeave code on the right should look like this:
++
+
+[source, DataWeave, linenums]
+----
+%dw 1.0
+%output application/json
+---
+{
+	address1: payload.order.buyer.address,
+	city: payload.order.buyer.city,
+	country: payload.order.buyer.nationality,
+	email: payload.order.buyer.email,
+	name: payload.order.buyer.name,
+	postalCode: payload.order.buyer.postCode as :string,
+	stateOrProvince: payload.order.buyer.state
+}
+----
+
+== Assigning Fixed Values
+
+The transform built in the previous section doesn't provide a value for `size` or for `address2`, you can provide a literal expression to populate these with the same value on each instance.
+
+
+. Double click on the `address2` field in the output, note how this adds an icon next to this field, and also creates a line in your DataWeave code that assigns this field the value `null`.
++
+image::dataweave-quickstart-c1e53.png[]
+
+. Do the same for the 'size' field, then edit the DataWeave code directly to assign the string value "M" to `size` instead of 'null'.
++
+image::dataweave-quickstart-4abf1.png[]
+
+
+== Conditional Logic
+
+You can make the transform form the previous section a little more interesting by changing the literal expression that populates "size" into a conditional expression.
+
+See in the code below how the line that defines "size" has changed, it uses the link:/mule-user-guide/v/3.8-m1/dataweave-language-introduction#unless-otherwise[Unless and Otherwise operators] to conditionally set the value to "M" unless the buyer's state is Texas, in which case makes the shirt size "XXL".
+
+
+[source, DataWeave, linenums]
+----
+%dw 1.0
+%output application/json
+---
+{
+	address1: payload.order.buyer.address,
+	address2: null,
+	city: payload.order.buyer.city,
+	country: payload.order.buyer.nationality,
+	email: payload.order.buyer.email,
+	name: payload.order.buyer.name,
+	postalCode: payload.order.buyer.postCode as :string,
+	size: "M" unless payload.order.buyer.state == "TX" otherwise "XXL",
+	stateOrProvince: payload.order.buyer.state
+}
+----
+
+
+== Previewing the Output
+
+The Transform Message component provides you with real time feedback of your actions on the editor. It lets you see a preview of what your output data will look like in run time, which is revised with every change you make.
+
+. To open this section click the `Preview` button on the top right corner of the editor.
++
+image::dataweave-quickstart-07f8a.png[]
+. As your metadata is based off a sample input you provided before, Studio uses the data in this sample to build out the output sample.
++
+image::dataweave-quickstart-59e9c.png[]
+
+. You can freely edit the sample data to test what would happen in corner cases. In your input section. Select the `payload` tab in your input section and replace any values there at will. When doing this, note how these values are populated into the values of the preview in real time, giving you a tangible representation of what the final result of your mapping will be.
++
+image::dataweave-quickstart-75ca5.png[]
+
+. Try populating the "state" field in the input sample with TX and note how the "size" field in the output sample is updated in real time.
+
+. Save your Mule project and Deploy it to Studio's virtual server to try it out by right-clicking on the project and selecting `Run As -> Mule Application`.
+
+. Using a tool like Postman (chrome extension), send an HTTP POST request to http://localhost:8081/place-order with a XML body like the one below:
+
+[source, xml, linenums]
+----
+<?xml version='1.0' encoding='UTF-8'?>
+<order>
+  <product>
+    <price>5</price>
+    <model>Mulesoft Connect 2015</model>
+  </product>
+  <item_amount>3</item_amount>
+  <payment>
+    <payment-type>credit-card</payment-type>
+    <currency>USD</currency>
+    <installments>1</installments>
+  </payment>
+  <buyer>
+    <email>mike@hotmail.com</email>
+    <name>Michael</name>
+    <address>Koala Boulevard 314</address>
+    <city>San Diego</city>
+    <state>TX</state>
+    <postCode>1345</postCode>
+    <nationality>USA</nationality>
+  </buyer>
+  <shop>main branch</shop>
+  <salesperson>Mathew Chow</salesperson>
+</order>
+----
+
+You should get a response with an JSON body that has a single value, this is the order ID for the shirt order you just placed.
+
+
+== Setup
+
+. Drag two HTTP connectors and a Transform Data component into a new flow
++
+image::dataweave-quickstart-e4466.png[]
+
+. Click on the first HTTP Connector to open its properties editor, then in the *Connector Configuration* select the one that you have already created in prior steps.
+
+. In the *path* field write `get-products`. Once deployed, this will make the endpoint reachable through '0.0.0.0:8081/get-products'
+
+. Click on the second HTTP connector to open its properties editor, then in the *Connector Configuration* select the one that you have already created in prior steps, which is linked to the RAML file you downloaded.
+
+. Set the Path to */products* and the Method to *GET*.
+. If you now click on the Transform Message component, note that its input is now populated with the data structure that is known to be sent when sending a GET request to /products.
++
+image::dataweave-quickstart-2196b.png[]
+
+. Click on the *Preview* button to open the output preview. As there is no sample data available, you will be prompted to provide a sample.
+
++
+image::dataweave-quickstart-be7fd.png[]
+
+. Click on the link of the notification. This will open an editor tab in the input section with an empty scaffold of the known input structure, where every field is populated with `????`. You can edit it so that it displays more usable data. Paste the following example in that editor:
+
+[source,json,linenums]
+----
+[
+  {
+    "productCode": "5423",
+    "size": "m",
+    "description": "Connect 2016",
+    "count": 151
+  },
+    {
+    "productCode": "2452",
+    "size": "m",
+    "description": "RAML",
+    "count": 23
+  },
+    {
+    "productCode": "4567",
+    "size": "xxl",
+    "description": "Connect 2016",
+    "count": 329
+  },
+    {
+    "productCode": "1256",
+    "size": "s",
+    "description": "RAML",
+    "count": 0
+  }
+]
+----
+
+
+== Using the Map Operator
+
+As occurred with the other Transform Message component used in this guide, in the input section you can see a tree that describes the data structure. As there's no metadata about the desired output, there isn't anything specified in the output section though. In this example we will build the DataWeave code manually, as what we need to do requires more advanced features than what can be done through the UI.
+
+
+. In the DataWeave Text Editor, change the output directive from the default `application/java` to `application/json`.
+
++
+image::dataweave-quickstart-3c348.png[]
+
+
+. Fill in the body of the DataWeave code with the following:
++
+
+[source, DataWeave, linenums]
+----
+%dw 1.0
+%output application/json
+---
+shirts: payload map {
+	size: upper $.size,
+	description: $.description,
+	count: $.count
+}
+----
+
+As the input is a collection of elements, each describing a product in inventory, this code uses the link:/mule-user-guide/v/3.8-m1/dataweave-operators#map[Map operator] to treat each of these instances separately. What's enclosed in curly brackets right after the map operator is executed once for each element in the collection. Within this operation, the code refers to the currently selected instance via the `$` selector. The code in this example merely takes each item of the input and maps it to an identical field, with the exception of the *size* field, on which it applies the link:/mule-user-guide/v/3.8-m1/dataweave-operators#upper[Upper operator] to change it to upper case.
+
+If you open the *Preview* section, you can see what this transform would output, given the sample as an input. The output is an object that contains a single array, each element in that array is one of the elements in the input, kept identical except that the size field appears in upper case.
+
+
+[source,json,linenums]
+----
+{
+  "shirts": [
+    {
+      "size": "M",
+      "description": "Connect 2016",
+      "count": 151
+    },
+    {
+      "size": "M",
+      "description": "RAML",
+      "count": 23
+    },
+    {
+      "size": "XXL",
+      "description": "Connect 2016",
+      "count": 329
+    },
+    {
+      "size": "S",
+      "description": "RAML",
+      "count": 0
+    }
+  ]
+}
+----
+
+
+== Filtering
+
+
+The result from the previous step includes a products for which there is zero stock. We can easily filter those cases out using the link:/mule-user-guide/v/3.8-m1/dataweave-operators#filter[Filter operator]. Modify your DataWeave code to include `filter $.count > 0` in the end. Your code should look like this:
+
+[source, DataWeave, linenums]
+----
+%dw 1.0
+%output application/json
+---
+shirts: payload map {
+	size: upper $.size,
+	description: $.description,
+	count: $.count
+} filter $.count > 0
+----
+
+The filter operator takes an array as an input validates each element in it against a condition. In this case, the array it takes is the resulting array created by the map operation, since the filter operation is only executed once the map operation is already compiled. Note that the condition uses the `$` selector to signal the element of the array that is currently being revised.
+
+[TIP]
+See the link:/mule-user-guide/v/3.8-m1/dataweave-language-introduction#precedence-table[Precedence Table] to have a clear idea about when each expression is compiled.
+
+
+If you open the *Preview* section, you can see what this transform would output, given the sample as an input. The output's array now contains one element less, which was the product that had 0 stock.
+
+[source,json,linenums]
+----
+{
+  "shirts": [
+    {
+      "size": "M",
+      "description": "Connect 2016",
+      "count": 151
+    },
+    {
+      "size": "M",
+      "description": "RAML",
+      "count": 23
+    },
+    {
+      "size": "XXL",
+      "description": "Connect 2016",
+      "count": 329
+    }
+  ]
+}
+----
+
+
+== Grouping
+
+The elements in the output can also be grouped into groups. The link:/mule-user-guide/v/3.8-m1/dataweave-operators#group-by[Group By operator] can arrange a collection into a collection of collections where each has the elements that share a common value in one of their fields. Modify your DataWeave code to include `groupBy $.size` in the end. Your code should look like this:
+
+
+[source, DataWeave, linenums]
+----
+%dw 1.0
+%output application/json
+---
+shirts: payload map {
+	size: upper $.size,
+	description: $.description,
+	count: $.count
+} filter $.count > 0 groupBy $.size
+----
+
+
+
+The Group By operator takes an array as an input and focuses on one of its fields to group the elements according to the values in this field. In this case, the array it takes is the resulting array created by the map operation, since the groupBy operation is only executed once the map operation is already compiled. Note that the condition uses the `$` selector to signal the element of the array that is currently being revised.
+
+
+If you open the *Preview* section, you can see what this transform would output, given the sample as an input. The output now contains an object with a single "shirts" object in it, which contains an array. Each different available value for "size" will have a corresponding element inside the "shirts" object, each holding an array of objects with every product that matches that value for size.
+
+
+[source,json,linenums]
+----
+{
+  "shirts": {
+    "M": [
+      {
+        "size": "M",
+        "description": "Connect 2016",
+        "count": 151
+      },
+      {
+        "size": "M",
+        "description": "RAML",
+        "count": 23
+      }
+    ],
+    "XXL": [
+      {
+        "size": "XXL",
+        "description": "Connect 2016",
+        "count": 329
+      }
+    ]
+  }
+}
+----
+
+
+
+
+
+
+== Also See
+
+* See more advanced examples in link:/mule-user-guide/v/3.8-m1/dataweave-examples[DataWeave Examples]
+* link:/mule-user-guide/v/3.8-m1/using-dataweave-in-studio[Using DataWeave in Studio]
+* link:/mule-user-guide/v/3.8-m1/dataweave-language-introduction[DataWeave Language Introduction]
+* link:/mule-user-guide/v/3.8-m1/dataweave-operators[DataWeave Operators]
+* link:/mule-user-guide/v/3.8-m1/dataweave-types[DataWeave Types]
+* link:/mule-user-guide/v/3.8-m1/dataweave-formats[DataWeave Formats]
+* link:/mule-user-guide/v/3.8-m1/dataweave-selectors[DataWeave Selectors]
+* link:/mule-user-guide/v/3.8-m1/mel-dataweave-functions[MEL DataWeave Functions]
+* Migrate your old DataMapper components automatically using link:/mule-user-guide/v/3.8-m1/dataweave-migrator[DataWeave Migrator Tool]
