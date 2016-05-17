@@ -1,9 +1,55 @@
 = SFTP Transport Reference
-:keywords: anypoint studio, esb, connectors, files transfer, ftp, sftp, endpoints
+:keywords: anypoint studio, connectors, files transfer, ftp, sftp, endpoints
 
-The Secure Shell (SSH) File Transfer Protocol (SFTP) transport allows files to be read and written to and from directories over SFTP. Unlike the Virtual File System (VFS) transport, it can handle large files because it streams message payloads. The SFTP transport can be used as an inbound or an outbound endpoint. Files can be retrieved from an SFTP server and processed as Mule messages, or Mule messages can be uploaded as files to an SFTP server.  Mule uses the link:http://www.jcraft.com/jsch/[JCraft library] for SFTP SSH. 
+The Secure Shell (SSH) File Transfer Protocol (SFTP) transport allows files to be read and written to and from directories over SFTP. Unlike the Virtual File System (VFS) transport, it can handle large files because it streams message payloads. The SFTP transport can be used as an inbound or an outbound endpoint. Files can be retrieved from an SFTP server and processed as Mule messages, or Mule messages can be uploaded as files to an SFTP server.  Mule uses the link:http://www.jcraft.com/jsch/[JCraft library] for SFTP SSH.
 
-*Notes*:
+== SFTP Accepts SSH Known Hosts File
+
+In Mule 3.8 and newer, an SSH known_hosts file may be passed to SFTP. The format for the SSH `known_hosts` file is standard to your operating system. Refer to your OS documentation for details.
+
+The following example uses outbound SFTP to ensure that the hosts are known in connectors and endpoints:
+
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp"z
+      xsi:schemaLocation="
+          http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+          http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+          http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd">
+
+  <spring:beans>
+        <spring:import resource="sftp-properties.xml"/>
+    </spring:beans>
+
+  <sftp:connector name="sftpConnector" />
+
+	<sftp:connector name="sftpConnectorWithKnownHosts"
+        knownHostsFile="src/test/resources/my_known_hosts" />
+
+    <flow name="knownHostsInConnector">
+        <sftp:outbound-endpoint
+            address="sftp://${USER1_NAME}@${SFTP_HOST}:${SFTP_PORT}/~/tempdir2-test-outbound"
+            connector-ref="sftpConnectorWithKnownHosts" name="outboundEndpoint1">
+        </sftp:outbound-endpoint>
+    </flow>
+
+    <flow name="knownHostsInEndpoint">
+        <sftp:outbound-endpoint
+            address="sftp://${USER1_NAME}@${SFTP_HOST}:${SFTP_PORT}/~/tempdir2-test-outbound"
+            connector-ref="sftpConnector" name="outboundEndpoint2"
+            knownHostsFile="src/test/resources/my_known_hosts">
+        </sftp:outbound-endpoint>
+    </flow>
+</mule>
+----
+
+This example sets the USER1_NAME, SFTP_HOST, and SFTP_PORT values in the sftp-properties.xml file.
+
+== Overview
 
 * Mule 3.7 and newer supports SFTP retries. 
 * In code examples in this guide, `spring-beans-current.xsd` is a placeholder. To locate the correct version, see  http://www.springframework.org/schema/beans/  
