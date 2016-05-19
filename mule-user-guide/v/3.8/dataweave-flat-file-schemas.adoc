@@ -3,24 +3,32 @@
 
 link:/mule-user-guide/v/3.8/dataweave[DataWeave] allows you to process several different link:/mule-user-guide/v/3.8/dataweave-formats[types of data]. For most of these types, you can link:/mule-user-guide/v/3.8/using-dataweave-in-studio#defining-input-and-output-structure[import a schema] that describes the input structure in order to have access to valuable metadata at design time. DataWeave uses a YAML format called FFD (for Flat File Definition) to represent flat file schemas. The FFD format is very flexible to support a range of use cases, but is based around the concepts of elements, composites, segments and structures.
 
-* *element* - an element is a basic data item, which has an associated type and fixed width, along with formatting options for how the data value is read and written.
-* *composite* - (optional) a group of elements. It can also include other child composites.
-* *segment* - a line of data, made up of any number of elements and/or composites which may be repeated.
-* *group* - (optional) several segments grouped together. It can also include other child groups.
-* *structure* - a hierarchical organization of segments, which requires that the segments have unique identifier codes as part of their data.
-
-image:flat-file-schema-diagram-structures.png[diagram]
-
-If you are only working with one type of record, you only need to have a segment definition for that record type in your FFD. If you're working with multiple types of records in the same transform, you'll need to use a structure definition that controls how these different records are combined.
-
-If you have a single structure or segment definition in an FFD, that structure or segment definition will be used automatically whenever you use the FFD as metadata for a link:/mule-user-guide/v/3.8/dataweave[DataWeave] transformer. If you have multiple structures or segment definitions in an FFD you'll need to specify which one you want to use for each DataWeave transform.
-
 
 Schemas must be written in Flat File Schema Language, with a .ffs extension. This language is very similar to EDI Schema Language (ESL), which is also accepted by the Studio component.
 
 
 [TIP]
 If you intend to use a fixed-width format, you can set up your structure directly through an editor in the UI of the Transform Mesasge component, that makes this a lot easier, just select the `Fixed Width` type. See link:/mule-user-guide/v/3.8/using-dataweave-in-studio#defining-input-and-output-structure[Defining Input and Output Structure].
+
+== Types of Components in a Schema
+
+Here are the different types of components that make up a flat file schema, going from the most elementary to the more complex. Elements and Segments are always required, whilst composites, groups and structures may be needed depending on the <<Top-level structure of an FFD Document, top level structure of your document>>.
+
+* *element* - an element is a basic data item, which has an associated type and fixed width, along with formatting options for how the data value is read and written.
+* *composite* - (optional) a group of elements. It can also include other child composites.
+* *segment* - a line of data, made up of any number of elements and/or composites which may be repeated.
+* *group* - (optional) several segments grouped together. It can also include other child groups.
+* *structure* - a hierarchical organization of segments, which requires that the segments have unique identifier codes as part of their data.
+
+
+
+////
+If you have a single structure or segment definition in an FFD, that structure or segment definition will be used automatically whenever you use the FFD as metadata for a link:/mule-user-guide/v/3.8/dataweave[DataWeave] transformer.
+////
+
+
+
+
 
 == Top-level structure of an FFD Document
 
@@ -32,13 +40,99 @@ The top-level definition in an FFD document starts with the form of the schema, 
 * *multiple segments* - a _segments_ key with multiple child objects, each defining one segment
 
 * *multiple structures* - a _structures_ key with multiple child objects, each defining one structure
+
+
+
 ////
 * *single structure* - structure information directly at the top level (including a _data_ key giving the segment details of the structure)
 ////
 
 
+=== Single Segment
 
-By way of example, here's what the top-level structure of a schema with multiple structures might look like:
+If you are only working with one type of record, you only need to have a segment definition for that record type in your FFD.
+
+image::dataweave-flat-file-schemas-84b06.png[]
+
+Here's a simple schema with only one segment:
+
+[source,yaml, linenums]
+----
+form: FLATFILE
+id: 'RQH'
+tag: '1'
+name: Request Header Record
+values:
+- { idRef: 'OrgCode' }
+- { idRef: 'CreatDate' }
+- { idRef: 'CreatTime' }
+elements:
+  - { id: 'OrgCode', name: 'Organization Code', type: String, length: 10 }
+  - { id: 'CreatDate', name: 'File Creation Date', type: Date, length: 8 }
+  - { id: 'CreatTime', name: 'File Creation Time', type: Time, length: 4 }
+----
+
+This example simply references a list of elements within a single segment, it has no composites to group them into.
+
+[TIP]
+The simplified forms are only for convenience. You can use the _segments_ key even if you only have a single child segment definition.
+
+=== Multiple Segments
+
+If you're working with multiple types of records in the same transform, you'll need to use a structure definition that controls how these different records are combined.
+
+image::dataweave-flat-file-schemas-8a0d2.png[]
+
+Here's an example of a multiple-segment schema:
+
+[source,yaml, linenums]
+----
+form: FLATFILE
+segments:
+- id: 'RQH'
+  tag: '1'
+  name: Request Header Record
+  values:
+  - { idRef: 'OrgCode' }
+  - { idRef: 'CreatDate' }
+  - { idRef: 'CreatTime' }
+- id: 'RSH'
+  tag: '1'
+  name: Response Header Record
+  values:
+  - { idRef: 'OrgCode' }
+  - { idRef: 'EntityName' }
+  - { idRef: 'CustAcct' }
+  - { idRef: 'TransNum' }
+- id: 'BCH'
+  tag: '2'
+  name: Batch Header Record
+  values:
+  - { idRef: 'CompName' }
+  - { idRef: 'CompCode' }
+  - { idRef: 'ExpDate' }
+  - { idRef: 'AcctNum' }
+elements:
+  - { id: 'OrgCode', name: 'Organization Code', type: String, length: 10 }
+  - { id: 'CreatDate', name: 'File Creation Date', type: Date, length: 8 }
+  - { id: 'CreatTime', name: 'File Creation Time', type: Time, length: 4 }
+  - { id: 'CustAcct', name: 'Customer Account Name', type: String, length: 22 }
+  - { id: 'TransNum', name: 'Transaction Number', type: String, length: 15 }
+  - { id: 'CompName', name: 'Company Name', type: String, length: 30 }
+  - { id: 'ExpDate', name: 'Expiration Date', type: String, length: 8 }
+  - { id: 'AcctNum', name: 'Account Number', type: String, length: 17 }
+----
+
+This example contains 3 segments, each with a list of elements referenced in it.
+
+=== Multiple Structures
+
+If you have multiple structures or segment definitions in an FFD, when you apply your schema to an metadata description on a link:/mule-user-guide/v/3.8/dataweave[Transform Message component] you'll need to specify which one you want to use.
+
+image:flat-file-schema-diagram-structures.png[diagram]
+
+
+Here's what the top-level structure of a schema with multiple structures might look like:
 
 [source,yaml, linenums]
 ----
@@ -75,9 +169,18 @@ structures:
   …
 ----
 
-The above defines two different structures, the *BatchReq* structure and the *BatchRsp* structure. Each of these structures uses a particular sequence of records (or segments), with some of the records repeating.
+The above defines two different structures, the *BatchReq* structure and the *BatchRsp* structure. Each of these structures uses a particular sequence of elements and groups. The group "batch" is repeated in both structures. Note that this example is not complete, you'd need to define each of the referenced elements first.
+
+
+
+
+
+
 
 ////
+=== Single Structure
+
+
 If this schema only included one of the structures, say the *BatchReq* structure, it could instead use the simpler form:
 
 [source,yaml, linenums]
@@ -100,66 +203,6 @@ data:
 …
 ----
 ////
-
-Likewise, here's an example of a multiple-segment schema:
-
-[source,yaml, linenums]
-----
-form: FLATFILE
-segments:
-- id: 'RQH'
-  tag: '1'
-  name: Request Header Record
-  values:
-  - { idRef: 'OrgCode' }
-  - { idRef: 'CreatDate' }
-  - { idRef: 'CreatTime' }
-  - { idRef: 'EntityName' }
-  - { idRef: 'FileId' }
-  - { idRef: 'Filler1', usage: U }
-- id: 'RSH'
-  tag: '1'
-  name: Response Header Record
-  values:
-  - { idRef: 'OrgCode' }
-  - { idRef: 'EntityName' }
-  - { idRef: 'FileId' }
-  - { idRef: 'Filler2', usage: U }
-- id: 'BCH'
-  tag: '2'
-  name: Batch Header Record
-  values:
-  - { idRef: 'CompName' }
-  - { idRef: 'CompCode' }
-  - { idRef: 'BatchType' }
-  - { idRef: 'BatchDesc' }
-  - { idRef: 'BatchId' }
-  - { idRef: 'RefundFlag' }
-  - { idRef: 'Currency' }
-  - { idRef: 'Filler3', usage: U }
-…
-----
-
-And here's a simplified form with only one segment:
-
-[source,yaml, linenums]
-----
-form: FLATFILE
-id: 'RQH'
-tag: '1'
-name: Request Header Record
-values:
-- { idRef: 'OrgCode' }
-- { idRef: 'CreatDate' }
-- { idRef: 'CreatTime' }
-- { idRef: 'EntityName' }
-- { idRef: 'FileId' }
-- { idRef: 'Filler1', usage: U }
-…
-----
-
-[TIP]
-The simplified forms are only for convenience. You can use the _segments_ key even if you only have a single child segment definition.
 
 
 == References and in-lined definitions
@@ -434,6 +477,8 @@ Here's a sample structure definition again:
   …
 ----
 
+
+
 The basic structure values are:
 
 [cols=",",options="header",]
@@ -639,6 +684,11 @@ elements:
   - { id: 'EndFileNumberOfRecords', name: 'Number Of Records', type: Integer, length: 8 }
   - { id: 'EndFileReserved', name: 'Reserved', type: String, length: 35 }
 ----
+
+This example contains:
+* a single <<Structure Definitions, structure>> named 'Check'
+* 6 <<Segment Definitions, segments>>, each with references to several elements
+* a long list of <<Element Definitions, elements>>, each with a name, type and length.
 
 
 ////
