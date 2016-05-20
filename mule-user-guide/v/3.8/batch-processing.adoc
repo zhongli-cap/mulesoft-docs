@@ -64,10 +64,23 @@ A *batch job* is a top-level element in Mule which exists outside all Mule flows
 A batch job contains one or more *batch steps* which, in turn, contain any number of message processors that act upon records as they move through the batch job. During batch processing, you can use *record-level variables* (`recordVars`) and MEL expressions to enrich, route or otherwise act upon records.
 
 A batch job executes when triggered by either a *batch executor* in a Mule flow or a *message source* in a batch-accepting input. +
-When triggered, Mule creates a new *batch job instance* for you if you don't assign a custom job instance Id to your batch job. When all records have passed through all batch steps, the batch job instance ends and the *batch job result* is summarized in a report to indicate which records succeeded and which failed during processing.
+When triggered, Mule creates a new *batch job instance*. When all records have passed through all batch steps, the batch job instance ends and the *batch job result* is summarized in a report to indicate which records succeeded and which failed during processing.
 
 Access link:/mule-user-guide/v/3.8/batch-processing-reference[Batch Processing Reference] for more information.
 ====
+
+
+[IMPORTANT]
+====
+*Batch Job vs. Batch Job Instance*
+
+Though defined in context above, it's worth elaborating upon the terms *batch job* and *batch job instance* as they relate to each other.
+
+* A *batch job* is the top-level element in an application in which Mule processes a message payload as a batch of records. The term batch job is inclusive of all four phases of processing: Input, Load and Dispatch, Process, and On Complete.
+
+* A *batch job instance* is an occurrence in a Mule application whenever a Mule flow executes a batch job. Mule creates the batch job instance in the <<Load and Dispatch>> phase. Every _batch job instance_ is identified internally using a unique String known as link:/mule-user-guide/v/3.8/batch-job-instance-id[batch job instance id].
+====
+
 
 The heart of Mule's batch processing functionality lies within the *batch job*. In an application, the batch job element exists outside the context of any regular Mule flow. It is a block of code containing one or more *batch steps* which, as the label implies, process items step-by-step in a sequential order. Batch steps all fall within the *Process Phase* of batch processing (more on <<Batch Processing Phases>> below).
 
@@ -153,62 +166,6 @@ However, consider three use cases where you might need to increase or decrease t
 By configuring a new block size in the properties tab, you can overcome all these use cases. To take full advantage of this feature, you need to understand how the block sizes affect your batch job. Running comparative tests with different values and testing performance helps you find an optimum block size before moving this change into production.
 
 Remember that modifying this value is optional. If you apply no changes, the default value is 100 records per block.
-
-=== Custom Batch Job Instance ID
-
-You can use a Mule expression to specify a unique identifier for each batch job by passing a *Job Instance Id* attribute that takes a MEL expression. +
-Note that constant values are not allowed for batch jobs and if the MEL expression returns a previously seen value, Mule throws an exception and does not create the job instance.
-If you don't set a job instance ID, Mule auto generates a UUID to assign to your instance.
-
-The log of a process without a job instance Id looks like this:
-
-[source, source, linenums]
-----
-Created instance 20ae8500-d1a7-11e5-af90-6003089b5498 for batch job contacts-to-SFDCBatch
-com.mulesoft.module.batch.engine.DefaultBatchEngine: Starting input phase
-com.mulesoft.module.batch.engine.DefaultBatchEngine: Input phase completed
-com.mulesoft.module.batch.engine.queue.BatchQueueLoader: Starting loading phase for instance '20ae8500-d1a7-11e5-af90-6003089b5498' of job 'contacts-to-SFDCBatch'
-com.mulesoft.module.batch.engine.queue.BatchQueueLoader: Finished loading phase for instance 20ae8500-d1a7-11e5-af90-6003089b5498 of job contacts-to-SFDCBatch. 3 records were loaded
-com.mulesoft.module.batch.engine.DefaultBatchEngine: Started execution of instance '20ae8500-d1a7-11e5-af90-6003089b5498' of job 'contacts-to-SFDCBatch'
-com.mulesoft.module.batch.DefaultBatchStep: Step Insert_SFDC finished processing all records for instance 20ae8500-d1a7-11e5-af90-6003089b5498 of job contacts-to-SFDCBatch
-----
-
-The UUID generated for this job instance is `20ae8500-d1a7-11e5-af90-6003089b5498`. As you can tell, it's not a human readable identifier making it hard to correlate to an actual execution and considering you could be running multiple jobs at the same time, this ID is not meaningful at all.
-
-In order to guarantee uniqueness, you can set the Job Id to take server date through the MEL expression: +
-`#['Job From ' + server.dateTime.format('dd/MM/yy hh:mm:ss') + '.' ]`.
-
-This names the execution instance `Job From 15/01/16 05:23:12`.
-
-[source, source, linenums]
-----
-com.mulesoft.module.batch.engine.DefaultBatchEngine: Created instance Job From 15/01/16 05:23:12 for batch job contacts-to-SFDCBatch
-com.mulesoft.module.batch.engine.DefaultBatchEngine: Starting input phase
-com.mulesoft.module.batch.engine.DefaultBatchEngine: Input phase completed
-com.mulesoft.module.batch.engine.queue.BatchQueueLoader: Starting loading phase for instance 'Job From 15/01/16 05:23:12' of job 'contacts-to-SFDCBatch'
-com.mulesoft.module.batch.engine.queue.BatchQueueLoader: Finished loading phase for instance Job From 15/01/16 05:23:12 of job contacts-to-SFDCBatch. 3 records were loaded
-com.mulesoft.module.batch.engine.DefaultBatchEngine: Started execution of instance 'Job From 15/01/16 05:23:12' of job 'contacts-to-SFDCBatch'
-----
-
-The logs of a properly identified instance are easier to read.
-
-The batch job properties tab, now looks like this:
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-image:batchJobProperties.png[batchJobProperties]
-....
-[tab,title="XML Editor"]
-....
-[source, xml, linenums]
-----
-<batch:job name="Batch3">
-    <batch:job name="demo-batch" job-instance-id="#['Job From ' + server.dateTime.format('dd/MM/yy hh:mm:ss') + '.' ]" block-size="50">
-</batch:job>
-----
-....
-------
 
 === Batch Processing Phases
 
@@ -371,17 +328,6 @@ After Mule executes the entire batch job, the output becomes a *batch job result
 * *Reference the batch job result object* elsewhere in the Mule application to capture and use batch metadata, such as the number of records which failed to process in a particular batch job instance.
 
 If you leave the On Complete phase empty (i.e. you do not set any message processors within the phase) and do not reference the batch job result object elsewhere in your application, the batch job simply completes, whether failed or successful. Good practice dictates, therefore, that you configure some mechanism for reporting on failed or successful records so as to facilitate further action where required. Refer to link:/mule-user-guide/v/3.8/batch-processing-reference[Batch Processing Reference] for a list of available MEL expressions pertaining to batch processing.
-
-[NOTE]
-====
-*Batch Job vs. Batch Job Instance*
-
-Though defined in context above, it's worth elaborating upon the terms *batch job* and *batch job instance* as they relate to each other.
-
-* A *batch job* is the top-level element in an application in which Mule processes a message payload as a batch of records. The term batch job is inclusive of all four phases of processing: Input, Load and Dispatch, Process, and On Complete.
-
-* A *batch job instance* is an occurrence in a Mule application whenever a Mule flow executes a batch job. Mule creates the batch job instance in the <<Load and Dispatch>> phase.
-====
 
 == Triggering Batch Jobs
 
