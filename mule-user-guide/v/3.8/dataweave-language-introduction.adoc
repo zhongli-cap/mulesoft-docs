@@ -547,7 +547,7 @@ DataWeave supports four different types of patterns:
 * regex
 * expression
 
-Each pattern type can be either named or unnamed.
+Each pattern type can be either named or unnamed. The example below is not actual DataWeave code, but rather a model for how matching works, you can see more concrete examples on each of the sections that follow:
 
 [source,dataweave, linenums]
 ---
@@ -561,6 +561,9 @@ value match {
 [TIP]
 For simpler use cases where all you need is a boolean result based on if a value matches or not, see the link:/mule-user-guide/v/3.8/dataweave-operators#matches[Matches Operator].
 
+[TIP]
+Check the <<Precedence Table>> to see what expressions are compiled before and after this one.
+
 ===== Literal Pattern
 
 Matches when the evaluated value equals a simple literal value.
@@ -569,10 +572,7 @@ Matches when the evaluated value equals a simple literal value.
 [source,json, linenums]
 ----
 {
-  "string": "Emiliano",
-  "number": 3.14,
-  "boolean": true,
-  "date": "2015-08-06T13:36:10-07:00"
+  "string": "Emiliano"
 }
 ----
 
@@ -604,6 +604,8 @@ a: payload.string match {
 }
 ----
 
+In this example, the first field simply matches the value in 'payload.string' and returns a boolean, the second field performs the same match, but returns an object that contains both a boolean and a reference to the validated value.
+
 ===== Expression Pattern
 
 Matches when running a certain expression over the evaluated value returns true.
@@ -613,9 +615,7 @@ Matches when running a certain expression over the evaluated value returns true.
 ----
 {
   "string": "Emiliano",
-  "number": 3.14,
-  "boolean": true,
-  "date": "2015-08-06T13:36:10-07:00"
+  "number": 3.14
 }
 ----
 
@@ -631,8 +631,8 @@ Matches when running a certain expression over the evaluated value returns true.
     str when str == "Emiliano" -> str ++ " Lesende"
   },
   b: payload.number match {
-    n when n < 3 -> "smaller",
-    n when n > 3 -> "bigger"
+    n when n < 3 -> "lower",
+    n when n > 3 -> "higher"
   }
 }
 ----
@@ -642,9 +642,11 @@ Matches when running a certain expression over the evaluated value returns true.
 ----
 {
   "a": "Emiliano Lesende",
-  "b": "bigger"
+  "b": "higher"
 }
 ----
+
+In this example, the first field matches the value of 'payload.string' against two alternatives and conditionally appends a different string to it; the second field evaluates if the value in 'payload.number' is larger or smaller than 3 and returns "lower" or "higher" accordingly.
 
 ===== Match Type
 
@@ -656,9 +658,7 @@ Matches when the evaluated value is of the specified type
 ----
 {
   "a": "Emiliano",
-  "b": 3.14,
-  "c": true,
-  "d": null
+  "b": 3.14
 }
 ----
 
@@ -701,6 +701,8 @@ Matches when the evaluated value is of the specified type
 }
 ----
 
+In this example, the first field evaluates the type of 'payload.a' and returns a different string with the type name depending on what type it matches with (this could be easier done through the link:/mule-user-guide/v/3.8/dataweave-operators#type-of[Type Of operator]), the second field returns an object with the same type name as a string and a reference to the evaluated value.
+
 ===== Match Regex
 
 Matches when the evaluated value fits a given regular expression
@@ -723,11 +725,11 @@ Matches when the evaluated value fits a given regular expression
 %output application/json
 ---
 {
-  b: payload.phones map ($ match {
+  a: payload.phones map ($ match {
      /\+(\d+)\s\((\d+)\)\s(\d+\-\d+)/ -> { country: $[0], area: $[1], number: $[2] },
      /\((\d+)\)\s(\d+\-\d+)/ -> { area: $[1], number: $[2] }
    }),
- c: payload.phones map ($ match {
+ b: payload.phones map ($ match {
    phone: /\+(\d+)\s\((\d+)\)\s(\d+\-\d+)/ -> { country: phone[0], area: phone[1], number: phone[2] },
    phone: /\((\d+)\)\s(\d+\-\d+)/ -> { area: phone[1], number: phone[2] }
  })
@@ -738,7 +740,7 @@ Matches when the evaluated value fits a given regular expression
 [source,json,linenums]
 ----
 {
-  "b": [
+  "a": [
     {
       "country": "+1 (415) 229-2009",
       "area": "1",
@@ -749,7 +751,7 @@ Matches when the evaluated value fits a given regular expression
       "number": "456-7008"
     }
   ],
-  "c": [
+  "b": [
     {
       "country": "+1 (415) 229-2009",
       "area": "1",
@@ -763,9 +765,8 @@ Matches when the evaluated value fits a given regular expression
 }
 ----
 
-[TIP]
-Check the <<Precedence Table>> to see what expressions are compiled before and after this one.
 
+In this example, the payload includes two elements in an array, and in both cases the link:/mule-user-guide/v/3.8/dataweave-operators#map[Mpa operator] to cycle through the array. It then evaluates each element agains a regular expression and outputs a different object depending on what kind of match is found.
 
 
 
