@@ -1,37 +1,40 @@
 = REST API Examples
 :keywords: rest, restful, raml, api, apis
 
-This page provides three examples of consuming REST APIs: a <<Simple Example: Consuming a REST API>> that simply details how to retrieve data from a REST API, and two examples – one for <<Extracting XML Data from a REST API and Inserting it in an External DB>> and one for <<JSON to Object Transformer>> – showing how to consume a REST API and insert selected data into an external database.
+This page provides three examples of consuming REST APIs: <<Simple Example: Consuming a REST API>> that describes how to retrieve data from a REST API, <<Extracting XML Data from a REST API and Inserting it in an External DB>>, and <<JSON to Object Transformer>> that shows how to consume a REST API and insert selected data into an external database.
 
 == Simple Example: Consuming a REST API
 
-This is a humorous but fully functional example designed for quick and effortless setup and testing. It queries the link:http://baconipsum.com/[Bacon Ipsum] REST API, which generates link:http://en.wikipedia.org/wiki/Lorem_ipsum[lorem ipsum] text, and is convenient because it does not require HTTPS or setting up an account to use. The example consists of only one flow, shown below.
+This example queries the link:http://baconipsum.com/[Bacon Ipsum] REST API, which generates link:http://en.wikipedia.org/wiki/Lorem_ipsum[lorem ipsum] text. You don't have to use HTTPS or set up an account. The example consists of the an HTTP listener and an HTTP requester initially.
 
-image:rest+api+1.png[rest+api+1]
+image::rest-api-examples-ec226.png[rest-api-examples-ec226]
+
+Later, you add a File component to the example to save the output of the request for lorem ipsum text to a file on your file system.
 
 *View the XML*
+
+The XML without the File Component is:
 
 [source, xml, linenums]
 ----
 <mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-    xmlns:spring="http://www.springframework.org/schema/beans"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+    xmlns:spring="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
-    <http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" doc:name="HTTP Listener Configuration"/>
-    <http:request-config name="HTTP_Request_Configuration" host="baconipsum.com"  doc:name="HTTP Request Configuration" basePath="api"/>
-    <flow name="test2Flow1" >
-        <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-        <http:request config-ref="HTTP_Request_Configuration" path="/" method="GET" doc:name="HTTP">
-          <http:request-builder>
-                <http:query-param paramName="type" value="#[message.inboundProperties.'http.query.params'.type]"/>
-                <http:query-param paramName="sentences" value="#[message.inboundProperties.'http.query.params'.sentences]"/>
-            </http:request-builder>
-        </http:request>
-      <file:outbound-endpoint path="/tmp/" outputPattern="out.json" responseTimeout="10000" doc:name="File"/>
-    </flow>
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <http:request-config name="HTTP_Request_Configuration" host="baconipsum.com"  doc:name="HTTP Request Configuration" basePath="api" port="80"/>
+    <flow name="test2Flow1" >
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP" allowedMethods="GET"/>
+        <http:request config-ref="HTTP_Request_Configuration" path="/" method="GET" doc:name="HTTP">
+          <http:request-builder>
+                <http:query-param paramName="type" value="#[message.inboundProperties.'http.query.params'.type]"/>
+                <http:query-param paramName="sentences" value="#[message.inboundProperties.'http.query.params'.sentences]"/>
+            </http:request-builder>
+        </http:request>
+    </flow>
 </mule>
 ----
 
@@ -42,11 +45,9 @@ The first element, an link:/mule-user-guide/v/3.8/http-connector[HTTP listener],
 http://localhost:8081?<query>
 ----
 
-The `<query>` part of the request consists of the parameters accepted by the REST API. When the HTTP listener receives the HTTP request, the `<query>` part of the URL is recorded as a set of inbound properties. The HTTP listener passes these properties to the next element in the flow, the HTTP request connector. This outbound connector is configured to query the remote REST API at http://baconipsum.com/api. The HTTP request connector uses a couple of simple link:/mule-user-guide/v/3.8/mule-expression-language-mel[MEL expressions] to extract the query parameters from the message it received from the listener, and to construct the full URL for the remote API, including the query parameters.
+The `<query>` part of the request consists of the parameters accepted by the REST API. When the HTTP listener receives the HTTP request, the `<query>` part of the URL is recorded as a set of inbound properties. The HTTP listener passes these properties to the next element in the flow, the HTTP request connector. This outbound connector is configured to query the remote REST API at http://baconipsum.com/api. The HTTP request connector uses  link:/mule-user-guide/v/3.8/mule-expression-language-mel[MEL expressions] to extract the query parameters from the message it received from the listener, and to construct the full URL for the remote API, including the query parameters.
 
-For example, if you hit the HTTP listener with ` http://localhost:8081?type=meat-and-filler`, the application queries `http://baconipsum.com/api/?type=meat-and-filler`.
-
-The full configuration for this example is detailed below.
+For example, if you hit the HTTP listener with `http://localhost:8081?type=meat-and-filler`, the application queries `http://baconipsum.com/api/?type=meat-and-filler`.
 
 === Configuring this Example
 
@@ -59,7 +60,7 @@ The full configuration for this example is detailed below.
 
 Set up the Properties editor of the Connector:
 
-image:http+listener+basic.png[http+listener+basic]
+image::rest-api-examples-bf47c.png[rest-api-examples-bf47c]
 
 [cols=",",options="header"]
 |===
@@ -70,7 +71,7 @@ image:http+listener+basic.png[http+listener+basic]
 
 Create a new Connector Configuration Element and set up the port and host:
 
-image:http+config+1.png[http+config+1]
+image::rest-api-examples-876de.png[rest-api-examples-876de]
 
 [cols=",",options="header"]
 |===
@@ -122,23 +123,22 @@ For this element to work, you must reference an abstract element called a *Conne
 ------
 [tab,title="Studio Visual Editor"]
 ....
-. Create a new Connector Configuration Element and set up the *Host* and *Base Path*:
+. Create a Connector Configuration and set up the *Host*, *Port*, *Base Path*:
 +
-image:http+global+element+baconipsum.png[http+global+element+baconipsum]
+image::rest-api-examples-fc78a.png[rest-api-examples-fc78a]
 +
 [cols=",",options="header"]
 |===
 |Parameter |Value
-|*Name* |`HTTP_Request_Connector `
+|*Name* |`HTTP_Request_Connector`
 |*Host* |`baconipsum.com`
+|*Port* | `80`
 |*Base Path* |`api`
 |===
 +
 With this configuration, requests are sent to http://baconipsum.com/api
-
-. Save changes and return to the connector's properties editor by clicking ok. Then set up the path and method:
 +
-image:http+connector+basic.png[http+connector+basic]
+. Click OK. Then set up the path and method:
 +
 [cols=",",options="header"]
 |===
@@ -147,10 +147,14 @@ image:http+connector+basic.png[http+connector+basic]
 |*Path* |`/`
 |*Method* |`GET`
 |===
-
-. Click the *Add Parameter* button twice to add two parameters. Leave both as the default type *query-param*. For the `value` field of each, write a mule expression that takes the equivalent value from the query parameters of the request that first reached the HTTP Listener, these are transformed into inbound properties by the time they reach the HTTP Request Connector.
 +
-image:request+connector+w+params.png[request+connector+w+params]
+image::rest-api-examples-e5e5f.png[rest-api-examples-e5e5f]
++
+. Add two parameters using *Add Parameter*. Leave both as the default type *query-param*. For the `value` field of each, write a mule expression that takes the specified value from the query parameters of the request that first reaches the HTTP Listener:
++
+These values are transformed a into inbound properties by the time they reach the HTTP Request Connector.
++
+image::rest-api-examples-ba00e.png[rest-api-examples-ba00e]
 +
 [cols=",",options="header"]
 |===
@@ -233,23 +237,32 @@ For this element to work, you must reference an abstract element called a *Conne
 
 ==== File Outbound Endpoint
 
-You can set this outbound endpoint with whatever parameters you wish, or use the values provided below. The configuration shown below outputs the resulting JSON to the file `/tmp/out.json`.
+You can set this outbound endpoint to a directory and file name for storing the output.
 
 [tabs]
 ------
 [tab,title="Studio Visual Editor"]
 ....
-*General Tab*
 
-[width="100%",cols=",",options="header"]
-|===
-|Parameter |Value |Configuration window image
-|*Display Name* |`File` .3+|image:f1.elem3.png[f1.elem3]
-|*Path* |`/tmp/`
-|*Output Pattern* |`out.json`
-|===
+The following example File connector properties and configuration sends the resulting text to the file `/tmp/output`.
 
-The rest of the tabs for this endpoint (Advanced, References, and Notes) are set with their default values; no configuration is necessary.
+. Drag a File connector to the flow.
++
+image::rest-api-examples-2d8e6.png[rest-api-examples-2d8e6]
++
+. In the properties editor, specify an actual path on your file system for the Path.
++
+Mule runtime performs intermediate processes here, but does not write the output here.
++
+. In *File Name/Pattern*, enter the name of an output file, for example `output`.
+. In *Connector Configuration*, select *File* from the drop-down. lick
++
+image::rest-api-examples-d0064.png[rest-api-examples-d0064]
++
+. In *Connector Configuration*, click the image:add.png[add], and enter a path in *Write to Directory*. Enter `/tmp` for example.
++
+image::rest-api-examples-479e3.png[rest-api-examples-479e3]
+
 ....
 [tab,title="Standalone XML"]
 ....
@@ -262,19 +275,23 @@ The rest of the tabs for this endpoint (Advanced, References, and Notes) are set
 
 === Running this Example
 
-[TIP]
-====
-To trigger the flow in this application, use a Web browser or an HTTP client such as the link:http://curl.haxx.se/download.html[curl] command-line utility to hit the HTTP listener on localhost port 8081.
+. Run the example as a Mule application.
+. To trigger the flow in this application, use a Web browser to hit the HTTP listener on localhost port 8081.
++
+image::rest-api-examples-4c1b4.png[rest-api-examples-4c1b4]
++
+The console logs a message that the response was written to the file you specified:
++
+`INFO  2016-05-22 17:40:56,406 [[myproject].HTTP_Listener_Configuration.worker.01] org.mule.transport.file.FileConnector: Writing file to: /private/tmp/output`
 
-image:browser1.png[browser1]
+Alternatively, you can use an HTTP client, such as the link:http://curl.haxx.se/download.html[curl] command-line utility to trigger the flow.
 
 [source, code, linenums]
 ----
 curl 'http://localhost:8081?type=meat-and-filler'
 ----
-====
 
-Run the example as a Mule application, then hit the HTTP listener with your query. The link:http://baconipsum.com/api/[Bacon Ipsum API page] contains a list of parameters you can use, although because of the way you set up your connector, you can only use *type* and *sentences*.
+The link:http://baconipsum.com/api/[Bacon Ipsum API page] contains a list of parameters you can use, but you set up your connector to use only *type* and *sentences*.
 
 [source, code, linenums]
 ----
@@ -282,13 +299,11 @@ type=meat-and-filler
 sentences=<num>
 ----
 
-To use any additional query parameter, you must add it to your HTTP Connector first.
-
 `sentences` determines the number of sentences to return in the JSON response. It is optional, you may not include it in your requests.
 
 The first parameter=value pair must be preceded by the `?` operator. To insert additional parameter=value pairs, use the `&` operator.
 
-Example queries sent to the HTTP listener on localhost port 8081:
+Example queries you can send to the HTTP listener on localhost port 8081 are:
 
 [source, code, linenums]
 ----
@@ -297,12 +312,13 @@ http://localhost:8081?sentences=2
 http://localhost:8081?type=all-meat&sentences=3
 ----
 
-The first example, with operation `type=meat-and-filler`, returns the output shown below.
+The `type=meat-and-filler` example returns the output shown below.
 
-[source, code, linenums]
 ----
 ["Doner ullamco ea non, porchetta incididunt brisket ball tip in chuck ex bresaola beef tongue.  Et aute ham hock kielbasa chuck fatback short ribs.  Kevin in reprehenderit est esse, ham bacon ut ball tip.  Laborum ut nulla ex irure t-bone flank, biltong cupidatat venison proident aliquip pork belly ham hock.  In consequat proident, cillum labore pariatur nisi.  Reprehenderit boudin beef ribs, frankfurter cillum enim pork loin consectetur kielbasa laboris.  Hamburger prosciutto nisi, jerky biltong ex pork chop venison.","Fatback tongue anim, irure ut ut cupidatat occaecat eiusmod ham hock laborum commodo.  Anim pig shank kielbasa, drumstick corned beef esse nostrud ham salami id laborum ribeye aute.  Duis pancetta sunt magna occaecat dolor leberkas, short loin meatloaf flank enim pastrami.  Prosciutto proident landjaeger deserunt tenderloin short loin.  Adipisicing aute in bresaola meatball, ut frankfurter pastrami shoulder porchetta turducken strip steak doner.  In filet mignon bresaola, sed deserunt pariatur eu mollit commodo shankle laborum.  Andouille aliqua jowl pork chop jerky sed consequat turkey voluptate bacon pastrami.","Ground round elit boudin reprehenderit.  Brisket shankle esse, leberkas veniam andouille rump proident drumstick.  Consequat sausage do ut prosciutto nostrud andouille tongue ullamco bacon est exercitation.  Do fugiat biltong est tempor short ribs reprehenderit adipisicing shoulder.  Tail venison shank incididunt, hamburger adipisicing voluptate corned beef fugiat sirloin fatback in tri-tip nisi ut.  Tail non excepteur, fugiat veniam corned beef dolore ex pig pork belly sint mollit chuck pork.","Pig hamburger dolore proident brisket landjaeger in boudin kielbasa ut elit.  Velit incididunt boudin qui.  Fatback anim adipisicing, pig jowl voluptate sirloin drumstick chicken esse.  Strip steak consequat tenderloin pastrami, ullamco brisket hamburger bacon beef adipisicing.  Tri-tip ham hock eu non et, flank dolore kevin.  Et duis frankfurter, ut ullamco do non quis boudin andouille aliqua venison ham.  Ut aliqua shoulder, aliquip pariatur bacon spare ribs irure.","Aliqua jerky frankfurter, swine ham in ground round sed qui laborum cow.  Sint turducken shank ut ea id.  Kevin dolore pig excepteur, anim ut magna.  Enim consequat short ribs corned beef ham hock nostrud fugiat chuck.  Tail spare ribs dolore boudin, andouille incididunt laboris occaecat strip steak.  Cow frankfurter capicola, landjaeger cupidatat porchetta ad ground round voluptate."]
 ----
+
+To use any additional query parameter, you need to add it to your HTTP Connector first.
 
 == Extracting XML Data from a REST API and Inserting it in an External DB
 
