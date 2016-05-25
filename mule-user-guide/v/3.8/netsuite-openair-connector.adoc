@@ -1,0 +1,256 @@
+= NetSuite OpenAir Connector
+:keywords: netsuite, openair, connector
+:imagesdir: ./_images
+:toc: macro
+:toclevels: 2
+
+
+toc::[]
+
+== Introduction
+
+The *Anypoint Connector for NetSuite OpenAir* is a closed source enterprise connector which provides a connection between OpenAir and third-party software. The OpenAir connector is a SOAP-based connector developed with link:/anypoint-connector-devkit/v/3.8/[Anypoint Connector DevKit 3.8.1].
+
+Read through this user guide to understand how to set up and configure a basic flow using the connector. Track feature additions, compatibility, limitations and API version updates with each release of the connector using the link:/release-notes/netsuite-openair-connector-release-notes[OpenAir Connector Release Notes]. Review the connector operations and functionality using the link:http://mulesoft.github.io/openair-connector/[Connector ApiDoc Technical Reference and demo applications].
+
+MuleSoft maintains this connector under the link:/mule-user-guide/v/3.8/anypoint-connectors#connector-categories[_Select_] support policy.
+
+== Prerequisites
+
+To use this connector, you need:
+
+* A NetSuite OpenAir instance
+* A set of valid credentials, including username, password, companyID, api namespace and key.
+* A MuleSoft Enterprise License
+
+This document assumes that you are familiar with Mule,
+link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors], and
+link:/mule-fundamentals/v/3.8/anypoint-studio-essentials[Anypoint Studio Essentials]. To increase your familiarity with Studio, consider completing one or more link:/mule-fundamentals/v/3.8/basic-studio-tutorial[Basic Studio Tutorial]. This page assumes you understand link:/mule-fundamentals/v/3.8/mule-concepts[Mule Concepts], link:/mule-fundamentals/v/3.8/elements-in-a-mule-flow[Elements in a Mule Flow], and link:/mule-fundamentals/v/3.8/global-elements[Global Elements].
+
+[NOTE]
+====
+We recommend you use the  link:http://www.openair.com/download/NetSuiteOpenAirSOAPAPIGuide.pdf[NetSuite OpenAir SOAP API Guide] as you familiarize yourself with the connector.
+
+OpenAir "complex types" are limited to a set of OpenAir operations.
+See the OpenAir guide to see the object types. You can see, for example, that object `oaActualCost` works with "read", "add", "modify", and "upsert" methods, while object `oaApproval` only works with the "submit" method.
+====
+
+== Requirements
+
+For hardware and software requirements, please visit link:https://docs.mulesoft.com/mule-user-guide/v/3.8/hardware-and-software-requirements[Mule Hardware and Software Requirements] page.
+
+== Namespace
+
+[source, xml]
+----
+xmlns:openair="http://www.mulesoft.org/schema/mule/openair"
+----
+
+=== Schema Location
+
+[source, code, linenums]
+----
+xsi:schemaLocation="
+...
+http://www.mulesoft.org/schema/mule/openair http://www.mulesoft.org/schema/mule/openair/current/mule-openair.xsd
+..."
+----
+
+== Compatibility
+
+The OpenAir connector is compatible with:
+
+[width="100a",cols="50a,50a",options="header",]
+|===
+|Application/Service|Version
+|Mule Runtime|EE 3.7.0 or later
+|Anypoint Studio|5.3 or later
+|Java|JDK 7
+|===
+
+
+You can install a connector in Anypoint Studio using the instructions in
+link:/mule-fundamentals/v/3.8/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Installing a Connector from Anypoint Exchange]. However, to use the OpenAir connector in a production environment, you must have an Enterprise license to use Mule. Contact the link:mailto:info@mulesoft.com[MuleSoft Sales Team] to obtain either of these. Read more about link:/mule-user-guide/v/3.8/installing-an-enterprise-license[Installing an Enterprise License].
+
+=== Using the Connector in a New Project
+
+To use the OpenAir connector in a Mule application project:
+
+. In Studio, select *File* > *New* > *Mule Project*.
+. Enter a name for your new project and leave the remaining options with their default values.
+. If you plan to use Git, select the *Create a .gitignore file* option, such that the project will use the default ignores for Studio Projects, and then click *Next*.
+. Click *Finish* to create the project.
+
+== Configuring the Global Element
+
+To use the OpenAir connector in your Mule application, you must configure a global OpenAir element that can be used by the OpenAir connector (read more about  link:/mule-fundamentals/v/3.8/global-elements[Global Elements].) The OpenAir connector offers one global configuration, requiring the following credentials: *Username*, *Password*, *Company ID*, *API Namespace*, and *API Key*.
+
+[width="100a",cols="50a,50a",options="header",]
+|===
+|Field |Description
+|*Username* |Enter the username to log in to OpenAir.
+|*Password* |Enter the corresponding password.
+|*Company ID* |Enter the provided companyID.
+|*API Namespace* |Enter the API Namespace provided by NetSuite OpenAir.
+|*API Key* |Enter the APIKey provided by NetSuite OpenAir
+|*Connection Timeout* | _Default_: 300
+|*Read Timeout* | _Default_: 270
+|===
+
+image:openair-config.png[openair-config]
+
+
+To configure the OpenAir global element:
+
+. Ensure you have included the following namespace in your configuration file:
++
+[source,xml]
+----
+xmlns:openair="http://www.mulesoft.org/schema/mule/openair"
+----
+. Create a global OpenAir configuration outside and above your flows, using the following global configuration code:
++
+[source,xml,linenums]
+----
+<openair:config name="OpenAir__Configuration" company="${openair.company}" username="${openair.username}" password="${openair.password}" apiNamespace="${openair.apiNamespace}" apiKey="${openair.apiKey}" doc:name="OpenAir: Configuration"/>
+----
+
+[TIP]
+====
+To enable the automatic *Reconnection* feature:
+
+. Access the OpenAir Global Element configuration window from Studio.
+. Click on the "Reconnection" tab.
+. Select the "Standard Reconnection" option.
+. Adjust the "Frequency (ms)" and "Reconnection Attempts" fields accordingly.
+
+After adding the Reconnection feature, the Configuration XML code should look like this:
+[source,xml,linenums]
+----
+<openair:config name="OpenAir__Configuration" company="${openair.company}" username="${openair.username}" password="${openair.password}" apiNamespace="${openair.apiNamespace}" apiKey="${openair.apiKey}" doc:name="OpenAir: Configuration">
+        <reconnect/>
+</openair:config>
+----
+====
+
+== Using the Connector
+
+=== Adding the OpenAir Connector to a Flow
+
+. Drag and drop the OpenAir connector onto the canvas, then select it to open the properties editor.
+. Configure the connector's parameters by:
+** Selecting the OpenAir Configuration created earlier.
+** Select the operation from the Operation dropdown e.g. Add.
+** Select the `oaObject` to add to your NetSuite OpenAir instance, and the metadata gets generated consequently.
+** Set the "Request Reference" to `#[payload]`.
+image:openair-add-config.png[openair-add-config]
+. Click the blank space on the canvas to save your configurations.
+
+
+
+
+== Example Use Case
+
+See the OpenAir connector "Add" operation in action.
+
+image:openair-use-case-flow.png[openair-use-case-flow]
+
+. Create a new Mule Project in Anypoint Studio
+. Drag and drop an HTTP Listener onto the canvas and configure it to listen on Port 8081.
+. Drag and drop the OpenAir connector into the flow and configure the connector as described above. (The "Add" operation is selected as the demonstrated operation for this use case.)
+. Drag and drop a *Transform Message* component between the HTTP connector and the OpenAir connector.
+. Inside the component insert the DataWeave script below into the DataWeave editor. The script adds both oaCustomer objects to your NetSuite OpenAir instance.
++
+[source, code, linenums]
+----
+%dw 1.0
+%output application/xml
+%namespace ns0 http://namespaces.soaplite.com/perl
+---
+{
+	ns0#ArrayOfoaBase: {
+		oaBase: {
+			oaCustomer: {
+				name: "James Bond",
+        			company: "MuleSoft"
+			},
+			oaCustomer: {
+				name: "John Doe",
+				company: "Pepsi"
+			}
+		}
+	}
+}
+----
++
+. Drag and drop another *Transform Message* component after the OpenAir connector, and insert the DataWeave script below into the *Transform Message* component's DataWeave editor. The script should return the IDs of the newly added OpenAir objects.
++
+[source,code,linenums]
+----
+%dw 1.0
+%output application/json
+%namespace ns0 http://namespaces.soaplite.com/perl
+---
+{
+	ID1: payload.ns0#ArrayOfUpdateResult.*updateResult[0].id,
+	ID2: payload.ns0#ArrayOfUpdateResult.*updateResult[1].id
+}
+----
++
+. Save and run the project as a Mule Application by right-clicking the project name in the Package Explorer, selecting *Run As* > *Mule Application*.
+. After hitting the HTTP endpoint you configured, your browser should display the following JSON:
++
+[source, json, linenums]
+----
+{
+
+    "ID1": "411",
+    "ID2": "412"
+}
+----
+
+=== Example Use Case Code
+
+Paste this into Anypoint Studio to interact with the example use case application discussed in this guide.
+
+[source, xml, linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:openair="http://www.mulesoft.org/schema/mule/openair" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/openair http://www.mulesoft.org/schema/mule/openair/current/mule-openair.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd">
+
+	<openair:config name="OpenAir__Configuration" company="${openair.company}" username="${openair.username}" password="${openair.password}" apiNamespace="${openair.apiNamespace}" apiKey="${openair.apiKey}"  connectionTimeout="${openair.connectionTimeout}" readTimeout="${openair.readTimeout}" doc:name="OpenAir: Configuration"/>
+	<context:property-placeholder location="openair-credentials.properties" />
+	<http:listener-config name="HTTP_Listener_Configuration"
+	host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration" />
+
+	<flow name="openair-connector-addFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+		path="/" doc:name="HTTP" />
+		<dw:transform-message doc:name="Transform Message">
+		<dw:set-payload resource="addRequest.dwl" />
+		</dw:transform-message>
+		<openair:add config-ref="OpenAir__Configuration" oaObject="OpenAir||add||oaCategory"
+		doc:name="OpenAir" />
+		<dw:transform-message doc:name="Transform Message">
+		<dw:set-payload resource="addResponse.dwl" />
+		</dw:transform-message>
+</flow>
+</mule>
+----
+
+== See Also
+* link:http://www.openair.com/download/NetSuiteOpenAirSOAPAPIGuide.pdf[NetSuite OpenAir SOAP API Guide]
+* Learn more about working with link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors].
