@@ -51,7 +51,7 @@ Maven Artifact
 *Docs* - Links to the JavaDoc and SchemaDoc for the transport +
 *Inbound* - Whether the transport can receive inbound events and can be used for an inbound endpoint +
 *Outbound* - Whether the transport can produce outbound events and be used with an outbound endpoint +
-*Request* - Whether this endpoint can be queried directly with a request call (via MuleClinet or the EventContext) +
+*Request* - Whether this endpoint can be queried directly with a request call (via the Mule client or the EventContext) +
 *Transactions* - Whether transactions are supported by the transport. Transports that support transactions can be configured in either local or distributed two-phase commit (XA) transaction. +
 *Streaming* - Whether this transport can process messages that come in on an input stream. This allows for very efficient processing of large data. For more information, see Streaming. +
 *Retry* - Whether this transport supports retry policies. Note that all transports can be configured with Retry policies, but only the ones marked here are officially supported by MuleSoft +
@@ -63,7 +63,7 @@ Maven Artifact
 
 XML namespace:
 
-[source, xml, linenums]
+[source]
 ----
 xmlns:multicast="http://www.mulesoft.org/schema/mule/multicast"
 ----
@@ -72,29 +72,34 @@ XML schema location:
 
 [source, code, linenums]
 ----
-http://www.mulesoft.org/schema/mule/multicast http://www.mulesoft.org/schema/mule/multicast/3.6/mule-multicast.xsd
+http://www.mulesoft.org/schema/mule/multicast http://www.mulesoft.org/schema/mule/multicast/current/mule-multicast.xsd
 ----
 
 Connector syntax:
 
 [source, xml, linenums]
 ----
-<multicast:connector name="mcConnector" receiveBufferSize="1024" sendBufferSize="1024"
-               timeout="0" keepSendSocketOpen="false" broadcast="false"
-               timeToLive="127" loopback="true'/>
+<multicast:connector name="mcConnector"
+           receiveBufferSize="1024"
+           sendBufferSize="1024"
+           timeout="0"
+           keepSendSocketOpen="false"
+           broadcast="false"
+           timeToLive="127"
+           loopback="true'/>
 ----
 
 Endpoint syntax:
 
-You can define your endpoints 2 different ways:
+You can define your endpoints two different ways:
 
 . Prefixed endpoint:
 +
-[source,xml, linenums]
+[source,xml]
 ----
 <multicast:inbound-endpoint host="localhost" port="65433"/>
 ----
-
++
 . Non-prefixed URI:
 +
 [source, xml, linenums]
@@ -136,19 +141,19 @@ To use Multicast endpoints:
 
 . Add the Mule Multicast namespace to your configuration: +
 .. Define the multicast prefix using `xmlns:multicast="http://www.mulesoft.org/schema/mule/multicast"`
-.. Define the schema location with http://www.mulesoft.org/schema/mule/multicast http://www.mulesoft.org/schema/mule/multicast/3.6/mule-multicast.xsd
+.. Define the schema location with http://www.mulesoft.org/schema/mule/multicast http://www.mulesoft.org/schema/mule/multicast/current/mule-multicast.xsd
 . Define one or more connectors for Multicast endpoints. +
 .. Create a Multicast connector:
 +
-[source, xml, linenums]
+[source,xml]
 ----
 <multicast:connector name="multicastConnector"/>
 ----
-
-. Create Multicast endpoints.
++
+. Create Multicast endpoints:
 .. Datagrams are received on inbound endpoints. The bytes in the datagram become the message payload.
 .. Datagrams are sent to outbound endpoints. The bytes in the message payload become the datagram.
-.. Both kinds of endpoints are identified by a host name and a port. The host name, in this case, is one of the standard IP multicast addresses defined link:http://www.iana.org/assignments/multicast-addresses/multicast-addresses.xml[here]. When a datagram is sent to a multicasting host/port combination, all sockets subscribed to that host/port receive the message.
+.. Both kinds of endpoints are identified by a host name and a port. The host name, in this case, is one of the standard IP multicast addresses defined in the  link:http://www.iana.org/assignments/multicast-addresses/multicast-addresses.xml[IANA Multicast Addresses]. When a datagram is sent to a multicasting host/port combination, all sockets subscribed to that host/port receive the message.
 
 Multicast endpoints are always one-way.
 
@@ -158,17 +163,18 @@ Multicast endpoints are always one-way.
 
 [source, xml, linenums]
 ----
-<multicast:connector name="connector"/> ❶
+<multicast:connector name="connector"/> //<1>
 
 <flow name="copy">
-    <multicast:inbound-endpoint host="224.0.0.0" port="4444" exchange-pattern="one-way"/> ❷
+    <multicast:inbound-endpoint host="224.0.0.0" port="4444" exchange-pattern="one-way"/> //<2>
     <pass-through-router>
-        <multicast:outbound-endpoint host="224.0.0.0" port="5555" exchange-pattern="one-way" /> ❸
+        <multicast:outbound-endpoint host="224.0.0.0" port="5555" exchange-pattern="one-way" /> //<3>
     </pass-through-router>
 </flow>
 ----
-
-The connector ❶ uses all default properties. The inbound endpoint ❷ receives multicasting datagrams and copies them to the outbound endpoint ❸, which copies them to a different multicasting group.
+<1> The connector uses all default properties.
+<2> The inbound endpoint receives multicasting datagrams and copies them to the outbound endpoint.
+<3> The outbound endpoint copies the diagrams to a different multicasting group.
 
 == Configuration Options
 
@@ -180,20 +186,18 @@ Multicast connector attributes:
 |*broadcast* |Set to true to allow sending to broadcast ports |false
 |*keepSendSocketOpen* |Whether to keep the the socket open after sending a message |false
 |*loopback* |Whether to loop messages back to the socket that sent them |false
-|*receiveBufferSize* |The size of the largest (in bytes) datagram that can be received. |16 Kbytes
-|*sendBufferSize* |The size of the network send buffer |16 Kbytes
+|*receiveBufferSize* |The size of the largest (in bytes) datagram that can be received. |16 KB
+|*sendBufferSize* |The size of the network send buffer |16 KB
 |*timeout* |The timeout used for both sending and receiving |system default
 |*timeToLive* |How long the packet stays active. This is a number betweeen 1 and 225 |System default
 |===
 
 
-= Multicast Transport
+== Multicast Transport
 
 The Multicast transport can dispatch Mule events using IP multicasting.
 
-== Connector
-
-== Inbound endpoint
+== Connector Inbound endpoint
 
 === Attributes of <inbound-endpoint...>
 
@@ -222,14 +226,10 @@ port number
 no
 |===
 
-=== Child Elements of <inbound-endpoint...>
+No Child Elements of <inbound-endpoint...>
 
-[width="100%",cols="34%,33%,33%",options="header",]
-|===
-|Name |Cardinality |Description
-|===
 
-== Outbound endpoint
+== Connector Outbound Endpoint
 
 === Attributes of <outbound-endpoint...>
 
@@ -258,12 +258,8 @@ port number
 no
 |===
 
-=== Child Elements of <outbound-endpoint...>
+No Child Elements of <outbound-endpoint...>
 
-[width="100%",cols="34%,33%,33%",options="header",]
-|===
-|Name |Cardinality |Description
-|===
 
 == Endpoint
 
@@ -294,12 +290,8 @@ port number
 no
 |===
 
-=== Child Elements of <endpoint...>
+No Child Elements of <endpoint...>
 
-[width="100%",cols="34%,33%,33%",options="header",]
-|===
-|Name |Cardinality |Description
-|===
 
 == Schema
 
@@ -320,10 +312,19 @@ The Multicast Module can be included with the following dependency:
 <dependency>
   <groupId>org.mule.transports</groupId>
   <artifactId>mule-transport-multicast</artifactId>
-  <version>3.6.0</version>
+  <version>3.8.0</version>
 </dependency>
 ----
 
 == Notes
 
 Before Mule 3.1.1, there were two different attributes for setting timeout on Multicast connectors, `sendTimeout` and `receiveTimeout`. It was necessary to set them to the same value. Now there is only `timeout` for either send or receive.
+
+== See Also
+
+* link:http://training.mulesoft.com[MuleSoft Training]
+* link:https://www.mulesoft.com/webinars[MuleSoft Webinars]
+* link:http://blogs.mulesoft.com[MuleSoft Blogs]
+* link:http://forums.mulesoft.com[MuleSoft Forums]
+* link:https://www.mulesoft.com/support-and-services/mule-esb-support-license-subscription[MuleSoft Support]
+* mailto:support@mulesoft.com[Contact MuleSoft]
