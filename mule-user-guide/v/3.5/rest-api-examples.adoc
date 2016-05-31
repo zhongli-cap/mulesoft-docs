@@ -20,36 +20,35 @@ image:rest+api+1.png[rest+api+1]
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
-    <http:request-config name="HTTP_Request_Configuration" host="baconipsum.com"  doc:name="HTTP Request Configuration" basePath="api"/>
     <flow name="test2Flow1" >
         <http:inbound-endpoint host="localhost" port="8081" path="/" />
-        <http:request config-ref="HTTP_Request_Configuration" path="/" method="GET" doc:name="HTTP">
+        <http:outbound-endpoint host="baconipsum.com" port="8081" path="api" method="GET" exchange-pattern="one-way">
           <http:request-builder>
                 <http:query-param paramName="type" value="#[message.inboundProperties.'http.query.params'.type]"/>
                 <http:query-param paramName="sentences" value="#[message.inboundProperties.'http.query.params'.sentences]"/>
             </http:request-builder>
-        </http:request>
-      <file:outbound-endpoint path="/tmp/" outputPattern="out.json" responseTimeout="10000" doc:name="File"/>
+        </http:outbound-endpoint>
+        <file:outbound-endpoint path="/tmp/" outputPattern="out.json" responseTimeout="10000" doc:name="File"/>
     </flow>
 </mule>
 ----
 
-The first element, an link:/mule-user-guide/v/3.6/http-connector[HTTP listener], listens on localhost port 8081 (the default) for incoming GET requests. Hitting the listener triggers the flow. Requests to the HTTP listener must take the form:
+The first element, an link:/mule-user-guide/v/3.6/http-connector[HTTP Inbound Endpoint], listens on localhost port 8081 (the default) for incoming GET requests. Hitting the listener triggers the flow. Requests to the HTTP inbound endpoint must take the form:
 
 [source, code, linenums]
 ----
 http://localhost:8081?<query>
 ----
 
-The `<query>` part of the request consists of the parameters accepted by the REST API. When the HTTP listener receives the HTTP request, the `<query>` part of the URL is recorded as a set of inbound properties. The HTTP listener passes these properties to the next element in the flow, the HTTP request connector. This outbound connector is configured to query the remote REST API at http://baconipsum.com/api. The HTTP request connector uses a couple of simple link:/mule-user-guide/v/3.7/mule-expression-language-mel[MEL expressions] to extract the query parameters from the message it received from the listener, and to construct the full URL for the remote API, including the query parameters.
+The `<query>` part of the request consists of the parameters accepted by the REST API. When the HTTP Inbound Endpoint receives the HTTP request, the `<query>` part of the URL is recorded as a set of inbound properties. The HTTP Inbound Endpoint passes these properties to the next element in the flow, the HTTP Outbound Endpoint. This outbound connector is configured to query the remote REST API at http://baconipsum.com/api. The HTTP Outbound Endpoint uses a couple of simple link:/mule-user-guide/v/3.7/mule-expression-language-mel[MEL expressions] to extract the query parameters from the message it received from the listener, and to construct the full URL for the remote API, including the query parameters.
 
-For example, if you hit the HTTP listener with ` http://localhost:8081?type=meat-and-filler`, the application queries `http://baconipsum.com/api/?type=meat-and-filler`.
+For example, if you hit the HTTP indbound endpoint with ` http://localhost:8081?type=meat-and-filler`, the application queries `http://baconipsum.com/api/?type=meat-and-filler`.
 
 The full configuration for this example is detailed below.
 
 === Configuring this Example
 
-==== HTTP Listener
+==== HTTP Inbound Endpoint
 
 [tabs]
 ------
@@ -105,7 +104,7 @@ Value
 ....
 ------
 
-==== HTTP Request Connector
+==== HTTP Outbound Endpoint
 
 [tabs]
 ------
@@ -138,7 +137,7 @@ image:http+connector+basic.png[http+connector+basic]
 |*Method* |`GET`
 |===
 
-. Click the *Add Parameter* button twice to add two parameters. Leave both as the default type **query-param**. For the `value` field of each, write a mule expression that takes the equivalent value from the query parameters of the request that first reached the HTTP Listener, these are transformed into inbound properties by the time they reach the HTTP Request Connector.
+. Click the *Add Parameter* button twice to add two parameters. Leave both as the default type **query-param**. For the `value` field of each, write a mule expression that takes the equivalent value from the query parameters of the request that first reached the HTTP Inbound Endpoint, these are transformed into inbound properties by the time they reach the HTTP Outbound Endpoint.
 +
 image:request+connector+w+params.png[request+connector+w+params]
 +
@@ -158,7 +157,7 @@ image:request+connector+w+params.png[request+connector+w+params]
 |*Value* |`#[message.inboundProperties.'http.query.params'.sentence]`
 |===
 
-Configured in this way, the query params that reach the HTTP listener are forwarded unchanged to the baconipsum API.
+Configured in this way, the query params that reach the HTTP Inbound Endpoint are forwarded unchanged to the baconipsum API.
 
 ....
 [tab,title="Standalone XML"]
@@ -168,12 +167,12 @@ Configure the HTTP connector as follows:
 
 [source, xml, linenums]
 ----
-<http:request config-ref="HTTP_Request_Configuration" path="/" method="GET" doc:name="HTTP">
+<http:outbound-endpoint host="baconipsum.com" port="8081" path="api" method="GET" exchange-pattern="one-way">
           <http:request-builder>
                 <http:query-param paramName="type" value="#[message.inboundProperties.'http.query.params'.type]"/>
                 <http:query-param paramName="sentences" value="#[message.inboundProperties.'http.query.params'.sentences]"/>
             </http:request-builder>
-        </http:request>
+</http:outbound-endpoint>
 ----
 
 [width="100%",cols="50%,50%",options="header",]
@@ -205,22 +204,8 @@ As you can see above, there are a series of child elements of the connector, the
 |*value* |`#[message.inboundProperties.'http.query.params'.sentences`]
 |===
 
-Configured in this way, the query params that reach the HTTP listener are forwarded unchanged to the baconipsum API.
+Configured in this way, the query params that reach the HTTP inboudn endpoint are forwarded unchanged to the baconipsum API.
 
-For this element to work, you must reference an abstract element called a *Connector Configuration*, which contains several of the high level necessary configuration properties. The **config-ref **attribute in the connector references this connector configuration element. You must now create an element outside the flow that matches the referenced name.
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="baconipsum.com"  doc:name="HTTP Request Configuration" basePath="api"/>
-----
-
-[width="100%",cols="50%,50%",options="header",]
-|===
-|*Attribute* |*Value*
-|*name* a|`HTTP_Request_Configuration` |*host* |`baconipsum.com`
-|*basePath* |`api`
-|*http://docname[doc:name]* a|`HTTP Request Configuration`
-|===
 
 ....
 ------
@@ -261,7 +246,7 @@ The rest of the tabs for this endpoint (Avanced, References, and Notes) are set 
 
 [TIP]
 ====
-To trigger the flow in this application, use a Web browser or an HTTP client such as the http://curl.haxx.se/download.html[curl] command-line utility to hit the HTTP listener on localhost port 8081.
+To trigger the flow in this application, use a Web browser or an HTTP client such as the http://curl.haxx.se/download.html[curl] command-line utility to hit the HTTP Inbound Endpoint on localhost port 8081.
 
 image:browser1.png[browser1]
 
@@ -271,7 +256,7 @@ curl 'http://localhost:8081?type=meat-and-filler'
 ----
 ====
 
-Run the example as a Mule application, then hit the HTTP listener with your query. The http://baconipsum.com/api/[Bacon Ipsum API page] contains a list of parameters you can use, although because of the way you set up your connector, you can only use *type* and *sentences*.
+Run the example as a Mule application, then hit the HTTP Inbound Endpoint with your query. The http://baconipsum.com/api/[Bacon Ipsum API page] contains a list of parameters you can use, although because of the way you set up your connector, you can only use *type* and *sentences*.
 
 [source, code, linenums]
 ----
@@ -285,7 +270,7 @@ To use any additional query parameter, you must add it to your HTTP Connector fi
 
 The first parameter=value pair must be preceded by the `?` operator. To insert additional parameter=value pairs, use the `&` operator.
 
-Example queries sent to the HTTP listener on localhost port 8081:
+Example queries sent to the HTTP Inbound Endpoint on localhost port 8081:
 
 [source, code, linenums]
 ----
@@ -334,16 +319,15 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         <db:in-param name="bookvalue" defaultValue="#[xpath('//BookValue').text])"/>
     </db:template-query>
         
-    <http:request-config name="HTTP_Request_Configuration" host="query.yahooapis.com" basePath="v1/public/yql" doc:name="HTTP Request Configuration"/>
     <flow name="financeapiFlow1" >
                 <http:inbound-endpoint host="localhost" port="8081" path="/" />
-        <http:request config-ref="HTTP_Request_Configuration" path="/" method="GET" followRedirects="true" doc:name="HTTP">
+        <http:outbound-endpoint host="query.yahooapis.com" port="8081" path="v1/public/yql" method="GET" exchange-pattern="one-way" followRedirects="true">
             <http:request-builder>
                 <http:query-param paramName="q" value="#[message.inboundProperties.'http.query.params'.q]"/>
                 <http:query-param paramName="env" value="#[message.inboundProperties.'http.query.params'.env]"/>
                 <http:query-param paramName="format" value="#[message.inboundProperties.'http.query.params'.format]"/>
             </http:request-builder>
-        </http:request>
+        </http:outbound-endpoint>
         <logger level="INFO" doc:name="Logger"/>
          
         <byte-array-to-string-transformer doc:name="Byte Array to String"/>
@@ -356,16 +340,16 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 ----
 
 
-The first element, an link:/mule-user-guide/v/3.6/http-connector[HTTP listener] , listens on localhost port 8081 (the default) for incoming GET requests. Hitting the listener triggers the flow. Requests to the HTTP listener must take the form:
+The first element, an link:/mule-user-guide/v/3.6/http-connector[HTTP inbound endpoint] , listens on localhost port 8081 (the default) for incoming GET requests. Hitting the connector triggers the flow. Requests to the HTTP Inbound Endpoint must take the form:
 
 [source, code, linenums]
 ----
 http://localhost:8081?<query>
 ----
 
-The `<query>` part of the request consists of the parameters accepted by the REST API. When the HTTP listener receives the HTTP request, the `<query>` part of the URL becomes a set of inbound properties. The HTTP lsitener passes the message to the next element in the flow, the HTTP request connector. The HTTP request connector uses a set of simple http://www.mulesoft.org/documentation/display/current/Mule+Expression+Language+MEL[MEL expressions] to extract the query parameters from the message, and to construct the full URL for the remote API, including the query parameters.
+The `<query>` part of the request consists of the parameters accepted by the REST API. When the HTTP Inbound Endpoint receives the HTTP request, the `<query>` part of the URL becomes a set of inbound properties. The HTTP lsitener passes the message to the next element in the flow, the HTTP Outbound Endpoint. The HTTP Outbound Endpoint uses a set of simple http://www.mulesoft.org/documentation/display/current/Mule+Expression+Language+MEL[MEL expressions] to extract the query parameters from the message, and to construct the full URL for the remote API, including the query parameters.
 
-For example, if you hit the HTTP listener with the following:
+For example, if you hit the HTTP Inbound Endpoint with the following:
 
 [source, code, linenums]
 ----
@@ -388,7 +372,7 @@ The above query retrieves information for ticker symbol BAC, for Bank of America
 <query yahoo:count="1" yahoo:created="2014-04-04T16:35:37Z" yahoo:lang="en"><results><quote symbol="BAC"><Ask/><AverageDailyVolume>107198000</AverageDailyVolume><Bid/><AskRealtime>17.00</AskRealtime><BidRealtime>16.99</BidRealtime><BookValue>20.708</BookValue><Change_PercentChange>-0.158 - -0.92%</Change_PercentChange><Change>-0.158</Change><Commission/><ChangeRealtime>-0.158</ChangeRealtime><AfterHoursChangeRealtime>N/A - N/A</AfterHoursChangeRealtime><DividendShare>0.04</DividendShare><LastTradeDate>4/4/2014</LastTradeDate><TradeDate/><EarningsShare>0.903</EarningsShare><ErrorIndicationreturnedforsymbolchangedinvalid/><EPSEstimateCurrentYear>1.09</EPSEstimateCurrentYear><EPSEstimateNextYear>1.60</EPSEstimateNextYear><EPSEstimateNextQuarter>0.34</EPSEstimateNextQuarter><DaysLow>16.96</DaysLow><DaysHigh>17.22</DaysHigh><YearLow>11.23</YearLow><YearHigh>18.03</YearHigh><HoldingsGainPercent>- - -</HoldingsGainPercent><AnnualizedGain/><HoldingsGain/><HoldingsGainPercentRealtime>N/A - N/A</HoldingsGainPercentRealtime><HoldingsGainRealtime/><MoreInfo>cnsprmiIed</MoreInfo><OrderBookRealtime/><MarketCapitalization>179.6B</MarketCapitalization><MarketCapRealtime/><EBITDA>0</EBITDA><ChangeFromYearLow>+5.762</ChangeFromYearLow><PercentChangeFromYearLow>+51.31%</PercentChangeFromYearLow><LastTradeRealtimeWithTime>N/A - <b>16.992</b></LastTradeRealtimeWithTime><ChangePercentRealtime>N/A - -0.92%</ChangePercentRealtime><ChangeFromYearHigh>-1.038</ChangeFromYearHigh><PercebtChangeFromYearHigh>-5.76%</PercebtChangeFromYearHigh><LastTradeWithTime>12:20pm - <b>16.992</b></LastTradeWithTime><LastTradePriceOnly>16.992</LastTradePriceOnly><HighLimit/><LowLimit/><DaysRange>16.96 - 17.22</DaysRange><DaysRangeRealtime>N/A - N/A</DaysRangeRealtime><FiftydayMovingAverage>16.9586</FiftydayMovingAverage><TwoHundreddayMovingAverage>15.602</TwoHundreddayMovingAverage><ChangeFromTwoHundreddayMovingAverage>+1.39</ChangeFromTwoHundreddayMovingAverage><PercentChangeFromTwoHundreddayMovingAverage>+8.91%</PercentChangeFromTwoHundreddayMovingAverage><ChangeFromFiftydayMovingAverage>+0.0334</ChangeFromFiftydayMovingAverage><PercentChangeFromFiftydayMovingAverage>+0.20%</PercentChangeFromFiftydayMovingAverage><Name>Bank of America C</Name><Notes/><Open>17.21</Open><PreviousClose>17.15</PreviousClose><PricePaid/><ChangeinPercent>-0.92%</ChangeinPercent><PriceSales>2.12</PriceSales><PriceBook>0.83</PriceBook><ExDividendDate>Mar  5</ExDividendDate><PERatio>18.99</PERatio><DividendPayDate>Mar 28</DividendPayDate><PERatioRealtime/><PEGRatio>0.76</PEGRatio><PriceEPSEstimateCurrentYear>15.73</PriceEPSEstimateCurrentYear><PriceEPSEstimateNextYear>10.72</PriceEPSEstimateNextYear><Symbol>BAC</Symbol><SharesOwned/><ShortRatio>1.10</ShortRatio><LastTradeTime>12:20pm</LastTradeTime><TickerTrend>&nbsp;==+--+&nbsp;</TickerTrend><OneyrTargetPrice>17.54</OneyrTargetPrice><Volume>38512660</Volume><HoldingsValue/><HoldingsValueRealtime/><YearRange>11.23 - 18.03</YearRange><DaysValueChange>- - -0.92%</DaysValueChange><DaysValueChangeRealtime>N/A - N/A</DaysValueChangeRealtime><StockExchange>NYSE</StockExchange><DividendYield>0.23</DividendYield><PercentChange>-0.92%</PercentChange></quote></results></query><!-- total: 22 --><!-- engine3.yql.bf1.yahoo.com -->
 ----
 
-The HTTP request connector passes the XML it received from the API to a byte-array-to-string transformer, which converts the message payload to a string. Next, a link:/mule-user-guide/v/3.6/splitter-flow-control-reference[splitter] splits the message into parts. The splitter is configured to split the incoming message using the XML element `<results`> as delimiter. The reason for this is that the REST API uses `<results>` to delimit the information for each stock symbol retrieved, as shown below.
+The HTTP Outbound Endpoint passes the XML it received from the API to a byte-array-to-string transformer, which converts the message payload to a string. Next, a link:/mule-user-guide/v/3.6/splitter-flow-control-reference[splitter] splits the message into parts. The splitter is configured to split the incoming message using the XML element `<results`> as delimiter. The reason for this is that the REST API uses `<results>` to delimit the information for each stock symbol retrieved, as shown below.
 
 [source, xml, linenums]
 ----
@@ -412,7 +396,7 @@ The full configuration for this example is detailed below. To see the applicatio
 
 === Configuring this Example
 
-==== HTTP Listener
+==== HTTP Inbound Endpoint
 
 [tabs]
 ------
@@ -469,7 +453,7 @@ Value
 ....
 ------
 
-==== HTTP Request Connector
+==== HTTP Outbound Endpoint
 
 [tabs]
 ------
@@ -500,7 +484,7 @@ image:http+connector+basic.png[http+connector+basic]
 |*Path* |`/`
 |*Method* |`GET`
 |===
-. Click the *Add Parameter* button three times to add three parameters. Leave all as the default type **query-param**. For the `value` field of each, write a mule expression that takes the equivalent value from the query parameters of the request that first reached the HTTP Listener, these are transformed into inbound properties by the time they reach the HTTP Request Connector. 
+. Click the *Add Parameter* button three times to add three parameters. Leave all as the default type **query-param**. For the `value` field of each, write a mule expression that takes the equivalent value from the query parameters of the request that first reached the HTTP Inbound Endpoint, these are transformed into inbound properties by the time they reach the HTTP Outbound Endpoint. 
 +
 image:yahoo+http+w+params.png[yahoo+http+w+params]
 +
@@ -528,7 +512,7 @@ image:yahoo+http+w+params.png[yahoo+http+w+params]
 |*Value* |`#[message.inboundProperties.'http.query.params'.format]`
 |===
 +
-Configured in this way, the query params that reach the HTTP listener are forwarded unchanged to the yahoo API.
+Configured in this way, the query params that reach the HTTP Inbound Endpoint are forwarded unchanged to the yahoo API.
 . Select the *Advanced* tab on the left side pannel of the connector, tick the checkbox labeled *Follow Redirects*
 
 ....
@@ -539,13 +523,13 @@ Configure the HTTP connector as follows:
 
 [source, xml, linenums]
 ----
-<http:request config-ref="HTTP_Request_Configuration" path="/" method="GET" followRedirects="true" doc:name="HTTP">
+<http:outbound-endpoint host="query.yahooapis.com" port="8081" path="/" method="GET" exchange-pattern="one-way" followRedirects="true">
             <http:request-builder>
                 <http:query-param paramName="q" value="#[message.inboundProperties.'http.query.params'.q]"/>
                 <http:query-param paramName="env" value="#[message.inboundProperties.'http.query.params'.env]"/>
                 <http:query-param paramName="format" value="#[message.inboundProperties.'http.query.params'.format]"/>
             </http:request-builder>
-        </http:request>
+</http:outbound-endpoint>
 ----
 
 [width="100%",cols="50%,50%",options="header",]
@@ -586,13 +570,13 @@ As you can see abouve, there are a series of child elements of the connector, th
 |*value* |`#[message.inboundProperties.'http.query.params'.format]`
 |===
 
-Configured in this way, the query params that reach the HTTP listener are forwarded unchanged to the yahoo API.
+Configured in this way, the query params that reach the HTTP Inbound Endpoint are forwarded unchanged to the yahoo API.
 
 For this element to work, you must reference a *Connector Configuration*. The **config-ref **attribute in the connector references this connector configuration element. You must now create an element outside the flow that matches the referenced name.
 
 [source, xml, linenums]
 ----
-<http:request-config name="HTTP_Request_Configuration" host="baconipsum.com"  doc:name="HTTP Request Configuration" basePath="api"/>
+<http:outbound-endpoint host="query.yahooapis.com" port="8081" path="/" method="GET" exchange-pattern="one-way" followRedirects="true">
 ----
 
 [width="100%",cols="50%,50%",]
@@ -772,7 +756,7 @@ Falltables.env&format=XML'
 ----
 ====
 
-Run the example as a Mule application, then hit the HTTP listener with your query. For a list of parameters you can use, consult the https://developer.yahoo.com/yql/console/[Yahoo! Query Language page], which allows you to build your REST query in an online console.
+Run the example as a Mule application, then hit the HTTP Inbound Endpoint with your query. For a list of parameters you can use, consult the https://developer.yahoo.com/yql/console/[Yahoo! Query Language page], which allows you to build your REST query in an online console.
 
 In this example, to retrieve a quote for Bank of America (ticker symbol BAC), we hit the application's HTTP listener with:
 
@@ -834,17 +818,17 @@ http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/jso
         <db:in-param name="date" type="DATE" defaultValue="#[xpath('//LastTradeDate').text]"/>
         <db:in-param name="bookvalue" defaultValue="#[xpath('//BookValue').text])"/>
     </db:template-query>
-     
-    <http:request-config name="HTTP_Request_Configuration" host="query.yahooapis.com" basePath="v1/public/yql" doc:name="HTTP Request Configuration"/>
+
     <flow name="financeapiFlow1" >
         <http:inbound-endpoint host="localhost" port="8081" path="/" />
-         <http:request config-ref="HTTP_Request_Configuration" path="/" method="GET" followRedirects="true" doc:name="HTTP">
+        <http:outbound-endpoint host="query.yahooapis.com" port="${port2}" path="v1/public/yql"
+    method="GET" exchange-pattern="one-way" followRedirects="true">
             <http:request-builder>
                 <http:query-param paramName="q" value="#[message.inboundProperties.'http.query.params'.q]"/>
                 <http:query-param paramName="env" value="#[message.inboundProperties.'http.query.params'.env]"/>
                 <http:query-param paramName="format" value="#[message.inboundProperties.'http.query.params'.format]"/>
             </http:request-builder>
-        </http:request>
+        </http:outbound-endpoint>
         <json:json-to-object-transformer returnClass="java.util.Map" doc:name="JSON to Object"/>
         <db:insert config-ref="Postgres" doc:name="Database">
             <db:dynamic-query><![CDATA[INSERT INTO mystock("name", "date", "bookvalue") VALUES('#[message.payload.query.results.quote.symbol]','#[message.payload.query.results.quote.LastTradeDate]','#[message.payload.query.results.quote.BookValue]');]]></db:dynamic-query>
@@ -854,16 +838,16 @@ http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/jso
 ----
 
 
-The first element, an http://www.mulesoft.org/documentation/display/current/HTTP+Connector[HTTP listener] , listens on localhost port 8081 (the default) for incoming GET requests. Hitting the listener triggers the flow. Requests to the HTTP listener must take the form:
+The first element, an http://www.mulesoft.org/documentation/display/current/HTTP+Connector[HTTP Inbound Endpoint] , listens on localhost port 8081 (the default) for incoming GET requests. Hitting the listener triggers the flow. Requests to the HTTP Inbound Endpoint must take the form:
 
 [source, code, linenums]
 ----
 http://localhost:8081?<query>
 ----
 
-The `<query>` part of the request consists of the parameters accepted by the REST API. When the HTTP listener receives the HTTP request, the `<query>` part of the URL becomes a set of inbound properties. The HTTP lsitener passes the message to the next element in the flow, the HTTP request connector. The HTTP request connector uses a set of simple http://www.mulesoft.org/documentation/display/current/Mule+Expression+Language+MEL[MEL expressions] to extract the query parameters from the message, and to construct the full URL for the remote API, including the query parameters.
+The `<query>` part of the request consists of the parameters accepted by the REST API. When the HTTP Inbound Endpoint receives the HTTP request, the `<query>` part of the URL becomes a set of inbound properties. The HTTP lsitener passes the message to the next element in the flow, the HTTP Outbound Endpoint. The HTTP Outbound Endpoint uses a set of simple http://www.mulesoft.org/documentation/display/current/Mule+Expression+Language+MEL[MEL expressions] to extract the query parameters from the message, and to construct the full URL for the remote API, including the query parameters.
 
-For example, if you hit the HTTP listener with the following:
+For example, if you hit the HTTP Inbound Endpoint with the following:
 
 [source, code, linenums]
 ----
@@ -891,7 +875,7 @@ The above query retrieves information for ticker symbol GE, for General Electric
 ----
 
 
-The HTTP Request Connector passes the JSON it received from the API to a link:/mule-user-guide/v/3.7/json-module-reference[JSON-to-object transformer] configured to output a java.util.Map object. The transformer sends this object, which contains the JSON data as key=value pairs, to the last element in the flow, a link:/mule-user-guide/v/3.6/database-connector[database connector]. This connector uses an SQL query with embedded link:/mule-user-guide/v/3.7/mule-expression-language-mel[Mule Expression Language] expressions to extract specific values from the JSON and insert them into the external database. The full SQL query is shown below.
+The HTTP Outbound Endpoint passes the JSON it received from the API to a link:/mule-user-guide/v/3.7/json-module-reference[JSON-to-object transformer] configured to output a java.util.Map object. The transformer sends this object, which contains the JSON data as key=value pairs, to the last element in the flow, a link:/mule-user-guide/v/3.6/database-connector[database connector]. This connector uses an SQL query with embedded link:/mule-user-guide/v/3.7/mule-expression-language-mel[Mule Expression Language] expressions to extract specific values from the JSON and insert them into the external database. The full SQL query is shown below.
 
 [source, code, linenums]
 ----
@@ -916,7 +900,7 @@ The full configuration for this example is detailed below. To see the applicatio
 
 === Configuring This Example
 
-==== HTTP Listener
+==== HTTP Inbound Endpoint
 
 [tabs]
 ------
@@ -971,7 +955,7 @@ Value
 ....
 ------
 
-==== HTTP Request Connector
+==== HTTP Outbound Endpoint
 
 [tabs]
 ------
@@ -1004,7 +988,7 @@ image:http+connector+basic.png[http+connector+basic]
 |*Method* |`GET`
 |===
 
-. Click the *Add Parameter* button three times to add three parameters. Leave all as the default type **query-param**. For the `value` field of each, write a mule expression that takes the equivalent value from the query parameters of the request that first reached the HTTP Listener, these are transformed into inbound properties by the time they reach the HTTP Request Connector. 
+. Click the *Add Parameter* button three times to add three parameters. Leave all as the default type **query-param**. For the `value` field of each, write a mule expression that takes the equivalent value from the query parameters of the request that first reached the HTTP Inbound Endpoint, these are transformed into inbound properties by the time they reach the HTTP Outbound Endpoint. 
 +
 image:yahoo+http+w+params.png[yahoo+http+w+params]
 +
@@ -1032,7 +1016,7 @@ image:yahoo+http+w+params.png[yahoo+http+w+params]
 |*Value* |`#[message.inboundProperties.'http.query.params'.format]`
 |===
 +
-Configured in this way, the query params that reach the HTTP listener are forwarded unchanged to the yahoo API.
+Configured in this way, the query params that reach the HTTP Inbound Endpoint are forwarded unchanged to the yahoo API.
 
 .Select the *Advanced* tab on the left side pannel of the connector, tick the checkbox labeled *Follow Redirects*
 
@@ -1044,13 +1028,13 @@ Configure the HTTP connector as follows:
 
 [source, xml, linenums]
 ----
-<http:request config-ref="HTTP_Request_Configuration" path="/" method="GET" followRedirects="true" doc:name="HTTP">
+<http:outbound-endpoint host="localhost" port="8081" path="hello" method="GET" exchange-pattern="one-way" followRedirects="true" >
             <http:request-builder>
                 <http:query-param paramName="q" value="#[message.inboundProperties.'http.query.params'.q]"/>
                 <http:query-param paramName="env" value="#[message.inboundProperties.'http.query.params'.env]"/>
                 <http:query-param paramName="format" value="#[message.inboundProperties.'http.query.params'.format]"/>
             </http:request-builder>
-        </http:request>
+</http:outbound-endpoint>
 ----
 
 [width="100%",cols="50%,50%",options="header",]
@@ -1094,13 +1078,13 @@ As you can see above, there are a series of child elements of the connector, the
 |*value* |`#[message.inboundProperties.'http.query.params'.format]`
 |===
 
-Configured in this way, the query params that reach the HTTP listener are forwarded unchanged to the yahoo API.
+Configured in this way, the query params that reach the HTTP Inbound Endpoint are forwarded unchanged to the yahoo API.
 
 For this element to work, you must reference a *Connector Configuration*. The **config-ref **attribute in the connector references this connector configuration element. You must now create an element outside the flow that matches the referenced name.
 
 [source, xml, linenums]
 ----
-<http:request-config name="HTTP_Request_Configuration" host="baconipsum.com"  doc:name="HTTP Request Configuration" basePath="api"/>
+<http:outbound-endpoint host="baconipsum.com" port="8081" path="api" method="GET" exchange-pattern="one-way" followRedirects="true" />
 ----
 
 [width="100%",cols="50%,50%",]
@@ -1221,7 +1205,7 @@ Note that you must install the appropriate driver for your database in your Stud
 
 [TIP]
 ====
-To trigger the flow in this application, use a Web browser or an HTTP client such as the http://curl.haxx.se/download.html[curl] command-line utility to hit the HTTP listener on localhost port 8081.
+To trigger the flow in this application, use a Web browser or an HTTP client such as the http://curl.haxx.se/download.html[curl] command-line utility to hit the HTTP Inbound Endpoint on localhost port 8081.
 
 image:browser2.png[browser2]
 
@@ -1235,9 +1219,9 @@ Falltables.env&format=json'
 When using whitespace characters as command parameters on the command line, make sure to adequately escape special characters as necessary (for example on Unix systems with the use of single quotes as shown above).
 ====
 
-Run the example as a Mule application, then hit the HTTP listener with your query. For a list of parameters you can use, consult the https://developer.yahoo.com/yql/console/[Yahoo! Query Language page], which allows you to build your REST query in an online console.
+Run the example as a Mule application, then hit the HTTP Inbound Endpoint with your query. For a list of parameters you can use, consult the https://developer.yahoo.com/yql/console/[Yahoo! Query Language page], which allows you to build your REST query in an online console.
 
-In this example, to retrieve a quote for General Electric (ticker symbol GE), we hit the application's HTTP Listener with:
+In this example, to retrieve a quote for General Electric (ticker symbol GE), we hit the application's HTTP Inbound Endpoint with:
 
 [source, code, linenums]
 ----
