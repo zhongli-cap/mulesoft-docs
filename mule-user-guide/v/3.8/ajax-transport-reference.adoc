@@ -309,16 +309,16 @@ First, set up an Ajax inbound endpoint in the Mule configuration to receive requ
 a|[source,xml, linenums]
 ----
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:ajax="http://www.mulesoft.org/schema/mule/ajax" ❶
+      xmlns:ajax="http://www.mulesoft.org/schema/mule/ajax" //<1>
       xsi:schemaLocation="
-        http://www.mulesoft.org/schema/mule/ajax http://www.mulesoft.org/schema/mule/ajax/3.6/mule-ajax.xsd ❷
-        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.6/mule.xsd">
+        http://www.mulesoft.org/schema/mule/ajax http://www.mulesoft.org/schema/mule/ajax/current/mule-ajax.xsd //<2>
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
  
     <ajax:connector name="ajaxServer" serverUrl="http://0.0.0.0:8090/services/updates"
-        resourceBase="${app.home}/docroot"/> ❸
+        resourceBase="${app.home}/docroot"/> //<3>
  
     <flow name="TestNoReply">
-        <ajax:inbound-endpoint channel="/services/serverEndpoint" /> ❹
+        <ajax:inbound-endpoint channel="/services/serverEndpoint" /> //<4>
         <!-- From here on, the data from the browser is available in Mule. -->
         ...
         <component .../>
@@ -326,16 +326,11 @@ a|[source,xml, linenums]
  
 </mule>
 ----
+<1> The Mule AJAX namespace was added to the _mule_ element.
+<2> Mule schema location was added to _mule_ element.
+<3> The AJAX Connector creates an embedded AJAX server for this application. The ‘resourceBase’ attribute specifies a directory where HTML and other resources can be published. When the browser requests pages, pages serve from this location. The `${app.home}` placeholder references the root directory of your application. `0.0.0.0` is the IP address of the computer running the Mule instance.
+<4> An AJAX inbound endpoint was added to a sample flow. This creates a channel named _/services/serverEndpoint_ and listens to incoming messages from the Mule JavaScript client.
 |===
-
-Note the following changes:
-
-* The Mule Ajax namespace ❶ and schema location ❷ have been added to the _mule_ element.
-* The Ajax Connector ❸ creates an embedded Ajax server for this application. +
-** The ‘resourceBase’ attribute specifies a directory where HTML and other resources can be published. When the browser requests pages, pages serve from this location.
-** The `${app.home}` placeholder references the root directory of your application.
-** `0.0.0.0` is the IP address of the computer running the Mule instance.
-* An Ajax inbound endpoint ❹ has been added to a sample flow, which creates a channel named _/services/serverEndpoint_ and listens to incoming messages from the Mule JavaScript client.
 
 === Publish Example Client Code
 
@@ -348,17 +343,17 @@ The browser sends some information to Mule (using the JavaScript Mule client) wh
 a|[source,xml, linenums]
 ----
 <head>
-    <script type="text/javascript" src="mule-resource/js/mule.js"></script> ❶
+    <script type="text/javascript" src="mule-resource/js/mule.js"></script> //<1>
     <script type="text/javascript">
      
-        function publishToMule() { ❷
+        function publishToMule() { //<2>
             // Create a new object and populate it with the request data
             var data = new Object();
             data.phrase = document.getElementById('phrase').value;
             data.user = document.getElementById('user').value;
             // Send the data to the Mule endpoint and do not expect a response.
             // The Mule element is provided by the Mule JavaScript client.
-            mule.publish("/services/serverEndpoint", data); ❸
+            mule.publish("/services/serverEndpoint", data); //<3>
         }
     </script>
 </head>
@@ -375,96 +370,74 @@ a|[source,xml, linenums]
  
 </body>
 ----
+<1> Loading the _mule.js_ script makes the Mule client automatically available via the _‘mule’_ variable.
+<2> The _rpcCallMule()_ method gathers some data from the page and submit it to the _‘/services/noReplyEndpoint’_ channel we configured beforehand.
+<3> The _mule.publish()_ method makes the actual call to Mule. It receives a channel name and the data to publish.
 |===
-
-Note the following changes:
-
-* Loading the _mule.js_ script ❶ makes the Mule client automatically available via the _‘mule’_ variable.
-
-* The _rpcCallMule()_ ❷ method gathers some data from the page and submit it to the _‘/services/noReplyEndpoint’_ channel we configured beforehand.
-
-* The _mule.publish()_❸ method makes the actual call to Mule. It receives two parameters: +
-
-** The channel name.
-
-** The data to publish.
 
 === Subscribe Example Server code
 
 This is a useful and friendly way to send information to several clients at once. All they have to do is subscribe themselves to a channel where the server sends whatever needs to be broadcasted.
 
-Mule Runtime provides an Ajax connector, an Ajax outbound endpoint and the required JavaScript client library to take care of this.
+Mule Runtime provides an AJAX connector, an AJAX outbound endpoint and the required JavaScript client library to take care of this.
 
-We add an Ajax connector that hosts the pages (HTML, CSS, etc.) using the JavaScript client and that lets them interact with Mule's Ajax endpoints. It's the same connector we used in the two previous examples.
+We add an AJAX connector that hosts the pages (HTML, CSS, etc.) using the JavaScript client and that lets them interact with Mule's AJAX endpoints. It's the same connector we used in the two previous examples.
 
-We also need to publish some content via an Ajax outbound endpoint in a channel.
+We also need to publish some content via an AJAX outbound endpoint in a channel.
 
 [width="100%",cols=",",options="header"]
 |===
-^|*Configuring an Ajax Outbound Endpoint Channel*
+^|*Configuring an AJAX Outbound Endpoint Channel*
 
 a|[source,xml, linenums]
 ----
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:ajax="http://www.mulesoft.org/schema/mule/ajax" ❶
+      xmlns:ajax="http://www.mulesoft.org/schema/mule/ajax" //<1>
       xsi:schemaLocation="
-        http://www.mulesoft.org/schema/mule/ajax http://www.mulesoft.org/schema/mule/ajax/3.6/mule-ajax.xsd ❷
-        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.6/mule.xsd">
+        http://www.mulesoft.org/schema/mule/ajax http://www.mulesoft.org/schema/mule/ajax/current/mule-ajax.xsd //<2>
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
  
     <ajax:connector name="ajaxServer" serverUrl="http://0.0.0.0:8090/services/updates"
-        resourceBase="${app.home}/docroot"/> ❸
+        resourceBase="${app.home}/docroot"/> //<3>
  
     <flow name="PublishUpdates">
         <!-- ... here we create the content to be published -->
-        <ajax:outbound-endpoint channel="/mule/notifications" cacheMessages="true"/>❹
+        <ajax:outbound-endpoint channel="/mule/notifications" cacheMessages="true"/> //<4>
     </flow>
  
 </mule>
 ----
+<1> The Mule AJAX namespace was added to the `mule` element.
+<2> The AJAX schema location was added to the `mule` element.
+<3> The AJAX Connector creates an embedded Ajax server for this application. The ‘resourceBase’ attribute specifies a directory where HTML and other resources can be published. When the browser requests pages, pages serve from this location. The `${app.home}` placeholder references the root directory of your application. `0.0.0.0` is the IP address of the computer running the Mule instance.
+<4> An AJAX outbound endpoint was added to a sample flow, which submits the events it receives into a channel named `/mule/notifications`, and any page listening on that channel receives a copy of the event.
 |===
 
-*Notes*:
-
-* The Mule Ajax namespace ❶ and schema location ❷ have been added to the _mule_ element.
-
-* The Ajax Connector ❸ creates an embedded Ajax server for this application.
-
-** The ‘resourceBase’ attribute specifies a directory where HTML and other resources can be published. When the browser requests pages, pages serve from this location.
-
-** The `${app.home}` placeholder references the root directory of your application.
-
-** `0.0.0.0` is the IP address of the computer running the Mule instance.
-
-* An Ajax outbound endpoint ❹ has been added to a sample flow.
-
-** It submits the events it receives into a channel named `/mule/notifications`.
-
-** Any page listening on that channel receives a copy of the event.
 
 === Subscribe Example Client Code
 
 [width="100%",cols=",",options="header"]
 |===
-^|*Listening to an Ajax Outbound Channel*
+^|*Listening to an AJAX Outbound Channel*
 
 a|[source,xml, linenums]
 ----
 <head>
-    <script type="text/javascript" src="mule-resource/js/mule.js"></script> ❶
+    <script type="text/javascript" src="mule-resource/js/mule.js"></script> //<1>
  
     <script type="text/javascript">
     
-        function init() ❷
+        function init() //<2>
         {
             mule.subscribe("/mule/notifications", notif);
         }
  
-        function dispose() ❸
+        function dispose() //<3>
         {
             mule.unsubscribe("/mule/notifications", notif);
         }
  
-        function notif(message) ❹
+        function notif(message) //<4>
         {
             console.debug("data:" + message.data);
  
@@ -474,23 +447,17 @@ a|[source,xml, linenums]
     </script>
 </head>
  
-<body onload="init()" onunload="dispose()"> ❺
+<body onload="init()" onunload="dispose()"> //<5>
  
 </body>
 ----
+<1> Loading the `mule.js` script makes the Mule client automatically available via the `mule` variable.
+<2> The `init()` method associates all incoming events on the `/mule/notifications` with the `notif()` callback method.
+<3> The `dispose()` method dissociates all incoming events on the `/mule/notifications` from the `notif()` callback method.
+<4> The `notif()` callback method processes the received messages.
+<5> The `onload` and `onunload` attributes of the _body_ HTML element should contain the calls to `init()` and `dispose()` respectively, to ensure the page is properly registered and de-registered to the `/mule/notifications` channel.
 |===
 
-Note the following changes:
-
-* Loading the _mule.js_ script ❶ makes the Mule client automatically available via the _‘mule’_ variable.
-
-* The _init()_ ❷ method associates all incoming events on the _‘/mule/notifications’_ with the _notif()_ callback method.
-
-* The _dispose()_ ❸ method dissociates all incoming events on the _‘/mule/notifications’_ from the _notif()_ callback method.
-
-* The _notif()_ ❹ callback method processes the received messages.
-
-* The _onload_ and _onunload_ attributes of the _body_ HTML element ❺ should contain the calls to _init()_ and _dispose()_ respectively, to ensure the page is properly registered and de-registered to the _‘/mule/notifications’_ channel.
 
 === RPC Example Server Code
 
@@ -498,45 +465,32 @@ This configuration is very similar to the one in the previous example. As a matt
 
 [width="100%",cols=",",options="header"]
 |===
-^|*Configuring an Ajax Inbound Endpoint that sends a response*
+^|*Configuring an AJAX Inbound Endpoint that sends a response*
 
 a|[source,xml, linenums]
 ----
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:ajax="http://www.mulesoft.org/schema/mule/ajax" ❶
+      xmlns:ajax="http://www.mulesoft.org/schema/mule/ajax" //<1>
       xsi:schemaLocation="
-        http://www.mulesoft.org/schema/mule/ajax http://www.mulesoft.org/schema/mule/ajax/3.6/mule-ajax.xsd ❷
-        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.6/mule.xsd">
+        http://www.mulesoft.org/schema/mule/ajax http://www.mulesoft.org/schema/mule/ajax/current/mule-ajax.xsd //<2>
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
  
     <ajax:connector name="ajaxServer" serverUrl="http://0.0.0.0:8090/services/updates"
-        resourceBase="${app.home}/docroot"/> ❸
+        resourceBase="${app.home}/docroot"/> //<3>
  
     <flow name="TestEcho">
-        <ajax:inbound-endpoint channel="/services/echo" /> ❹
+        <ajax:inbound-endpoint channel="/services/echo" /> //<4>
         <echo-component/>
     </flow>
  
 </mule>
 ----
+<1> The Mule AJAX namespace was added to the `mule` element.
+<2> The Mule AJAX schema location was added to the _mule_ element.
+<3> The AJAX Connector creates an embedded AJAX server for this application. The ‘resourceBase’ attribute specifies a directory where HTML and other resources can be published. When the browser requests pages, they are served from this location. The `${app.home}` placeholder references the root directory of your application. `0.0.0.0` is the IP address of the computer running the Mule instance.
+<4> An AJAX inbound endpoint was added to a sample flow. This creates a channel named `/services/echo` that listens to incoming RPC calls from the Mule JavaScript client. When a request is received, the request is processed by the `<echo-component/>` and sent back via the AJAX channel to the client that submitted the request.
 |===
 
-Note the following changes:
-
-* The Mule Ajax namespace ❶ and schema location ❷ have been added to the _mule_ element.
-
-* The Ajax Connector ❸ creates an embedded Ajax server for this application.
-
-** The ‘resourceBase’ attribute specifies a directory where HTML and other resources can be published. When the browser requests pages, they are served from this location.
-
-** The `${app.home}` placeholder references the root directory of your application.
-
-** `0.0.0.0` is the IP address of the computer running the Mule instance.
-
-* An Ajax inbound endpoint ❹ has been added to a sample flow.
-
-** It creates a channel named _/services/echo_ and listen to incoming RPC calls from the Mule JavaScript client.
-
-** When a request is received, the request is processed by the `<echo-component/>` and sent back via the Ajax channel to the client that submitted the request.
 
 === RPC Example Client Code
 

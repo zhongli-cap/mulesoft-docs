@@ -153,6 +153,8 @@ structures:
     - { idRef: 'TDR', count: '>1' }
     - { idRef: 'BCF' }
   - { idRef: 'RSF' }
+segments:
+- id: 'RQH'
   …
 ----
 
@@ -332,24 +334,25 @@ Here's a sample structure definition again:
 
 [source,yaml, linenums]
 ----
-- id: 'BatchReq'
-  name: Batch Request
+structures:
+- id: 'Check'
+  name: My Check
   tagStart: 0
   tagLength: 1
   data:
-  - { idRef: 'RQH' }
-  - groupId: 'Batch'
-    usage: O
+  - { idRef: 'HeaderFile' }
+  - groupId: 'Data'
     count: '>1'
     items:
-    - { idRef: 'BCH' }
-    - { idRef: 'TDR', count: '>1' }
-    - { idRef: 'BCF' }
-  - { idRef: 'RQF' }
+    - { idRef: 'Ticket' }
+    - { idRef: 'Check', count: '>1' }
+  - { idRef: 'EndFile' }
+segments:
+- id: 'HeaderFile'
   …
 ----
 
-This example includes a direct reference to two segments (RQH and RQF), as well as a group definition that includes references to other segments. Note that for this structure to work, each of the <<Segment Definition, referenced segments>> needs to be defined below. See <<Referenced vs in-lined Definitions>> to understand how segments are being referened in this example.
+This example includes a direct reference to two segments (HeaderFile and Endfile), as well as a group definition that includes references to other segments (Ticket and Check). Note that for this structure to work, each of the <<Segment Definition, referenced segments>> needs to be defined below. See <<Referenced vs in-lined Definitions>> to understand how segments are being referened in this example.
 
 A structure definition can contain the following attributes:
 
@@ -364,7 +367,7 @@ A structure definition can contain the following attributes:
 |===
 
 [NOTE]
-The *tagStart* parameter is required when using flat file structures, using it, along with tagLength, is the only way for the parser to distinguish different segments. The the only supported value for now is 0.
+The *tagStart* parameter is required when using flat file structures. Using it, along with tagLength, is the only way for the parser to distinguish different segments. The the only supported value for tagStart now is 0.
 
 Each item in a segment list is either a segment reference (or inline definition) or a group definition (always inline).
 
@@ -514,58 +517,68 @@ Here's what an in-lined definition of the same structure would look like:
 [source,yaml, linenums]
 ----
   form: FLATFILE
-  id: 'Check'
-  name: 'My Check'
-  data:
-  - name: 'Header File'
+  structures:
+  - id: 'Check'
+    name: My Check
+    tagStart: 0
+    tagLength: 1
+    data:
+    - { idRef: 'HeaderFile' }
+    - groupId: 'Data'
+      count: '>1'
+      items:
+      - { idRef: 'Ticket' }
+      - { idRef: 'Check', count: '>1' }
+    - { idRef: 'EndFile' }
+  segments:
+  - id: 'HeaderFile'
+    name: Header File
+    tag: '0'
     values:
-    - { name: 'Identifier', type: Integer, length: 1, tagValue: '0' }
     - { name: 'Priority Code', type: Integer, length: 2 }
-    - { name: 'Presentation Date', type: Integer, length: 6 }
-    - { name: 'Presentation Time', type: Integer, length: 4 }
+    - { name: 'Presentation Date', type: Date, length: 8 }
+    - { name: 'Presentation Time', type: Time, length: 4 }
     - { name: 'File Identifier', type: String, length: 1 }
-    - { name: 'Record Size', type: Integer, length: 3 }
     - { name: 'Block Factor', type: Integer, length: 2 }
     - { name: 'Format Code', type: Integer, length: 1 }
-  - groupId: 'Data'
-    count: '>1'
-    items:
-    - name: 'Ticket'
-      values:
-      - { name: 'Identifier', type: Integer, length: 1, tagValue: '1' }
-      - { name: 'Transaction Code', type: Integer, length: 2 }
-      - { name: 'Deposit Bank', type: Integer, length: 8 }
-      - { name: 'Reserved', type: Integer, length: 1 }
-      - { name: 'Deposit Account', type: Integer, length: 17 }
-      - { name: 'Amount', type: Integer, length: 10 }
-      - { name: 'Type And ID', type: Integer, length: 15 }
-      - { name: 'Zip Code', type: String, length: 6 }
-      - { name: 'Exchange Point', type: String, length: 16 }
-      - { name: 'Additional Records', type: Integer, length: 1 }
-      - { name: 'Trace Number', type: Integer, length: 15 }
-    - count: '>1'
-      name: 'Check'
-      values:
-      - { name: 'Identifier', type: Integer, length: 1, tagValue: '2' }
-      - { name: 'Bank', type: Integer, length: 3 }
-      - { name: 'Office', type: Integer, length: 3 }
-      - { name: 'Zip Code', type: Integer, length: 4 }
-      - { name: 'Check', type: Integer, length: 8 }
-      - { name: 'Account Check', type: Integer, length: 11 }
-      - { name: 'Amount', type: Integer, length: 10 }
-      - { name: 'Ticket Account', type: Integer, length: 11 }
-      - { name: 'Other Motives', type: String, length: 26 }
-      - { name: 'Trace Number', type: Integer, length: 15 }
-  - name: 'End File'
+  - id: 'Ticket'
+    name: Ticket
+    tag: '1'
     values:
-    - { name: 'Identifier', type: Integer, length: 1, tagValue: '3' }
+    - { name: 'Transaction Code', type: Integer, length: 2 }
+    - { name: 'Deposit Bank', type: String, length: 8 }
+    - { name: 'Reserved', type: String, length: 1, usage: U }
+    - { name: 'Deposit Account', type: String, length: 17 }
+    - { name: 'Amount', type: Integer, length: 10 }
+    - { name: 'Type And ID', type: String, length: 15 }
+    - { name: 'Zip Code', type: String, length: 6 }
+    - { name: 'Exchange Point', type: String, length: 16 }
+    - { name: 'Additional Records', type: Integer, length: 1 }
+    - { name: 'Trace Number', type: Integer, length: 15 }
+  - id: 'Check'
+    name: Check
+    tag: '2'
+    values:
+    - { name: 'Bank', type: Integer, length: 3 }
+    - { name: 'Office', type: Integer, length: 3 }
+    - { name: 'Zip Code', type: String, length: 6 }
+    - { name: 'Check', type: Integer, length: 8 }
+    - { name: 'Account Check', type: Integer, length: 11 }
+    - { name: 'Amount', type: Integer, length: 10 }
+    - { name: 'Ticket Account', type: String, length: 11 }
+    - { name: 'Other Motives', type: String, length: 26 }
+    - { name: 'Trace Number', type: Integer, length: 15 }
+  - id: 'EndFile'
+    name: End File
+    tag: '3'
+    values:
     - { name: 'Number Of Batchs', type: Integer, length: 6 }
     - { name: 'Number Of Blocks', type: Integer, length: 6 }
     - { name: 'Number Of Records', type: Integer, length: 8 }
     - { name: 'Controls', type: Integer, length: 10 }
     - { name: 'Sum Of Debits', type: Integer, length: 12 }
     - { name: 'Sum Of Credits', type: Integer, length: 12 }
-    - { name: 'Reserved', type: String, length: 35 }
+    - { name: 'Reserved', type: String, length: 35, usage: U }
 ----
 
 
@@ -574,65 +587,75 @@ Here's what an in-lined definition of the same structure would look like:
 [source,yaml, linenums]
 ----
   form: FLATFILE
-  id: 'Check'
-  name: 'My Check'
-  data:
-  - name: 'Header File'
+  structures:
+  - id: 'Check'
+    name: My Check
+    tagStart: 0
+    tagLength: 1
+    data:
+    - { idRef: 'HeaderFile' }
+    - groupId: 'Data'
+      count: '>1'
+      items:
+      - { idRef: 'Ticket' }
+      - { idRef: 'Check', count: '>1' }
+    - { idRef: 'EndFile' }
+  segments:
+  - id: 'HeaderFile'
+    name: Header File
+    tag: '0'
     values:
-    - { name: 'Identifier', type: Integer, length: 1, tagValue: '0' }
     - { name: 'Priority Code', type: Integer, length: 2 }
-    - { name: 'Presentation Date', type: Integer, length: 6 }
-    - { name: 'Presentation Time', type: Integer, length: 4 }
+    - { name: 'Presentation Date', type: Date, length: 8 }
+    - { name: 'Presentation Time', type: Time, length: 4 }
     - { name: 'File Identifier', type: String, length: 1 }
-    - { name: 'Record Size', type: Integer, length: 3 }
     - { name: 'Block Factor', type: Integer, length: 2 }
     - { name: 'Format Code', type: Integer, length: 1 }
-  - groupId: 'Data'
-    count: '>1'
-    items:
-    - name: 'Ticket'
-      values:
-      - { name: 'Identifier', type: Integer, length: 1, tagValue: '1' }
-      - { name: 'Transaction Code', type: Integer, length: 2 }
-      - { name: 'Deposit Bank', type: Integer, length: 8 }
-      - { name: 'Reserved', type: Integer, length: 1 }
-      - { name: 'Deposit Account', type: Integer, length: 17 }
-      - { name: 'Amount', type: Integer, length: 10 }
-      - { name: 'Type And ID', type: Integer, length: 15 }
-      - { name: 'Zip Code', type: String, length: 6 }
-      - { name: 'Exchange Point', type: String, length: 16 }
-      - { name: 'Additional Records', type: Integer, length: 1 }
-      - { name: 'Trace Number', type: Integer, length: 15 }
-    - count: '>1'
-      name: 'Check'
-      values:
-      - { name: 'Identifier', type: Integer, length: 1, tagValue: '2' }
-      - { name: 'Bank', type: Integer, length: 3 }
-      - { name: 'Office', type: Integer, length: 3 }
-      - { name: 'Zip Code', type: Integer, length: 4 }
-      - { name: 'Check', type: Integer, length: 8 }
-      - { name: 'Account Check', type: Integer, length: 11 }
-      - { name: 'Amount', type: Integer, length: 10 }
-      - { name: 'Ticket Account', type: Integer, length: 11 }
-      - { name: 'Other Motives', type: String, length: 26 }
-      - { name: 'Trace Number', type: Integer, length: 15 }
-  - name: 'End File'
+  - id: 'Ticket'
+    name: Ticket
+    tag: '1'
     values:
-    - { name: 'Identifier', type: Integer, length: 1, tagValue: '3' }
+    - { name: 'Transaction Code', type: Integer, length: 2 }
+    - { name: 'Deposit Bank', type: String, length: 8 }
+    - { name: 'Reserved', type: String, length: 1, usage: U }
+    - { name: 'Deposit Account', type: String, length: 17 }
+    - { name: 'Amount', type: Integer, length: 10 }
+    - { name: 'Type And ID', type: String, length: 15 }
+    - { name: 'Zip Code', type: String, length: 6 }
+    - { name: 'Exchange Point', type: String, length: 16 }
+    - { name: 'Additional Records', type: Integer, length: 1 }
+    - { name: 'Trace Number', type: Integer, length: 15 }
+  - id: 'Check'
+    name: Check
+    tag: '2'
+    values:
+    - { name: 'Bank', type: Integer, length: 3 }
+    - { name: 'Office', type: Integer, length: 3 }
+    - { name: 'Zip Code', type: String, length: 6 }
+    - { name: 'Check', type: Integer, length: 8 }
+    - { name: 'Account Check', type: Integer, length: 11 }
+    - { name: 'Amount', type: Integer, length: 10 }
+    - { name: 'Ticket Account', type: String, length: 11 }
+    - { name: 'Other Motives', type: String, length: 26 }
+    - { name: 'Trace Number', type: Integer, length: 15 }
+  - id: 'EndFile'
+    name: End File
+    tag: '3'
+    values:
     - { name: 'Number Of Batchs', type: Integer, length: 6 }
     - { name: 'Number Of Blocks', type: Integer, length: 6 }
     - { name: 'Number Of Records', type: Integer, length: 8 }
     - { name: 'Controls', type: Integer, length: 10 }
     - { name: 'Sum Of Debits', type: Integer, length: 12 }
     - { name: 'Sum Of Credits', type: Integer, length: 12 }
-    - { name: 'Reserved', type: String, length: 35 }
+    - { name: 'Reserved', type: String, length: 35, usage: U }
 ----
 
 This example contains:
 
 * a single <<Structure Definitions, structure>> named 'Check'
-* a <<Group Definitions, group>> named Data that contains two types of segments
 * 4 <<Segment Definitions, segments>>, each with several elements within
+* a <<Group Definitions, group>> named 'Data' that contains of the segment types
 * Several <<Element Definitions, elements>>, each with a name, type and length.
 
 The structure defines that the data will contain
@@ -643,6 +666,32 @@ The structure defines that the data will contain
 * A single line that corresponds to the segment *'EndFile'*
 
 A Ticket with its corresponding Checks makes up a group, and this group may be repeated any number of times within a message, whilst the HeaderFile and the EndFile segments are each present only once and mark the start and end of the message.
+
+Below is an example that works with this data structure definition:
+
+
+[source, csv, linenums]
+----
+0 1201604221027A 21
+122AB000012 XAC00120034838565     15600CD0013289375938 98034ABC       1375860          38038
+2123456 38495    1736     385768      2247ABC   38577                                    87356
+2123457 38456    1737     385768      4447ABC   38577                                    87357
+122AB000013 XAC00120034838566     15600CD0013289375937 98034ABD       1375861          38039
+2123458 38495    1736     385768      2247ABC   38577                                    87358
+2123459 38456    1737     385768      4447ABC   38577                                    87359
+3     2     2       6        22       12345       34567
+----
+
+The lines on example match the defined structures as listed below:
+
+* 1 `HeaderFile`
+* 2 `Ticket`
+* 3 `Check`
+* 4 `Check`
+* 5 `Ticket`
+* 6 `Check`
+* 7 `Check`
+* 8 `EndFile`
 
 
 == Applying a Schema as Metadata
