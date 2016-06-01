@@ -22,8 +22,8 @@ This DataWeave Quickstart Guide introduces the key functional features of the Tr
 
 Here are the steps we take in this Quickstart Guide to design an example DataWeave transformation and run the example in the context of a REST request.
 
-. Use DataWeave to transform XML data structure into different structure, expressed in JSON
-. Send JSON input to a web service in a REST request
+. Use DataWeave to transform XML data structure into a different structure, expressed in JSON
+. Send a JSON input to a REST web service
 
 [TIP]
 ====
@@ -33,7 +33,7 @@ For advanced examples that involve writing DataWeave code, see link:/mule-user-g
 
 ====
 
-The objective in this example is to send a REST request to a web service that places t-shirt orders based on information derived from a sales service (which outputs data in an XML structure). The service that accepts order requests requires a JSON input structure with values for the following set of keys:
+The objective of this example is to send an HTTP request to a web service that places t-shirt orders based on information derived from a sales service (which outputs data in an XML structure). The service that accepts order requests requires a JSON input structure with values for the following set of keys:
 
 * _size_
 * _email_
@@ -45,7 +45,7 @@ The objective in this example is to send a REST request to a web service that pl
 * _postalCode_
 * _country_
 
-The order processing service is defined in this example using link:http://raml.org/[RAML], a lightweight API-modeling language whose format is supported by the HTTP connector.
+The order processing service is defined in this example using link:http://raml.org/[RAML], a lightweight API-modeling language whose format is supported by the HTTP connector as a way of providing metadata into Studio.
 
 The raw data from the sales service follows this structure:
 
@@ -79,17 +79,17 @@ The raw data from the sales service follows this structure:
 
 [NOTE]
 ====
-This XML format won't work as raw input to our web service, because the web service requires the data be serialized as JSON.
+This XML format won't work as a raw input to our web service, because the web service requires the data be serialized as JSON.
 
-Further, as you might have already guessed, only a subset of these fields are needed to complete an order, or they may need to be renamed  and used to infer some other required values. You can setup the *metadata structure* and *mapping* in the following two sections.
+Further, as you might have already guessed, only a subset of these fields are needed to complete an order, or they may need to be renamed and used to infer some other required values. You can setup the *metadata structure* and *mapping* in the following two sections.
 ====
 
-== Phase 1 - Scaffold the Metadata Structures
+== Phase 1 - Define Input and Output Metadata
 
 [NOTE]
-The Transform Message component picks up all of the available metadata about the input and output on either side of the component in the flow -- this metadata awareness feature helps you build the transformation interactively.
+The Transform Message component picks up all of the available metadata about the input and output on either side of the component in the flow -- this metadata awareness feature helps you build the transformation interactively through the UI.
 
-It is recommended you set up the other components of your flow before you configure the Transform Message component.
+It is always recommended you set up the other components of your flow before you configure the Transform Message component.
 
 . In Anypoint Studio click *File* > *New* > *Mule Project* to create a new project, give the project a name, and click *Finish*.
 . Drag an link:/mule-user-guide/v/3.8/http-connector[HTTP Connector] from the palette onto your empty canvas, followed by a *Transform Message* component, then another HTTP Connector.
@@ -120,10 +120,11 @@ image::dataweave-quickstart-22a00.png[]
 image::dataweave-quickstart-26f37.png[]
 +
 [TIP]
+====
 Now if you select the Transform Message component by clicking it in the flow, the input section should show the fields that are expected in the *incoming payload* through the Transform Message.
-+
+
 image::dataweave-quickstart-4a1db.png[]
-+
+====
 . Click on the *_second HTTP connector in the flow_* to open its properties editor. Click the green plus sign to create a new configuration for the HTTP connector. In the Global Element Properties popup find the "RAML Location" field, and give the proper path to the `t-shirt.raml` file, which is available in the bundle you downloaded earlier. Then click *Ok*.
 +
 image::dataweave-quickstart-6d4b7.png[]
@@ -132,9 +133,13 @@ image::dataweave-quickstart-6d4b7.png[]
 +
 image::dataweave-quickstart-3c9c7.png[]
 
-. Note that if you click on the Transform Message component, the output section now reflects the data structure that's described in the RAML file for *POST*-ing to `/orders`.
 +
+[TIP]
+====
+Note that if you click on the Transform Message component, the output section now reflects the data structure that's described in the RAML file for *POST*-ing to `/orders`.
+
 image::dataweave-quickstart-f39a5.png[]
+====
 
 [NOTE]
 In this example we need to convert XML input into JSON output. Because this difference is defined and known in the metadata of both the input and output, *DataWeave handles the conversion _implicitly_*.
@@ -143,7 +148,7 @@ In this example we need to convert XML input into JSON output. Because this diff
 == Phase 2 - Map Input Fields to Output Fields
 
 
-. Use the link:/mule-user-guide/v/3.8/using-dataweave-in-studio#the-graphical-ui[DataWeave GUI] to create the actual mapping between the input and output fields. Simply click and drag a field in the input side to a field in the output side. The most obvious task is to match similarly named fields together if their direct mapping is desired. Do the same for those that are similar, if necessary:
+. Use the link:/mule-user-guide/v/3.8/using-dataweave-in-studio#the-graphical-ui[DataWeave GUI] to create the actual mapping between the input and output fields. Simply click and drag a field in the input side to a field in the output side. The most obvious task is to match similarly named fields together. Do the same for those that are similar:
 
 ** `address` and `address1`
 ** `state` and `stateOrProvince`
@@ -157,13 +162,11 @@ The `address2` and `size` fields in the output side should remain unassigned.
 +
 image::dataweave-quickstart-1984d.png[map]
 
-+
 
-[NOTE]
-====
+
+
 Each of these actions draws a connection in the UI and generates DataWeave code in the text editor. At this point your DataWeave code should look like this:
-====
-+
+
 [source, DataWeave, linenums]
 ----
 %dw 1.0
@@ -180,11 +183,11 @@ Each of these actions draws a connection in the UI and generates DataWeave code 
 }
 ----
 
-== How to Assign Fixed Values to Output
+== How to Assign Fixed Values to the Output
 
 The transform that we mapped in the previous section does not account for the fields `size` or `address2` -- you can provide these fields with an expression to populate them with the desired value.
 
-. Double click on the `address2` field in the output, seeing how this adds an icon next to the `address2` field, and generates the DataWeave code assigning this field the value `null`.
+. Double click on the `address2` field in the output, seeing how this adds an icon next to the `address2` field, and generates a line of DataWeave code that assigns this field the value `null`.
 +
 image::dataweave-quickstart-c1e53.png[]
 +
@@ -221,10 +224,10 @@ See how the expression that evaluates `size` has changed--it uses the link:/mule
 
 == How to Preview Output in the Transform Message Component
 
-The Transform Message component provides realtime feedback in the editor; a preview of what your output data would look like at _run time_, which is responsive to changes in the metadata structure in design time.
+The Transform Message component provides realtime feedback in the editor; a preview of what your output data would look like at _run time_, which is responsive to changes in the metadata structure in _design time_.
 
 [NOTE]
-The *Preview* can only show an output preview given valid input sample data.
+The *Preview* can only show an output preview when given valid input sample data.
 
 . To open this section click the `Preview` button on the top right corner of the editor.
 +
@@ -233,7 +236,7 @@ image::dataweave-quickstart-07f8a.png[]
 +
 image::dataweave-quickstart-59e9c.png[]
 
-. You can freely edit the sample data to test what would happen in corner cases. In your input section. Select the `payload` tab in your input section and replace any values there at will. When doing this, note how these values are populated into the values of the preview in real time, giving you a tangible representation of what the final result of your mapping will be.
+. You can freely edit the sample data to test what would happen in corner cases. Select the `payload` tab in your input section and replace any values there at will. When doing this, note how these values are populated into the values of the preview in real time, giving you a tangible representation of what the final result of your mapping will be.
 +
 image::dataweave-quickstart-75ca5.png[]
 
@@ -274,7 +277,7 @@ image::dataweave-quickstart-75ca5.png[]
 You should get a response with an JSON body that has a single value, this is the order ID for the shirt order you just placed.
 
 
-== DataWeave Example Setup
+== Define Input and Output Metadata for Exercise 2*​
 
 . Drag two HTTP connectors and a Transform Message component into a new flow.
 +
@@ -328,7 +331,7 @@ image::dataweave-quickstart-be7fd.png[]
 ]
 ----
 
-== Type Transformation and Important Operators
+== Type Transformation
 
 As with the other Transform Message component used in the first example of this Quickstart guide, in the *input section* you can see a tree that describes the data structure. As there's no metadata about the desired output, there isn't anything specified in the output section though. In this example we will write the DataWeave code *manually* to access more advanced features than are offered through the UI.
 
@@ -350,7 +353,7 @@ image::dataweave-quickstart-c8b4f.png[]
 [NOTE]
 Note that in this particular example, the format `application/XML` won't work as is because XML requires a parent node, which is absent here.
 
-Change the output directive to `application/json` so that the final result is identical to the sample data in the input. Later on you can transform this in more interesting ways.
+Change the link:/mule-user-guide/v/3.8/dataweave-language-introduction#output-directive[output directive] to `application/json` so that the final result is identical to the sample data in the input. Later on you can transform this in more interesting ways.
 
 image::dataweave-quickstart-6381c.png[]
 
@@ -373,7 +376,7 @@ shirts: payload map {
 }
 ----
 
-As the input is a collection of elements, each describing a product in inventory, this code uses the link:/mule-user-guide/v/3.8/dataweave-operators#map[Map operator] to treat each of these instances separately. What's enclosed in curly brackets right after the map operator is executed once for each element in the collection. Within this operation, the code refers to the currently selected instance via the `$` selector. The code in this example merely takes each item of the input and maps it to an identical field, with the exception of the *size* field, on which it applies the link:/mule-user-guide/v/3.8/dataweave-operators#upper[Upper operator] to change it to upper case.
+As the input is a collection of elements, each describing a product in inventory, this code uses the link:/mule-user-guide/v/3.8/dataweave-operators#map[map operator] to treat each of these instances separately. What's enclosed in curly brackets right after the map operator is executed once for each element in the collection. Within this operation, the code refers to the currently selected instance via the `$` selector. The code in this example merely takes each item of the input and maps it to an identical field, with the exception of the *size* field, on which it applies the link:/mule-user-guide/v/3.8/dataweave-operators#upper[upper operator] to change it to upper case.
 
 If you open the *Preview* pane, you can see what this transform would output, given the sample as an input. The output is an object that contains a single array, each element in that array is one of the elements in the input, kept identical except that the size field appears in upper case.
 
@@ -520,4 +523,4 @@ If you open the *Preview* section, you can see what this transform would output,
 * link:/mule-user-guide/v/3.8/dataweave-formats[DataWeave Formats]
 * link:/mule-user-guide/v/3.8/dataweave-selectors[DataWeave Selectors]
 * link:/mule-user-guide/v/3.8/mel-dataweave-functions[MEL DataWeave Functions]
-* Migrate your old DataMapper components automatically using the link:/mule-user-guide/v/3.8/dataweave-migrator[DataWeave Migrator Tool]
+* Migrate your old DataMapper transforms automatically by using the link:/mule-user-guide/v/3.8/dataweave-migrator[DataWeave Migrator Tool]
