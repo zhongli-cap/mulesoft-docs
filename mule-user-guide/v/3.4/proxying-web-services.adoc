@@ -34,13 +34,10 @@ Following is a simple configuration example that forwards a request from one HTT
     xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
-    <http:request-config name="HTTP_Request_Configuration" host="www.webservicex.net#[header:INBOUND:http.request]" port="8888" doc:name="HTTP Request Configuration"/>
- 
- 
- 
   <flow name="HttpProxyService">
         <http:inbound-endpoint host="localhost" port="8888" />
-        <http:request config-ref="HTTP_Request_Configuration" path="#[message.inboundProperties.'http.listener.path']" method="#[message.inboundProperties.'http.method']" doc:name="HTTP"/>
+        <http:outbound-endpoint host="www.webservicex.net#[header:INBOUND:http.request]" port="8888" path="#[message.inboundProperties.'http.listener.path']"
+    method="#[message.inboundProperties.'http.method']" exchange-pattern="one-way" />
   </flow>
 </mule>
 ----
@@ -72,19 +69,17 @@ Next, define your service bridge to use this component:
 
 [source, xml, linenums]
 ----
-<http:request-config name="HTTP_Request_Configuration" host="acme.come" port="8080" basePath="remote/web/service" doc:name="HTTP Request Configuration"/>
- 
- 
 <flow name="HttpWebServiceBridge">
         <http:inbound-endpoint host="localhost" port="8080" path="/my/service"/>
         <component>
          <spring-object bean="WSProxyService" />
         </component>
-        <http:request config-ref="HTTP_Request_Configuration" path="#[message.inboundProperties.'http.listener.path']" method="#[message.inboundProperties.'http.method']" doc:name="HTTP"/>
+        <http:outbound-endpoint host="acme.come" port="8080" path="#[message.inboundProperties.'http.listener.path']"
+    method="GET" exchange-pattern="one-way" />
 </flow>
 ----
 
-Now any request to "http://localhost:8080/my/service?wsdl" will cause your WSDL to be served.
+Now any request to "http://localhost:8080?wsdl" will cause your WSDL to be served.
 
 == Using CXF Proxy
 

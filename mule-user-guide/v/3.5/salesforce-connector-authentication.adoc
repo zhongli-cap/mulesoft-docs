@@ -152,25 +152,24 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
         consumerKey="" consumerSecret="" doc:name="Salesforce (OAuth)">
         <sfdc:oauth-callback-config domain="localhost" localPort="8081" remotePort="8081" path="oauthcallback"/>
     </sfdc:config-with-oauth>
-    <http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" doc:name="HTTP Listener Configuration"/>   
- 
+
     <flow name="authorize" doc:name="authorize">
-        <http:listener config-ref="HTTP_Listener_Configuration" path="authorize" doc:name="HTTP">
+        <http:inbound-endpoint host="localhost" port="8081" path="authorize">
             <http:response-builder statusCode="200" reasonPhrase="You have successfully authorized the connector. Your access token id is: #[flowVars.OAuthAccessTokenId]"/>
             <http:error-response-builder statusCode="404" reasonPhrase="An error has occurred authorizing the connector"/>
-        </http:listener>
+        </http:inbound-endpoint>
         <sfdc:authorize config-ref="salesforce-oauth" display="PAGE" doc:name="Salesforce"/>
     </flow>
     <flow name="sfdctestFlow1" doc:name="sfdctestFlow1">
-        <http:listener config-ref="HTTP_Listener_Configuration" path="run" doc:name="HTTP"/>
+        <http:inbound-endpoint host="localhost" port="8081" path="run"/>
         <sfdc:create config-ref="salesforce-oauth" type="Contact" accessTokenId="#[flowVars.OAuthAccessTokenId]" doc:name="Salesforce">
             <sfdc:objects ref="#[payload]"/>
         </sfdc:create>
     </flow>
     <flow name="unauthorize" doc:name="unauthorize">
-        <http:listener config-ref="HTTP_Listener_Configuration" path="unauthorize" doc:name="HTTP">
+        <http:inbound-endpoint host="localhost" port="8081" path="unauthorize">
             <http:response-builder statusCode="200" reasonPhrase="You have successfully unauthorized the connector for #[message.inboundProperties.'http.query.params'.accessTokenId]"/>
-        </http:listener>     
+        </http:inbound-endpoint>     
         <sfdc:unauthorize config-ref="salesforce-oauth"
             accessTokenId="#[message.inboundProperties.'http.query.params'.accessTokenId]" doc:name="Salesforce"/>
     </flow>
