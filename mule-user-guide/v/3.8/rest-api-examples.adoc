@@ -30,7 +30,9 @@ http://localhost:8081?<query>
 
 The `<query>` consists of the parameters accepted by the REST API. When the HTTP listener receives the HTTP request, the application records `<query>` as a set of inbound properties. The HTTP listener passes these properties to the next element in the flow, the HTTP request connector. This outbound connector is configured to query the remote REST API at http://baconipsum.com/api. The HTTP request connector uses link:/mule-user-guide/v/3.8/mule-expression-language-mel[MEL expressions] to extract the query parameters from the properties in the message, and constructs the full URL for the remote API, including the query parameters.
 
-For example, you enter a local browser request `http://localhost:8081?type=meat-and-filler` and the application issues this query: `http://baconipsum.com/api/?type=meat-and-filler`.
+For example, you enter this local browser request: `http://localhost:8081?type=meat-and-filler`.
+
+The application issues this query: `http://baconipsum.com/api/?type=meat-and-filler`.
 
 Follow the procedures in subsequent sections to create and run the example.
 
@@ -40,7 +42,8 @@ You need to specify how to call the API and what to return by configuring the HT
 
 ==== HTTP Listener
 
-In the Properties editor of the HTTP listener connector, set the *Path* to `/`:
+. Select the HTTP listener component.
+. In the properties editor, set the *Path* to `/`:
 
 image::rest-api-examples-bf47c.png[rest-api-examples-bf47c]
 
@@ -87,7 +90,7 @@ image::rest-api-examples-e5e5f.png[rest-api-examples-e5e5f]
 +
 . Add two parameters using *Add Parameter*. Accept the default type *query-param* for both. For the `value` field of each, write a mule expression that takes the specified value from the query parameters of the request that first reaches the HTTP Listener.
 +
-These values are transformed into inbound properties when they reach the HTTP Request Connector.
+The application transforms the parameters into inbound properties when they reach the HTTP request connector.
 +
 image::rest-api-examples-ba00e.png[rest-api-examples-ba00e]
 +
@@ -114,11 +117,11 @@ The link:http://baconipsum.com/api/[Bacon Ipsum API page] contains a list of par
 Set up the File connector properties to save the output of this application to a file.
 
 . Drag a File connector onto the canvas.
-. Set the directory and file name for storing the output: `/tmp/output`
+. In the properties editor, set the directory and file name for storing the output: `/tmp/output`
 +
 image::rest-api-examples-2d8e6.png[rest-api-examples-2d8e6]
 +
-. In the properties editor, specify an actual path on your file system for the Path.
+. In the properties editor, specify any actual path on your file system for *Path*.
 +
 Mule runtime performs intermediate processes here, but does not write the output here.
 +
@@ -170,11 +173,17 @@ The `type=meat-and-filler` example returns the output shown below.
 ....
 Configure the HTTP listener connector as follows:
 
-`<http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>`
+[source,xml,linenums]
+----
+<http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
+----
 
 You reference an abstract element called a *Connector Configuration*, which contains several of the high level necessary configuration properties. The **config-ref **attribute in the connector references this connector configuration element. You must now create an element outside the flow that matches the referenced name.
 
-`<http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" doc:name="HTTP Listener Configuration"/>`
+[source,xml,linenums]
+----
+<http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" doc:name="HTTP Listener Configuration"/>
+----
 
 Configure the HTTP request connector as follows:
 
@@ -192,11 +201,17 @@ A series of child elements of the connector define two query parameters that tak
 
 You reference an abstract element called a *Connector Configuration*, which contains several of the high level necessary configuration properties. The **config-ref **attribute in the connector references this connector configuration element. You must now create an element outside the flow that matches the referenced name.
 
-`<http:request-config name="HTTP_Request_Configuration" host="baconipsum.com"  doc:name="HTTP Request Configuration" basePath="api"/>`
+[source,xml,linenums]
+----
+<http:request-config name="HTTP_Request_Configuration" host="baconipsum.com"  doc:name="HTTP Request Configuration" basePath="api"/>
+----
 
 Finally, add the file component.
 
-`<file:outbound-endpoint path="/tmp/" outputPattern="out.json">`
+[source,xml,linenums]
+----
+<file:outbound-endpoint responseTimeout="10000" doc:name="File" connector-ref="File" outputPattern="output" path="/Users/max"/>
+----
 
 ....
 [tab,title="XML"]
@@ -235,9 +250,8 @@ http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/fil
 
 This example consumes XML data from an external REST API, extracts values from the XML, and inserts the values into a Postgres database. The application uses the link:http://developer.yahoo.com/yql/console/[Yahoo! REST API] for financial services, which is free to use and does not require a user account. You call the API to retrieve financial quotes using the SQL-based link:http://developer.yahoo.com/yql/guide/running-chapt.html[Yahoo Query Language].
 
-You specify the XML format when querying the Yahoo! REST API at http://query.yahooapis.com/v1/public/yql.
-
-The application receives the reply and extracts some values, such as stock name and price. Finally, the API inserts the values into a table in an external Postgres database.
+=== Overview of Extracting and Storing XML Data from a REST API
+You specify the XML format when querying the Yahoo! REST API at http://query.yahooapis.com/v1/public/yql. The application receives the reply and extracts some values, such as stock name and price. Finally, the API inserts the values into a table in an external Postgres database.
 
 The application contains one flow:
 
@@ -315,11 +329,11 @@ INSERT INTO mystock(name,bookvalue) VALUES('#[flowVars.dbName]','#[flowVars.dbBo
 
 ==== HTTP Listener
 
-. In the Properties editor of the HTTP listener connector, set the *Path* to `/`:
+. Select the HTTP Listener, and in the Properties editor of the HTTP listener connector, set the *Path* to `/`:
 +
 image::rest-api-examples-2979f.png[rest-api-examples-2979f]
 +
-. In *Connector Configuration*, click image:add.png[add], and set up the port and host:
+. In *Connector Configuration*, click image:add.png[add], and set up the *Host* and *Port*:
 +
 image::rest-api-examples-c6d2d.png[rest-api-examples-c6d2d]
 +
@@ -341,7 +355,7 @@ image::rest-api-examples-426f6.png[rest-api-examples-426f6]
 [width="100%",cols="20a,80a",options="header",]
 |===
 |Parameter |Value
-|*Name* |`HTTP_Request_Connector `
+|*Name* |`HTTP_Request_Connector`
 |*Host* |`query.yahooapis.com`
 |*Port* |`80`
 |*Base Path* |`v1/public.yql`
@@ -357,7 +371,7 @@ image::rest-api-examples-4ec20.png[rest-api-examples-4ec20]
 [cols=",",options="header"]
 |===
 |Parameter |Value
-|*Display Name* |`HTTP `
+|*Display Name* |`HTTP`
 |*Path* |`/`
 |*Method* |`GET`
 |===
@@ -392,7 +406,7 @@ image:yahoo+http+w+params.png[yahoo+http+w+params]
 +
 Configured in this way, the API forwards the query params received by the HTTP listener to the Yahoo API.
 
-. Select the *Advanced* tab on the left side panel of the connector, tick the checkbox labeled *Follow Redirects*
+. Select the *Advanced* tab on the left side panel of the connector, and check the *Follow Redirects* checkbox.
 
 ==== Byte Array to String Transformer
 
@@ -440,30 +454,36 @@ Accept the default values on the Advanced tab.
 
 ==== DOM to XML Transformer
 
-The DomToXml transformer converts DOM objects to XML. Accept the default values for the DOM to XML connector.
+The *Dom To Xml* transformer converts DOM objects to XML. Accept the default values in the properties editor.
 
 ==== Expression
 
-The Expression component evaluates an expression. Create expressions to represent the Name and BookValue for Bank of America stock to extract from the XML and store in the database.
+The *Expression* component evaluates an expression.
 
+. Select the Expression component.
+. In the properties editor, create the following expressions to represent the Name and BookValue for Bank of America stock:
++
+[source]
+----
+flowVars.dbName=xpath3('//Name');
+flowVars.dbBookValue=xpath3('//BookValue');
+----
++
 image::rest-api-examples-3756b.png[rest-api-examples-3756b]
-
-*General Tab*
-[width="100%",cols=",",options="header"]
-|===
-|Parameter |Value
-|*Display Name* |`Expression`
-|*Expression* |`flowVars.dbName=xpath3('//Name'); flowVars.dbBookValue=xpath3('//BookValue');`
-|===
-
-Accept the default values on the Advanced tab.
++
+The application extracts the values from the XML in preparation for storage in the database.
++
+. Accept the default values on the Advanced tab.
 
 ==== Variable
 
-The Variable component creates a variable that represents the insert statement. Configure this component as shown in the following screenshot and table:
+The *Variable* component creates a variable that represents the SQL INSERT statement.
 
+. Select the Variable component.
+. Configure the component as shown in the following screenshot and table:
++
 image::rest-api-examples-51c06.png[rest-api-examples-51c06]
-
++
 *General Tab*
 [width="100%",cols=",",options="header"]
 |===
@@ -472,8 +492,8 @@ image::rest-api-examples-51c06.png[rest-api-examples-51c06]
 |*Operation - Set Variable - Name* |`insertStatement`
 |*Value* |`INSERT INTO mystock(name,bookvalue) VALUES('#[flowVars.dbName]','#[flowVars.dbBookValue]');`
 |===
-
-Accept the default values on the Advanced tab.
++
+. Accept the default values on the Advanced tab.
 
 ==== Database Connector
 
@@ -518,8 +538,10 @@ The *Generic Database Configuration* dialog appears.
 `org.postgresql.Driver`
 +
 . Click *Test Connection*.
++
 image::rest-api-examples-82a84.png[rest-api-examples-82a84]
-+ If the test fails, check the prerequisites.
++
++ If the test fails, check that you meet the prerequisites.
 . Click *OK*.
 . In *Operation*, select `Insert` from the drop-down.
 . In *Query*, select `Dynamic` from the *Type* drop-down.
@@ -537,10 +559,11 @@ image::rest-api-examples-3678e.png[rest-api-examples-3678e]
 . Run the example as a Mule application.
 . Call the HTTP listener with your query.
 +
-Use a Web browser or an HTTP client such as the link:http://curl.haxx.se/download.html[curl] command-line utility to call the HTTP listener on localhost port 8081.
+Use a Web browser or an HTTP client, such as the link:http://curl.haxx.se/download.html[curl] command-line utility, to call the HTTP listener on localhost port 8081. Remove any line breaks from the URL or `curl` command.
 +
 This example retrieves a quote for Bank of America by calling the HTTP listener using the following URL or curl command:
 +
+[source,code,linenums]
 ----
 http://localhost:8081?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20
 (%22BAC%22)%0A%09%09&env=http%3A%2F%2Fdatatables.org%2Falltables.env&format=XML
@@ -548,17 +571,16 @@ http://localhost:8081?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbo
 +
 image:browser2.png[browser2]
 +
+[source,code,linenums]
 ----
 curl 'http://localhost:8081?q=select%20*%20from%20yahoo.finance.quotes%20where
 %20symbol%20in%20(%22BAC%22)%0A%09%09&env=http%3A%2F%2Fdatatables.org%2
 Falltables.env&format=XML'
 ----
 +
-Remove any line breaks from the URL or `curl` command.
-+
 Calling the listener triggers the flow.
 +
-PgAdmin III Postgres interface shows the data inserted in the database row.
+PgAdmin III interface to Postgres shows the data inserted in the database row.
 +
 image::rest-api-examples-b8dd8.png[rest-api-examples-b8dd8]
 
