@@ -423,19 +423,27 @@ See <<Complete Code Example>> for more detail.
 
 From time to time, when processing a batch job, a Mule message processor in a batch step may find itself unable to process a record. When this occurs – perhaps because of corrupted or incomplete record data – Mule has three options for handling a record-level error:
 
-. *Stop processing* the entire batch, skip any remaining batch steps and push all records to the On Complete phase (where, ideally, you have designed a report to notify you of failed records)
+. *Finish processing* the current batch step, skip any remaining batch steps and push all records to the On Complete phase (where, ideally, you have designed a report to notify you of failed records).
++
+[IMPORTANT]
+--
+When one of the records fails, the batch job does not immediately stops there. +
+The batch step where the failed record was encountered needs to finish processing before Mule stops the batch job.
 
+This means that if you set a block size of 100 records, and the first record fails, Mule still needs to process the remaining 99 records before stopping the batch job.
+--
++
 . *Continue processing* the batch regardless of any failed records, using link:/mule-user-guide/v/3.8/batch-filters-and-batch-commit[filters] to instruct subsequent batch steps how to handle failed records
 
 . *Continue processing* the batch regardless of any failed records (using link:/mule-user-guide/v/3.8/batch-filters-and-batch-commit[filters] to instruct subsequent batch steps how to handle failed records), until the batch job accumulates a *maximum number of failed records* at which point Mule pushes all records to the On Complete phase (where, ideally, you have designed a report to notify you of failed records)
 
-By default, Mule's batch jobs follow the first error handling option which halts processing as soon as Mule encounters a single record-level error. However, you can use a *batch job attribute* and batch step *accept expression* to explicitly configure the batch job to handle failures according to the second or third above-listed options. The table below describes how to configure the batch job attribute to customize error handling.
+By default, Mule's batch jobs follow the first error handling option which halts the batch after processing the last step where a record-level error was triggered. However, you can use a *batch job attribute* and batch step *accept expression* to explicitly configure the batch job to handle failures according to the second or third above-listed options. The table below describes how to configure the batch job attribute to customize error handling.
 
 [cols="30a,40a,30a",options="header"]
 |===
 |Failed Record Handling Option 2+^|Batch Job
 | | *Attribute* | *Value*
-| Stop processing upon encountering the first failed record
+| Stop processing upon finishing the current step where the record failed
 | `max-failed-records`|`0`
 | Continue processing indefinitely, regardless of the number of failed records
 | `max-failed-records` |`-1`
@@ -449,6 +457,9 @@ By default, Mule's batch jobs follow the first error handling option which halts
 ----
 
 Read more about link:/mule-user-guide/v/3.8/batch-filters-and-batch-commit[fine-tuning filters] on batch steps to manage failed records at a more granular level.
+
+
+Also check link:https://docs.mulesoft.com/mule-user-guide/v/3.8/using-mel-with-batch-processing#mel-functions-that-involve-batch-jobs[MEL expressions for Batch Processing] for a detailed description of the MEL expressions you can use to monitor 
 
 === Crossing the Max Failed Threshold
 
