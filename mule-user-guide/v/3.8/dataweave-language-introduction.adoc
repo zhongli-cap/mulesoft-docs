@@ -67,17 +67,17 @@ In Anypoint Studio, inputs are implicitly known based on the metadata that runs 
 
 == DataWeave File Structure
 
-DataWeave files are divided into two main sections:
+DataWeave files are divided into two sections:
 
-. The Header, which defines directives (optional)
-. The Body, which describes the output structure
+* *Header* - defines directives (_optional_)
+* *Body* - describes the output structure
 
-The two sections are delimited by a separator, which is not required if no header is present. The separator consists of three dashes: "---"
+The two sections are delimited by a three-dash *separator*: "---"
 
-Below is a taste of what a `.dwl` file looks like. This code describes a conversion from a JSON input to an XML output:
+This is basically what a `.dwl` file looks like. This code describes a transformation from a JSON input to an XML output:
 
 [source,DataWeave,linenums]
----------------------------------------------------------------------
+----
 %dw 1.0
 %output application/xml
 ---
@@ -87,49 +87,54 @@ Below is a taste of what a `.dwl` file looks like. This code describes a convers
     lastName: payload.user_lastName
   }
 }
----------------------------------------------------------------------
+----
 
 Note that the two initial lines of code compose the header, the separator then delimits it from the rest of the file, the body, where the output structure is defined.
 
 This DataWeave example expects to receive a JSON input that is structured like the JSON example below:
 
 [source,json,linenums]
----------------------------------------------------------------------
+----
  {
   "user_name": "Annie",
   "user_lastName": "Point"
  }
----------------------------------------------------------------------
+----
 
 Upon receiving that as an input, DataWeave produces the XML output shown below:
 
 [source,xml,linenums]
----------------------------------------------------------------------
+----
 <?xml version="1.0" encoding="UTF-8"?>
 <user>
  <name>Annie</name>
  <lastName>Point</lastName>
 </user>
----------------------------------------------------------------------
+----
 
 == The DataWeave Header
 
-The DataWeave header contains the directives, which define high level information about your transformation. The structure of the Header is a sequence of lines, each with its own Directives. The Header is terminated with '---'.
+The DataWeave header contains the *directives*, which define high-level information about your transformation. The structure of the *header* is a sequence of lines, each with its own *directives*. The *header* section ends at `---`.
 
-Through directives you can define:
+Through the *directives* you define key aspects of the transformation:
 
-* DataWeave *version*
-* *Output* type
-* *Namespaces* to import into your transform
-* *Constants* that can be referenced throughout the body
-* *Functions* that can be called throughout the body
+* *DataWeave version*, e.g. `%dw 1.0`
+* *Output type*, e.g. `%output application/xml`
+* *Namespaces* to import into your transform, e.g. %namespace ns0 `http://mulesoft.org/tshirt-service/`
+* *Constants* that can be referenced throughout the body, e.g. `%var conversionRate=13.15`
+* *Functions* that can be called throughout the body, e.g. `%var toUser = (user) -> {firstName: user.name, lastName: user.lastName}`
 
-All directives are declared on the header section of your DataWeave document and act upon the entire scope of it. Directives are a mechanism to declare variables and constants and namespace aliases which need to be referenced in the Document.
-They are also needed to declare the type of the output of your transform. In Anypoint Studio, you can optionally use them to declare additional inputs. You rarely need them for this as any data arriving in the incoming Mule Message is already implicitly recognized as an input.
+All directives are declared in the header section of your DataWeave document and act on the entire scope of it. 
+
+Directives are a mechanism used to declare _variables_, _constants_ and _namespaces_ and their _aliases_, which are referenced in the body.
+
+They are needed to declare the type of the output of your transform. 
+
+In Anypoint Studio, you may use directives to declare additional input. You likely will not need this feature as any data arriving inside the incoming Mule message is naturally recognized as an input, and can be acted upon easily enough within the DataWeave code body.
 
 === Version Directive
 
-Through this directive, you specify the version of the DataWeave syntax that is used to interpret the transformation.
+Specify the version of the DataWeave syntax that is used to interpret the transformation using the version directive.
 
 [source,DataWeave]
 ---------------------------------------------------------------------
@@ -138,7 +143,7 @@ Through this directive, you specify the version of the DataWeave syntax that is 
 
 === Namespace Directive
 
-This directive associates an alias with its subsequent URI. The directive is relevant only when either the input or the output is of type XML.
+Use this directive to specify an alias for a URI, which is specified after the alias. The directive is relevant only when either the input or the output is of type XML.
 [source,DataWeave,linenums]
 ---------------------------------------------------------------------
 %namespace mes http://www.mulesoft.com/anypoint/SOA/message/v1.0
@@ -147,13 +152,14 @@ This directive associates an alias with its subsequent URI. The directive is rel
 
 === Output Directive
 
-The Output Directive specifies what the output type is in a transformation, which is specified using content/type.
-Only one output can be specified, the structure of this output is then defined in the DataWeave body.
+Specify the transformation output type in the format: `<content>/<type>`.
+
+Only one output type can be specified -- the structure of this output is further specified in the DataWeave body.
 
 [source,DataWeave]
----------------------------------------------------------------------
+----
 %output application/xml
----------------------------------------------------------------------
+----
 
 Valid types are:
 
@@ -171,10 +177,10 @@ Valid types are:
 
 === Define Constant Directive
 
-You can define a constant in the header, you can then reference it (or its child elements, if any exist) in the DataWeave body.
+You can define a constant in the header, andreference it (or its child elements, if any exist) in the DataWeave body.
 
 [source,DataWeave,linenums]
----------------------------------------------------------------------
+----
 %dw 1.0
 %var conversionRate=13.15
 %output application/json
@@ -183,14 +189,14 @@ You can define a constant in the header, you can then reference it (or its child
  price_dollars: payload.price,
  price_localCurrency: payload.price * conversionRate
 }
----------------------------------------------------------------------
+----
 
 === Define Function Directive
 
 You can define a link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[function] in the header, you can then call it in any part of the DataWeave body, including arguments.
 
 [source,DataWeave,linenums]
----------------------------------------------------------------------
+----
 %dw 1.0
 %output application/json
 %var toUser = (user) -> {firstName: user.name, lastName: user.lastName}
@@ -198,9 +204,9 @@ You can define a link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambd
 {
  user: toUser(payload)
 }
----------------------------------------------------------------------
+----
 
-A function directive can be defined via a `%var` as in the example above, or via `%function`
+A function directive can be defined via `%var` as in the example above, or via `%function`
 
 .Transform
 [source,DataWeave, linenums]
