@@ -1,0 +1,469 @@
+= Object Store Connector
+:keywords: anypoint studio, esb, connector, object store, mule stores
+:imagesdir: ./_images
+:toc: macro
+:toc-title: Table of Contents
+:toclevels: 2
+
+toc::[]
+////
+. link:#intro[Introduction]
+    ..  link:#prerequisites[Prerequisites]re
+    ..  link:#requirements[Requirements]
+    ..  link:#namespace[Namespace]
+    ..  link:#schema-location[Schema Location]
+. link:#compatibility[Compatibility]
+. link:#install-and-config[Installing & Configuring]
+    .. link:#install[Installing the Object Store connector]
+    .. link:#config[Configuring the Object Store connector]
+        ... link:#config-global[Setting up the Global Configuration]
+    .. link:#upgrading[Upgrading from an Older Version]
+. link:#using-the-connector[Using the Connector]
+    .. link:#use-cases-and-demos[Use Cases and Demos]
+    .. link:#adding-to-a-flow[Adding to a Flow]
+. link:#example-use-case[Example Use Case]
+    .. link:#example-code[Example Code]
+    .. link:#run[Run Time]
+    .. link:#demo[Demo]
+    .. link:#see-also[See Also]
+////
+
+[[intro]]
+== Introduction
+
+The Object Store Connector lets you connect to the object storage facility in Mule and exposes convenient methods for exploiting the capabilities of Mule Object Stores. Internally, Mule uses object stores in various filters, routers, and other message processors that need to store state between messages.
+
+Read through this user guide to understand how to set up and configure a basic flow using the connector. Read through the link:http://mulesoft.github.io/objectstore-connector/[Technical Reference] to understand how the connector operations interact with Mule Object Stores. You will also find **demo applications** here that illustrate how to use the connector operations. link:/release-notes/objectstore-connector-release-notes[Release Notes] are a good way to track feature additions, compatibility limitations and API version updates with each release of the connector version.
+
+MuleSoft maintains this connector under the link:/mule-user-guide/v/3.8/anypoint-connectors#connector-categories[_Select_] support policy.
+
+[[prerequisites]]
+=== Prerequisites
+
+This document assumes that you are familiar with Mule, the link:/mule-fundamentals/v/3.8/anypoint-studio-essentials[Anypoint Studio Interface], link:/mule-fundamentals/v/3.8/global-elements[Global Elements], and link:/mule-user-guide/v/3.8/datasense[DataSense].
+
+[[requirements]]
+=== Requirements
+
+For hardware and software requirements, please visit link:https://www.mulesoft.com/lp/dl/mule-esb-enterprise[Mulesoft.com].
+
+== Namespace and Schema
+
+When designing your application in Studio, the act of dragging the connector from the palette onto the Anypoint Studio canvas should automatically populate the XML code with the connector *namespace* and *schema location*.
+
+[TIP]
+If you are manually coding the Mule application in Studio's XML editor or other text editor, paste these into the header of your *Configuration XML* inside the tags specified below.
+
+[[namespace]]
+=== Namespace
+
+[source, xml]
+----
+xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore"
+----
+
+[[schema-location]]
+=== Schema Location
+
+[source, code, linenums]
+----
+xsi:schemaLocation="
+...
+http://www.mulesoft.org/schema/mule/objectstore
+http://www.mulesoft.org/schema/mule/object/current/mule-objectstore.xsd"
+----
+
+For example, see how the XML is configured to include the *connector namespace and schema location* in the application:
+
+[source, xml, linenums]
+----
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore"
+      xsi:schemaLocation="
+               http://www.mulesoft.org/schema/mule/core
+               http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+               http://www.mulesoft.org/schema/mule/objectstore
+               http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd">
+  
+      <!-- Insert your configuration elements and your flow here -->
+</mule>
+----
+
+== Using the Connector in a Mavenized Mule App
+
+If you are coding a Mavenized Mule application, this XML snippet must be included in your `pom.xml` file.
+
+[source,xml,linenums]
+----
+<dependency>
+  <groupId>org.mule.modules</groupId>
+  <artifactId>mule-module-objectstore</artifactId>
+  <version>2.0.0</version>
+</dependency>
+----
+
+[[compatibility]]
+== Compatibility
+
+The Object Store connector is compatible with:
+
+[width="70%",cols="20a,80a",options="header"]
+|===
+|Application/Service|Version
+|Mule Runtime|3.6.0 or newer
+|Anypoint Studio|5.2 or newer
+|===
+
+[IMPORTANT]
+Starting with version 2.0.0, the Object Store connector is licensed commercially with Anypoint Platform as with other Select connectors.  Prior versions will remain freely available to the community.
+
+== Installing and Configuring
+
+[[install]]
+=== Installing the Object Store Connector
+
+You can install the connector in Anypoint Studio using the instructions in link:/mule-fundamentals/v/3.8/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Installing a Connector from Anypoint Exchange].
+
+[[config]]
+=== Configuring the Object Store Connector
+
+To use the connector in your Mule application, you must configure a global Object Store element that can be used by all the Object Store connectors in the application.
+
+TIP: If you haven't already, read about link:/mule-fundamentals/v/3.8/global-elements[Global Elements] before proceeding further.
+
+[[config-global]]
+==== Setting up the Global Configuration
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+. Click the **Global Elements** tab at the base of the canvas.
+. On the **Global Mule Configuration Elements** screen, click **Create**.
+. In the **Choose Global Type** wizard, expand **Connector Configuration** and select **ObjectStore: Configuration** and click **Ok.**
++
+[.center.text-center]
+image:objectstore_config_global_wizard.png["Global Element Configuration Wizard"]
++
+. Configure the parameters according to your needs. This is the screen you configure the connector global element from:
++
+[.center.text-center]
+image:objectstore_config_global.png["Global Element Configuration"]
++
+[width="80%",cols="30a,70a",options="header"]
+|===
+|Parameter|Description
+|*Name*|Enter a name for the configuration to reference it.
+|*Partition*|Name of the partition in the default in-memory or persistent object stores.
+|*Object Store Reference*|Reference to an Object Store bean. This is optional and if not specified, the default in-memory or persistent store will be used.
+|*Entry Ttl*|TimeToLive for stored values in milliseconds. "Max Entries" and "Expiration Interval" are mandatory for using this param.
+|*Expiration Interval*|Specifies the expiration check interval in milliseconds.
+|*Max Entries*|Specifies the maximum number of entries.
+|*Persistent*|Specified whenever the required store needs to be persistent or not.
+|===
++
+[NOTE]
+In the image above, the placeholder values refer to a configuration file placed in the
+`src` folder of your project. See link:/mule-user-guide/v/3.8/configuring-properties[Learn how to configure properties].
++
+You can either enter your credentials into the global configuration properties, or reference a configuration file that contains these values. For simpler maintenance and better re-usability of your project, Mule recommends that you use a configuration file. Keeping these values in a separate file is useful if you need to deploy to different environments, such as production, development, and QA, where your access credentials differ. See
+link:/mule-user-guide/v/3.8/deploying-to-multiple-environments[Deploying to Multiple Environments] for instructions on how to manage this.
+. Click *OK* to save the global connector configurations.
+....
+[tab,title="XML Editor"]
+....
+
+Follow these steps to configure the connector in your application:
+Create a global Object Store configuration outside and above your flows, using the following global configuration code.
+
+[source,xml,linenums]
+----
+<objectstore:config name="ObjectStore__Configuration" partition="${objectstore.partition.counter}" doc:name="ObjectStore: Configuration"/>
+----
+....
+------
+
+[[upgrading]]
+=== Updating from an Older Version
+
+If you’re currently using an older version of the connector, a small popup appears in the bottom right corner of Anypoint Studio with an "Updates Available" message.
+
+. Click the popup and check for available updates. 
+. Click the *Object Store connector* checkbox for the version you require and click *Next*, following the instructions provided by the user interface. 
+. Restart Studio when prompted. 
+. After restarting, when creating a flow and using the Object Store connector, if you have several versions of the connector installed, you may be asked which version you would like to use. Choose the version you would like to use.
+
+We recommend that you keep Studio up to date with its latest version. 
+
+[[using-the-connector]]
+== Using This Connector
+
+The Object Store connector is an operation-based connector, which means that when you add the connector to your flow, you need to configure a specific operation for the connector to perform. See the entire operation processors list link:https://mulesoft.github.io/objectstore-connector/2.0.0/apidocs/objectstore-apidoc.html#_processors[here] or click individually on the listed operations below. The connector currently supports the following list of operations, each requiring certain attributes to be set:
+
+* link:https://mulesoft.github.io/objectstore-connector/2.0.0/apidocs/objectstore-apidoc.html#_contains[Contains]
+* link:https://mulesoft.github.io/objectstore-connector/2.0.0/apidocs/objectstore-apidoc.html#_dual_store[Dual store]
+* link:https://mulesoft.github.io/objectstore-connector/2.0.0/apidocs/objectstore-apidoc.html#_remove[Remove]
+* link:https://mulesoft.github.io/objectstore-connector/2.0.0/apidocs/objectstore-apidoc.html#_retrieve[Retrieve]
+* link:https://mulesoft.github.io/objectstore-connector/2.0.0/apidocs/objectstore-apidoc.html#[Retrieve all keys]
+* link:https://mulesoft.github.io/objectstore-connector/2.0.0/apidocs/objectstore-apidoc.html#_retrieve_and_store[Retrieve and store]
+* link:https://mulesoft.github.io/objectstore-connector/2.0.0/apidocs/objectstore-apidoc.html#_store[Store]
+
+
+
+[[adding-to-a-flow]]
+=== Adding to a Flow
+
+. Create a new *Mule Project* in Anypoint Studio.
+. Add a suitable Mule *Inbound Endpoint*, such as the HTTP listener or File endpoint, to begin the flow.
+. Drag and drop the *Object Store connector* onto the canvas.
+. Click on the connector component to open the *Properties Editor*.
++
+[.center.text-center]
+image:objectstore_usecase_settings.png[Flow Settings]
++
+. Configure the following parameters:
++
+[options="header,autowidth"]
+|===
+|Field|Description
+2+|*Basic Settings*
+|Display Name|Enter a unique label for the connector in your application.
+|Connector Configuration|Connect to a global element linked to this connector. Global elements encapsulate reusable data about the connection to the target resource or service. Select the global Object Store connector element that you just created.
+|Operation|Select *Store* from the drop-down menu.
+2+|*General*
+|Key|The identifier of the object to store.
+|Value Reference|The object to store.
+|===
++
+. Click the blank space on the canvas to save your configurations.
+
+[[example-use-case]]
+== Example Use Case
+
+After installing and configuring the Object Store connector, use it in a Mule flow to store and retrieve employee data.
+
+The following Mule App stores employee data containing employee identifier, first name, last name and age in JSON format using the Object Store connector. The Mule app has two HTTP endpoints.
+
+* `/store` :  Used to store employee data
+* `/retrieve` : Get employee data for the identifier mentioned.
+[.center.text-center]
+image:user-manual-e8636.png[Store and Retrieve Employee data]
+
+Lets start with the flow to store employee data.
+
+. Create a new **Mule Project** in Anypoint Studio.
+. Drag a **HTTP endpoint** onto the canvas and configure the following parameters: +
+image:objectstore-http-props-store.png[objectstore http config props for store endpoint]
++
+[options="header,autowidth"]
++
+|===
+|Parameter|Value
+|*Display Name*|HTTP
+|*Connector Configuration*| If no HTTP element has been created yet, click the plus sign to add a new **HTTP Listener Configuration** and click **OK** (leave the values to its defaults).
+|*Path*|/store
+|===
++
+. Next, drag the *Object Store connector* next to the Transform Message component and configure it according to the steps below:
+. Click the plus sign next to the *Connector Configuration* field to add a new *Object Store Global Element*.
+.. Configure the global element according to the table below:
++
+[options="header,autowidth"]
+|===
+|Parameter|Description|Value
+|*Name*|Enter a name for the configuration to reference it.|<Configuration_Name>
+|*Partition*|Name of the partition|`employees`
+|===
++
+.. The corresponding XML configuration should be as follows:
++
+[source,xml]
+----
+<objectstore:config name="ObjectStore__Configuration" partition="employees" doc:name="ObjectStore: Configuration"/>
+----
++
+. Back in the properties editor of the Object Store connector, configure the remaining parameters:
++
+[options="header,autowidth"]
+|===
+|Parameter|Value
+2+|*Basic Settings*
+|Display Name|Store employee (or any other name you prefer).
+|Connector Configuration|ObjectStore__Configuration (the reference name to the global element you have created).
+|Operation| Store
+2+|*General*
+|Key| #[message.inboundProperties.'http.query.params'.id]
+|Value Reference| #[payload]
+|===
++
+. Check that your XML looks as follows:
++
+[source,xml, linenums]
+----
+<objectstore:store config-ref="ObjectStore__Configuration" key="#[message.inboundProperties.'http.query.params'.id]" value-ref="#[payload]" doc:name="Store employee"/>
+----
++
+. Similarly, drag another *Object Store connector* to get all keys from Store.
+. Configure the properties editor accordingly to the table below:
++
+[options="header,autowidth"]
+|===
+|Parameter|Value
+2+|*Basic Settings*
+|Display Name|Get all keys (or any other name you prefer).
+|Connector Configuration|ObjectStore__Configuration (the reference name to the global element you have created).
+|Operation| All keys
+|===
++
+. Check that your XML looks as follows:
++
+[source,xml,linenums]
+----
+<objectstore:all-keys config-ref="ObjectStore__Configuration" doc:name="Get all keys"/>
+----
++
+. Add a *Logger* scope after the Object Store connector to print the data that is being passed by the All keys operation in the Mule Console. Configure the Logger according to the table below.
++
+[options="header,autowidth"]
+|===
+|Parameter|Value
+|*Display Name*|Log Employee Id's (or any other name you prefer)
+|*Message*|Keys : #[payload]
+|*Level*|INFO
+|===
++
+. Add a *Set Payload* after the logger component. Configure the component according to the table below.
++
+[options="header,autowidth"]
+|===
+|Parameter|Value
+|*Display Name*|Show Employee Id's (or any other name you prefer)
+|*Message*|Keys : #[payload]
+|*Level*|INFO
+|===
+
+Now lets add another flow to retrieve employee data stored previously.
+
+. Drag a **Flow Component** below the above flow.
+. Drag a **HTTP endpoint** onto the canvas and configure the following parameters: +
+image:objectstore-http-props-retrieve.png[objectstore http config props for retrieve endpoint]
++
+[options="header,autowidth"]
++
+|===
+|Parameter|Value
+|*Display Name*|HTTP
+|*Connector Configuration*| Use the already available configuration .
+|*Path*|/retrieve
+|===
++
+. Drag the *Object Store connector* and configure it according to the steps below:
++
+[options="header,autowidth"]
+|===
+|Parameter|Value
+2+|*Basic Settings*
+|Display Name|Store employee (or any other name you prefer).
+|Connector Configuration|ObjectStore__Configuration (the reference name to the global element you have created).
+|Operation| Retrieve
+2+|*General*
+|Key| #[message.inboundProperties.'http.query.params'.id]
+|===
++
+. Check that your XML looks as follows:
++
+[source,xml,linenums]
+----
+<objectstore:retrieve config-ref="ObjectStore__Configuration" key="#[message.inboundProperties.'http.query.params'.id]" doc:name="Retrieve Employee"/>
+----
++
+
+. Add a *Logger* scope after the Object Store connector to print the data that is being retrieved in the previous operation to the Mule Console. Configure the Logger according to the table below.
++
+[options="header,autowidth"]
+|===
+|Parameter|Value
+|*Display Name*|Log Employee data (or any other name you prefer)
+|*Message*|Keys : #[payload]
+|*Level*|INFO
+|===
++
+. Add a *Set Payload* after the logger component. Configure the component according to the table below.
++
+[options="header,autowidth"]
+|===
+|Parameter|Value
+|*Display Name*|Show Employee data (or any other name you prefer)
+|*Message*|Keys : #[payload]
+|*Level*|INFO
+|===
+
+[[example-code]]
+=== Example Code
+
+Paste this code into your XML Editor to quickly load the flow for this example use case into your Mule application.
+
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <objectstore:config name="ObjectStore__Configuration" partition="employees" doc:name="ObjectStore: Configuration"/>
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <flow name="objectstore-store-employee-flow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/store" doc:name="HTTP"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+		id: inboundProperties.'http.query.params'.id,
+		name: inboundProperties.'http.query.params'.name,
+		lname: inboundProperties.'http.query.params'.lname,
+		age: inboundProperties.'http.query.params'.age
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <objectstore:store config-ref="ObjectStore__Configuration" key="#[message.inboundProperties.'http.query.params'.id]" value-ref="#[payload]" doc:name="Store employee"/>
+        <objectstore:all-keys config-ref="ObjectStore__Configuration" doc:name="Get all keys"/>
+        <logger message="Keys : #[payload]" level="INFO" doc:name="Log Employee Id's"/>
+        <set-payload value="Keys : #[payload]" doc:name="Show Employee Id's"/>
+    </flow>
+    <flow name="objectstore-retrieve-employee-flow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/retrieve" doc:name="HTTP"/>
+        <objectstore:retrieve config-ref="ObjectStore__Configuration" key="#[message.inboundProperties.'http.query.params'.id]" doc:name="Retrieve Employee"/>
+        <logger message="Employee: #[payload]" level="INFO" doc:name="Log Employee"/>
+        <set-payload value="Employee : #[payload]" doc:name="Show Employee"/>
+    </flow>
+</mule>
+----
+
+[[run]]
+=== Run Time
+
+. Save and **run** the project as a Mule Application.
+. Open a web browser and enter the below to check the response.
+.. To store a employee record enter the URL `http://localhost:8081/store?id=1&name=David&lname=Malhar&age=10`.
+.. To retrieve a employee record enter the URL `http://localhost:8081/retrieve?id=1`. The logger will display the employee record in JSON format in the browser.
+
+[NOTE]
+* The object store will throw an exception when an attempt is made to overwrite an existing key; this is expected behavior. The object store will throw an exception when an attempt to read is made using a key that does not exist in the object store; this too is expected; this is also expected behavior.
+* This example uses a simple in-memory store; to clear the contents of this store, restart Mule runtime.
+
+[[demo]]
+=== Demo
+
+You can download another fully functional example from http://mulesoft.github.io/objectstore-connector/[this link].
+
+[[see-also]]
+=== See Also
+
+* Read more about link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors].

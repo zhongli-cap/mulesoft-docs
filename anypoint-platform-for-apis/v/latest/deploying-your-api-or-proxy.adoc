@@ -1,13 +1,13 @@
 = Deploying Your API or Proxy
 :keywords: api, proxy, gateway, apikit, deploy
 
-This walkthrough describes how to deploy an APIkit project or an API proxy to an API Gateway or other runtime. This walkthrough uses features that might not be visible or accessible to you, depending on the link:/release-notes/anypoint-platform-for-apis-release-notes[entitlements you purchased].
+This walkthrough describes how to deploy an APIkit project or an API proxy to a Mule runtime or an API Gateway (in case you are running older versions than Mule 3.8). This walkthrough uses features that might not be visible or accessible to you, depending on the link:/release-notes/anypoint-platform-for-apis-release-notes[entitlements you purchased].
 
 == Assumptions
 
 This page assumes that you have done one of the following things:
 
-* Built a new API using link:/anypoint-platform-for-apis/building-your-api[APIkit ]
+* Built a new API using link:/anypoint-platform-for-apis/apikit[APIkit ]
  _or_
 
 * Created an link:/anypoint-platform-for-apis/proxying-your-api[auto-generated proxy application] for the endpoint on which your API is hosted (if you want to deploy on premises or manually on the Runtime Manager, you must downloaded it as a .zip file)
@@ -24,7 +24,8 @@ If your API is behind a firewall, see link:/anypoint-platform-for-apis/accessing
 
 == Selecting a Deployment Target
 
-Before you proceed, determine what you have and where you are trying to deploy it.
+Since Mule Runtime v3.8 and older, the Mule and API Gateway are unified. If you are running newer versions than v3.8, then the Mule Runtime is your default deployment target and you should follow the instructions for <<Deploying to Mule, deploying to a Mule instance>> both on-prem or in the cloud.+
+If you are using older Mule runtimes, use the below table to determine what you have and where you are trying to deploy it.
 
 [width="99a",cols="50a,50a",options="header"]
 |===
@@ -49,6 +50,89 @@ Your APIkit project or proxy application should be saved as a deployable zip fil
 
 If your organization has On Premises Auto-Deploy enabled, and you have already configured your API Gateway for Auto-deployment, then you can also deploy your applications on premises link:/runtime-manager/managing-servers[via the Anypoint Runtime Manager Console].
 
+=== Deploying to Mule
+
+[tabs]
+------
+[tab,title="On-Prem Mule"]
+....
+
+If it is not already running, start Mule in the command line by running:
+
+* *Windows*: `<MULE_HOME>\bin\mule`
+* *Unix*: `<MULE_HOME>/bin/mule`
+
+*Starting Mule as a Foreground Process*
+
+. Use the `cd` command to navigate to the `$MULE_HOME/bin` directory.
+. Run the startup script according to the options below.
+
+* *Unix:* `./mule`
+* *Windows:* `mule`
+
+To stop Mule, press `CTRL-C` in the terminal in which the script is running.
+
+*Starting Mule as a Background Process*
+
+. Use the `cd` command to navigate to the `<MULE_HOME>/bin` directory.
+. Run the startup script with the `start` option.
++
+* *Unix:* `./mule start`
+* *Windows:* `mule.bat start`
++
+To stop Mule, run the script with the `stop` parameter.
++
+. Navigate to the directory where the proxy .zip file is located and copy the .zip file. Ensure that your copy of the file does not have any spaces in the name. 
+. Drop the copy of the .zip file into the *`<MULE_HOME>/apps`* folder.
++*`<MULE_HOME`>* is the value of the MULE_HOME variable employed by Mule, usually the root directory of the installation, such as `/opt/Mule/mule-standalone-3.6.0/`.
+. Mule polls this folder for new applications every five seconds. Watch your command line window to track the progress of the deployment.
++
+image:deploy_proxy.png[image]
+
+Congratulations! Your API is deployed to the Mule runtime.
+
+If you wish to undeploy your application, navigate to the `app` directory and delete the file `your_application.txt`. This removes your application from the `/app` directory, which automatically undeploys it.
+
+If you wish to update your API at runtime, you can drop a new .zip version of the app into the `$MULE_HOME/apps` directory. Mule will detect this as an existing app update and will ensure a clean redeployment of the application.
+
+[TIP]
+Now that you have deployed your API to a runtime, you will need to link:/anypoint-platform-for-apis/setting-your-api-url[register the endpoint] with the Anypoint Platform, then link:/anypoint-platform-for-apis/proxying-your-api[download a proxy] application to deploy to the API Gateway.
+
+....
+[tab,title="Cloud Mule"]
+....
+
+. link:https://anypoint.mulesoft.com[Log in] to your Anypoint Platform account.
+. First, ensure that you are in the environment that you wish to deploy to. If necessary, click your username, then click *Switch environment* .
+. Once you are in the correct environment, click *Add application*
+
+image:add+cloudhub+app.jpeg[add+cloudhub+app]
+
+. In the New Application screen, give your API a unique domain name.
+. Click *Choose File* and select the .zip file of your API.
+. Select the latest Mule runtime from the drop-down. (Important: If your API has endpoints other than HTTP, Jetty, and Web Service Consumer, do not select the API Gateway runtime.)
+. Click *Create*.
+. the Runtime Manager automatically moves to the *Logs* view where you can track the status of the deployment. Watch for this message:
+
+image:proxyCH-started.png[image]
+
+. Congratulations! Your API is deployed.
+
+If you wish to undeploy your application, go to the *Deployment* tab and click *Stop Application*.
+
+If you wish to update your API at runtime, you can upload a new .zip file on the Deployment tab and click *Update*. CloudHub performs a zero downtime update using the new .zip file.
+
+[TIP]
+
+Now that you have deployed your API to a runtime, link:/anypoint-platform-for-apis/setting-your-api-url[register the endpoint] with the Anypoint Platform, and link:/anypoint-platform-for-apis/proxying-your-api[download a proxy] application to deploy to the API Gateway.
+
+
+[NOTE]
+
+If you plan to expose your API through SSL, then there are a couple of link:/runtime-manager/building-an-https-service[additional steps] you need to take.
+
+....
+------
 
 === Deploying to API Gateway
 
@@ -148,7 +232,7 @@ image:deploying.png[deploying]
 +
 . After deployment is complete, the API status symbol turns green, for active. At this point, you have successfully auto-deployed your API.
 
-For more information about registering a server, see *Add a Server* section of link:/cloudhub/managing-applications-and-servers-in-the-cloud-and-on-premises[Managing Applications and Domains in the Cloud and On-Premises].
+For more information about registering a server, see link:/runtime-manager/managing-servers-[Managing Servers].
 
 ....
 [tab,title="Cloud API Gateway - Automatic"]
@@ -204,7 +288,7 @@ anypoint.platform.client_id="[your organization's unique client_id]"
 anypoint.platform.client_secret="[your organization's unique client secret]"
 ----
 +
-Use your Anypoint Platform for APIs client id and client secret, which you can obtain from an Organization Administrator. Log in to the Anypoint Platform as an administrator, click the gear icon at the top-right, and then select the *Organization* tab. The client id and secret id appear.
+Use your Anypoint Platform for APIs client id and client secret, which you can obtain from an Organization Administrator. Log in to the Anypoint Platform as an administrator, click the menu icon on the top-left and select the *Access Management* section, then select the *Organization* tab. The client id and secret id appear.
 +
 . Make sure that when deploying your application, you pick a compatible runtime in the the *Mule Version* field. See Release notes.
 . Click *Create*.
@@ -223,92 +307,6 @@ If you wish to update your application at runtime, you can upload a new .zip fil
 
 [TIP]
 If you plan to expose your API through SSL, then there are a couple of link:/runtime-manager/building-an-https-service[additional steps] you need to take.
-
-
-....
-------
-
-=== Deploying to Mule ESB
-
-[tabs]
-------
-[tab,title="On-Prem Mule ESB"]
-....
-
-If it is not already running, start Mule in the command line by running:
-
-* *Windows*: `<MULE_HOME>\bin\mule`
-* *Unix*: `<MULE_HOME>/bin/mule`
-
-*Starting Mule as a Foreground Process*
-
-. Use the `cd` command to navigate to the `$MULE_HOME/bin` directory.
-. Run the startup script according to the options below.
-
-* *Unix:* `./mule`
-* *Windows:* `mule`
-
-To stop Mule, press `CTRL-C` in the terminal in which the script is running.
-
-*Starting Mule as a Background Process*
-
-. Use the `cd` command to navigate to the `<MULE_HOME>/bin` directory.
-. Run the startup script with the `start` option.
-+
-* *Unix:* `./mule start`
-* *Windows:* `mule.bat start`
-+
-To stop Mule, run the script with the `stop` parameter.
-+
-. Navigate to the directory where the proxy .zip file is located and copy the .zip file. Ensure that your copy of the file does not have any spaces in the name. 
-. Drop the copy of the .zip file into the *`<MULE_HOME>/apps`* folder.
-+*`<MULE_HOME`>* is the value of the MULE_HOME variable employed by Mule ESB, usually the root directory of the installation, such as `/opt/Mule/mule-standalone-3.6.0/`.
-. Mule polls this folder for new applications every five seconds. Watch your command line window to track the progress of the deployment.
-+
-image:deploy_proxy.png[image]
-
-Congratulations! Your API is deployed to the Mule runtime.
-
-If you wish to undeploy your application, navigate to the `app` directory and delete the file `your_application.txt`. This removes your application from the `/app` directory, which automatically undeploys it.
-
-If you wish to update your API at runtime, you can drop a new .zip version of the app into the `$MULE_HOME/apps` directory. Mule will detect this as an existing app update and will ensure a clean redeployment of the application.
-
-[TIP]
-Now that you have deployed your API to a runtime, you will need to link:/anypoint-platform-for-apis/setting-your-api-url[register the endpoint] with the Anypoint Platform, then link:/anypoint-platform-for-apis/proxying-your-api[download a proxy] application to deploy to the API Gateway.
-
-....
-[tab,title="Cloud Mule ESB"]
-....
-
-. link:https://anypoint.mulesoft.com[Log in] to your Anypoint Platform account.
-. First, ensure that you are in the environment that you wish to deploy to. If necessary, click your username, then click *Switch environment* .
-. Once you are in the correct environment, click *Add application*
-
-image:add+cloudhub+app.jpeg[add+cloudhub+app]
-
-. In the New Application screen, give your API a unique domain name.
-. Click *Choose File* and select the .zip file of your API.
-. Select the latest Mule runtime from the drop-down. (Important: If your API has endpoints other than HTTP, Jetty, and Web Service Consumer, do not select the API Gateway runtime.)
-. Click *Create*.
-. the Runtime Manager automatically moves to the *Logs* view where you can track the status of the deployment. Watch for this message:
-
-image:proxyCH-started.png[image]
-
-. Congratulations! Your API is deployed.
-
-If you wish to undeploy your application, go to the *Deployment* tab and click *Stop Application*.
-
-If you wish to update your API at runtime, you can upload a new .zip file on the Deployment tab and click *Update*. CloudHub performs a zero downtime update using the new .zip file.
-
-[TIP]
-
-Now that you have deployed your API to a runtime, link:/anypoint-platform-for-apis/setting-your-api-url[register the endpoint] with the Anypoint Platform, and link:/anypoint-platform-for-apis/proxying-your-api[download a proxy] application to deploy to the API Gateway.
-
-
-[NOTE]
-
-If you plan to expose your API through SSL, then there are a couple of link:/runtime-manager/building-an-https-service[additional steps] you need to take.
-
 ....
 ------
 
@@ -318,4 +316,4 @@ If you plan to expose your API through SSL, then there are a couple of link:/run
 * If you deployed your API to to a Mule runtime, link:/anypoint-platform-for-apis/setting-your-api-url[set its URL] with the Anypoint Platform, then link:/anypoint-platform-for-apis/proxying-your-api[download a proxy]application to deploy to the API Gateway. Return to this page for deployment instructions.
 * Learn about link:/anypoint-platform-for-apis/localhost-behavior-on-the-api-gateway[localhost behavior].
 * Don't have a proxy application for your API endpoint? link:/anypoint-platform-for-apis/proxying-your-api[Learn how to obtain one].
-* Learn more about link:/anypoint-platform-for-apis/building-your-api[building an API with APIkit].
+* Learn more about link:/anypoint-platform-for-apis/apikit[building an API with APIkit].

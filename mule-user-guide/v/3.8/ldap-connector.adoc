@@ -1,0 +1,463 @@
+= LDAP Connector
+:keywords: anypoint studio, esb, connector, ldap, active directory
+:imagesdir: ./_images
+:toc: macro
+:toclevels: 2
+
+
+toc::[]
+////
+. link:#intro[Introduction]
+    .. link:#prerequisites[Prerequisites]
+    .. link:#requirements[Requirements]
+    .. link:#compatibility[Compatibility]
+
+. link:#install-and-config[Installing & Configuring]
+    .. link:#install[Installing]
+    .. link:#config[Configuring]
+        ... link:#config-global[Setting up the Global Configuration]
+
+. link:#using-the-connector[Using the Connector]
+    .. link:#use-cases-and-demos[Use Cases and Demos]
+    .. link:#adding-to-a-flow[Adding to a Flow]
+. link:#example-use-case[Example Use Case]
+    .. link:#example-code[Example Code]
+    .. link:#run-time[Run Time]
+    .. link:#demo[Demo]
+    .. link:#see-also[See Also]
+////
+
+[[intro]]
+== Introduction
+
+The Lightweight Directory Access Protocol (LDAP) is a public standard that facilitates maintenance and access to distributed directories (such as network user privilege information) over an Internet Protocol (IP) network.
+
+Many LDAP servers are included in free-use open source projects and packages. The particulars of installing, running and configuring LDAP servers fall outside the scope of this document.
+
+This document provides
+an example of a simple LDAP connector configuration, including basic instructions for installing and connecting to an LDAP server using the LDAP connector. MuleSoft has designated the LDAP connector as a link:/mule-user-guide/v/3.8/anypoint-connectors#connector-categories[_Select_] connector.
+
+*Release Notes:* link:/release-notes/ldap-connector-release-notes[LDAP Connector Release Notes]
+
+[[prerequisites]]
+=== Prerequisites
+
+To use the LDAP connector, you must have the following:
+
+* Access to either an OpenLDAP, Apache Directory or MicroSoft Active Directory Instance.
+* Anypoint Studio - Enterprise Edition.
+
+This document assumes you are familiar with Mule, link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors], and link:/mule-fundamentals/v/3.8/anypoint-studio-essentials[Anypoint Studio Essentials]. To increase your familiarity with Studio, consider completing one or more link:/mule-fundamentals/v/3.8/basic-studio-tutorial[Anypoint Studio Tutorials]. Further, this page assumes that you have a basic understanding of link:/mule-fundamentals/v/3.8/elements-in-a-mule-flow[Elements in a Mule Flow] and link:/mule-fundamentals/v/3.8/global-elements[Global Elements].
+
+
+[[compatibility]]
+=== Compatibility
+
+The LDAP connector is compatible with:
+
+[width="70%",cols="20a,80a",options="header"]
+|===
+|Application/Service|Version
+|Mule Runtime|3.6.0 or higher
+|Java|1.7.0_x or higher
+|Anypoint Studio|5.2 or higher
+|===
+
+[[install-and-config]]
+== Installing and Configuring
+
+To use the LDAP connector in a production environment, you must have either:
+
+* An Enterprise license to use Mule.
+* A CloudHub Starter, Professional, or Enterprise account.
+
+NOTE: Contact the mailto:info@mulesoft.com[MuleSoft Sales Team] to obtain either of these. Read more about link:/mule-user-guide/v/3.8/installing-an-enterprise-license[Installing an Enterprise License].
+
+[[install]]
+=== Installing
+
+To install LDAP connector in Anypoint Studio, follow the steps below:
+
+* Open Anypoint Studio and go to *Help > Install New Software*.
+* Select *Anypoint Connectors Update Site - http://repository.mulesoft.org/connectors/releases/3.5.0*.
+* Locate and select the LDAP connector.
+[.center.text-center]
+image:ldap_install_updatesite.png["Anypoint Studio Install Window"]
+* Click *Next* and accept the License Agreement.
+* Restart Studio when prompted.
+* Now, the LDAP connector should appear in your Studio Palette: +
+
+[.center.text-center]
+image:ldap_install_palette.png["Anypoint Studio palette - LDAP connector"]
+
+NOTE: Read more about link:/mule-user-guide/v/3.8/installing-connectors[Installing Connectors].
+
+[[config]]
+=== Configuring
+
+To use the LDAP connector in a Mule application, you must configure a global LDAP configuration element that can be used by as many LDAP connectors as you require for your application.
+
+NOTE: Read more about link:/mule-fundamentals/v/3.8/global-elements[Global Elements].
+
+[[config-global]]
+==== Setting up the Global Configuration
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+. Click the **Global Elements** tab at the base of the canvas.
+. On the **Global Mule Configuration Elements** screen, click **Create**.
+. In the **Choose Global Type** wizard, expand **Connector Configuration** and select **LDAP: Configuration** and click **Ok.**
++
+[.center.text-center]
+image:ldap_config_global_wizard.png["Global Element Configuration Wizard"]
++
+. Configure the parameters according to instructions below.
++
+[.center.text-center]
+image:ldap_config_global.png["Global Element Configuration"]
++
+[width="80%",cols="30a,70a",options="header"]
+|===
+|Parameter|Description
+|*Name*|Enter a name for the configuration to reference it.
+|*Principal DN*|The DN (distinguished name) of the user
+|*Password*|The password of the user
+|*URL*|The connection URL to the LDAP server
+|*Authentication*|Specifies the authentication mechanism to use. Default: Simple
+|===
++
+[NOTE]
+. In the image above, the placeholder values refer to a configuration file placed in the
+`src` folder of your project. See link:/mule-user-guide/v/3.8/configuring-properties[Learn how to configure properties].
++
+. You can either enter your credentials into the global configuration properties, or reference a configuration file that contains these values. For simpler maintenance and better re-usability of your project, Mule recommends that you use a configuration file. Keeping these values in a separate file is useful if you need to deploy to different environments, such as production, development, and QA, where your access credentials differ. See
+link:/mule-user-guide/v/3.8/deploying-to-multiple-environments[Deploying to Multiple Environments] for instructions on how to manage this.
++
+. Keep the *Pooling Profile* and the *Reconnection tabs* with their default entries.
+. Click *Test Connection* to confirm that the parameters of your global configuration are accurate, and that Mule is able to successfully connect to your instance of Amazon S3. Read more about this in  link:/mule-user-guide/v/3.8/testing-connections[Testing Connections].
+. Click *OK* to save the global connector configurations.
+....
+[tab,title="XML Editor"]
+....
+.Ensure that you have included the **LDAP namespaces** in your configuration file.
++
+[source,xml,linenums]
+----
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+  xmlns:ldap="http://www.mulesoft.org/schema/mule/ldap"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ldap http://www.mulesoft.org/schema/mule/ldap/current/mule-ldap.xsd">
+
+<!-- Put your flows and configuration elements here -->
+</mule>
+----
++
+. Create a global element for LDAP configuration using the following global configuration code:
+[source,xml,linenums]
+----
+<ldap:config name="LDAP_Configuration" authDn="${config.principal.dn}" authPassword="${config.password}" url="${config.url}" doc:name="LDAP: Configuration">
+    <ldap:extended-configuration>
+        <ldap:extended-configuration key="java.naming.ldap.factory.socket">org.mule.module.ldap.security.BypassTrustSSLSocketFactory</ldap:extended-configuration>
+    </ldap:extended-configuration>
+</ldap:config>
+----
++
+. Save the changes made to the XML file.
+
+....
+
+------
+[[using-the-connector]]
+== Using the Connector
+
+The LDAP connector is an operation-based connector, which means that when you add the connector to your flow, you need to configure a specific operation for the connector to execute. The connector currently supports the following operations:
+
+[cols="30a,70a",options="header"]
+|===
+|Operation |Description
+| *Bind* |  Authenticates against the LDAP server. This occurs automatically before each operation but can also be performed on request.
+| *Search* |  Performs an LDAP search in a base DN with a given filter.
+| *Search one* |  Performs an LDAP search that is supposed to return a unique result.
+| *Paged result search* |  Performs an LDAP search and streams result to the rest of the flow.
+| *Lookup* |  Retrieves a unique LDAP entry.
+| *Exists* |  Checks whether an LDAP entry exists in the LDAP server or not.
+| *Add* |  Creates a new LDAP entry.
+| *Add single-valued attribute* |  Adds a specific single-valued attribute to an existing LDAP entry.
+| *Add multi-valued attribute* |  Adds a specific multi-valued attribute to an existing LDAP entry.
+| *Modify* |  Updates an existing LDAP entry.
+| *Modify single-valued attribute* |  Updates specific single-valued attribute of an existing LDAP entry.
+| *Modify multi-valued attribute* |  Updates specific multi-valued attribute of an existing LDAP entry.
+| *Delete* |  Deletes an existing LDAP entry.
+| *Delete single-valued attribute* |  Deletes specific single-valued attribute to an existing LDAP entry.
+| *Delete multi-valued attribute* |  Deletes specific multi-valued attribute to an existing LDAP entry.
+|===
+
+[[use-cases-and-demos]]
+=== Use Cases and Demos
+
+Listed below are the most common use cases for the LDAP connector:
+
+[options="autowidth"]
+|===
+|*Adding User Accounts to Active Directory*| Business user accounts can be added to Active Directory groups defined on the base DN.
+|*Retrieve User attributes*| Basic attributes of the business user can be retrieved for one or more purposes, like e-mail or phone.
+|===
+
+
+[[adding-to-a-flow]]
+=== Adding to a Flow
+
+. Create a new *Mule Project* in Anypoint Studio.
+. Add a suitable Mule *Inbound Endpoint*, such as the HTTP listener or File endpoint at the beginning of the flow.
+. Drag and drop the *LDAP connector* onto the canvas.
+. Click on the connector to open the *Properties Editor*.
++
+[.center.text-center]
+image:ldap_usecase_settings.png[Flow Settings]
++
+. Configure the following parameters:
++
+[options="header,autowidth"]
+|===
+|Field|Description
+2+|*Basic Settings*
+|Display Name|Enter a unique label for the connector in your application.
+|Connector Configuration|Connect to a global element linked to this connector. Global elements encapsulate reusable data about the connection to the target resource or service. Select the global LDAP connector element that you just created.
+|Operation|Select *Add entry* from the drop-down menu.
+2+|*General*
+|Topic Name|Enter a unique name for the topic.
+|===
++
+. Click the blank space on the canvas for the connector to fetch the metadata based on the Structural Object Class, which traverses the directory information tree to retrieve the hierarchy and all the properties it inherits.
+
+[[example-use-case]]
+== Example Use Case
+
+Add and delete an organizational person from an organizational unit.
+
+[.center.text-center]
+image:ldap_usecase_flow.png[Add User Entry Flow]
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+. Create a new **Mule Project** in Anypoint Studio.
+. Add the below properties to `mule-app.properties` file to hold your LDAP credentials and place it in the project's `src/main/app` directory.
++
+[source,code,linenums]
+----
+config.principal.dn=<DN>
+config.password=<Password>
+config.url=<URL>
+----
++
+. Drag an **HTTP endpoint** onto the canvas and configure the following parameters:
++
+[options="header,autowidth"]
++
+|===
+|Parameter|Value
+|*Display Name*|HTTP
+|*Connector Configuration*| If no HTTP element has been created yet, click the plus sign to add a new **HTTP Listener Configuration** and click **OK** (leave the values to its defaults).
+|*Path*|/
+|===
++
+. Set the flow variable to hold the group distinguished name (dn), for example: `DevOpsGroup`.
+. Drag the **Variable Transformer** next to the HTTP endpoint component. Configure according to the table below:
++
+[options="header,autowidth"]
+|===
+|Parameter|Description|Value
+|*Operation*|Select the transformer operation.|Set Variable
+|*Name*|The variable name.|`dn`
+|*Value*|The variable value.|`ou=DevOpsGroup,#[message.inboundProperties.'http.query.params'.dn]`
+|===
++
+. Now let's create the organizational unit entry using a *Groovy component*. Drag the Groovy component next to the Variable Transformer and use the script below.
++
+[source,java,linenums]
+----
+import org.mule.module.ldap.api.LDAPEntry;
+
+LDAPEntry entryToAdd = new LDAPEntry(flowVars.dn);
+entryToAdd.addAttribute("ou", "DevOpsGroup");
+entryToAdd.addAttribute("objectclass", ["top", "organizationalUnit"]);
+
+return entryToAdd
+----
++
+. Drag the **LDAP connector** next to the Groovy component to add the LDAP Entry.
+. Configure the LDAP connector by adding a new **LDAP Global Element**. Click the plus sign next to the *Connector Configuration* field.
+.. Configure the global element according to the table below:
++
+[options="header,autowidth"]
+|===
+|Parameter|Description|Value
+|*Name*|Enter a name for the configuration to reference it.|<Configuration_Name>
+|*Principal DN*|The DN (distinguished name) of the user.|`${config.principal.dn}`
+|*Password*|The password of the user.|`${config.password}`
+|*URL*|The connection URL to the LDAP server.|`${config.url}`
+|===
++
+.. The corresponding XML configuration should be as follows:
++
+[source,xml,linenums]
+----
+<ldap:config name="LDAP_Configuration" authDn="${config.principal.dn}" authPassword="${config.password}" url="${config.url}" doc:name="LDAP: Config"/>
+----
++
+. Click **Test Connection** to confirm that Mule can connect with the LDAP instance. If the connection is successful, click **OK** to save the configurations. Otherwise, review or correct any incorrect parameters, then test again.
+. Back in the properties editor of the LDAP connector, configure the remaining parameters:
++
+[options="header,autowidth"]
+|===
+|Parameter|Value
+2+|*Basic Settings*
+|Display Name|Add Group Entry
+|Operation| Add entry
+2+|*General*
+|Entry Reference|#[payload]
+|===
++
+. Now let's create the organizational person entry using a *Groovy component*. Drag the Groovy component next to the LDAP connector and add the below script to the Script text.
++
+[source,java,linenums]
+----
+import org.mule.module.ldap.api.LDAPEntry;
+
+LDAPEntry entryToAdd = new LDAPEntry("cn=Test User,"+ flowVars.dn);
+entryToAdd.addAttribute("uid", "testUser");
+entryToAdd.addAttribute("cn", "Test User");
+entryToAdd.addAttribute("sn", "User");
+entryToAdd.addAttribute("userPassword", "test1234");
+entryToAdd.addAttribute("objectclass", ["top", "person", "organizationalPerson", "inetOrgPerson"]);
+
+return entryToAdd
+----
++
+. Drag the **LDAP connector** next to the Groovy component. The connector adds the LDAP Entry created in the previous step.
+. In the properties editor of the LDAP connector, configure the parameters as below:
++
+[options="header,autowidth"]
+|===
+|Parameter|Value
+2+|*Basic Settings*
+|Display Name|Add User Entry
+|Connector Configuration|LDAP_Configuration
+|Operation| Add entry
+2+|*General*
+|Entry Reference|#[payload]
+|===
++
+. Now that we have successfully added the entries, let's try to delete them using the LDAP connector.
+. Drag the **LDAP connector** besides the existing flow and configure the parameters as below:
++
+[options="header,autowidth"]
+|===
+|Parameter|Value
+2+|*Basic Settings*
+|Display Name|Delete User Entry
+|Connector Configuration|LDAP_Configuration
+|Operation| Delete entry
+2+|*General*
+|DN|cn=Test User,#[flowVars.dn]
+|===
++
+. Drag another **LDAP connector** to the right of the first LDAP connector and configure the parameters as below:
++
+[options="header,autowidth"]
+|===
+|Parameter|Value
+2+|*Basic Settings*
+|Display Name|Delete Group Entry
+|Connector Configuration|LDAP_Configuration
+|Operation| Delete entry
+2+|*General*
+|DN|#[flowVars.dn]
+|===
++
+. Finally drag **Set Payload** transformer to set the value to "Flow Successfully Completed".
+....
+[tab,title="XML Editor"]
+....
+[[example-code]]
+=== Example Use Case Code
+
+Paste this code into your XML Editor to quickly load the flow for this example use case into your Mule application.
+
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ldap="http://www.mulesoft.org/schema/mule/ldap" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ldap http://www.mulesoft.org/schema/mule/ldap/current/mule-ldap.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <ldap:config name="LDAP_Configuration" authDn="${config.principal.dn}" authPassword="${config.password}" url="${config.url}" doc:name="LDAP: Config">
+        <ldap:extended-configuration>
+            <ldap:extended-configuration key="java.naming.ldap.factory.socket">org.mule.module.ldap.security.BypassTrustSSLSocketFactory</ldap:extended-configuration>
+        </ldap:extended-configuration>
+    </ldap:config>
+    <flow name="ldap-add-entry-flow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
+        <set-variable variableName="dn" value="ou=DevOpsGroup,#[message.inboundProperties.'http.query.params'.dn]" doc:name="Set DN as Flow Variable"/>
+        <scripting:component doc:name="Groovy Script to Create DevOps Group Object">
+            <scripting:script engine="Groovy"><![CDATA[import org.mule.module.ldap.api.LDAPEntry;
+
+LDAPEntry entryToAdd = new LDAPEntry(flowVars.dn);
+entryToAdd.addAttribute("ou", "DevOpsGroup");
+entryToAdd.addAttribute("objectclass", ["top", "organizationalUnit"]);
+
+return entryToAdd]]></scripting:script>
+        </scripting:component>
+        <ldap:add config-ref="LDAP_Configuration" doc:name="Add Group Entry to LDAP Directory"/>
+        <scripting:component doc:name="Groovy Script to Create User Object">
+            <scripting:script engine="Groovy"><![CDATA[import org.mule.module.ldap.api.LDAPEntry;
+
+LDAPEntry entryToAdd = new LDAPEntry("cn=Test User,"+ flowVars.dn);
+entryToAdd.addAttribute("uid", "testUser");
+entryToAdd.addAttribute("cn", "Test User");
+entryToAdd.addAttribute("sn", "User");
+entryToAdd.addAttribute("userPassword", "test1234");
+entryToAdd.addAttribute("objectclass", ["top", "person", "organizationalPerson", "inetOrgPerson"]);
+
+return entryToAdd]]></scripting:script>
+        </scripting:component>
+        <ldap:add config-ref="LDAP_Configuration"  doc:name="Add User Entry to LDAP Directory"/>
+        <ldap:delete config-ref="LDAP_Configuration" dn="cn=Test User,#[flowVars.dn]" doc:name="Delete User Entry from LDAP Directory"/>
+        <ldap:delete config-ref="LDAP_Configuration" dn="#[flowVars.dn]" doc:name="Delete Group Entry from LDAP Directory"/>
+        <set-payload value="Flow Successfully Completed" doc:name="Set Payload: Flow Completed"/>
+    </flow>
+</mule>
+
+----
+....
+------
+
+[[run-time]]
+=== Run Time
+
+. Save and **run** the project as a Mule Application.
+. Open a web browser and check the response after entering the URL `http://localhost:8081/?dn=dc=mulesoft,dc=org`.
+
+[[demo]]
+=== Demo
+
+You can download a fully functional example from http://mulesoft.github.io/ldap-connector/[this link].
+
+[[see-also]]
+=== See Also
+* Read more about link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors].

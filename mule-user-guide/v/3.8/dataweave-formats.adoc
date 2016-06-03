@@ -1,0 +1,624 @@
+= Formats
+:keywords: studio, anypoint, esb, transform, transformer, format, aggregate, rename, split, filter convert, xml, json, csv, pojo, java object, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping
+
+DataWeave supports different types of data formats. Each format has an associated reader and a writer, and in some cases custom types are allowed. Each reader and writer defines configuration properties for customization.
+
+
+== Java
+
+=== Canonical Model
+
+The mapping between Java objects to DataWeave types is quite simple:
+
+[options="header"]
+|=======================
+|Java Type |DataWeave Type
+|`Collections/Array/Iterator/Iterable` | link:/mule-user-guide/v/3.8/dataweave-types#array[:array]
+|`String/CharSequence/Char/Enum/Class` | link:/mule-user-guide/v/3.8/dataweave-types#string[:string]
+|`int/Short/Long/BigInteger/Flat/Double/BigDecimal`|link:/mule-user-guide/v/3.8/dataweave-types#number[:number]
+|`Calendar/XmlGregorainCalendar`|link:/mule-user-guide/v/3.8/dataweave-types#datetime[:datetime]
+|`TimeZone`|link:/mule-user-guide/v/3.8/dataweave-types#timezone[:timezone]
+|`sql.Date/util.Date`|link:/mule-user-guide/v/3.8/dataweave-types#date[:date]
+|`Bean/Map`|link:/mule-user-guide/v/3.8/dataweave-types#object[:object]
+|`InputStream/Array[Byte]`|link:/mule-user-guide/v/3.8/dataweave-types#boolean[:boolean]
+|=======================
+
+
+=== Custom Types
+
+
+=== Metadata property *class*
+
+Java developers use the 'class' metadata key as hint for what class needs to be created and sent as an input.
+If this is not explicitly defined, DataWeave tries to infer from the context or it assigns it the default values:
+
+
+ * java.util.HashMap for *objects*
+ * java.util.ArrayList for *lists*
+
+.Transform
+[source,DataWeave, linenums]
+-----------------------------------------------------------------------
+%dw 1.0
+%type user = :object { class: "com.anypoint.df.pojo.User"}
+%output application/xml
+---
+{
+  name : "Mariano",
+  age : 31
+} as :user
+
+-----------------------------------------------------------------------
+
+The above code defines the type of the required input as an instance of 'com.anypoint.df.pojo.User'.
+
+=== :enum
+
+In order to put an enum value in a java.util.Map, the DataWeave java module defines a custom type called :enum.
+It allows you to specify that a given string should be handled as the name of a specified enum type.
+It should always be used with the class property with the java class name of the enum.
+
+=== Defining a Metadata Type
+
+In the Transform Message component, you can define a Java type through the following methods:
+
+* By Providing a sample object
+
+[TIP]
+See link:/mule-user-guide/v/3.8/using-dataweave-in-studio#defining-metadata-via-the-ui[Using DataWeave in Studio] for more detailed instructions on how to set this up.
+
+== CSV
+
+=== Canonical Model
+
+CSV content is modeled in DataWeave as a list of objects, where every record is an object and every field in it is a property. For example:
+
+.Input
+[source,csv,linenums]
+----
+Name,Last Name
+Mariano, De achaval
+Leandro, Shokida
+----
+
+.DataWeave representation
+[source,dataweave,linenums]
+----
+[
+  {
+    Name: "Mariano",
+    "Last Name": " De achaval"
+  },
+  {
+    Name: "Leandro",
+    "Last Name": " Shokida"
+  }
+]
+----
+
+
+=== Reader Properties
+
+In CSV you can assign any special character as the indicator for separating fields, toggling quotes, or escaping quotes. Make sure you know what special characters are being used in your input, so that DataWeave can interpret it correctly.
+
+When defining an input of type CSV, there are a few optional parameters you can add in the XML definition of your Mule project to customize how the data is parsed.
+
+[options="header"]
+|=======================
+|Parameter |Type |Default|Description
+|separator |char |, |Character that separates one field from another
+|quote |char |" |Character that delimits the field values
+|escape |char | \ |Character used to escape occurrences of the separator or quote character within field values
+|bodyStartLineNumber| number | 0 | The line number where the body starts.
+|ignoreEmptyLine |bool | true | defines if empty lines are ignored
+|header |bool |true |Indicates if the first line of the output shall contain field names
+|headerLineNumber | number | 0 | the line number where the header is located
+|bodyStartLineNumber | number | 0 | the line number where the actual body starts
+|=======================
+
+
+[NOTE]
+====
+When `header=true` you can then access the fields within the input anywhere by name. Ex: `payload.userName`.
+
+When `header=false` you must access the fields by index, referencing first the entry and then the field, Ex: `payload[107][2]`
+====
+
+These properties can be either set via the XML of your Mule project:
+
+[source,xml,linenums]
+----
+	 <dw:transform-message metadata:id="33a08359-5085-47d3-aa5f-c7dd98bb9c61"
+	 			doc:name="Transform Message">
+ 			<dw:input-payload
+ 			    <!-- Boolean that defines if the first line in the data contains headers -->
+ 				<dw:reader-property name="header" value="false" />
+ 				<!-- Character that separates fields, `','` by default -->
+ 				<dw:reader-property name="separator" value="," />
+ 				<!-- Character that defines quoted text, `" "` by default -->
+ 				<dw:reader-property name="quote" value="&quot;" />
+ 				<!-- Character that escapes quotes, `\` by default -->
+ 				<dw:reader-property name="escape" value="\" />
+ 			</dw:input-payload>
+ 			<dw:set-payload>
+                <![CDATA[
+                    %dw 1.0
+                    %output application/java
+                    ---
+                    // Your transformation script goes here
+                ]]>
+            </dw:set-payload>
+     </dw:transform-message>
+----
+
+Or via the UI of the Transform Message component:
+
+image::dataweave-formats-580be.png[]
+
+See link:/mule-user-guide/v/3.8/using-dataweave-in-studio#reader-configuration[Using DataWeave in Studio] for more detailed instructions on how to set these properties.
+
+
+
+
+=== Writer Properties
+
+When defining an output of type CSV, there are a few optional parameters you can add to the output directive to customize how the data is parsed:
+
+[options="header"]
+|=======================
+|Parameter |Type |Default|Description
+|separator |char |, |Character that separates one field from another
+|encoding |string | |The character set to be used for the output
+|quote |char |" |Character that delimits the field values
+|escape |char | \ |Character used to escape occurrences of the separator or quote character within field values
+|lineSeparator| char | system line ending default | line separator to be used
+|header |bool |true |Indicates if the first line of the output shall contain field names
+|quoteHeader |bool |false |Indicates header values should be quoted
+|quoteValues |bool |false |Indicates if every value should be quoted whether or not it contains special characters within
+|=======================
+
+All of these parameters are optional. A CSV output directive might for example look like this:
+
+[source,DataWeave]
+---------------------------------------------------------------------
+%output text/csv separator=";", header=false, quoteValues=true
+---------------------------------------------------------------------
+
+=== Defining a Metadata Type
+
+In the Transform Message component, you can define a CSV type through the following methods:
+
+* By Providing a sample file
+* Via a graphical editor that allows you to set up each field manually
+
++
+image::dataweave-formats-4a556.png[]
+
+[TIP]
+See link:/mule-user-guide/v/3.8/using-dataweave-in-studio#defining-metadata-via-the-ui[Using DataWeave in Studio] for more detailed instructions on how to set this up.
+
+
+== XML
+
+=== Canonical Model
+
+The XML data-structure is mapped to DataWeave objects that may contain other objects as values to their keys. Repeated keys are supported. For example:
+
+.Input
+[source,xml, linenums]
+----
+<users>
+  <company>Mulesoft</company>
+  <user name="Leandro" lastName="Shokida"/>
+  <user name="Mariano" lastName="Achaval"/>
+</users>
+----
+
+.DataWeave representation
+[source,dataweave,linenums]
+----
+{
+  users: {
+    company: "Mulesoft",
+    user @(name: "Leandro",lastName: "Shokida"): "",
+    user @(name: "Mariano",lastName: "Achaval"): ""
+  }
+}
+----
+
+
+=== Reader Properties
+
+
+When defining an input of type XML, there are a few optional parameters you can add in the XML definition of your Mule project to customize how the data is parsed.
+
+[options="header"]
+|=======================
+|Parameter |Type |Default|Description
+|`optimizeFor`| string | speed | specifies the strategy to be used by the reader. Posible values = memory/speed
+|`nullValueOn`|string |  |If a tag with empty or blank text should be read as null.
+|=======================
+
+
+
+These properties can be either set via the XML of your Mule project:
+
+[source,xml,linenums]
+----
+	 <dw:transform-message metadata:id="33a08359-5085-47d3-aa5f-c7dd98bb9c61"
+	 			doc:name="Transform Message">
+ 			<dw:input-payload
+ 			    <!-- specifies the strategy to be used by the reader -->
+ 				<dw:reader-property name="optimizeFor" value="speed" />
+ 				<!-- If a tag with empty or blank text should be read as null. -->
+ 				<dw:reader-property name="nullValueOn" value="empty" />
+ 			</dw:input-payload>
+ 			<dw:set-payload>
+                <![CDATA[
+                    %dw 1.0
+                    %output application/xml
+                    ---
+                    // Your transformation script goes here
+                ]]>
+            </dw:set-payload>
+     </dw:transform-message>
+----
+
+Or via the UI of the Transform Message component:
+
+image::dataweave-formats-b696c.png[]
+
+See link:/mule-user-guide/v/3.8/using-dataweave-in-studio#reader-configuration[Using DataWeave in Studio] for more detailed instructions on how to set these properties.
+
+
+=== Writer Properties
+
+When defining an output of type XML, there are a few optional parameters you can add to the output directive to customize how the data is parsed:
+
+[options="header"]
+|=======================
+|Parameter |Type |Default|Description
+|`indent`| boolean | true | defines if the XML code will be indented for better readability, or if it will be compressed into a single line
+|`encoding`|string | UTF-8 |The character set to be used for the output
+|`bufferSize`| number | 153600 | The size of the buffer writer
+|`inlineCloseOn` | string | | When the writer should use inline close tag. Possible values = `empty`/`none`
+|`skipNullOn`| string | | Possible values = `elements`/`attributes`/`everywhere`. See <<Skip Null On>>
+|=======================
+
+[source,DataWeave]
+---------------------------------------------------------------------
+%output application/xml indent=false, skipNullOn="attributes"
+---------------------------------------------------------------------
+
+==== Skip Null On
+
+You can specify whether your transform generates an outbound message that contains fields with "null" values, or if these fields are ignored entirely. This can be set through an attribute in the output directive named *skipNullOn*, which can be set to three different values: *elements*, *attributes*, or *everywhere*.
+
+When set to:
+* *elements*: A key:value pair with a null value is ignored.
+* *attributes*: An XML attribute with a null value is skipped.
+* *everywhere*: Apply this rule to both elements and attributes.
+
+=== Custom Types
+
+==== :cdata
+
+XML defines a custom type named :cdata, it extends from string and is used to identify a CDATA XML block.
+It can be used to tell the writer to wrap the content inside CDATA or to check if the input string arrives inside a CDATA block. `:cdata` inherits from the type `:string`.
+
+.Transform
+[source,DataWeave, linenums]
+----------------------------------------------------------------------
+%dw 1.0
+%output application/xml
+---
+{
+  users:
+  {
+    user : "Mariano" as :cdata,
+    age : 31 as :cdata
+  }
+}
+----------------------------------------------------------------------
+
+.Output
+[source,xml,linenums]
+----------------------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<users>
+  <user><![CDATA[Mariano]]></user>
+  <age><![CDATA[31]]></age>
+</users>
+----------------------------------------------------------------------
+
+== Defining a Metadata Type
+
+In the Transform Message component, you can define a XML type through the following methods:
+
+* By Providing a sample file
+* By pointing to a schema file
+
+[TIP]
+See link:/mule-user-guide/v/3.8/using-dataweave-in-studio#defining-metadata-via-the-ui[Using DataWeave in Studio] for more detailed instructions on how to set this up.
+
+
+
+== JSON
+
+=== Canonical Model
+
+JSON data-structures are mapped to DataWeave data-structures in a straight forward way as they share a lot of similarities.
+
+
+=== Writer Properties
+
+When defining an output of type JSON, there are a few optional parameters you can add to the output directive to customize how the data is parsed:
+
+[options="header"]
+|=======================
+|Parameter |Type |Default|Description
+|`Indent`| boolean | true | defines if the JSON code will be indented for better readability, or if it will be compressed into a single line
+|`encoding`|string | UTF-8 |The character set to be used for the output
+|`bufferSize`| number | 153600 | The size of the buffer writer
+|`inlineCloseOn` | string | | When the writer should use inline close tag. Possible values = empty/none
+|`skipNullOn`| string | | Possible values = `elements`/`attributes`/`everywhere`. See <<Skip Null On>>
+|`duplicateKeyAsArray`| boolean | false | JSON language doesn't allow duplicate keys with one same parent, this usually raises an exception. If set to true, the output contains a single key that points to an array containing all the values assigned to it.
+|=======================
+
+[source,DataWeave]
+---------------------------------------------------------------------
+%output application/json indent=false, skipNullOn="arrays"
+---------------------------------------------------------------------
+
+==== Skip Null On
+
+You can specify whether this generates an outbound message that contains fields with "null" values, or if these fields are ignored entirely. This can be set through an attribute in the output directive named *skipNullOn*, which can be set to three different values: *elements*, *attributes*, or *everywhere*.
+
+When set to:
+* *elements*: A key:value pair with a null value is ignored.
+* *attributes*: An XML attribute with a null value is skipped.
+* *everywhere*: Apply this rule to both elements and attributes.
+
+
+=== Defining a Metadata Type
+
+In the Transform Message component, you can define a JSON type through the following methods:
+
+* By Providing a sample file
+* By pointing to a schema file
+
+[TIP]
+See link:/mule-user-guide/v/3.8/using-dataweave-in-studio#defining-metadata-via-the-ui[Using DataWeave in Studio] for more detailed instructions on how to set this up.
+
+
+
+
+
+== Flat File
+
+
+=== Reader Properties
+
+
+When defining an input of type Flat File, there are a few optional parameters you can add in the XML definition of your Mule project to customize how the data is parsed.
+
+[options="header"]
+|=======================
+|Parameter |Type |Default|Description
+|`schemaPath`| string | | Location in your local disk of the schema file used to parse your input
+|`structureIdent`|string |  | In case the schema file defines multiple different structures, this field selects which to use
+|=======================
+
+
+
+These properties can be either set via the XML of your Mule project:
+
+[source, xml, linenums]
+----
+<dw:input-payload mimeType="flat-file" >
+    <dw:reader-property name="schemaPath" value="myschema.ffs"/>
+    <dw:reader-property name="structureIdent" value="structure1"/>
+</dw:input-payload>
+----
+
+Or via the UI of the Transform Message component
+
+See link:/mule-user-guide/v/3.8/using-dataweave-in-studio#reader-configuration[Using DataWeave in Studio] for more detailed instructions on how to set these properties.
+
+=== Writer Properties
+
+When defining an output of type flat file (which includes fixed width, EDI and Copybook but not CSV) there are a few optional parameters you can add to the output directive to customize how the data is parsed:
+
+[options="header"]
+|=======================
+|Parameter |Type |Default|Description
+|schemaPath |string | |Path where the schema file to be used is located
+|structureIdent |string | |In case the schema file defines multiple formats, indicates which of them to use
+|=======================
+
+[source,DataWeave,linenums]
+----
+%dw 1.0
+%output text/plain schemaPath="src/main/resources/test-data/QBReqRsp.esl", structureIdent=“QBResponse"
+---
+payload
+----
+
+[TIP]
+====
+See link:/mule-user-guide/v/3.8/dataweave-flat-file-schemas[DataWeave Flat File Schemas] or link:/mule-user-guide/v/3.8/dataweave-edi-schemas[DataWeave EDI Schemas] for instructions and examples on how to create the required schema file.
+====
+
+
+=== Defining a Metadata Type
+
+In the Transform Message component, you can define a Flat File type through the following methods:
+
+* By pointing to a schema file
+
+[TIP]
+See link:/mule-user-guide/v/3.8/using-dataweave-in-studio#defining-metadata-via-the-ui[Using DataWeave in Studio] for more detailed instructions on how to set this up.
+
+
+
+
+
+
+== Fixed Width
+
+Fixed width types are technically considered a type of <<Flat File>> format, but when selecting this option the Transform Message component offers you settings that are better tailored to the needs of this format.
+
+
+=== Reader Properties
+
+
+When defining an input of type Fixed Width, there are a few optional parameters you can add in the XML definition of your Mule project to customize how the data is parsed.
+
+[options="header"]
+|=======================
+|Parameter |Type |Default|Description
+|`schemaPath`| string | | Location in your local disk of the schema file used to parse your input
+|encoding |string | UTF-8 | MIME type encoding
+|=======================
+
+
+
+These properties can be either set via the XML of your Mule project:
+
+[source, xml, linenums]
+----
+<dw:input-payload mimeType="flat-file" >
+    <dw:reader-property name="schemaPath" value="myschema.ffs"/>
+    <dw:reader-property name="structureIdent" value="structure1"/>
+</dw:input-payload>
+----
+
+Or via the UI of the Transform Message component
+
+See link:/mule-user-guide/v/3.8/using-dataweave-in-studio#reader-configuration[Using DataWeave in Studio] for more detailed instructions on how to set these properties.
+
+=== Writer Properties
+
+When defining an output of type fixed width there are a few optional parameters you can add to the output directive to customize how the data is parsed:
+
+[options="header"]
+|=======================
+|Parameter |Type |Default|Description
+|schemaPath |string | |Path where the schema file to be used is located
+|encoding |string | UTF-8 | MIME type encoding
+|=======================
+
+[source,DataWeave,linenums]
+----
+%dw 1.0
+%output text/plain schemaPath="src/main/resources/test-data/QBReqRsp.esl", encoding="UTF-8"
+---
+payload
+----
+
+[TIP]
+====
+See link:/mule-user-guide/v/3.8/dataweave-flat-file-schemas[DataWeave Flat File Schemas] or link:/mule-user-guide/v/3.8/dataweave-edi-schemas[DataWeave EDI Schemas] for instructions and examples on how to create the required schema file.
+====
+
+
+
+=== Defining a Metadata Type
+
+In the Transform Message component, you can define a Fixed Width type through the following methods:
+
+* By Providing a sample file
+* By pointing to a <<flat file>> schema file
+* Via a graphical editor that allows you to set up each field manually
+
++
+image::dataweave-formats-27b3c.png[]
+
+[TIP]
+See link:/mule-user-guide/v/3.8/using-dataweave-in-studio#defining-metadata-via-the-ui[Using DataWeave in Studio] for more detailed instructions on how to set this up.
+
+
+
+== Cobol Copybook
+
+Copybook types are technically considered a type of <<Flat File>> format, but when selecting this option the Transform Message component offers you settings that are better tailored to the needs of this format.
+
+
+[NOTE]
+This format is currently being supported as an early access feature.
+
+=== Reader Properties
+
+When defining an input of type Copybook, there are a few optional parameters you can add in the XML definition of your Mule project to customize how the data is parsed.
+
+[options="header"]
+|=======================
+|Parameter |Type |Default|Description
+|`schemaPath`| string | | Location in your local disk of the schema file used to parse your input
+|`segmentIdent`|string |  | In case the schema file defines multiple different structures, this field selects which to use
+|encoding |string | UTF-8 | MIME type encoding
+|=======================
+
+
+
+These properties can be either set via the XML of your Mule project:
+
+[source, xml, linenums]
+----
+<dw:input-payload mimeType="flat-file" >
+    <dw:reader-property name="schemaPath" value="myschema.ffs"/>
+    <dw:reader-property name="segmentIdent" value="structure1"/>
+</dw:input-payload>
+----
+
+Or via the UI of the Transform Message component
+
+See link:/mule-user-guide/v/3.8/using-dataweave-in-studio#reader-configuration[Using DataWeave in Studio] for more detailed instructions on how to set these properties.
+
+=== Writer Properties
+
+When defining an output of type copybook there are a few optional parameters you can add to the output directive to customize how the data is parsed:
+
+[options="header"]
+|=======================
+|Parameter |Type |Default|Description
+|schemaPath |string | |Path where the schema file to be used is located
+|segmentIdent |string | |In case the schema file defines multiple formats, indicates which of them to use
+|encoding |string | UTF-8 | MIME type encoding
+|=======================
+
+[source,DataWeave,linenums]
+----
+%dw 1.0
+%output text/plain schemaPath="src/main/resources/test-data/QBReqRsp.esl", structureIdent=“QBResponse"
+---
+payload
+----
+
+[TIP]
+====
+See link:/mule-user-guide/v/3.8/dataweave-flat-file-schemas[DataWeave Flat File Schemas] or link:/mule-user-guide/v/3.8/dataweave-edi-schemas[DataWeave EDI Schemas] for instructions and examples on how to create the required schema file.
+====
+
+
+=== Defining a Metadata Type
+
+In the Transform Message component, you can define a Fixed Width type through the following methods:
+
+* By pointing to a <<flat file>> schema file
+
+
+[TIP]
+See link:/mule-user-guide/v/3.8/dataweave-flat-file-schemas[Flat File Schemas] for more detailed instructions on how to write the required schema.
+
+
+== See Also
+
+* link:/mule-user-guide/v/3.8/dataweave-quickstart[DataWeave quickstart guide]
+* link:/mule-user-guide/v/3.8/using-dataweave-in-studio[Using DataWeave in Studio]
+* link:/mule-user-guide/v/3.8/dataweave-language-introduction[DataWeave Language Introduction]
+* link:/mule-user-guide/v/3.8/dataweave-operators[DataWeave Operators]
+* link:/mule-user-guide/v/3.8/dataweave-types[DataWeave Types]
+* link:/mule-user-guide/v/3.8/dataweave-selectors[DataWeave Selectors]
+* link:/mule-user-guide/v/3.8/dataweave-examples[DataWeave Examples]
+* link:/mule-user-guide/v/3.8/mel-dataweave-functions[MEL DataWeave Functions]
