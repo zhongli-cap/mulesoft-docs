@@ -2,61 +2,73 @@
 :keywords: studio, server, components, connectors, elements, palette, global elements, configuration elements
 
 
-A *Global Element* is an object that you define once, then reference as many times as needed from elements in one or many Mule flows. Rather than repeatedly writing the same code to apply the same configuration to multiple elements in flows, you can create one global element that details your configurations or transport details. Then, you can instruct any number of elements across flows in your Mule application to reference the global element for specifics on how to behave.  +
+A *Global Element* is an object that you define once to configure specific parameters, ensuring expected functionality of the element inside a Mule flow. Rather than repeatedly writing the same code to apply the same configuration to multiple elements in flows, you create one _global_ element that details your connection, configuration or transport details.
 
+Then, you can require any number of elements across flows in your Mule application to reference the global element to configure runtime behavior.
+
+== Essentials
+
+Before venturing further into this topic, review the features of the link:/mule-fundamentals/v/3.8/anypoint-studio-essentials[Anypoint Studio Visual Editor] to learn more about developing Mule applications using the Anypoint Studio graphical user interface and to understand the context in which we use these "global elements".
+
+[[advantages]]
 == Advantages
 
-Global elements provide a number of benefits to you as a Mule application developer, such as:
+Global elements provide a number of benefits to you as a Mule application developer.
 
-*Flexibility*
+=== Reusability
+
+You can configure a global element just once, and *_share that configuration among building blocks of the same type_*. This is particularly useful when you have to define the connection details and login credentials for an external source, such as a SaaS application or database. +
+
+=== Efficiency
+
+Rather than changing the same configuration multiple times within many like building blocks (e.g. multiple connectors that hook into the same service, using one set of credentials) throughout the Mule flow, you can change the configuration once in the global element, and the changes apply to all Mule flow elements that reference the global element.
+
+=== Flexibility
+
 An element in a Mule flow can apply a global element’s configuration exactly as defined, or compliment the global configuration properties. +
-
-*Reusability*
-You can configure a global element just once, and _share that configuration among building blocks of the same type_. This is particularly useful when you have to define the connection details and login credentials for an external source, such as a SaaS application or database. +
-
-* *Efficiency.* +
-Rather than changing the same configuration multiple times within many like building blocks (e.g. multiple connectors that hook into the same service, using one set of credentials) throughout the Mule flow, you can change the configuration once in the global element, and the changes apply to all Mule flow elements that reference the global element. 
-
-== Prerequisites
-
-This *Global Elements* primer assumes that you are familiar with the
- link:/mule-fundamentals/v/3.8/anypoint-studio-essentials[Visual Editor in Anypoint Studio]. Review the link:/mule-fundamentals/v/3.8/anypoint-studio-essentials[Anypoint Studio Essentials] document to learn more about developing Mule applications using the Anypoint Studio graphical user interface.
 
 == How to Create a Global Element
 
-Some elements _require_ their properties be stored in a global element. For example, some "message sources" must reference a global connector configuration in order to function. The majority of elements, however, use global elements merely as a matter of convenience and efficiency.
+[NOTE]
+Some components _require_ their properties be stored in a global element.
+In any case, we recommend you use global elements for the link:#advantages[Advantages] listed in the previous section.
+
 
 [tabs]
 ------
 [tab,title="Anypoint Studio Visual Editor"]
 ....
-. In the visual editor, click the *Global Elements* tab at the base of the canvas to access a list of all global elements in an application. +
+. In the Anypoint Studio Visual Editor, click the *Global Elements* tab at the base of the canvas to access a list of all global elements in an application.
++
+image:global-element-create-annot.png[GEtab]
++
+. Click *Create* to add a new global element.
+. In the *Choose Global Type* wizard, navigate the directories or use the filter to select the _type_ of global element you wish to create, then click *OK*.
++
+.Anypoint Studio 5 and Older Look
+image::chooseglobaltype.png[chooseglobaltype,225,225,role="left"]
+.Anypoint Studio 6 and Newer Look
+image::global-elements-03c8f.png[new look - studio 6 look,225,225,role="right"]
+. Define the configurable parameters of your global element in the *Global Element Properties* window that appears, then click *OK* to save.
 
 +
-image:GEtab.png[GEtab] +
+[NOTE]
+====
+To configure a _local_ element in a Mule app flow to reference a _global_ element:
 
-. Click *Create* to add a new global element. +
-
-+
-image:GEcreate.png[GEcreate] +
-
-. In the *Choose Global Type* wizard, navigate the directories or use the filter to select the type of global element you wish to create, then click OK. 
-+
-image:chooseglobaltype.png[chooseglobaltype] +
-
-. Define the configurable parameters of your global element, then click *OK* to save.
-. To configure a local element in flow to reference a global element, use the drop-down menu next to the *Connector Configuration*, *Connector Endpoint*, or other reference field to select a global element from a list of those you have created. +
+* Click the element in the flow
+* Use the drop-down menu next to the *Connector Configuration*, *Connector Endpoint*, or other reference field to select a global element from one or many you may have already created.
+====
 
 +
-image:connectorconfiguration.png[connectorconfiguration] +
 
 [TIP]
 ====
-You can create a new global element from within a local element in your flow.
+You can create a new global element from within an element instance in your flow.
 
-Click the plus icon next to the *Connector Configuration*, *Connector Endpoint*, or other reference field, then follow the steps above to configure a global element. Click the edit icon to edit an existing global element.
+Click the plus icon next to the *Connector Configuration*, *Connector Endpoint*, or other reference field, then follow the steps above to configure a global element. Click the Edit icon to edit an existing global element.
 
-image:createvsedit.png[createvsedit]
+image:connector-configuration.png[connectorconfiguration]
 ====
 ....
 [tab,title="XML Editor or Standalone"]
@@ -97,9 +109,25 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 ....
 ------
 
-== Examples
+== Global Element Examples
 
-==== HTTP Connector
+=== Example 1 - Append a String
+
+[TIP]
+If you find that you need to append the same string multiple times at various points in a flow, you might store such a piece of functionality inside a global element for a *Transformer* of type *Append String*, where the *Message* field would be where you store your string to append.
+
+image:global-elements-f7eb3.png[example ge for append string]
+
+=== Example 2 - HTTP Listener Global Element
+
+The HTTP listener in this example is configured to listen on a particular port for requests. There are Mule runtime-specific parameters configured as well.
+
+`    <http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" doc:name="HTTP Listener Configuration">
+        <http:worker-threading-profile threadWaitTimeout="1500" maxBufferSize="10"/>
+    </http:listener-config>`
+
+[IMPORTANT]
+If you are coding by hand, notice the global element is defined _outside and above_ the flow that references it.
 
 [source, xml, linenums]
 ----
@@ -121,51 +149,6 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 </mule>
 ----
 
-==== JDBC Connector
-
-[source, xml, linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
- 
-<mule xmlns:jdbc-ee="http://www.mulesoft.org/schema/mule/ee/jdbc" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans"  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
- 
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
- 
-http://www.mulesoft.org/schema/mule/ee/jdbc http://www.mulesoft.org/schema/mule/ee/jdbc/current/mule-jdbc-ee.xsd">
- 
-    <jdbc-ee:mysql-data-source name="MySQL_Data_Source" user="test" password="test" url="jdbc:mysql://localhost:3306/[dbName]" transactionIsolation="UNSPECIFIED" doc:name="MySQL Data Source"/>
- 
-    <jdbc-ee:connector name="Database_Connector" dataSource-ref="MySQL_Data_Source" validateConnections="true" queryTimeout="-1" pollingFrequency="0" doc:name="Database"/>
- 
-    <flow name="myNewProjectFlow1" doc:name="myNewProjectFlow1">
-        <jdbc-ee:inbound-endpoint queryKey="test" queryTimeout="-1" pollingFrequency="1000" connector-ref="Database_Connector" doc:name="Database">
-            <jdbc-ee:query key="test" value="test"/>
-        </jdbc-ee:inbound-endpoint>
-    </flow>
- 
-</mule>
-----
-
-==== JMS Connector
-
-[source, xml, linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
- 
-<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans"  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
- 
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
- 
-http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
- 
-    <jms:activemq-connector name="Active_MQ" username="test" password="test" brokerURL="tcp://localhost:61616" validateConnections="true" doc:name="Active MQ"/>
- 
-    <flow name="myNewProjectFlow1" doc:name="myNewProjectFlow1">
-        <jms:inbound-endpoint queue="test" connector-ref="Active_MQ" doc:name="JMS Endpoint"/>
-    </flow>
- 
-</mule>
-----
 
 == See Also
 
