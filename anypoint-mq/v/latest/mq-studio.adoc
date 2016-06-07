@@ -83,38 +83,7 @@ The flow for the previous Anypoint Studio example is as follows:
 
 [source,xml,linenums]
 ----
-<?xml version="1.0" encoding="UTF-8"?>
-
-<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
-	xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
-http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd">
-  <anypoint-mq:config name="Anypoint_MQ_Configuration" doc:name="Anypoint MQ Configuration">
-      <anypoint-mq:provider url="https://mq-us-east-1.anypoint.mulesoft.com/api/v1" clientId="<id>" clientSecret="<secret>"/>
-  </anypoint-mq:config>
-<flow name="producerFlow">
-  <poll doc:name="Poll">
-    <dw:transform-message doc:name="Create Customer">
-    <dw:set-payload><![CDATA[%dw 1.0
-%output application/json
----
-{
-    "firstName" : "Joe",
-    "lastName" : "Schmoe",
-    "company" : "Acme, Inc"
-}]]></dw:set-payload>
-    </dw:transform-message>
-  </poll>
-        <anypoint-mq:publish config-ref="Anypoint_MQ_Configuration" destination="MyExchange" doc:name="Anypoint MQ">
-            <anypoint-mq:message-builder messageId="mq42"/>
-        </anypoint-mq:publish>
-</flow>
-</mule>
+include::_sources/mq-studio.xml[]
 ----
 
 == Advanced Global Element Properties
@@ -127,45 +96,99 @@ image:mq-global-element-props-full.png[mq-global-element-props-full]
 
 The General tab fields are:
 
-[width="100%",cols="20a,5a,5a,70a",options="header"]
+[width="100%",cols="30a,70a",options="header"]
 |===
-|Field |Req'd |Default |Description
-|Name |yes |none |Configuration name.
-|Provider +
-Use Provider Config |yes |none |Sets a provider configuration for the current app.
+|Field |Description
+|Name |Configuration name.
+
+*Required:* Yes +
+*Default:* None
+|Provider: +
+Use Provider Config |Sets a provider configuration for the current app.
 available to all applications.
-|URL |yes |none |URL shown in Anypoint Platform:
+
+*Required:* Yes +
+*Default:* None
+|URL |URL shown in Anypoint Platform.
+
+*Required:* Yes +
+*Default:* None
 
 image:mq-ap-url.png[URL in MQ near top of UI]
-|Client App ID |yes |none |From Anypoint Platform > MQ > Client Apps. Click the app and copythe  Client App ID value.
-|Client Secret |yes |none |From Anypoint Platform > MQ > Client Apps. Click the app and copy the Client Secret value.
-|Use Global Provider Config |no |none |Sets the URL, Client App ID, and Client Secret for all apps.
-|Basic Settings +
-Max Redelivery |no |-1 |Number of redeliveries
+|Client App ID |From Anypoint Platform > MQ > Client Apps. Click the app and copy the  Client App ID value.
+
+*Required:* Yes +
+*Default:* None
+|Client Secret |From Anypoint Platform > MQ > Client Apps. Click the app and copy the Client Secret value.
+
+*Required:* Yes +
+*Default:* None
+|Use Global Provider Config |Sets the URL, Client App ID, and Client Secret for all apps.
+
+*Required:* No +
+*Default:* None
+|Basic Settings: +
+Max Redelivery |Number of redeliveries
 to try in case a message fails. -1 indicates that Anypoint MQ retry indefinitely.
-|[[am]]Acknowledgement Mode |no |none|Defines how the Anypoint MQ messages are acknowledged when the message are removed from being inflight messages. Possible values are:
+
+*Required:* No +
+*Default:* -1
+|[[am]]Acknowledgement Mode |Defines how the Anypoint MQ messages are acknowledged when the message are removed from being inflight messages. Possible values are:
 
 * AUTO (Default)- Messages are acknowledged or negatively acknowledged depending on whether or not exceptions occur. See link:/anypoint-mq/mq-ack-mode[Acknowledgement Mode] for more information.
 * MANUAL - Messages are acknowledged using a custom ACK message processor.
 * NONE - Messages are acknowledged and removed as soon as they are received.
-|Acknowledgement Timeout |no |none |When you take an Anypoint MQ message from a queue, the broker puts it in flight, and the message remains in that state until the ACK is performed (application reads the message and Anypoint MQ deletes it), or the Acknowledgement Timeout is reached. If ACK is performed, then the message is removed from the queue, if Acknowledgement Timeout is reached, the message returns to the queue.
-|Pooling Time |no |10000 |Maximum time in milliseconds to wait for the expected message or messages.
-|Threading Profile Settings +
-Define threading profile behavior +
-Use default worker threading profile |no |none |See link:/mule-user-guide/v/3.7/tuning-performance[Tuning Performance]. The threading profile options let you optimize connector performance for use with Anypoint MQ.
-|Use custom worker threading profile |no |none |See link:/mule-user-guide/v/3.7/tuning-performance[Tuning Performance].
-|Max Active Threads |no |none |The maximum number of threads to use. See link:/mule-user-guide/v/3.7/tuning-performance[Tuning Performance].
-|Max Idle Threads |no |none |The maximum number of idle or inactive threads that can be in the pool before they are destroyed. See link:/mule-user-guide/v/3.7/tuning-performance[Tuning Performance]. The thread pool does not grow from Max Idle Threads towards Max Active Threads unless the queue is completely filled up.
-|Thread TTL |no |none |Thread time to live duration.
-|Pool Exhausted Action |no |none |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks. Possible values are: WAIT (wait until a thread becomes available; don’t use this value if the minimum number of threads is zero, in which case a thread may never become available), DISCARD (throw away the current request and return), DISCARD_OLDEST (throw away the oldest request and return), ABORT (throw a RuntimeException), and RUN (the default; the thread making the execute request runs the task itself, which helps guard against lockup).
-|Thread Wait Timeout |no |none |Thread wait timeout in milliseconds.
-|Max Buffer Size |no |none |Max buffer size.
+
+*Required:* No +
+*Default:* None
+|Acknowledgement Timeout |When you take an Anypoint MQ message from a queue, the broker puts it in flight, and the message remains in that state until the ACK is performed (application reads the message and Anypoint MQ deletes it), or the Acknowledgement Timeout is reached. If ACK is performed, then the message is removed from the queue, if Acknowledgement Timeout is reached, the message returns to the queue.
+
+*Required:* No +
+*Default:* None
+|Pooling Time |Maximum time in milliseconds to wait for the expected message or messages.
+
+*Required:* No +
+*Default:* 10000
+|Threading Profile Settings: +
+Define threading profile behavior: +
+Use default worker threading profile |See link:/mule-user-guide/v/3.8/tuning-performance[Tuning Performance]. The threading profile options let you optimize connector performance for use with Anypoint MQ.
+
+*Required:* No +
+*Default:* None
+|Use custom worker threading profile |See link:/mule-user-guide/v/3.8/tuning-performance[Tuning Performance].
+
+*Required:* No +
+*Default:* None
+|Max Active Threads |The maximum number of threads to use. See link:/mule-user-guide/v/3.8/tuning-performance[Tuning Performance].
+
+*Required:* No +
+*Default:* None
+|Max Idle Threads |The maximum number of idle or inactive threads that can be in the pool before they are destroyed. See link:/mule-user-guide/v/3.8/tuning-performance[Tuning Performance]. The thread pool does not grow from Max Idle Threads towards Max Active Threads unless the queue is completely filled up.
+
+*Required:* No +
+*Default:* None
+|Thread TTL |Thread time to live duration.
+
+*Required:* No +
+*Default:* None
+|Pool Exhausted Action |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks. Possible values are: WAIT (wait until a thread becomes available; don’t use this value if the minimum number of threads is zero, in which case a thread may never become available), DISCARD (throw away the current request and return), DISCARD_OLDEST (throw away the oldest request and return), ABORT (throw a RuntimeException), and RUN (the default; the thread making the execute request runs the task itself, which helps guard against lockup).
+
+*Required:* No +
+*Default:* None
+|Thread Wait Timeout |Thread wait timeout in milliseconds.
+
+*Required:* No +
+*Default:* None
+|Max Buffer Size |Max buffer size.
+
+*Required:* No +
+*Default:* None
 |===
 
 === TLS/SSL and Proxy Tabs
 
 The TSL/SSL and Proxy tabs share the same information as the
-link:/mule-user-guide/v/3.7/http-connector[HTTP Connector].
+link:/mule-user-guide/v/3.8/http-connector[HTTP Connector].
 
 === Prefetch Tab
 
@@ -190,6 +213,161 @@ the retrieve operation when the prefetch queue is not empty.
 *Note*: For best performance, set `Fetch Size` to 10 (maximum value) and reduce `Frequency` to increase the pooling time and the resulting dequeuing of transactions per second (TPS). You can increase `Fetch Timeout` if message processing is slow. For example, if processing takes 5 seconds, set the `Fetch Timeout` to at least double this time (10000 milliseconds).
 
 Apart from these performance-related parameters, it is important to properly configure the xref:am[Acknowledgement Mode].
+
+== Anypoint MQ Properties Menu
+
+After configuring the Anypoint MQ connector's Global Element Properties, you need to configure the properties menu depending on how you want a flow to operate:
+
+* <<Publish Operation>> - Send a message to a queue or exchange.
+* <<Consume Operation>> - Receive a message from a queue.
+* <<Ack Operation>> - Accept a message from a queue.
+* <<Nack Operation>> - Do not accept a message from a queue. This causes the message to be returned to the queue.
+
+=== Publish Operation
+
+Uses the current flow to send a message to an Anypoint MQ queue or exchange.
+
+image:mq-connector-publish.png[mq-connector-publish]
+
+Anypoint MQ connector properties menu:
+
+[cols="30a,70a",options="header"]
+|===
+|Field |Description
+|Display Name |Name of the Anypoint MQ connector in the flow.
+
+*Required:* Yes +
+*Default:* Anypoint MQ
+|Basic Settings: +
+Connector Configuration |Set or change the Anypoint MQ connector's Global Element Properties. See <<Advanced Global Element Properties>> for how to set each field.
+
+*Required:* Yes +
+*Default:* N/A
+|Operation |Set to *publish*.
+
+*Required:* Yes +
+*Default:* None
+|Publisher Settings: +
+Destination |Name of the queue or exchange in Anypoint Platform > MQ that you want to send a message to.
+
+*Required:* Yes +
+*Default:* None
+|Message ID |Specify the ID of a message that you want to send to the queue or exchange. You can get the ID from Anypoint Platform > MQ > Message Browser feature after you send a message.
+
+*Required:* No +
+*Default:* None
+|Send Outbound Properties |Sends the outbound properties you specify. You can specify properties using the green plus sign above the Name and Value table.
+
+*Required:* No +
+*Default:* None
+|Send Content Type |Sends the type of content with the message.
+
+*Required:* No +
+*Default:* None
+|Name and Value table |Click the green plus sign to specify a property name and value that is sent with the message. Proceeding the property with `anypoint-mq:` provides useful information to identify the property.
+
+*Required:* No +
+*Default:* None
+|===
+
+=== Consume Operation
+
+Receives a message from a queue.
+
+image:mq-connector-consume.png[mq-connector-consume]
+
+Fields:
+
+[cols="30a,70a",options="header"]
+|===
+|Field |Description
+|Display Name |Name of the connector in the Studio flow.
+
+*Required:* Yes +
+*Default:* Anypoint MQ
+|Basic Settings: +
+Connector Configuration |Set or change the Anypoint MQ connector's Global Element Properties. See <<Advanced Global Element Properties>> for how to set each field.
+
+*Required:* Yes +
+*Default:* N/A
+|Operation |Set to *consume* to receive a message from a queue.
+
+*Required:* Yes +
+*Default:* None
+|Consumer Settings: +
+Destination |Name of the queue in Anypoint Platform > MQ that you want to access.
+
+*Required:* Yes +
+*Default:* None
+|Acknowledgement Mode |Defines how the Anypoint MQ messages are acknowledged when the message are removed from being inflight messages. Possible values are:
+
+* AUTO (Default)- Messages are acknowledged or negatively acknowledged depending on whether or not exceptions occur. See link:/anypoint-mq/mq-ack-mode[Acknowledgement Mode] for more information.
+* MANUAL - Messages are acknowledged using a custom ACK message processor.
+* NONE - Messages are acknowledged and removed as soon as they are received.
+
+*Required:* No +
+*Default:* None
+|Acknowledgement Timeout |When you take an Anypoint MQ message from a queue, the broker puts it in flight, and the message remains in that state until the ACK is performed (application reads the message and Anypoint MQ deletes it), or the Acknowledgement Timeout is reached. If ACK is performed, then the message is removed from the queue, if Acknowledgement Timeout is reached, the message returns to the queue.
+
+*Required:* No +
+*Default:* None
+|Pooling Time |Maximum time in milliseconds to wait for the expected message or messages.
+
+*Required:* No +
+*Default:* 10000
+|===
+
+=== Ack Operation
+
+Accepts a message from a queue.
+
+image:mq-connector-ack.png[mq-connector-ack]
+
+Fields:
+
+[cols="30a,70a",options="header"]
+|===
+|Field |Description
+|Display Name |Name of the connector in the Studio flow.
+
+*Required:* Yes +
+*Default:* Anypoint MQ
+|Basic Settings: +
+Connector Configuration |Set or change the Anypoint MQ connector's Global Element Properties. See <<Advanced Global Element Properties>> for how to set each field.
+
+*Required:* Yes +
+*Default:* N/A
+|Operation |Set to *ack* to accept a message.
+
+*Required:* Yes +
+*Default:* None
+|===
+
+=== Nack Operation
+
+Does not accept a message from a queue. Anypoint MQ returns the message to the queue.
+
+image:mq-connector-nack.png[mq-connector-nack]
+
+Fields:
+
+[cols="30a,70a",options="header"]
+|===
+|Field |Description
+|Display Name |Name of the connector in the Studio flow.
+
+*Required:* Yes +
+*Default:* Anypoint MQ
+|Basic Settings: +
+Connector Configuration |Set or change the Anypoint MQ connector's Global Element Properties. See <<Advanced Global Element Properties>> for how to set each field.
+
+*Required:* Yes +
+*Default:* N/A
+|Operation |Set to *nack* to not accept a message.
+
+*Required:* Yes +
+*Default:* None
+|===
 
 == See Also
 
