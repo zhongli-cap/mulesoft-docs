@@ -1,11 +1,15 @@
 = Windows PowerShell Connector Guide
-:keywords: anypoint studio, connector, endpoint, windows powershell, powershell, os administration
+:keywords: anypoint studio, esb, connector, endpoint, windows powershell, powershell, os administration
 
 *Select*
 
-*Latest version: 1.5.0*
+*Latest version: 1.6.1*
 
-http://en.wikipedia.org/wiki/Windows_PowerShell[Windows PowerShell] lets you automate tasks and create configuration management scripts. The PowerShell connector enables Windows OS administration tasks to be integrated into Mule applications. PowerShell scripts may be executed on a remote Windows machine using the link:/mule-user-guide/v/3.8/windows-gateway-services-guide[Windows Gateway Service] and the result processed within Mule. 
+http://en.wikipedia.org/wiki/Windows_PowerShell[Windows PowerShell] lets you automate tasks and create configuration management scripts. The PowerShell connector enables Windows OS administration tasks to be integrated into Mule applications. PowerShell scripts may be executed on a remote Windows machine using the link:/mule-user-guide/v/3.8/windows-gateway-services-guide[Windows Gateway Services] and the result processed within Mule. 
+
+Release Notes:
+
+* link:/release-notes/windows-powershell-connector-release-notes[Windows Powershell Connector Release Notes]
 
 *Questions*?  See the <<Frequently Asked Questions - FAQ>>.
 
@@ -14,8 +18,9 @@ http://en.wikipedia.org/wiki/Windows_PowerShell[Windows PowerShell] lets you aut
 [cols=",",options="header"]
 |===
 |Software |Version
-|Mule runtime|3.5 and later
+|Mule ESB |3.5 and later
 |Anypoint Studio |October 2014 and later
+|Windows Gateway Services |1.10.0 or higher
 |Windows PowerShell |v3 or higher
 |.NET Framework |4.0
 |Windows |7 or 8
@@ -29,7 +34,7 @@ This guide draws on information from the link:/mule-user-guide/v/3.8/windows-gat
 == Installing the PowerShell Connector
 
 
-. Download and install the Windows Gateway Services Software. A link to the software is in the link:/mule-user-guide/v/3.8/windows-gateway-services-guide[Windows Gateway Service Guide] .
+. Download and install the Windows Gateway Services Software. A link to the software is in the link:/mule-user-guide/v/3.8/windows-gateway-services-guide[Windows Gateway Services Guide] .
 . You can install a connector in Anypoint Studio using the instructions in  link:/mule-fundamentals/v/3.8/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Installing a Connector from Anypoint Exchange].
 
 . Search for *powershell* and drag the *Windows PowerShell* connector to the Canvas to the right of the HTTP connector. 
@@ -40,12 +45,12 @@ image:PowershellGlobalElementProperties.png[PowershellGlobalElementProperties]
 [cols=",",options="header"]
 |===
 |Field |Description
-|*Gateway Service Address* |Required. Windows Gateway Service IP address. Format: _ip_addr:port._ URLs are not supported. Example: `203.0.113.42:9333`
-|*Gateway Access Token* |Required. Windows Gateway Service access token. Find the configured token in the Windows Service configuration file (`c:\Program Files(x86)\Anypoint Gateway for Windows\Mule.SelfHost.exe.config`) under the `appSettings` key **mule-auth-token**.
-|*Username* |Optional. Username on Windows Gateway Service. Provide if a call must be impersonated.
-|*Password* |Optional. Password on Windows Gateway Service. Provide if a call must be impersonated.
+|*Gateway Service Address* |Required. Windows Gateway Services IP address. Format: _ip_addr:port._ URLs are not supported. Example: `203.0.113.42:9333`
+|*Gateway Access Token* |Required. Windows Gateway Services access token. Find the configured token in the Windows Services configuration file (`c:\Program Files(x86)\Anypoint Gateway for Windows\Mule.SelfHost.exe.config`) under the `appSettings` key **mule-auth-token**.
+|*Username* |Optional. Username on Windows Gateway Services. Provide if a call must be impersonated.
+|*Password* |Optional. Password on Windows Gateway Services. Provide if a call must be impersonated.
 |*Ignore SSL Warnings* |Optional. Click the checkbox if you are using a self-signed SSL certificate.
-|*Test Connection* |Click to test that the connection to Windows Gateway Service is working.
+|*Test Connection* |Click to test that the connection to Windows Gateway Services is working.
 |===
 
 . Click *OK*. Ensure that the *Connector Configuration* is set to *Powershell*.
@@ -68,7 +73,7 @@ The completed XML Mule flow appears as:
 [source,xml, linenums]
 ----
 <mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:powershell="http://www.mulesoft.org/schema/mule/powershell" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-    xmlns:spring="http://www.springframework.org/schema/beans" 
+    xmlns:spring="http://www.springframework.org/schema/beans" version="CE-3.6.1"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
@@ -116,7 +121,7 @@ http://www.mulesoft.org/schema/mule/powershell http://www.mulesoft.org/schema/mu
 
 == Solution Overview
 
-The PowerShell connector uses a client-server architecture with two tiers, the connector or client running in the Mule, and the Windows Services Gateway running on the server side. The latter exposes an HTTP Web API for receiving and executing PowerShell commands.
+The PowerShell connector uses a client-server architecture with two tiers, the connector or client running in the Mule ESB, and the Windows Services Gateway running on the server side. The latter exposes an HTTP Web API for receiving and executing PowerShell commands.
 
 The Windows Gateway leverages the following technologies and frameworks:
 
@@ -131,7 +136,7 @@ The PowerShell connector supports two primary use cases.
 * Send a single inline command/script and wait for the response.
 * Send a complex command/script from a file with arguments and wait for the response.
 
-In the first scenario, the Mule uses the connector to send a simple inline script via HTTP to the Windows Gateway. The message is sent as an HTTP Post. The payload of the HTTP request represents the command. The Web API running on the Windows Gateway executes the PowerShell script locally. The following message illustrates the structure of the HTTP Request.
+In the first scenario, the Mule ESB uses the connector to send a simple inline script via HTTP to the Windows Gateway. The message is sent as an HTTP Post. The payload of the HTTP request represents the command. The Web API running on the Windows Gateway executes the PowerShell script locally. The following message illustrates the structure of the HTTP Request.
 
 *Request Message:*
 
@@ -212,13 +217,15 @@ get-service $servicename
 }
 ----
 
-The connector uses HTTP headers with the prefix *mule-ps-param-* for sending command arguments, which are mapped to the expected parameters in the script. In the example above, the header **mule-ps-param-servicename *is mapped to the parameter servicename*.
+By *default* the connector uses the *ISO-8859-1* charset to decode the input script file, but it also supports the following charsets by specifying a BOM marker within the script: UTF-8, UTF-16LE, UTF-16BE, UTF-32LE & UTF-32BE. In case your script contains not standard characters, not within the ISO-8859-1 charset, then you should save it with the respective encoding and be sure those characters are encoded well using the selected charset. As example, if your script contains the '€' (U+20AC - euro sign character) then it would be recommended to encode the script as UTF-8 by adding the corresponding BOM mark at the beginning (`0xEF 0xBB 0xBF`) and that character should be encoded as `0xE2 0x82 0xAC` within the script bytes.
+
+The connector uses HTTP headers with the prefix *mule-ps-param-* for sending command arguments, which are mapped to the expected parameters in the script. In the example above, the header `mule-ps-param-servicename` is mapped to the script's parameter `servicename`.
 
 The response is also returned as a JSON message.
 
 == Configuration of the powershell:send Element
 
-The `powershell:send` element is the only element used by the two scenarios described earlier in the document.
+The `powershell:send` element is the only element used by the two scenarios described earlier in the document. The result type from this operation is a JAVA *String* representing the object, or objects, you returned from your script but serialized as JSON.
 
 This following table shows the supported properties in this element:
 
@@ -226,7 +233,7 @@ This following table shows the supported properties in this element:
 |==============================================================================================
 |Property |Usage
 |*script* |Inline PowerShell script. It could also represent the call to a command passed from a file.
-|*scriptFile* |Path a file containing a PowerShell script.
+|*scriptFile* |Full path of the file containing a PowerShell script. Additionally, you can use "classpath:{resource_name}" if your script file is within your project's resources.
 |*userName* |The name of the user that is used to impersonate the call when executing the powershell script in the Gateway. Overrides the user name set in the Global element. Optional.
 |*password* |The password of the user that is used to impersonate the call when executing the powershell script in the Gateway. Overrides the password set in the Global element. Optional.
 |*depth* |A number for controlling the JSON serialization deep level for the PowerShell script output.
@@ -306,6 +313,26 @@ This value must be set in the *depth* property: 
 <powershell:send config-ref="Powershell"  doc:name="Powershell" scriptFile="myscript.ps1" depth="2"/>
 ----
 
+As mentioned above, you should keep in mind that the connector's response is a JSON serialized representation of the powershell object you returned (i.e. the payload generated from the *send* operation is a string with the script's result converted to JSON).
+
+As example let's take the following script:
+
+[source, javascript, linenums]
+----
+$obj = @{}
+$obj.Timestamp = DateTime::Now
+return $obj
+----
+
+The output from the *send* operation will be a JSON string like the one shown below:
+
+[source, javascript, linenums]
+----
+{
+    "Timestamp":  "\/Date(1465325586560)\/"
+}
+----
+
 == Frequently Asked Questions - FAQ
 
 ==== What can I do with the PowerShell connector?
@@ -314,7 +341,7 @@ Any arbitrary PowerShell script may be executed on a target Windows OS host, wit
 
 ==== Can I use the PowerShell connector on a non-Windows platform?
 
-Yes, the PowerShell connector passes the script contents to the link:/mule-user-guide/v/3.8/windows-gateway-services-guide[Windows Gateway Service] for execution so can be run on any platform.
+Yes, the PowerShell connector passes the script contents to the link:/mule-user-guide/v/3.8/windows-gateway-services-guide[Windows Gateway Services] for execution so can be run on any platform.
 
 ==== Do I have to install the Windows Gateway Service on each machine I wish to run PowerShell scripts on?
 
@@ -336,7 +363,23 @@ Specifying the username and password for impersonation lets you run a script as 
 
 The proper way for specifying a fully-qualified domain user is using the username@domain syntax, at the username field.
 
+==== Are the impersonated user's mapped drives accessible when the PowerShell script is executing? 
+
+Network drive mapping (with reconnection at login) happens for interactive GUI user sessions only; it does not happen for headless remote sessions. If mapped network drives are required for use by a PowerShell script, then it is necessary to recreate them manually within the script itself, as demonstrated in the following script snippet: 
+
+[source, code, linenums]
+----
+$server = "\\myServer" 
+$folderPath = "\myFolderPath" 
+$mapped = "X:" 
+
+if (-not (test-path $mapped)) { 
+# If drive mapping is not present, create it now. 
+net use "$mapped" "$server$folderPath" 
+} 
+----
+
 == See Also
 
-* link:/mule-user-guide/v/3.8/windows-gateway-services-guide[Windows Gateway Service]  
-*  link:/mule-user-guide/v/3.8/msmq-connector-user-guide[MSMQ Connector]
+* link:/mule-user-guide/v/3.8/windows-gateway-services-guide[Windows Gateway Services]  
+* link:/mule-user-guide/v/3.8/msmq-connector-user-guide[MSMQ Connector]
