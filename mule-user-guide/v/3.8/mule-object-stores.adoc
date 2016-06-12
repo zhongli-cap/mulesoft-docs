@@ -23,9 +23,13 @@ In most cases, Mule creates and manages object stores for you, so no configurati
 
 Mule provides two types of object stores:
 
-* *In-memory store* – Persistent store is the default. For more information, see "Object Stores and Clustering" in the link:/mule-user-guide/v/3.8/cache-scope[Cache Scope] document.
+* *In-memory store* – Stores objects in local Mule runtime memory. Objects will be lost when the Mule runtime shuts down. 
 
-* *Persistent store* – Mule persists data when an object store is explicitly configured to be persistent. Mule creates a default persistent store in the file system.
+* *Persistent store* – Mule persists data when an object store is explicitly configured to be persistent. In a stand-alone Mule runtime, Mule creates a default persistent store in the file system.
+
+If you do not specify an object store, the default persistent object store is used.  
+
+For more information, see "Object Stores and Clustering" in the link:/mule-user-guide/v/3.8/cache-scope[Cache Scope] document.
 
 [TIP]
 The default object store created for all new caching strategies supports cluster mode out of the box, with the exception of the cache scope which uses the old default caching strategy. For details, see the Object Stores and Clustering section in link:/mule-user-guide/v/3.8/cache-scope[Cache Scope].
@@ -59,22 +63,42 @@ image:info-icon.png[info-icon]
 +
 [cols="30a,70a",options="header"]
 |===
+| Operation | Description
 | *All keys* |
-Returns a list of all the keys in the object store.
+Sets the message payload to a list of all the keys in the object store. 
+
+Throws an `UnsupportedOperationException` if the object store implementation does not support listing all keys. 
+
 | *Contains* |
-Checks whether the object store contains the given key.
+Checks whether the object store contains the given key. 
+
+Sets the payload to true if the key exists in the object store, otherwise the payload is set to false. 
 | *Dual store* |
-Stores a value using key, and also store key using value.
+Stores the value object using the supplied key, and also stores the key object using the supplied value. This is equivalent to calling `Store(key,value)` and `Store(value,key)` in a single operation.  
+
+This allows you to later retrieve the key object by supplying the value object, instead of only retrieving the value object by supplying the key object.  
+
+See the Store operation for more details. 
 | *Remove* |
-Remove the object for the respective key.
+Lock the object store and remove the object for the respective key. throws an `ObjectDoesNotExistException` if the key does not exist in the object store.  
+
+Sets the message payload to the object that was previously stored for the given key. f the key does not exist and ignoreNotExists is true the operation will return a null object.
+
+Throws an `ObjectStoreException` if the given key is `null`,  if the store is not available, or if any other implementation-specific error occurrs. 
 | *Retrieve* |
-Retrieve an object from the object store and make it available in the specified property scope of a Mule Message.
+Retrieve an object from the object store and copy the retrieved value into the specified property scope of a Mule Message. The default target proprty scope is `INVOCATION`. 
+
+Throws an `ObjectDoesNotExistException` exception if the key does not exist in the object store. 
 | *Retrieve store* |
 Retrieve and Store in the same operation.
 | *Retrieve with lock* |
-Retrieve the given object with lock from the object store and make it available in the specified property scope of a Mule Message.
+Lock the object store and retrieve the given value object for the supplied key object. The retrieved value is then copied into the specified property scope of a Mule Message. The object store lock is released after the object is retrieved from the object store. 
 | *Store* |
-Stores an object in the object store.
+Locks the object store and then writes the value object in the object store using the supplied key object. 
+
+This operation does not change the current message payload. 
+
+Throws an `ObjectAlreadyExistsException` if the overwrite property is set to false (the default) and the key already exists in the object store. 
 |===
 +
 . Depending on the operation you select, different fields are available to configure the connector.
