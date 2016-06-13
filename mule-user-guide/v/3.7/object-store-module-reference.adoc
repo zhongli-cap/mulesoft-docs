@@ -47,24 +47,45 @@ When using Anypoint Studio's UI, the necessary elements are added to your namesp
 
 [width="100%",cols="50%,50%,options="header"]
 |===
-`<objectstore:config>` |
+| *Component*                            | *Description*
+|`<objectstore:config>` |
 Configure an instance of this module
 | `<objectstore:all-keys>` |
-Returns a list of all the keys in the object store.
+Set the message payload to a list of all the keys in the object store. 
+
+Throws an `UnsupportedOperationException` if the object store implementation does not support listing all keys. 
 | `<objectstore:contains>` |
-Checks whether the object store contains the given key.
+Checks whether the object store contains the given key. 
+
+Sets the payload to true if the key exists in the object store, otherwise the payload is set to false. 
 | `<objectstore:dual-store>` |
-Stores a value using key, and also store key using value.
+Stores the value object using the supplied key, and also stores the key object using the supplied value. This is equivalent to calling `Store(key,value)` and `Store(value,key)` in a single operation.  
+
+This allows you to later retrieve the key object by supplying the value object, instead of only retrieving the value object by supplying the key object.  
+
+See the Store operation for more details. 
 | `<objectstore:remove>` |
-Remove the object for the respective key.
+Lock the object store and remove the object for the respective key. throws an `ObjectDoesNotExistException` if the key does not exist in the object store.  
+
+Sets the message payload to the object that was previously stored for the given key. f the key does not exist and ignoreNotExists is true the operation will return a null object.
+
+Throws an `ObjectStoreException` if the given key is `null`,  if the store is not available, or if any other implementation-specific error occurrs. 
 | `<objectstore:retrieve>` |
-Retrieve an object from the object store and make it available in the specified property scope of a Mule Message.
+Retrieve an object from the object store and copy the retrieved value into the specified property scope of a Mule Message. The default target proprty scope is `INVOCATION`. 
+
+Throws an `ObjectDoesNotExistException` exception if the key does not exist in the object store. 
 | `<objectstore:retrieve-store>` |
 Retrieve and Store in the same operation.
 | `<objectstore:retrieve-with-lock>` |
-Retrieve the given object with lock from the object store and make it available in the specified property scope of a Mule Message.
+Lock the object store and retrieve the given value object for the supplied key object. The retrieved value is then copied into the specified property scope of a Mule Message. The object store lock is released after the object is retrieved from the object store. 
 | `<objectstore:store>` |
-Stores an object in the object store.
+Store an object in the object store. 
+
+Locks the object store and then writes the value object in the object store using the supplied key object. 
+
+This operation does not change the current message payload. 
+
+Throws an `ObjectAlreadyExistsException` if the overwrite property is set to false (the default) and the key already exists in the object store. 
 |===
 
 === <objectstore:config>
@@ -75,29 +96,40 @@ By default, Mule includes three default object stores that are initiated every t
 
 They are the names of the beans shipped in Mule:
 
-* '_defaultInMemoryObjectStore'
-* '_defaultUserObjectStore'
-* '_defaultTransientUserObjectStore'
+* _defaultInMemoryObjectStore
+* _defaultUserObjectStore
+* _defaultTransientUserObjectStore
 
-If you don't want to use one of the default object stores, you can define your own Java bean and reference it instead.
-
-[source, xml, linenums]
-----
-<objectstore:config name="ObjectStore__Configuration" partition="a" objectStore-ref="_defaultUserObjectStore" persistent="true"/>
-----
 
 [width="100%",cols="20%,20%,20%,20%,20%,20%,options="header"]
 |===
 Name |	Default Value |	Description |	Java Type |	MIME Type | Encoding |
 name | | The identifier of the object store configuration. Other components must refernce this configuration via this name| String |	*/* |	UTF-8|
-partition | | Name of the partition in the default in-memory or persistent object store| String |	*/* |	UTF-8|
-objectStore-ref |	|	Optional. Reference to an object store bean. If not specified, one of the defaults will be used depending on the case.|String|||
+doc:name | | The string displayed in Studio. | String |	*/* |	UTF-8|
+partition | | Name of the partition in the default in-memory or persistent object store. This attribute is ignored if the object store is specified in an objectstore-ref attribute.| String |	*/* |	UTF-8|
+objectStore-ref |	|	Optional. Reference to an object store bean. If not specified, one of the defaults will be used depending on the context (stand-alone Mule runtime, Mule runtime cluster, or CloudHub cluster). You can also specify one of the default object stores by name `_defaultInMemoryObjectStore`, `_defaultUserObjectStore`, or `_defaultTransientUserObjectStore`.|String|||
 entryTtl | | Time To Live for stored values in milliseconds. If using this parameter, maxEntries and expirationInterval are mandatory.| Int |	*/* |	UTF-8|
 expirationInterval | | Specifies the expiration check interval in milliseconds.| Int |	*/* ||
-maxEntries| | Specifies the max number of entries | Int| 	*/* |
-persistent| `False` | Defines if the object store will be persistent or not.| boolean| 	*/* |
+maxEntries| | Specifies the max number of entries | Int| 	*/* ||
+persistent| `false` | Dpecified whenever the required store needs to be persistent or not (this argument is ignored if the 
+ object store is passed by ref using the objectStore-ref attribute, or if no partition name is defined).
+ If persistent is `false`, then data may be lost when a Mule runtime restarts.| boolean| 	*/* |
 |===
 
+Here is an example objectstore configuration that specifies a partition named `customers` within the defaultUserObjectStore, and specifying that the object store should be persistent. 
+
+[source, xml, linenums]
+----
+<objectstore:config name="ObjectStore__Configuration" partition="customer"  persistent="true"/>
+----
+If you do not specify a value for the objectstore-ref, the _defaultUserObjectStore is used, which is equivalent to this configuration:
+
+[source, xml, linenums]
+----
+<objectstore:config name="ObjectStore__Configuration" objectstore-ref="_defaultUserObjectStore"  persistent="true"/>
+----
+
+If you don't want to use one of the default object stores, you can define your own Java bean and reference it instead in the objectstore-ref attribute. 
 
 === <objectstore:all-keys>
 
