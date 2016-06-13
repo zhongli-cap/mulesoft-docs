@@ -224,24 +224,39 @@ config-ref="https-lc-0.0.0.0-8082"
 
 === HTTPS with the API
 
-. In the Configure Endpoint menu, provide an implementation URI to an HTTPS address. Having an HTTPS address specified here modifies the proxy so that it supports HTTPS. By default, it takes your JMV's default HTTPS credentials and sign requests with those, if this is enough for your security needs then your proxy is ready to be deployed.
-. If the default certificate of your JMV is not enough and you need to include other HTTPS credentials, then you must now download the proxy and modify it to include your own credentials.
+. In the Configure Endpoint menu, provide an implementation URI to an HTTPS address. Specifying an HTTPS address modifies the proxy to support HTTPS. By default, the proxy signs requests using the default HTTPS credentials of the JVM.
+. If you want to include other HTTPS credentials, download the proxy and modify it accordingly.
 +
-When importing your proxy application into Studio, your project is linked to a *domain* project named `api-gateway` (which is automatically created in studio if not already present). This domain project is identical to the domain that exists in CloudHub and in your API Gateway On-Premises by default. It's necessary for being able to deploy your app to the Anypoint Studio server under the same conditions as when deployed to production. If you modify your domain on your API Gateway on-prem installation to include HTTPS credentials, then you should also replicate those changes on this domain that exists in Studio so that you can deploy it under the same conditions in both places.
+If you plan to import your proxy application into Studio 6.x or later, you can choose in API Manager whether to /anypoint-platform-for-apis/api-gateway-domain#sts=API Gateway Domain[link the application to a domain] or not. When importing your proxy application into Studio 5.x, your project is linked to a *domain* project named `api-gateway`, which is automatically created in studio if not already present. This domain project is identical to the domain that exists in CloudHub and in your default API Gateway On-Premises. It's necessary for being able to deploy your app to the Anypoint Studio server under the same conditions as those present when you deploy the app to production. If you modify your domain on your API Gateway On-Premises installation to include HTTPS credentials, replicate those changes on the domain that exists in Studio to match deployment conditions.
 +
-. link:/mule-user-guide/v/3.8/http-request-connector[Modify the http:request-config] element in your proxy's `proxy.xml` file to include TLS configuration elements that point to the required truststore/keystore.
+. link:/mule-user-guide/v/3.8/http-request-connector[Modify the http:request-config] element in the `proxy.xml` file of the proxy to include TLS configuration elements that point to the required truststore/keystore.
 
-== Understanding the Proxy Application
+== Modifying a Proxy Application
 
-If you wish to inspect or change your proxy application, you can do so by opening the application in http://www.mulesoft.com/platform/mule-studio[Anypoint Studio]. You can also use Studio to build a proxy application from scratch, based on the models below. 
+If you want to inspect or change your proxy application, you can do so by opening the proxy application in http://www.mulesoft.com/platform/mule-studio[Anypoint Studio]. You can also use Studio to build a proxy application from scratch, based on the models below. 
 
-The sections below introduce the anatomy of the automatically generated proxy applications for a REST API, a SOAP API, and RAML proxy.
+In most cases, the proxy you generate in API Manager is suitable for deployment out of the box. However, you can modify the proxy to apply HTTPS credentials or to add additional functionality. For example, you might want to log data to a file or send it to your Splunk account with the Anypoint Splunk Connector. You can import a proxy application into Anypoint Studio and modify the application to perform additional functionality, provided essential structures remain in place.
+
+. After link:/anypoint-platform-for-apis/proxying-your-api#setting-up-a-proxy[setting up a proxy] using API Manager, click one of the *Download proxy* options.
++
+image::proxying-your-api-295dc.png[proxying-your-api-295dc]
++
+. In Studio, select *File* > *Import*.
+. In the Import dialog, expand the *Mule* node, and select *Anypoint Studio Generated Deployable Archive (.zip)*. Click *Next*.
+. Navigate to a proxy zip file that you downloaded from API Manager.
+. Click *Finish*.
+
+You can now edit your proxy application.
+
+After editing, you can export your project and then deploy it either on-premises or to CloudHub. If you link:/anypoint-platform-for-apis/api-gateway-domain[use a domain], you are exporting and deploying only your proxy app, not the domain project that is linked to it. When deployed to production, your app relies on the domain that exists in that environment.
+
+The following sections introduce the anatomy of the automatically generated proxy applications for a REST API, a SOAP API, and RAML proxy.
 
 === Basic Anatomy of a REST Proxy
 
-This section describes the structure of a REST proxy that you can set up in API Manager. From this basic structure, you can add additional functionality – to log data, for example. 
+This section describes the structure of a REST proxy application that you can set up in API Manager. From this basic structure, you can add additional functionality – to log data, for example. 
 
-The purpose of a proxy application is to abstract your API to a layer that can be managed by the Anypoint Platform for APIs. A well-built proxy application for a REST API meets the following criteria:
+A proxy application abstracts the API to a layer that can be managed by API Manager. A well-built proxy application for a REST API meets the following criteria:
 
 * Accepts incoming service calls from applications and routes them to the URI of your target API.
 * Copies any message headers from the service call and passes them along to your API.
@@ -249,59 +264,69 @@ The purpose of a proxy application is to abstract your API to a layer that can b
 * Captures message headers from your API's response and attaches them to the response message.
 * Routes the response to the application that made the service call.
 
-Here's what a basic REST proxy application looks like in Anypoint Studio's GUI.
+Here's a basic REST proxy application in Anypoint Studio.
 
-image:rest-proxy.png[rest-proxy]
+[tabs]
+------
+[tab,title="REST API Proxy"]
+....
 
-The following example shows an XML configuration of the above REST API proxy:
+image::proxying-your-api-a2d91.png[proxying-your-api-a2d91]
+....
+[tab,title="XML"]
+....
+The following example shows an XML configuration of this REST API proxy:
 
 [source,xml,linenums]
 ----
-<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:http="http://www.mulesoft.org/schema/mule/http"
-      xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
-      xmlns:expression-language="http://www.mulesoft.org/schema/mule/expression-language-gw"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd
-http://www.mulesoft.org/schema/mule/expression-language-gw http://www.mulesoft.org/schema/mule/expression-language-gw/current/mule-expression-language-gw.xsd
-http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd" version="EE-3.7.0">
-    <api-platform-gw:api id="${api.id}" apiName="${api.name}" version="${api.version}" flowRef="proxy">
-        <api-platform-gw:description>${api.description}</api-platform-gw:description>
-    </api-platform-gw:api>
-    <http:request-config name="http-request-config" host="${implementation.host}" port="${implementation.port}" basePath="${implementation.path}" doc:name="HTTP Request Configuration"/>
-    <flow name="proxy">
-        <http:listener config-ref="http-lc-0.0.0.0-8081" path="${proxy.path}" parseRequest="false" doc:name="HTTP"/>
-        <flow-ref name="copy-headers" doc:name="Flow Reference"/>
-        <http:request config-ref="http-request-config" method="#[message.inboundProperties['http.method']]"
-                      path="#[message.inboundProperties['http.request.path'].substring(message.inboundProperties['http.listener.path'].length()-2)]" parseResponse="false" doc:name="HTTP">
-            <http:request-builder>
-                <http:query-params expression="#[message.inboundProperties['http.query.params']]"/>
-            </http:request-builder>
-            <http:success-status-code-validator values="0..599" />
-        </http:request>
-        <flow-ref name="copy-headers" doc:name="Flow Reference"/>
-    </flow>
-    <sub-flow name="copy-headers">
-        <custom-transformer class="com.mulesoft.gateway.extension.CopyHeadersTransformer" doc:name="Java"/>
-        <!-- This can be uncommented for customization
-            <copy-properties propertyName="*"/>
-            <remove-property propertyName="Host"/>
-            <remove-property propertyName="Content-Length"/>
-            <remove-property propertyName="MULE_*"/>
-            <remove-property propertyName="Connection"/>
-            <remove-property propertyName="Transfer-Encoding"/>
-            <remove-property propertyName="Server"/>
-        -->
-    </sub-flow>
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+  <api-platform-gw:api id="${api.id}" apiName="${api.name}" version="${api.version}" flowRef="proxy" doc:name="API Autodiscovery">
+        <api-platform-gw:description>${api.description}</api-platform-gw:description>
+    </api-platform-gw:api>
+    <http:request-config name="http-request-config" host="${implementation.host}" port="${implementation.port}" basePath="${implementation.path}" doc:name="HTTP Request Configuration"/>
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <flow name="proxy">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="${proxy.path}" parseRequest="false" doc:name="HTTP"/>
+        <flow-ref name="copy-headers" doc:name="Flow Reference"/>
+        <http:request config-ref="http-request-config" method="#[message.inboundProperties['http.method']]"
+                      path="#[message.inboundProperties['http.request.path'].substring(message.inboundProperties['http.listener.path'].length()-2)]" parseResponse="false" doc:name="HTTP">
+            <http:request-builder>
+                <http:query-params expression="#[message.inboundProperties['http.query.params']]"/>
+            </http:request-builder>
+            <http:success-status-code-validator values="0..599" />
+        </http:request>
+        <flow-ref name="copy-headers" doc:name="Flow Reference"/>
+    </flow>
+    <sub-flow name="copy-headers">
+        <custom-transformer class="com.mulesoft.gateway.extension.CopyHeadersTransformer" doc:name="Java"/>
+        <!-- This can be uncommented for customization
+            <copy-properties propertyName="*"/>
+            <remove-property propertyName="Host"/>
+            <remove-property propertyName="Content-Length"/>
+            <remove-property propertyName="MULE_*"/>
+            <remove-property propertyName="Connection"/>
+            <remove-property propertyName="Transfer-Encoding"/>
+            <remove-property propertyName="Server"/>
+        -->
+    </sub-flow>
 </mule>
 ----
+....
+------
+When importing your proxy application into Studio 5.x and earlier, notice that your project is linked to a *domain* project named `api-gateway` (which is automatically created in studio if not already present). This domain project is identical to the domain that exists in CloudHub and in your API Gateway On-Premises by default. It's necessary for being able to deploy your app to the Anypoint Studio 5.x server under the same conditions as when deployed to production. If you modify your domain on your API Gateway on-prem installation, then you should also replicate those changes on this domain that exists in Studio 5.x so that you can deploy it under the same conditions in both places. This Domain project contains the `<http:listener-config` statement that the Mule flow requires.
 
-When importing your proxy application into Studio 5.x and earlier, notice that your project is linked to a *domain* project named `api-gateway` (which is automatically created in studio if not already present). This domain project is identical to the domain that exists in CloudHub and in your API Gateway On-Premises by default. It's necessary for being able to deploy your app to the Anypoint Studio server under the same conditions as when deployed to production. If you modify your domain on your API Gateway on-prem installation, then you should also replicate those changes on this domain that exists in Studio so that you can deploy it under the same conditions in both places. This Domain project contains the `<http:listener-config` statement that the Mule flow requires.
+In your API project, configure the property placeholders in the configuration in the `mule-app.properties` file, which you can find in your Package Explorer under `src/main/app`.
 
-* In your API project, configure the property placeholders in the configuration in the `mule-app.properties` file, which you can find in your Package Explorer under `src/main/app`.
-+
 [source,code,linenums]
 ----
 api.id=apiId
@@ -315,14 +340,17 @@ implementation.path=/
 http.port=8081
 ----
 
-* Your HTTP listeners may differ, and you may need to add additional configuration if your API requires HTTPS communication (as shown in link:/anypoint-platform-for-apis/https-api-proxy-example[this example]) or link:/anypoint-platform-for-apis/managing-internal-links-in-api-proxies[returns internal API URLs] as part of the response.
-* You can file a support ticket for assistance with setting up your proxy application.
+The HTTP listeners in your app may differ, and you may need to add additional configuration if your API requires HTTPS communication (as shown in link:/anypoint-platform-for-apis/https-api-proxy-example[the HTTPS example]) or link:/anypoint-platform-for-apis/managing-internal-links-in-api-proxies[returns internal API URLs] as part of the response.
+
 
 === Basic Anatomy of a SOAP Proxy
 
-This section describes the structure of a SOAP proxy that you can auto-generate from the Anypoint Platform for APIs. From this basic structure, you can add additional functionality to log data, for example. 
+[tabs]
+------
+[tab,title="SOAP Proxy"]
+....
 
-The purpose of a proxy application is to abstract your API to a layer that can be managed by the Anypoint Platform for APIs. A well-built proxy application for a SOAP API:
+A well-built proxy application for a SOAP API meets the following criteria:
 
 . Accepts incoming service calls from applications and route them to the URI of your target API.
 . Captures the Content-Type and stores it in a variable.
@@ -335,54 +363,44 @@ The purpose of a proxy application is to abstract your API to a layer that can b
 
 Here's what a basic SOAP proxy application looks like in Anypoint Studio's GUI.
 
-image:soap-proxy.png[soap-proxy]
+image::proxying-your-api-9fa34.png[proxying-your-api-9fa34]
 
+....
+[tab,title="XML of SOAP Proxy"]
+....
 Here is the XML configuration of a basic SOAP API proxy.
 
 [source,xml,linenums]
 ----
-<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" xmlns="http://www.mulesoft.org/schema/mule/core"
-    xmlns:http="http://www.mulesoft.org/schema/mule/http"
-    xmlns:cxf="http://www.mulesoft.org/schema/mule/cxf"
-    xmlns:expression-language="http://www.mulesoft.org/schema/mule/expression-language-gw"
-    xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"   xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:cxf="http://www.mulesoft.org/schema/mule/cxf" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/cxf http://www.mulesoft.org/schema/mule/cxf/current/mule-cxf.xsd
-http://www.mulesoft.org/schema/mule/expression-language-gw http://www.mulesoft.org/schema/mule/expression-language-gw/current/mule-expression-language-gw.xsd
-http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd
-http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd" version="EE-3.7.0">
-    <http:request-config name="http-request-config" host="![wsdl(p['wsdl.uri']).services[0].preferredPort.addresses[0].host]"
-        port="![wsdl(p['wsdl.uri']).services[0].preferredPort.addresses[0].port]" doc:name="HTTP Request Configuration"/>
-    <api-platform-gw:api id="${api.id}" apiName="${api.name}" version="${api.version}" flowRef="proxy" doc:name="API Autodiscovery">
-        <api-platform-gw:description>${api.description}</api-platform-gw:description>
-    </api-platform-gw:api>
-    <flow name="proxy">
-        <http:listener config-ref="http-lc-0.0.0.0-8081" path="${proxy.path}" parseRequest="false" doc:name="HTTP"/>
-        <set-session-variable variableName="originalContentType" value="#[message.inboundProperties['Content-Type']]" doc:name="Session Variable"/>
-        <cxf:proxy-service port="![wsdl(p['wsdl.uri']).services[0].preferredPort.name]"
-                           namespace="![wsdl(p['wsdl.uri']).targetNamespace]"
-                           service="![wsdl(p['wsdl.uri']).services[0].name]"
-                           payload="envelope" enableMuleSoapHeaders="false"
-                           soapVersion="1.2"
-                           wsdlLocation="${wsdl.uri}" doc:name="CXF">
-            <cxf:features>
-                <spring:bean class="org.mule.module.cxf.feature.ProxyGZIPFeature"/>
-            </cxf:features>
-        </cxf:proxy-service>
-        <flow-ref name="copy-headers" doc:name="Flow Reference"/>
-        <cxf:proxy-client payload="envelope" enableMuleSoapHeaders="false" soapVersion="1.2" doc:name="CXF">
-            <cxf:features>
-                <spring:bean class="org.mule.module.cxf.feature.ProxyGZIPFeature"/>
-            </cxf:features>
-        </cxf:proxy-client>
-        <set-property propertyName="Content-Type" value="#[sessionVars['originalContentType']]" doc:name="Property"/>
-        <http:request config-ref="http-request-config" path="![wsdl(p['wsdl.uri']).services[0].preferredPort.addresses[0].path]" method="POST" parseResponse="false" doc:name="HTTP">
-            <http:success-status-code-validator values="0..599" />
-        </http:request>
-        <flow-ref name="copy-headers" doc:name="Flow Reference"/>
-    </flow>
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+<http:request-config name="http-request-config" host="![wsdl(p['wsdl.uri']).services[0].preferredPort.addresses[0].host]" port="![wsdl(p['wsdl.uri']).services[0].preferredPort.addresses[0].port]" doc:name="HTTP Request Configuration"/>
+<api-platform-gw:api id="${api.id}" apiName="${api.name}" version="${api.version}" flowRef="proxy" doc:name="API Autodiscovery">
+  <api-platform-gw:description>${api.description}</api-platform-gw:description>
+</api-platform-gw:api>
+<flow name="proxy">
+  <http:listener config-ref="http-lc-0.0.0.0-8081" path="${proxy.path}" parseRequest="false" doc:name="HTTP"/>
+  <set-session-variable variableName="originalContentType" value="#[message.inboundProperties['Content-Type']]" doc:name="Session Variable"/>
+  <cxf:proxy-service port="![wsdl(p['wsdl.uri']).services[0].preferredPort.name]" namespace="![wsdl(p['wsdl.uri']).targetNamespace]" service="![wsdl(p['wsdl.uri']).services[0].name]" payload="envelope" enableMuleSoapHeaders="false" soapVersion="1.2" wsdlLocation="${wsdl.uri}" doc:name="CXF">
+    <cxf:features>
+      <spring:bean class="org.mule.module.cxf.feature.ProxyGZIPFeature"/>
+    </cxf:features>
+  </cxf:proxy-service>
+<flow-ref name="copy-headers" doc:name="Flow Reference"/>
+  <cxf:proxy-client payload="envelope" enableMuleSoapHeaders="false" soapVersion="1.2" doc:name="CXF">
+    <cxf:features>
+      <spring:bean class="org.mule.module.cxf.feature.ProxyGZIPFeature"/>
+    </cxf:features>
+  </cxf:proxy-client>
+  <set-property propertyName="Content-Type" value="#[sessionVars['originalContentType']]" doc:name="Property"/>
+  <http:request config-ref="http-request-config"   path="![wsdl(p['wsdl.uri']).services[0].preferredPort.addresses[0].path]" method="POST" parseResponse="false" doc:name="HTTP">
+    <http:success-status-code-validator values="0..599" />
+  </http:request>
+  <flow-ref name="copy-headers" doc:name="Flow Reference"/>
+</flow>
     <sub-flow name="copy-headers">
         <custom-transformer class="com.mulesoft.gateway.extension.CopyHeadersTransformer" doc:name="Java"/>
         <!-- This can be uncommented for customization
@@ -397,16 +415,15 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     </sub-flow>
 </mule>
 ----
+....
+------
 
-[WARNING]
-====
-*Notes*:
+The cxf:proxy-* enableMuleSoapHeaders attribute is currently not implemented and has no effect.
 
-* The cxf:proxy-* enableMuleSoapHeaders attribute is currently not implemented and has no effect.
-* The above template is a basic skeleton only. Fill in details for your API and add additional configuration if your API requires HTTPS communication (discussed in the REST proxy example) or returns internal API URLs as part of the response.
+This XML template is a basic skeleton only. Fill in details for your API and add additional configuration if your API requires HTTPS communication (discussed in the REST proxy example) or return internal API URLs as part of the response.
 
-* Configure the property placeholders in the configuration in your `mule-app.properties` file, which you can find in your Package Explorer under `src/main/app`.
-+
+Configure the property placeholders in the configuration in your `mule-app.properties` file, which you can find in your Package Explorer under `src/main/app`.
+
 [source,code,linenums]
 ----
 api.id=apiId
@@ -417,73 +434,102 @@ proxy.path=/api/*
 wsdl.uri=http://baseUri.com/?wsdl
 ----
 
-* You can file a support ticket for assistance with setting up your proxy application.
-====
-
 === Basic Anatomy of a RAML Proxy
+
+[tabs]
+------
+[tab,title="RAML Proxy"]
+....
 
 When you set your API URL in the Anypoint Platform using the *type* field, the proxy that is generated uses the RAML defined within the API version and honors the content of that RAML. This proxy type differs from the pass-through proxies that you can generate from a basic HTTP or WSDL URL in some important ways:
 
-* Because the proxy honors the content of the RAML file, requests sent to the proxy that do not match the RAML definition (for example, a request for a resource that does not exist) are rejected by the proxy itself, rather than being passed through the proxy to the API for the appropriate response.
-* The RAML proxy application exposes the API Console at the API Gateway.
+Because the proxy honors the content of the RAML file, requests sent to the proxy that do not match the RAML definition, such as a request for a resource that does not exist, are rejected by the proxy itself, rather than being passed through the proxy to the API for the appropriate response.
+
+The RAML proxy application exposes the API Console.
 
 Here's what a basic RAML proxy application looks like in Anypoint Studio's GUI.
 
-image:raml-proxy.png[raml-proxy]
+image::proxying-your-api-a969c.png[proxying-your-api-a969c]
 
+....
+[tab,title="XML of RAML Proxy"]
+....
 Here is the XML configuration of a basic RAML API proxy.
 
 [source,xml,linenums]
 ----
-<mule xmlns:spring="http://www.springframework.org/schema/beans" xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:http="http://www.mulesoft.org/schema/mule/http"
-        xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-        xmlns:expression-language="http://www.mulesoft.org/schema/mule/expression-language-gw"
-        xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
-        xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/expression-language-gw http://www.mulesoft.org/schema/mule/expression-language-gw/current/mule-expression-language-gw.xsd
-http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
-http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd
-http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd" version="EE-3.7.0">
-    <http:request-config name="http-request-config" host="${implementation.host}" port="${implementation.port}" basePath="${implementation.path}" doc:name="HTTP Request Configuration"/>
-    <apikit:proxy-config name="proxy-config" raml="${raml.location}" disableValidations="true"/>
-  
-    <api-platform-gw:api id="${api.id}" apiName="${api.name}" version="${api.version}" flowRef="proxy" apikitRef="proxy-config" doc:name="API Autodiscovery">
-        <api-platform-gw:description>${api.description}</api-platform-gw:description>
-    </api-platform-gw:api>
-    <flow name="proxy" >
-        <http:listener config-ref="http-lc-0.0.0.0-8081" path="${proxy.path}" parseRequest="false" doc:name="HTTP"/>
-        <apikit:proxy config-ref="proxy-config"/>
-        <http:request config-ref="http-request-config" method="#[message.inboundProperties['http.method']]" path="#[message.inboundProperties['http.request.path'].substring(message.inboundProperties['http.listener.path'].length()-2)]" parseResponse="false" doc:name="HTTP">
-            <http:request-builder>
-                <http:query-params expression="#[message.inboundProperties['http.query.params']]"/>
-            </http:request-builder>
-            <http:success-status-code-validator values="0..599" />
-        </http:request>
-        <exception-strategy ref="defaultExceptionStrategy" doc:name="Reference Exception Strategy"/>
-    </flow>
-    <flow name="console" >
-        <http:listener config-ref="http-lc-0.0.0.0-8081" path="${console.path}" parseRequest="false" doc:name="HTTP"/>
-        <apikit:console config-ref="proxy-config" doc:name="APIkit Console"/>
-    </flow>
-    <apikit:mapping-exception-strategy name="defaultExceptionStrategy">
-        <apikit:mapping statusCode="404">
-            <apikit:exception value="org.mule.module.apikit.exception.NotFoundException"/>
-            <set-payload value="resource not found" doc:name="Set Payload"/>
-        </apikit:mapping>
-        <apikit:mapping statusCode="405">
-            <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException"/>
-            <set-payload value="method not allowed" doc:name="Set Payload"/>
-        </apikit:mapping>
-    </apikit:mapping-exception-strategy>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+   xmlns:http="http://www.mulesoft.org/schema/mule/http"
+   xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+   xmlns:expression-language="http://www.mulesoft.org/schema/mule/expression-language-gw"
+   xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
+   xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit"
+   xmlns:proxy="http://www.mulesoft.org/schema/mule/proxy"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+        http://www.mulesoft.org/schema/mule/expression-language-gw http://www.mulesoft.org/schema/mule/expression-language-gw/current/mule-expression-language-gw.xsd
+        http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+        http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd
+        http://www.mulesoft.org/schema/mule/proxy http://www.mulesoft.org/schema/mule/proxy/current/mule-proxy.xsd">
+
+    <configuration defaultProcessingStrategy="non-blocking" />
+
+    <expression-language:property-placeholder location="config.properties" />
+
+    <http:listener-config name="http-lc-0.0.0.0-8081" host="0.0.0.0" port="![p['proxy.port']]" protocol="HTTP"/>
+
+    <http:request-config
+      name="http-request-config"
+      host="![p['implementation.host']]"
+      port="![p['implementation.port']]"
+      basePath="![p['implementation.path']]"
+      protocol="HTTP"
+    />
+
+    <proxy:raml-proxy-config name="proxy-config" raml="![p['raml.location']]" disableValidations="true"/>
+
+    <api-platform-gw:api apiName="![p['api.name']]" version="![p['api.version']]" apikitRef="proxy-config" flowRef="proxy">
+    </api-platform-gw:api>
+
+    <flow name="proxy" doc:name="HTTP Proxy">
+        <http:listener config-ref="http-lc-0.0.0.0-8081" path="![p['proxy.path']]" parseRequest="false" />
+        <custom-processor class="com.mulesoft.gateway.extension.ProxyRequestHeadersProcessor" />
+        <proxy:raml config-ref="proxy-config"/>
+        <http:request config-ref="http-request-config" method="#[message.inboundProperties['http.method']]" path="#[message.inboundProperties['http.request.path'].substring(message.inboundProperties['http.listener.path'].length()-2)]" parseResponse="false">
+            <http:request-builder>
+                <http:query-params expression="#[message.inboundProperties['http.query.params']]"/>
+            </http:request-builder>
+            <http:success-status-code-validator values="0..599" />
+        </http:request>
+        <custom-processor class="com.mulesoft.gateway.extension.ProxyResponseHeadersProcessor" />
+        <exception-strategy ref="defaultExceptionStrategy"/>
+    </flow>
+
+    <flow name="console" doc:name="console">
+        <http:listener config-ref="http-lc-0.0.0.0-8081" path="![p['console.path']]" parseRequest="false" />
+        <apikit:console config-ref="proxy-config"/>
+    </flow>
+
+    <apikit:mapping-exception-strategy name="defaultExceptionStrategy">
+        <apikit:mapping statusCode="404">
+            <apikit:exception value="org.mule.module.apikit.exception.NotFoundException"/>
+            <set-payload value="resource not found"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="405">
+            <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException"/>
+            <set-payload value="method not allowed"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="504">
+            <apikit:exception value="java.util.concurrent.TimeoutException"/>
+            <set-payload value="Gateway timeout"/>
+        </apikit:mapping>
+    </apikit:mapping-exception-strategy>
 </mule>
 ----
+....
+------
 
-[WARNING]
-====
 Configure the property placeholders in the configuration in your `mule-app.properties` file, which you can find in your Package Explorer under `src/main/app`.
 
 [source,code,linenums]
@@ -500,27 +546,7 @@ console.path=/console/*
 raml.location=api.raml
 ----
 
-You can file a support ticket for assistance with setting up your proxy application.
-====
-
-== Modify a Proxy Application
-
-For most cases, the auto-generated proxy should be good for deploying as it comes out of the box. However, you may wish to modify it to apply HTTPS credentials  or to add additional functionality to the proxy with your own code. For example, you may want to log data to a file or send it to your Splunk account with the Anypoint Splunk Connector. You can modify the proxy application to perform this additional functionality, provided that you leave its essential structures in place.
-
-. In Studio, select *File* > *Import*.
-. In the Import dialog, expand the *Mule* node, and select *Anypoint Studio Project from External Location*. Click *Next*.
-. In the *Project Root* field, navigate to the proxy folder that you just downloaded from the Anypoint Platform.
-. Edit the project *Name* to be unique, then select the *API Gateway runtime* from the Server Runtime dropdown. Don't have it installed? See link:/anypoint-platform-for-apis/configuring-an-api-gateway#setting-up-your-gateway[Setting Up API Gateway].
-. Click *Finish*.
-
-You can now edit your proxy application in Studio's visual editor or XML editor.
-
-When you're done, you can export your project and then deploy it either on-premises or to CloudHub. Keep in mind that you are only exporting and deploying your proxy app, not the domain project that is linked to it. When deployed to production, your app relies on the domain that exists in that environment.
-
 == See Also
 
 * link:/anypoint-platform-for-apis/api-gateway-domain[API Gateway Domain] for the API Gateway 2.0.n and newer API Gateway domain feature.
-* Learn more about the link:/anypoint-platform-for-apis/api-auto-discovery[API Auto-Discovery] functionality.
-* Read more about the link:/anypoint-platform-for-apis/localhost-behavior-on-the-api-gateway[localhost behavior on the API Gateway], and some suggestions for how to configure your inbound endpoints to avoid conflicts.
-* Check out an link:/anypoint-platform-for-apis/https-api-proxy-example[example of a proxy application for an HTTPS API].
-* Not using a proxy? Learn how to link:/anypoint-platform-for-apis/deploying-your-api-or-proxy[deploy an APIkit project] to a Mule runtime or directly to an API Gateway.
+* link:/anypoint-platform-for-apis/https-api-proxy-example[Example of a proxy application for an HTTPS API].
