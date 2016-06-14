@@ -20,23 +20,12 @@ The users who you invite receive email invitations to sign up to your organizati
 
 Resend or cancel a sent invitation? Click *Pending Invites* to view all invitations that have not yet been accepted. Select the ones you need to manage, and click *Re-send Invite* or *Cancel Invite*.
 
-[NOTE]
---
-*Understanding API Permissions*
+== Granting Permissions to Users
 
-You can assign user permissions to edit or view individual API versions or API portals using the following pre-defined Roles:
+There are two ways to assign permissions to users:
 
-* *API Version Owner*: API Version Owners can view specific versions of the API that they own. API Version Owners inherit Portal Viewer permissions by default for any API Portals that you create for the API versions they own.
-* *Portal Viewer*: Portal Viewers can see a list of the Private API Portals to which they have Portal Viewer permissions from the Developer Portal. They can also click to view those API Portals. Note that the ability to view an API Portal does not automatically give a user access to the API.
---
-
-=== Granting Permissions to Individual Users
-
-There are two ways to assign permissions. One way is to use the permissions system in the *Access Management* Administration page, which Organization Owners can access through the *Access Management* section. +
-The other is to assign permissions directly from an API version details page in API Manager, which you can do as an API Version Owner.
-
-==== Granting Permissions from Organization Administration Page
-
+* As an Organization Owner, or Organization Administrator, you can use the permissions system in the *Access Management* Administration page
+::
 . In the Organization Administration page, click *Users* to view a list of your users.
 . Search or browse to find a user to whom you wish to grant permissions, then click the username.
 . On the user details page, you can edit the user's email address, send a reset password link, or configure API Permissions and Roles. By default, the API Permissions tab is open.
@@ -47,7 +36,21 @@ image::users-d7388.png[users-d7388]
 . Once you selected your desired API, configure versions and access levels by using the *Select Version* and *Select Access* buttons that are made visible. *Note* that you cannot grant Portal Viewer permissions unless the API has an API Portal.
 . Your selections are commited automatically.
 
-==== Granting Permissions from API Manager
+
+* The other method consists in assigning permissions from the permission system of each product within the Anypoint Platform.
+:: For a detailed explanation on how to do this, check the documentation of the specific product. +
+You can also check the link:/access-management/managing-accounts-roles-and-permissions[account roles and permissions] section for a list of all pre-set roles for each product.
+
+////
+[NOTE]
+--
+You can assign user permissions to edit or view individual API versions or API portals using the following pre-defined *Roles*:
+
+* *API Version Owner*: API Version Owners can view specific versions of the API that they own. API Version Owners inherit Portal Viewer permissions by default for any API Portals that you create for the API versions they own.
+* *Portal Viewer*: Portal Viewers can see a list of the Private API Portals to which they have Portal Viewer permissions from the Developer Portal. They can also click to view those API Portals. Note that the ability to view an API Portal does not automatically give a user access to the API.
+--
+
+=== Granting Permissions from API Manager
 
 If you are not an organization owner, you can assign permissions for APIs to which you are an *API Version Owner*.
 
@@ -59,3 +62,76 @@ If you are not an organization owner, you can assign permissions for APIs to whi
 image::users-606be.png[users-606be]
 
 If necessary, you can remove user permissions. Note that if users have been granted their permission via a role, managed by Organization Administrators on the Organization Administration page, you cannot view or remove those role-based permissions here.
+////
+
+== Federated Organizations - Map Users to Anypoint Platform Roles
+
+As of November 2014, Anypoint Platform provides a feature to help you map users in a federated organization's LDAP groups. This requires that your Anypoint Platform organization utilizes an external identity provider such as link:https://www.pingidentity.com/en/products/pingfederate.html[PingFederate].
+
+This feature enables users in an organization to sign in to Anypoint Platform using the same organizational credentials and access permissions that an organization maintains using LDAP. This ensures credential security and maintains organizational roles for accessing privileged information.
+
+To support this feature you need to:
+
+* Configure an link:/access-management/external-identity[external identity]
+* <<Verify SAML Information,Verify SAML assertion information>>
+* <<Configure Roles,Configure Anypoint Platform Roles with the same values as the SAML assertion>>
+
+=== Verify SAML Information
+
+The SAML assertion is an XML file that is issued by the external identity provider as described in link:/access-management/setting-up-external-identity[Setting Up External Identity].
+
+Log into Anypoint Platform and click the *External Identity* tab to verify your organization's Identity management information.
+
+image:APExtIdentityTab.png[APExtIdentityTab.png]
+
+Verify that the **group_attribute **value is set to the correct attribute name. In the example above, the attribute is named *memberOf*. You can see a sample SAML assertion with that attribute below :
+
+[source,xml,linenums]
+----
+<saml:Attribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:basic" Name="memberOf">
+  <saml:AttributeValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">cn=jira-users,ou=groups,dc=muleforge,dc=org</saml:AttributeValue>
+  <saml:AttributeValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">cn=confluence-users,ou=groups,dc=muleforge,dc=org</saml:AttributeValue>
+  <saml:AttributeValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">cn=mule-community,ou=groups,dc=muleforge,dc=org</saml:AttributeValue>
+  <saml:AttributeValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">cn=SR-User,ou=Groups,dc=muleforge,dc=org</saml:AttributeValue>
+</saml:Attribute>
+----
+
+All other information on the tab is provided when registering an organization to use Anypoint Platform. If any information needs to be changed, log into the  link:https://www.mulesoft.com/support-login[MuleSoft Support Portal] and submit a request.
+
+=== Configure Roles
+
+To configure a role:
+
+. In Anypoint Platform, click *Roles*. Click *Add role* to create a role for each group of users in your organization.
++
+image:RolesAddRole.png[RolesAddRole.png]
+
+. Specify a role name and description. Click *Add role* to add the role:
++
+image:APNewRoleJU.png[APNewRoleJU.png] +
+
+. In the *Roles* menu, click the name of the new role:
++
+image:APClickRole.png[APClickRole.png] +
+
+.  Click *Set external group mapping*:
++
+image:APJUInfo.png[APJUInfo.png] +
+
+. Copy the string from your SAML assertion's AttributeValue to the *External group name* field, for example:
++
+SAML AttributeValue:
++
+[source,xml,linenums]
+----
+<saml:AttributeValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:type="xs:string">cn=jira-users,ou=groups,dc=muleforge,dc=org</saml:AttributeValue>
+----
+
++
+Mapping:
++
+image:APJUSetExGrpMap.png[APJUSetExGrpMap.png]
+
+. Click *Update*.
+. Repeat this process for each role that you would like mapped to an external group.
