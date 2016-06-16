@@ -45,12 +45,12 @@ For information on software setup and DevKit, see link:/anypoint-connector-devki
 *You can develop a connector on a Windows, Mac, or Linux machine.*
 ====
 
-== Background
+== DevKit Description
 
-DevKit exposes to connector developers  link:http://docs.oracle.com/javase/tutorial/java/annotations/[Java annotations] that generate code and files to interact with Mule, as well as Anypoint Studio. The generated code provides the interface between the connector and Mule that would otherwise require each connector developer to include extensive boilerplate code, as well as the code and files required to interact with your connector in Anypoint Studio.
+DevKit exposes connector developers to link:http://docs.oracle.com/javase/tutorial/java/annotations/[Java annotations] that generate code and files to interact with Mule, as well as Anypoint Studio. The generated code provides the interface between the connector and Mule that would otherwise require each connector developer to include extensive boilerplate code, as well as the code and files required to interact with your connector in Anypoint Studio.
 
 
-
+[[get-cookbook]]
 == Get the Cookbook
 
 Get the cookbook tutorial, which is stored on GitHub:
@@ -63,12 +63,13 @@ cd ~/dev
 git clone https://github.com/mulesoft/mule-cookbook.git
 ----
 +
-. Enter your `mule-cookbook` directory and run the following Maven command:
+. Enter your newly created `mule-cookbook` directory and run the following Maven command:
 +
 [source,bash,linenums]
 ----
 mvn install eclipse:eclipse
 ----
++
 ////
 As the connector has not yet been built, you should receive a FAILURE to build the Mule Cookbook Anypoint Connector
 todo
@@ -87,11 +88,15 @@ todo
 [INFO] BUILD FAILURE
 [INFO] ------------------------------------------------------------------------
 ////
-. When done, open Anypoint Studio, import the root project as an existing project. *File* > *Import* > *General* > *Existing Projects into Workspace*.
+. When done, open Anypoint Studio, import the `mule-cookbook` directory as an existing project. *File* > *Import* > *Existing Projects into Workspace*.
++
+image::devkit-tutorial-30756.png[import existing - mule-cookbook]
+
+This should create the several folders you see on the above screen in your workspace in Studio, which is visible in the *Package Explorer*.
 
 == Cookbook Description
 
-Cookbook is a web service to help users organize ingredients and recipes for dishes they might like to access, store and update from the web.
+Before we move on, let us briefly mention that the Cookbook service is a web service that helps users organize ingredients and recipes they might like to access, store or update from the web.
 
 === Cookbook API Description
 
@@ -171,11 +176,13 @@ To build a basic connector for the {tutorial} service, we need to perform the fo
 
 === Create the {tutorial} Connector
 
+With the `mule-cookbook` directory imported as an existing project into your workspace as instructed link:#get-cookbook[above], you can begin to create the connector project and start coding.
+
 . In Anypoint Studio, click *File* > *New* > *Anypoint Connector Project* or right-click your project name in Package Explorer and click *New* > *Anypoint Connector Project*:
 +
 image::new-connector-1.png[width="500"]
 +
-. Select the Connector Type you want to create. In this case, select SDK Based:
+. Select the project type you want to create. In this case, select *SDK Based*:
 +
 image::new0.png[width="500"]
 +
@@ -183,40 +190,34 @@ image::new0.png[width="500"]
 +
 image:new1.png[width="550"]
 +
-This generates a project containing the structure and all required elements including a skeleton connector, images, sample docs file, but no basic tests for your connector.
+This generates a project containing the structure and all required elements including a skeleton connector, icons, sample docs file, but no basic tests for your connector.
 +
 image::new-connector-3.png[width="600",link="images/new-connector-3.png"]
-+
-[NOTE]
-====
-You can customize the icons by replacing the generated ones. Just make sure that they have the same size so that they look good in Studio.
-====
-+
-You can enable the DevKit view by clicking from the top bar *Window* > *Show view* > *Other*, and look for DevKit in the list.
-+
+
+[TIP]
+You can enable the DevKit view by clicking from the top bar *Window* > *Show View* > *Other*, and look for DevKit in the *Mulesoft* dropdown.
+
+
 .DevKit View shows a compact view of the connector.
 image::enable-view.png[width="300"]
-+
-[NOTE]
-====
-You can check a detailed explanation of the relation between <<connector-structure,connector>> structure and Studio.
-====
+
+== Connection Configuration using @Config
 
 When consuming a service, you may need to configure different values to establish a connection.
 
-To solve this, DevKit provides a pair of annotations that let you modularize in different classes:
+To facilitate developing connection configuration strategies, DevKit provides a pair of annotations that let you modularize these definitions inside several classes:
 
 * The behavior you expose to users, using the @Connector annotation.
-* Code related to the connection/configuration is injected into your @Config annotated field. There are several types of configuration you can use as we will see in this tutorial.
+* Code related to the connection configuration is injected where you add the `@Config` annotation. There are several types of configuration you can use as we will see in this tutorial.
 
 [TIP]
 ====
-When you mark a field with @Config, DevKit ensures that you have an initialized object set when the Mule app runs and that requests are made to your connector.
+When you mark a class with `@Config`, DevKit ensures that you have an initialized object set when the Mule app runs and that requests are made to your connector.
 ====
 
 ==== Adding Dependencies
 
-Let's start coding by creating a connector that allows you to get the recently added elements.
+Let's start coding by creating a connector that allows you to get the recently added items from the Cookbook service.
 
 Since we don't need any kind of authentication to consume the recently added recipes, this is the best operation we can use to start learning how to build our connector.
 
@@ -235,23 +236,22 @@ In your pom.xml file add:
 </dependencies>
 ----
 
-=== Adding @Configurable Fields
+=== Adding Code to Support Configurable Fields
 
-On the @Configuration ConnectorConfig add a <<configurable,configurable>> field for the address where the {tutorial} service is hosted:
+In the `ConnectorConfig.java` file add the @Configurable annotation for the address where the {tutorial} service is hosted:
 
-. Type *conf* at the editor of your connector config and use Ctrl+Space to display the templates.
+. Type *conf* at the editor of your connector config and use `control` + `space` to display the templates.
 +
 image::config-field.png[width="600"]
 +
-. Add a configurable field in our @Configuration component with a default value for the endpoint our client connects to so that users can connect to different sandboxes.
-+
-. Create the a setter and a getter, since all @Configurable items must have getters and setters.
+. Define a configurable field inside the `@Configuration`-annotated class with a default value for the endpoint our client connects to so that users can connect to different sandboxes. For example, `@Default("http://devkit-cookbook.cloudhub.io/soap")`
+. Any field marked with the `@Configurable` annotation must have a getter and a setter for that field.
 +
 See full link:https://github.com/mulesoft/mule-cookbook-tutorial/blob/master/src/main/asciidoc/resources/java/v1/ConnectorConfig.java[Config] source code.
 
 === Initialize the Client
 
-. On your @Connector marked class use the @Start annotation on a method to initialize the client.
+. On your `@Connector`-annotated class in the `Connector.java` file use the `@Start` annotation on a method to initialize the client.
 +
 [source,java,linenums]
 ----
@@ -1327,7 +1327,7 @@ For example in our case, to consume the SDK for the Cookbook we can add the depe
 
 If you have a wsdl, the easiest way to build a connector is to create a client using CXF link:http://cxf.apache.org/docs/wsdl-to-java.html[wsdl2java].
 
-You can configure the CXF goal in your pom.xml file very easily. The full documentation is at the Apache  link:http://cxf.apache.org/docs/maven-cxf-codegen-plugin-wsdl-to-java.html[CXF site].
+You can configure the CXF goal in your `pom.xml` file very easily. The full documentation is at the Apache  link:http://cxf.apache.org/docs/maven-cxf-codegen-plugin-wsdl-to-java.html[CXF site].
 
 For example, in your pom.xml file, you can add the following plus all required dependencies:
 [source,xml,linenums]
