@@ -1070,7 +1070,6 @@ To define the pooling profile for the connector manually, access the *Pooling Pr
 
 For background information on pooling, see link:/mule-user-guide/v/3.8/tuning-performance[Tuning Performance].
 
-/mule-user-guide/v/3.8/tuning-performance
 == Example Code
 
 NOTE: For the example use case code to work in Anypoint Studio, you must provide the credentials for both Siebel and Salesforce accounts. You can either replace the variables with their values in the code, or you can add a file named mule.properties in the src/main/properties folder to provide values for each variable.
@@ -1079,23 +1078,25 @@ NOTE: For the example use case code to work in Anypoint Studio, you must provide
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:context="http://www.springframework.org/schema/context"
-	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
-	xmlns:siebel="http://www.mulesoft.org/schema/mule/siebel" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.7.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="
-http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+<mule xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns:context="http://www.springframework.org/schema/context"
+        xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+        xmlns:siebel="http://www.mulesoft.org/schema/mule/siebel" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+        xmlns:spring="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
 http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/siebel http://www.mulesoft.org/schema/mule/siebel/current/mule-siebel.xsd
-http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd">
+http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd
+http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd">
 
    <siebel:config name="Oracle_Siebel_Business_Object" user="${siebel.user}" password="${siebel.password}" server="${siebel.server}" serverName="${siebel.servername}" objectManager="${siebel.mgr}" dataSenseFilterQueryBusComp="[Name] = 'Action' OR [Name] = 'Contact'" dataSenseFilterQueryBusObjects="[Name] = 'Action' OR [Name] = 'Contact'" doc:name="oracle siebel business objects">
         <siebel:connection-pooling-profile initialisationPolicy="INITIALISE_ONE" exhaustedAction="WHEN_EXHAUSTED_GROW"/>
     </siebel:config>
     <context:property-placeholder location="mule.properties"/>
+    <sfdc:config name="Salesforce__Basic_Authentication" username="a" password="a" doc:name="Salesforce: Basic Authentication"/>
     <flow name="siebel2salesforce" >
         <poll doc:name="Poll">
             <fixed-frequency-scheduler frequency="60000"/>
@@ -1121,10 +1122,10 @@ http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schem
   "SiebelMessage":payload.SiebelMessage
 }]]></dw:set-payload>
         </dw:transform-message>
-
-        <sfdc:create config-ref="Salesforce" type="Contact" doc:name="Salesforce">
+        <sfdc:create config-ref="Salesforce__Basic_Authentication" type="List&lt;Contact&gt;" doc:name="Salesforce">
             <sfdc:objects ref="#[payload]"/>
         </sfdc:create>
+
         <logger message="#[payload.toString()]" level="INFO" doc:name="Logger"/>
     </flow>
 </mule>

@@ -1,0 +1,112 @@
+= CloudHub Custom Log Appender
+:keywords: cloudhub, logging, enhanced log management
+
+With the option to disable CloudHub logs, customers can supply their own log4j configurations to
+integrate with their own logging systems.
+
+== Creating your Log4j configuration
+[IMPORTANT]
+====
+*Important:*
+
+* This feature is only available on request. If you do not have access to this feature, you can request it via the support portal.
+* MuleSoft is not responsible for lost logging data due to misconfiguration of your own log4j appender.
+* MuleSoft is also not responsible for misconfigurations that result in performance degradation,
+running out of disk space, or other side effects.
+* To configure logs to flow to both your log system and CloudHub, read the directions below. Note that the UI will continue to
+warn you that logs in CloudHub will not be available. This will be addressed in a future release.
+====
+
+To enable your own log4j appender, you need to first create a log4j2.xml configuration with your log
+settings. In Anypoint Studio, this file must reside in the src/main/resources directory. For details
+on creating your own log4j configuration, please see the
+link:https://logging.apache.org/log4j/2.x/manual/configuration.html[Log4j documentation].
+
+If you wish to have logs flow to both your own logging system, and be viewable in CloudHub, you
+must configure the CloudHub log4j appender. MuleSoft recommends this as the base configuration for your
+log configuration. It sends log data to CloudHub and provides a local log file in case it's needed for
+remote debugging purposes by MuleSoft staff.
+
+[source,xml, linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="INFO" name="cloudhub" packages="com.mulesoft.ch.logging.appender">
+    <Appenders>
+        <RollingFile name="FILE"
+                     fileName="/opt/mule/mule-CURRENT/logs/mule-${sys:domain}.log"
+                     filePattern="/opt/mule/mule-CURRENT/logs/mule-${sys:domain}-%i.log">
+
+            <PatternLayout pattern="[%d{MM-dd HH:mm:ss.SSS}] %-5p %c{1} [%t]: %m%n"/>
+            <DefaultRolloverStrategy max="10"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="10 MB" />
+            </Policies>
+        </RollingFile>
+        <Log4J2CloudhubLogAppender name="CLOUDHUB"
+                                   addressProvider="com.mulesoft.ch.logging.DefaultAggregatorAddressProvider"
+                                   applicationContext="com.mulesoft.ch.logging.DefaultApplicationContext"
+                                   appendRetryIntervalMs="${sys:logging.appendRetryInterval}"
+                                   appendMaxAttempts="${sys:logging.appendMaxAttempts}"
+                                   batchSendIntervalMs="${sys:logging.batchSendInterval}"
+                                   batchMaxRecords="${sys:logging.batchMaxRecords}"
+                                   memBufferMaxSize="${sys:logging.memBufferMaxSize}"
+                                   journalMaxWriteBatchSize="${sys:logging.journalMaxBatchSize}"
+                                   journalMaxFileSize="${sys:logging.journalMaxFileSize}"
+                                   clientMaxPacketSize="${sys:logging.clientMaxPacketSize}"
+                                   clientConnectTimeoutMs="${sys:logging.clientConnectTimeout}"
+                                   clientSocketTimeoutMs="${sys:logging.clientSocketTimeout}"
+                                   serverAddressPollIntervalMs="${sys:logging.serverAddressPollInterval}"
+                                   serverHeartbeatSendIntervalMs="${sys:logging.serverHeartbeatSendIntervalMs}"
+                                   statisticsPrintIntervalMs="${sys:logging.statisticsPrintIntervalMs}">
+
+            <PatternLayout pattern="[%d{MM-dd HH:mm:ss}] %-5p %c{1} [%t] CUSTOM: %m%n"/>
+        </Log4J2CloudhubLogAppender>
+    </Appenders>
+    <Loggers>
+        <Root level="INFO">
+            <AppenderRef ref="FILE"/>
+            <AppenderRef ref="CLOUDHUB"/>
+        </Root>
+        <Logger name="com.gigaspaces" level="ERROR"/>
+        <Logger name="com.j_spaces" level="ERROR"/>
+        <Logger name="com.sun.jini" level="ERROR"/>
+        <Logger name="net.jini" level="ERROR"/>
+        <Logger name="org.apache" level="WARN"/>
+        <Logger name="org.apache.cxf" level="WARN"/>
+        <Logger name="org.springframework.beans.factory" level="WARN"/>
+        <Logger name="org.mule" level="INFO"/>
+        <Logger name="com.mulesoft" level="INFO"/>
+        <Logger name="org.jetel" level="WARN"/>
+        <Logger name="Tracking" level="WARN"/>
+    </Loggers>
+</Configuration>
+----
+
+== Enabling custom Log4j configurations in CloudHub
+
+Once you've configured your log4j appenders, you'll need to deploy this application to CloudHub
+and tell CloudHub you are supplying your own log4j configuration:
+
+. Log into link:https://anypoint.mulesoft.com/#/signin[Anypoint Platform] and click *CloudHub*.
+. Click an application to expand the details view:
++
+image:CHApps.png[CHApps]
++
+. Click *Settings* > *Disable CloudHub Logs*. 
++
+image:DisableCHLogs.png[DisableCHLogs]
++
+The verification prompt appears:
++
+image:DisableCHLogsVerification.png[DisableCHLogsVerification]
++
+. Click *Apply Changes*.
+. Review your application settings to ensure they are correct.
+. Then click Apply Changes to restart your application and
+
+Once your application starts, logs should start flowing to your custom log4j appender and will be
+viewable in your target system.
+
+If you did not use the CloudHub log4j appender specified above, only system logs will be available.
+System logs will tell you the status of your worker deployment and if your application started correctly,
+but will not provide any application logs.

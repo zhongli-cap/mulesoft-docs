@@ -6,39 +6,20 @@
 :toclevels: 2
 
 toc::[]
-////
-. link:#intro[Introduction]
-    ..  link:#prerequisites[Prerequisites]re
-    ..  link:#requirements[Requirements]
-    ..  link:#namespace[Namespace]
-    ..  link:#schema-location[Schema Location]
-. link:#compatibility[Compatibility]
-. link:#install-and-config[Installing & Configuring]
-    .. link:#install[Installing the Object Store connector]
-    .. link:#config[Configuring the Object Store connector]
-        ... link:#config-global[Setting up the Global Configuration]
-    .. link:#upgrading[Upgrading from an Older Version]
-. link:#using-the-connector[Using the Connector]
-    .. link:#use-cases-and-demos[Use Cases and Demos]
-    .. link:#adding-to-a-flow[Adding to a Flow]
-. link:#example-use-case[Example Use Case]
-    .. link:#example-code[Example Code]
-    .. link:#run[Run Time]
-    .. link:#demo[Demo]
-    .. link:#see-also[See Also]
-////
+
+
 
 [[intro]]
 == Introduction
 
-The Object Store Connector lets you connect to the object storage facility in Mule and exposes convenient methods for exploiting the capabilities of Mule Object Stores. Internally, Mule uses object stores in various filters, routers, and other message processors that need to store state between messages.
+The Object Store Connector lets you connect to the object storage facility in Mule and exposes convenient methods for exploiting the capabilities of link:/mule-user-guide/v/3.8/mule-object-stores[Mule Object Stores]. Internally, Mule uses object stores in various filters, routers, and other message processors that need to store state between messages.
 
 Read through this user guide to understand how to set up and configure a basic flow using the connector. Read through the link:http://mulesoft.github.io/objectstore-connector/[Technical Reference] to understand how the connector operations interact with Mule Object Stores. You will also find **demo applications** here that illustrate how to use the connector operations. link:/release-notes/objectstore-connector-release-notes[Release Notes] are a good way to track feature additions, compatibility limitations and API version updates with each release of the connector version.
 
 MuleSoft maintains this connector under the link:/mule-user-guide/v/3.8/anypoint-connectors#connector-categories[_Select_] support policy.
 
 [[prerequisites]]
-=== Prerequisites
+== Prerequisites
 
 This document assumes that you are familiar with Mule, the link:/mule-fundamentals/v/3.8/anypoint-studio-essentials[Anypoint Studio Interface], link:/mule-fundamentals/v/3.8/global-elements[Global Elements], and link:/mule-user-guide/v/3.8/datasense[DataSense].
 
@@ -90,18 +71,7 @@ For example, see how the XML is configured to include the *connector namespace a
 </mule>
 ----
 
-== Using the Connector in a Mavenized Mule App
 
-If you are coding a Mavenized Mule application, this XML snippet must be included in your `pom.xml` file.
-
-[source,xml,linenums]
-----
-<dependency>
-  <groupId>org.mule.modules</groupId>
-  <artifactId>mule-module-objectstore</artifactId>
-  <version>2.0.0</version>
-</dependency>
-----
 
 [[compatibility]]
 == Compatibility
@@ -118,17 +88,57 @@ The Object Store connector is compatible with:
 [IMPORTANT]
 Starting with version 2.0.0, the Object Store connector is licensed commercially with Anypoint Platform as with other Select connectors.  Prior versions will remain freely available to the community.
 
-== Installing and Configuring
 
 [[install]]
-=== Installing the Object Store Connector
+== Installing the Object Store Connector
 
 You can install the connector in Anypoint Studio using the instructions in link:/mule-fundamentals/v/3.8/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Installing a Connector from Anypoint Exchange].
 
 [[config]]
-=== Configuring the Object Store Connector
+== Configuring the Object Store Connector
 
 To use the connector in your Mule application, you must configure a global Object Store element that can be used by all the Object Store connectors in the application.
+
+By default, Mule includes three default object stores instantiated every time you run Mule ESB both on premises and on CloudHub.
+
+Each Mule runtime includes these three spring bean instances:
+
+* `_defaultInMemoryObjectStore`
+* `_defaultUserObjectStore`
+* `_defaultTransientUserObjectStore`
+
+You can also code your own object store Java class, then include an instance in your application as a Spring bean. You can then reference your custom object store when you define a new Object Store global element.
+
+[width="100%",cols="20%,20%,20%,20%,20%,20%,options="header"]
+|===
+Name |	Default Value |	Description |	Java Type |	MIME Type | Encoding |
+name | | The identifier of the object store configuration. Other components must refernce this configuration via this name| String |	*/* |	UTF-8|
+doc:name | | The string displayed in Studio. | String |	*/* |	UTF-8|
+partition | | Name of the partition in the default in-memory or persistent object store. This attribute is ignored if the object store is specified in an objectstore-ref attribute.| String |	*/* |	UTF-8|
+objectStore-ref |	|	Optional. Reference to an object store bean. If not specified, one of the defaults will be used depending on the context (stand-alone Mule runtime, Mule runtime cluster, or CloudHub cluster). You can also specify one of the default object stores by name `_defaultInMemoryObjectStore`, `_defaultUserObjectStore`, or `_defaultTransientUserObjectStore`.|String|||
+entryTtl | | Time To Live for stored values in milliseconds. If using this parameter, maxEntries and expirationInterval are mandatory.| Int |	*/* |	UTF-8|
+expirationInterval | | Specifies the expiration check interval in milliseconds.| Int |	*/* ||
+maxEntries| | Specifies the max number of entries | Int| 	*/* ||
+persistent| `false` | Dpecified whenever the required store needs to be persistent or not (this argument is ignored if the
+ object store is passed by ref using the objectStore-ref attribute, or if no partition name is defined).
+ If persistent is `false`, then data may be lost when a Mule runtime restarts.| boolean| 	*/* |
+|===
+
+Here is an example objectstore configuration that specifies a partition named `customers` within the `defaultUserObjectStore`, and specifying that the object store should be persistent.
+
+[source, xml, linenums]
+----
+<objectstore:config name="ObjectStore__Configuration" partition="customer"  persistent="true"/>
+----
+If you do not specify a value for the objectstore-ref, the `_defaultUserObjectStore` is used, which is equivalent to this configuration:
+
+[source, xml, linenums]
+----
+<objectstore:config name="ObjectStore__Configuration" objectstore-ref="_defaultUserObjectStore"  persistent="true"/>
+----
+
+If you don't want to use one of the default object stores, you can define your own Java bean and reference it instead in the objectstore-ref attribute.
+
 
 TIP: If you haven't already, read about link:/mule-fundamentals/v/3.8/global-elements[Global Elements] before proceeding further.
 
@@ -462,6 +472,29 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 === Demo
 
 You can download another fully functional example from http://mulesoft.github.io/objectstore-connector/[this link].
+
+== Using the Connector in a Mavenized Mule App
+
+If you are coding a Mavenized Mule application, this XML snippet must be included in your `pom.xml` file.
+
+[source,xml,linenums]
+----
+<dependency>
+  <groupId>org.mule.modules</groupId>
+  <artifactId>mule-module-objectstore</artifactId>
+  <version>2.0.0</version>
+</dependency>
+----
+
+[TIP]
+====
+Inside the `<version>` tags, put the desired version number, the word `RELEASE` for the latest release, or `SNAPSHOT` for the latest available version. The available versions to date are:
+
+* *2.0.0*
+* *1.3.3*
+* *1.3.2*
+====
+
 
 [[see-also]]
 === See Also
