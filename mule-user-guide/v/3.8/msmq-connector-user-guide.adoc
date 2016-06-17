@@ -43,7 +43,7 @@ This setting appears in the XML as:
 <flow name="myMSMQFlow" doc:name="myMSMQFlow" processingStrategy="synchronous">
 ----
 
-More related info at <<Two-Phase Commit>> section ahead.
+More related info at <<Message delivery>> section ahead.
 
 == Primary Use Cases
 
@@ -130,15 +130,21 @@ THIS IS A MESSAGE
 
 The HTTP headers used for sending and receiving messages to and from the Gateway service are discussed more in detail later in this document.
 
-== Two-Phase Commit
+==  Message delivery
 
-The MSMQ connector uses a two-phase protocol to ensure zero-message-loss communication with the gateway. 
+The MSMQ connector can use a two-phase protocol to ensure zero-message-loss communication with the gateway, or it can be set to use a no-acknowledgement protocol when you want to achieve high throughput and do not need to ensure receiving each message at least once.
 
-In a traditional scenario, after a message is read in the gateway, it is deleted from the queue. If there is a connection failure or another issue in the ESB that prevents the message from being read, that message is lost (this *Message delivery* mode can be set by choosing the 'NoAcknowledgement' value at the corresponding configuration setting).
+Message delivery can be chosen from two different options. The configuration setting *Message delivery* established the message delivering working mode, and details on each available option are described below.
+
+=== No Acknowledgement
+
+In a traditional scenario, after a message is read in the gateway, it is deleted from the queue. If there is a connection failure or another issue in the ESB that prevents the message from being read, that message is lost (this *Message delivery* mode can be set by choosing the `NoAcknowledgement` value at the corresponding configuration setting). Nevertheless, this delivery mode is the fastest one and you should select it if you don't need each message to be delivered at least once.
+
+=== At Least Once (default)
 
 In a scenario with a two-phase commit protocol, the messages read from the main queue are kept in a sub-queue as backup. After the connector receives a copy of the message, it sends an additional request to the gateway to remove the message from the sub-queue. When this commit action is not completed, the message remains in the sub-queue. After a period of time, messages in the subqueue, considered as orphans, are moved back to their parent queue where they are retried. To be clear, this mechanism should not be affected by external exceptions happening in the flow unless the flow is interrupted before the commit phase is completed (this *Message delivery* mode can be set by choosing the `AtLeastOnce` value at the corresponding configuration setting).
 
-As said, message delivery mode depends on the *Message delivery* configuration setting, which should be set to `AtLeastOnce` (default) if you wanna ensure two phase commit protocol to be used. If you set this parameter to `NoAcknoledgement` then each message will be delivered to mule with no acknowledgement of reception from it.
+As said, message delivery mode depends on the *Message delivery* configuration setting, which should be set to `AtLeastOnce` (default) if you want to ensure two phase commit protocol to be used. If you set this parameter to `NoAcknoledgement` then each message will be delivered to mule with no acknowledgement of reception from it.
 
 == Message Timeouts
 
