@@ -406,57 +406,65 @@ The client you are using provides a login call that initializes the token and us
 Take into account that the session can expire and cause the connector to make a login request again.
 ====
 
-DevKit provides a different set of annotations to keep your code clean and handle the connection in a different class for delegating responsibilities.
+DevKit provides a set of annotations to keep your code clean and handle the connection.
 
-To implement @ConnectionManagement, you need to move the initialization to @ConnectionManagement, instead of using the @Start annotation as we did before.
-
-. In the ConnectorConfig change the @Configuration for a @ConnectionManagement annotation
+. In the `Config.java` file, change `@Configuration` to `@ConnectionManagement`
 +
 [source,java,linenums]
 ----
 include::{resourcesDir}/java/v2/ConnectorConfig.java[lines=29]
 ----
 +
-. Add the MuleCookbookClient to the ConnectorConfig and add a getter and getter.
+. Make sure you have set the MuleCookbookClient in the `ConnectorConfig.java` with a getter and a setter.
 +
 [source,java,linenums]
 ----
 include::{resourcesDir}/java/v2/ConnectorConfig.java[lines=91..100]
 ----
 +
-. Implement these four methods as shown in the code sample that follows:
+. Implement these four methods as shown:
 +
-* *@Connect* - Initialize the client, and if you don't have a login, call the API to verify.
+* *`@Connect`* - Initialize the client, and if the login does not succeed, throw an exception.
 +
 [source,java,linenums]
 ----
 include::{resourcesDir}/java/v2/ConnectorConfig.java[lines=41..50]
 ----
 +
-* *@Disconnect* - Release any connection if required.
+* *`@Disconnect`* - Release a connection.
 +
 [source,java,linenums]
 ----
 include::{resourcesDir}/java/v2/ConnectorConfig.java[lines=55..58]
 ----
 +
-* *@ValidateConnection* - Check that your connection is alive.
+* *`@ValidateConnection`* - Check if your connection is alive.
 +
 [source,java,linenums]
 ----
 include::{resourcesDir}/java/v2/ConnectorConfig.java[lines=63..66]
 ----
 +
-* *@ConnectionIdentifier* - Return a string value. This will only be used when debugging.
+* *`@ConnectionIdentifier`* - Return a string value. This will only be used when debugging.
 +
 [source,java,linenums]
 ----
 include::{resourcesDir}/java/v2/ConnectorConfig.java[lines=71..74]
 ----
 +
-. Remove the MuleCookBookClient from the CookbookConnector and the @Start method
+. Remove the declaration of `MuleCookBookClient` from  `CookbookConnector.java` and remove the method where a new `MuleCookBookClient` client is instantiated.
 +
-. On our @Processor use the client provided by the ConnectorConfig
+[source,java,linenums]
+----
+	private MuleCookBookClient client;
+
+	@Start
+	public void initialize() {
+		client = new MuleCookBookClient(config.getAddress());
+	}
+----
++
+. In our `getRecentlyAdded` method (annotated as a `@Processor`) call the `getclient` method, which should be defined in `ConnectorConfig.java`.
 +
 [source,java,linenums]
 ----
@@ -469,9 +477,9 @@ See:
 
 * link:https://github.com/mulesoft/mule-cookbook-tutorial/blob/master/src/main/asciidoc/resources/java/v2/ConnectorConfig.java[Config] source code.
 
-If you install this version and try to run the mule app we created before, you will see that it fails with a SAXParseException because we need to add a username and password to our configuration.
+If you install this version and try to run the Mule app we created earlier, you will see that it fails with a "SAXParseException" because we need to add a username and password to our configuration.
 
-Just open the global configuration of your connector and check that there are 2 new fields, username and password. Configure them and you can run the app again.
+Just open the global configuration of your connector and check that there are two new fields, username and password. Configure them and you can run the app again.
 
 image::connection-management.png[width="600"]
 
@@ -479,26 +487,40 @@ This is the updated Mule app XML:
 
 [source,xml,linenums]
 ----
-include::{resourcesDir}/mule-app/mule-app-connection-management.xml[]
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:cookbook="http://www.mulesoft.org/schema/mule/cookbook" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/cookbook http://www.mulesoft.org/schema/mule/cookbook/current/mule-cookbook.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <cookbook:config name="Cookbook__Configuration" doc:name="Cookbook: Configuration type config" password="admin" username="admin"/>
+    <flow name="mule-appFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/get-recently" doc:name="HTTP"/>
+        <cookbook:get-recently-added config-ref="Cookbook__Configuration" doc:name="Cookbook"/>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+    </flow>
+</mule>
 ----
 
-See:
+* Understand link:http://mulesoft.github.io/connector-certification-docs/advanced/index.html#_test_connectivity[Testing Connectivity].
+* See documentation on setting up link:/anypoint-connector-devkit/v/3.8/authentication[ Authentication] using DevKit.
 
-* Check the link:http://mulesoft.github.io/connector-certification-docs/advanced/index.html#_test_connectivity[Test Connectivity] section.
-
-* link:/anypoint-connector-devkit/v/3.8/authentication[Authentication][DevKit Authentication] documentation.
-
-== Improving Error Handling
+== Improving Exception and Error Handling
 
 This section explains how to improve exception handling and reconnecting.
 
 === Exception Handling with @Handler
 
-The @Handler feature, is very useful when you want to avoid duplicated code when handling exceptions, and also so that your connector code is cleaner.
+The `@Handler` feature is useful to avoid duplicating code for handling exceptions, and makes your code easier to read.
 
-When handling messages retrieved from the API, if the message is poor and you know how to improve it, you can use this mechanism, to enrich the error provided to the user.
+When handling messages retrieved from the API, if you see the message is uninformative and you know how to improve it, use the `@Handler` mechanism to enrich the error information provided to the user.
 
-To see how it works, let's create a handler for the InvalidEntityException thrown by the create() call of the Cookbook SDK.
+To see how it works, let's create a handler for the `InvalidEntityException` thrown by the Cookbook SDK `create()` call.
 
 . Create a new Anypoint Connector Component by doing a right click and selecting the wizard.
 +
@@ -528,7 +550,7 @@ Check the full link:https://github.com/mulesoft/mule-cookbook-tutorial/blob/mast
 
 === Handling Session Expiration
 
-There is no need for users to add custom code in their Mule apps to handle session expiration. DevKit provides a mechanism to do this in a clean way.
+There is no need for users to add custom code in their Mule apps to handle session expiration. DevKit provides a mechanism to do this cleanly.
 
 Just annotate your @Processor method with the @ReconnectOn exception.
 
