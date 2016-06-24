@@ -1,89 +1,101 @@
-= Manage Your API
+= Manage an API
 :keywords: api, gateway, sla, policy, raml, portal, manage
 
-This step in the walkthrough assumes that you have API Version Owner permissions for the T-Shirt Ordering Service API, and that this API has been deployed (or has a proxy that has been deployed).
+After deploying T-Shirt Ordering Service API or its proxy, as an API Version Owner you can manage an API using policies and SLA tiers. In this walkthrough, you create two access tiers:
+
+*  A tier that accepts any developer who wants to use the API, but limits applications from the user/developer to three requests per minute, and rejects additional requests.
+* A tier for a premium access level that accepts up to five per minute and requires API Version Owner approval of the user who wants to access the API.
+
+API Manager sends an email to the API Version Owner when a user/developer calls signs up for premium access.
+
+In this walkthrough, you also apply SLA-based policies to handle requests that exceed SLA limits that you added in the previous procedure.
+
+* Throttling - SLA-based
++
+Stores excessive requests in a queue for processing later.
+* Rate Limiting - SLA-based
++
+Discards excessive requests.
 
 This walkthrough uses features that might not be visible or accessible to you, depending on link:/release-notes/anypoint-platform-for-apis-release-notes#april-2016-release[entitlements you purchased].
 
-Now that you have a tracked endpoint for your API, you can manage it with any number of policies and SLA tiers. Add a few SLA tiers and then a policy to enforce the tiers. Click the *SLA Tiers* tab, then click the *Add SLA Tier* button.
+To add SLA tiers:
 
+. On the API version details page, click the *SLA Tiers* tab.
++
 image::walkthrough-manage-afcf8.png[walkthrough-manage-afcf8,height=515,width=515]
-
-Fill out the fields of the tier creation window as follows, then click *Submit*.
-
++
+The *Add SLA tier* dialog appears.
++
+. Click *Add SLA Tier*.
++
+. Fill in the fields as follows:
++
+* *Name*: Free
+* *Approval*: Automatic
+* *Throughput requests*: 3
+* *Throughput time period*: Minute
++
 image::walkthrough-manage-ae5a4.png[walkthrough-manage-ae5a4,height=631,width=598]
++
+. Click *Add*.
++
+. On the API version details page, click *Add SLA Tier* again, and fill in the fields as follows:
++
+* *Name*: Premium
+* *Approval*: Manual
+* *Throughput requests*: 5
+* *Throughput time period*: Minute
 
-[cols=",",options="header",]
-|===
-|Field |Value
-|*Name* |Free
-|*Approval* |Automatic
-|*Throughput requests* |3
-|*Throughput time period* |Minute
-|===
+To apply policies:
 
-This creates a tier that developers can sign up for and be automatically approved. When that application calls this API and passes its client id and client secret, the Anypoint Platform allows it three requests per minute, then rejects additional calls.
-
-You can create a second tier for a different level of access. Click *Add SLA Tier* again, then fill out the fields again, as follows:
-
-image:PremiumSLAtier.png[PremiumSLAtier]
-
-[cols=",",options="header",]
-|===
-|Field |Value
-|*Name* |Premium
-|*Approval* |Manual
-|*Throughput requests* |5
-|*Throughput time period* |Minute
-|===
-
-This second tier requires the API Version Owner to manually approve access requests. When an application developer selects this tier for their application, the Anypoint Platform sends an email to the API Version Owner. As an API Version Owner, you can manage the applications that have requested access to your API version on the Applications tab.
-
-== Applying a Policy
-
-Now that you've created two SLA tiers, apply an SLA-based policy to enforce those tiers. Click the *Policies* tab to review your options. There are two policies that you can apply to enforce your SLA tiers: Throttling - SLA-based and Rate Limiting - SLA-based. The difference between them is in how requests that exceed SLA limits are handled. Throttled APIs queue extra requests for later processing, while rate-limited APIs discard them.
-
-Apply a Rate Limiting - SLA-based policy. Click the arrow to the left of the policy name to expand it and view more information. To apply the policy to your API version, click *Apply*. Adjust the mechanism by which your API collects the client id and client secret of registered applications. By default, the policy is configured to collect these values as query parameters.
-
-image:RateLimitingSLAbased.png[RateLimitingSLAbased]
-
-Leave the defaults in place and click *Apply policy*. Congratulations, your API version is now enforcing its SLA tiers. In order to access your API, developers now have to register their applications on one of your SLA tiers, which they can do by clicking *Request API Access* on your API Portal.
-
-== Adjusting Your RAML to Reflect Your Policy
-
-This section only applies if your T-Shirt Ordering Service API has a RAML definition. If you skipped the design phase and skipped straight to proxying an already built API, you can disregard this section. However, be sure to carefully document your policy on your API Portal so that developers know what to expect when they make calls to your API.
-
-Your API Console does not automatically reflect the policies that you have applied to your API, or the URL that you defined as your inbound endpoint – the API Console is reading straight from your RAML definition. Go to *Edit API definition* to make some adjustments to your RAML.
-
-First, change the baseURI in your RAML to reflect the URL that developers should use in their apps when calling your API. If you proxied your API, be sure to direct developers to the proxy, not to the underlying implementation.
-
-In order to have your console mimic the behavior of your policy, you need to add some additional logic to the RAML definition.
-
-Add a section called "traits:" in the root, like this, to define some query parameters that the API should expect:
+. Click the *Policies* tab.
++
+The list of available policies appears.
++
+. Click `>` to get the status and description of a policy.
++
+image::walkthrough-manage-0994c.png[walkthrough-manage-0994c,height=453,width=800]
++
+. Click *Apply* for the Throttling - SLA-based policy.
++
+The *Apply "Throttling - SLA based" policy* dialog appears.
++
+image::walkthrough-manage-e6710.png[walkthrough-manage-e6710,height=631,width=493]
++
+. Accept the defaults, click *Apply*.
++
+. Click *Apply* for the Rate limiting - SLA-based policy.
++
+The *Apply "Rate limited - SLA based" policy* dialog appears.
++
+. Accept the defaults, click *Apply*.
+. On the list of available policies, click the *Raml snippet* for either of the policies you applied.
+. Follow instructions to add traits to RAML for enforcing the policies: Open API Designer and edit the RAML as follows:
++
+* Add a section called "traits:" at the root level to define query parameters:
 
 [source,yaml,linenums]
 ----
 traits:
-  - rate-limited:
+  - client-id-required:
       queryParameters:
        client_id:
         type: string
       client_secret:
         type: string
 ----
-
-Next, reference this trait in each of your methods to specify that each of the methods require these query parameters. After each method in your RAML file, add **is: [rate-limited]**. For example:
-
++
+* Reference the trait in each of the methods to specify that each of the methods require these query parameters. After each method in the RAML file, add **is: [rate-limited]**. For example:
++
 [source,yaml,linenums]
 ----
 /products:
   get:
-    is: [rate-limited]
+    is: [client-id-required]
     description: Gets a list of all the inventory products.
 ----
 
 == Next
 
-If you haven't already done so, link:/anypoint-platform-for-apis/walkthrough-engage[publish an API Portal] so that other users can find your API, read its documentation, and request access to it.
-
-If you already published your portal, go back and edit it to include additional information about your endpoint, your SLA tiers, and your policy.
+link:/anypoint-platform-for-apis/walkthrough-engage[Publish an API Portal] so users can find your API, read its documentation, and request access to it.
