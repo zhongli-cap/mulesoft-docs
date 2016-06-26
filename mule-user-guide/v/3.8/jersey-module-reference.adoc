@@ -13,7 +13,7 @@ In addition to the annotation capabilities, Jersey contains many useful features
 * Integration with link:http://incubator.apache.org/abdera[Abdera] for Atom support.
 
 [WARNING]
-Mule 3.6 makes use of Jersey v2.11, whilst older versions of Mule used Jersey 1.6. If you want to update an existent API built using Jersey 1.x, this might require you to perform some code changes, since the latest JAX-RS and Jersey versions aren't backwards compatible with the 1.x versions.
+Mule 3.6 makes use of Jersey v2.11, while older versions of Mule used Jersey 1.6. If you want to update an existent API built using Jersey 1.x, this might require you to perform some code changes, since the latest JAX-RS and Jersey versions aren't backwards compatible with the 1.x versions.
 
 [WARNING]
 Currently implicit views are not supported.
@@ -78,7 +78,9 @@ Once you've written your service, you can create a `jersey:resources` component 
 
 == Consume a RESTful Web Service
 
-Once you run this configuration in Mule, you can hit the url: `http://localhost:8080/jersey/helloworld/Dan` and you should see this response in your browser: 'Hello Dan'.
+After you run this configuration in Mule, use the following URL. You should see this response in your browser: 'Hello Dan':
+
+link:http://localhost:8080/jersey/helloworld/Dan[http://localhost:8080/jersey/helloworld/Dan]
 
 == Exception Mappers
 
@@ -112,9 +114,9 @@ public class HelloWorldExceptionMapper implements ExceptionMapper<HelloWorldExce
 
 https://jersey.java.net/nonav/apidocs/1.12/jersey/javax/ws/rs/ext/ContextResolver.html[Context resolvers] are injected into resource classes, and they provide context information to them, which can be useful in certain cases when you need specific metadata that is not available by default.
 
-When you use JAXB for your XML/JSON serialisation, JAXB provides some annotations in case you would need to change the output format. A simple example of such annotations is @XmlElement where you can provide the name of the field as a property on the annotation itself: @XmlElement(name="PersonName").
+When you use JAXB for your XML/JSON serialization, JAXB provides some annotations in case you would need to change the output format. A simple example of such annotations is @XmlElement where you can provide the name of the field as a property on the annotation itself: @XmlElement(name="PersonName").
 
-Some configuration however is not possible to achieve using annotations. For example by default when using JAXB for JSON serialisation, the numbers (int, long ...) are surrounded by double quotes, making them look like strings. This might be good for some projects, but other projects might want to remove those double quotes. This can be done by configuring a ContextResolver on the Jersey resource. Let's take a quick example. If we have a class called Person which internally contains an age property, and we would want this Person object to be returned as a JSON object with the age without quotes, first create the custom context resolver.
+Some configuration however is not possible to achieve using annotations. For example by default when using JAXB for JSON serialization, the numbers (int, long ...) are surrounded by double quotes, making them look like strings. This might be good for some projects, but other projects might want to remove those double quotes. This can be done by configuring a ContextResolver on the Jersey resource. Let's take a quick example. If we have a class called Person which internally contains an age property, and we would want this Person object to be returned as a JSON object with the age without quotes, first create the custom context resolver.
 
 *CustomContextResolver.java*
 
@@ -195,35 +197,38 @@ For more information about context resolvers, check out the Jersey link:http://j
 
 == Sending a Jersey Response to Other Flows
 
-You can use interface bindings to invoke completely separate Mule flows from your Jersey resource:
+You can use interface bindings to invoke completely separate Mule flows from your Jersey resource.
+
+=== XML Configuration
 
 [source, xml, linenums]
 ----
-<http:listener-config name="HTTP_Listener_Configuration" host="localhost"
- port="${port}" doc:name="HTTP Listener Configuration"/>
+<http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" doc:name="HTTP Listener Configuration" />
 
 <flow name="test">
-    <http:listener config-ref="HTTP_Listener_Configuration"
-      path="/*" doc:name="HTTP"/>
+    <http:listener config-ref="HTTP_Listener_Configuration" path="/*" doc:name="HTTP" />
 
     <jersey:resources>
-        <component class="org.mule.module.jersey.HelloWorldComponent">
-            <binding interface="org.mule.module.jersey.HelloWorldInterface">
-                <flow-ref name="TransformationFlow" />
+        <component class="org.example.JerseyHelloWorldComponent">
+            <binding interface="org.example.JerseyHelloWorldComponent.HelloWorldInterface">
+                <vm:outbound-endpoint path="bindingQueue" exchange-pattern="request-response" />
             </binding>
         </component>
     </jersey:resources>
 </flow>
 
 <flow name="TransformationFlow">
+    <vm:inbound-endpoint path="bindingQueue" exchange-pattern="request-response" />
     <set-payload value="Hello World!" />
 </flow>
 ----
 
+=== Java Class
+
 [source, java, linenums]
 ----
 @Path("/")
-public class HelloWorldComponent {
+public class JerseyHelloWorldComponent {
 
     private HelloWorldInterface helloWorldBinding;
 
@@ -242,12 +247,24 @@ public class HelloWorldComponent {
         return this.helloWorldBinding;
     }
 
-    public static interface HelloWorldInterfac {
+    public static interface HelloWorldInterface {
 
         public String sayHello(String s);
     }
 
 }
+----
+
+To test, browse to link:http://localhost:8081/sayHello[http://localhost:8081/sayHello].
+
+The result is: `Hello World!` by virtue of the Set Payload from the <<XML Configuration>>:
+
+[source,xml,linenums]
+----
+<flow name="TransformationFlow">
+    <vm:inbound-endpoint path="bindingQueue" exchange-pattern="request-response" />
+    <set-payload value="Hello World!" />
+</flow>
 ----
 
 == Adding Custom Properties
