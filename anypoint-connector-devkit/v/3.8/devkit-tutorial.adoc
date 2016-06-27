@@ -15,6 +15,8 @@ As you move forward you will learn the features that DevKit provides to help you
 
 The link:/anypoint-connector-devkit/v/3.8/index[Anypoint Connector DevKit] is an essential development tool in the Anypoint Platform that makes coding Anypoint Connectors easier. DevKit is a Maven-based tool that lets you build reusable components that can be run as part of a Mule application, and can be easily configured from link:http://www.mulesoft.com/platform/mule-studio[Anypoint Studio].
 
+DevKit exposes connector developers to link:http://docs.oracle.com/javase/tutorial/java/annotations/[Java annotations] that generate code and files to interact with Mule runtime, as well as Anypoint Studio. The generated code provides the interface between the connector and Mule that would otherwise require each connector developer to include extensive boilerplate code, as well as the code and files required to interact with your connector in Anypoint Studio.
+
 == What is a Connector?
 
 An Anypoint Connector is a reusable component that interacts with Mule runtime and Anypoint Studio. A connector communicates with a target resource and conveys information between a resource and Mule, and transforms the data into a Mule message.
@@ -44,10 +46,6 @@ For information on software setup and DevKit, see link:/anypoint-connector-devki
 
 *You can develop a connector on a Windows, Mac, or Linux machine.*
 ====
-
-== DevKit Description
-
-DevKit exposes connector developers to link:http://docs.oracle.com/javase/tutorial/java/annotations/[Java annotations] that generate code and files to interact with Mule, as well as Anypoint Studio. The generated code provides the interface between the connector and Mule that would otherwise require each connector developer to include extensive boilerplate code, as well as the code and files required to interact with your connector in Anypoint Studio.
 
 
 [[get-cookbook]]
@@ -207,7 +205,7 @@ When consuming a service, you may need to configure different values to establis
 
 To facilitate developing connection configuration strategies, DevKit provides a pair of annotations that let you modularize these definitions inside several classes:
 
-* The behavior you expose to users, using the @Connector annotation.
+* The behavior you expose to users, using the `@Connector` annotation.
 * Code related to the connection configuration is injected where you add the `@Config` annotation. There are several types of configuration you can use as we will see in this tutorial.
 
 [TIP]
@@ -221,7 +219,7 @@ Let's start coding by creating a connector that allows you to get the recently a
 
 Since we don't need any kind of authentication to consume the recently added recipes, this is the best operation we can use to start learning how to build our connector.
 
-. Add our client dependency so that we can use it in our connector. This way we can use the Java API built to connect to the {tutorial}.
+. Add our client dependency so that we can use it in our connector. This way we can use the Java API to connect to the {tutorial}.
 +
 In your pom.xml file add:
 +
@@ -251,7 +249,7 @@ See full link:https://github.com/mulesoft/mule-cookbook-tutorial/blob/master/src
 
 === Initialize the Client
 
-On your `@Connector`-annotated class in the `Connector.java` file use the `@Start` annotation on a method to initialize the client.
+In your `@Connector`-annotated class in the `Connector.java` file use the `@Start` annotation on a method to initialize the client.
 
 [source,java,linenums]
 ----
@@ -270,7 +268,7 @@ When a method is annotated with one of these annotations, DevKit invokes it duri
 [[processor]]
 === Adding @Processor Methods
 
-. Remove the dummy `@Processor` operation from the `Connector.java`.
+. Remove the dummy `@Processor` operation from the `Connector.java` file.
 +
 . To add a processor simply type `proc` in the Studio code editor and use `ctrl` + `space` to display the templates and pick the simple processor.
 +
@@ -308,7 +306,7 @@ Connectors built with DevKit 3.8 support specification of examples in a differen
 
 Follow along to add an example use for an operation (annotated with `@Processor`).
 
-Create the file indicated by the code block in the `Connector.java` file following `{@sample ...}` if the file does not exist already.
+Create the file referenced in the code block in the `Connector.java` file following `{@sample ...}` if the file does not exist already.
 
 ----
 /**
@@ -415,7 +413,7 @@ DevKit provides a set of annotations to keep your code clean and handle the conn
 include::{resourcesDir}/java/v2/ConnectorConfig.java[lines=29]
 ----
 +
-. Make sure you have set the MuleCookbookClient in the `ConnectorConfig.java` with a getter and a setter.
+. Make sure you have equipped the `MuleCookbookClient` in the `ConnectorConfig.java` with a getter and a setter.
 +
 [source,java,linenums]
 ----
@@ -520,9 +518,26 @@ The `@Handler` feature is useful to avoid duplicating code for handling exceptio
 
 When handling messages retrieved from the API, if you see the message is uninformative and you know how to improve it, use the `@Handler` mechanism to enrich the error information provided to the user.
 
-To see how it works, let's create a handler for the `InvalidEntityException` thrown by the Cookbook SDK `create()` call.
+To see how it works, let's create a handler in the connector code for the `InvalidEntityException` thrown by the Cookbook SDK `create()` call:
 
-. Create a new Anypoint Connector Component by doing a right click and selecting the wizard.
+.`create()` call from `MuleCookBookClient.java` throws `InvalidEntityException`
+[source,java,linenums]
+----
+@Override
+   public CookBookEntity create(CookBookEntity entity) throws InvalidEntityException,
+           SessionExpiredException {
+       Create request = factory.createCreate();
+       request.setEntity(entity);
+       try {
+           return port.create(request, token).getReturn();
+       } catch (InvalidTokenException e) {
+           logger.warn("Should never happen.", e);
+           throw new RuntimeException(e);
+       }
+     }
+----
+
+. Create a new *Anypoint Connector Component* by right-clicking and navigating to that item in the menu, or via *New* > *Other*, selecting this option in the wizard.
 +
 image::new-component.png[width="600"]
 +
@@ -530,7 +545,7 @@ image::new-component.png[width="600"]
 +
 image::new-component-2.png[width="600"]
 +
-. Improve the error message when InvalidEntityException is thrown.
+. Improve the error message when `InvalidEntityException` is thrown.
 +
 [source,java,linenums]
 ----
@@ -539,7 +554,7 @@ include::{resourcesDir}/java/v3/CookbookHandler.java[lines=11..19]
 +
 Check the full link:https://github.com/mulesoft/mule-cookbook-tutorial/blob/master/src/main/asciidoc/resources/java/v3/CookbookHandler.java[source code].
 +
-. Add a new processor to create Ingredients
+. Add a new processor to create Ingredients, noticing how it references the exception handler we included.
 +
 [source,java,linenums]
 ----
@@ -552,7 +567,7 @@ Check the full link:https://github.com/mulesoft/mule-cookbook-tutorial/blob/mast
 
 There is no need for users to add custom code in their Mule apps to handle session expiration. DevKit provides a mechanism to do this cleanly.
 
-Just annotate your @Processor method with the @ReconnectOn exception.
+Just annotate your `@Processor` method with the `@ReconnectOn` exception.
 
 [source,java,linenums]
 ----
@@ -1306,7 +1321,7 @@ include::{resourcesDir}/mule-app/transformer2-example.xml[]
 
 === Using @Password
 
-When using the @Password in a @Connect parameters, it generates a masked input field in the UI.
+When using the `@Password` in a @`Connect` parameters, it generates a masked input field in the UI.
 
 [source,java,linenums]
 ----

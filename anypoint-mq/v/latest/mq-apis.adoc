@@ -1,14 +1,16 @@
 = Anypoint MQ APIs
 :keywords: mq, destinations, queues, exchanges
 
-The Anypoint MQ APIs let you use REST to send and receive messages, administer queues and exchanges, and analyze results.
+The Anypoint MQ APIs let you use REST to send and receive messages, administer queues and exchanges, and analyze results. Anypoint provides these APIs, which are described later in this document:
 
-Sign in with your Anypoint Platform username and password to use these portals. For access help, contact
-link:https://www.mulesoft.com/support-and-services/mule-esb-support-license-subscription[MuleSoft Support].
+* xref:mqadminapi[Anypoint MQ Administration API]
+* xref:mqbrokerapi[Anypoint MQ Broker API]
+* xref:mqstatapi[Anypoint MQ Statistics API]
 
 Anypoint MQ portals are available in the link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals[Developer portal].
 
-== Getting API Access Information
+[[getoeb]]
+== Get an Organization ID, Environment ID, and Bearer Token
 
 After you get an application's client ID and client secret from Anypoint Platform > *MQ*, you can run a *curl* command from a command line to get the bearer token, organization ID, and environment ID by using the Authorize resource. Once authorized, you can use the bearer token organization ID and environment ID in the rest of the calls.
 
@@ -20,25 +22,61 @@ To get API access information:
 +
 [source]
 ----
-curl -X POST -H "client_id: myclientId" -H "client_secret: myclientSecret" -H "grant_type: client_credentials" -H "Cache-Control: no-cache" -H "Content-Type: application/x-www-form-urlencoded" -d 'client_id={{client_id_broker}}&client_secret={{client_secret_broker}}&grant_type=client_credentials' "https://mq-us-east-1.anypoint.mulesoft.com/api/v1/authorize"`
+curl -X POST -H "Contentorm-urlencoded" -d 'client_id=<client_ID>&client_secret=<client_Secret>&grant_type=client_credentials' "https://mq-us-east-1.anypoint.mulesoft.com/api/v1/authorize"
 ----
 +
 . Submit the *curl* command.
++
+This returns output similar to:
++
+[source]
+----
+{"access_token":"<token>","simple_client":{"envId":"<env_ID>","orgId":"<org-ID>"},"token_type":"bearer"}
+----
 
-You can also see the Organization ID and Environment ID from Anypoint Platform by clicking *Access Management* and getting the ID values from the URLs in the *Environments* and *Organization* sections.
+Two other ways to view the Organization ID:
 
+. View your Anypoint Platform profile JSON listing. First log in, and then copy and paste this address into your browser -- Line #4 shows your Organization ID value: link:https://anypoint.mulesoft.com/accounts/api/profile[https://anypoint.mulesoft.com/accounts/api/profile]
++
+For example:
++
+[source,xml,linenums]
+----
+},
+  "organization": {
+    "name": "memyself.andi",
+    "id": "42d0gf0g-4254-4254-4254-425442544254",
+    "createdAt": "2014-10-27T23:35:41.369Z",
+    "updatedAt": "2016-01-22T14:59:53.397Z",
+    "ownerId": "42544254-4254-4254-4254-425442544254",
+    "clientId": "42424242424242424242424242424242",
+    "domain": "memyselfandi",
+    "idprovider_id": "example",
+    "isFederated": false,
+    "parentOrganizationIds": [],
+    "subOrganizationIds": [],
+    "tenantOrganizationIds": [],
+    "isMaster": true,
+    "subscription": {
+      "type": "RocketScientist",
+      "expiration": null
+    },
+----
++
+. View the Organization ID and Environment ID from Anypoint Platform by clicking *Access Management* and getting the ID values from the URLs in the *Environments* and *Organization* sections.
++
 *Environment ID*
-
++
 image:mq-envid-from-url.png[mq-envid-from-url]
-
++
 *Organization ID*
-
++
 image:mq-get-orgid-from-url.png[mq-get-orgid-from-url]
 
 
 == API Workflow
 
-The following example with the Messaging API illustrates the workflow for accessing an API:
+The following example with the Broker API illustrates the workflow for accessing an API:
 
 image:mq-api-workflow.png[mq-api-workflow]
 
@@ -49,6 +87,118 @@ Steps:
 . The application acknowledges the message and requests Anypoint MQ to delete the message, or the application negatively acknowledges the message and requests Anypoint MQ to make the message available to other applications. The application sends the message ID and lock ID to Anypoint MQ. For additional information on setting automatic ack or nack, see the link:/anypoint-mq/mq-ack-mode[Acknowledgement Mode] guide.
 . If no action is taken and the duration of the lock's time to live expires, the message is negatively acknowledged and returns to the queue to be available for other applications.
 
+== API Access Examples
+
+The following examples let you test Anypoint MQ from either the xref:excoliuscu[command line using the *curl*] command, or from a xref:expostbro[combination of Postman, Anypoint Studio, and a browser].
+
+[[excoliuscu]]
+=== Example: Command Line Using Curl
+
+The examples in this section use the link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/25547/versions/27130[MQ Broker API] to publish and consume messages. You need to substitute the placeholder string, `42544254-4254-4254-4254-425442544254` for the proper values for authorization and token strings. These examples use Postman to access the queue.
+
+The following *curl* command publishes a message:
+
+[source,xml,linenums]
+----
+curl -X PUT -H "Content-Type: application/json" -H "Authorization: bearer 42544254-4254-4254-4254-425442544254" -H "Cache-Control: no-cache" -H "Postman-Token: 42544254-4254-4254-42544254-425442544254" -d '{
+  "properties": {
+    "userDefinedHeader": "User defined stuff",
+    "anotherUserDefinedHeader": "Random stuff"
+  },
+
+  "body": "This is a message payload"
+}
+' "https://mq-qa-us-east-1.anypoint.mulesoft.com/api/v1/organizations/42544254-4254-4254-4254-425442544254/environments/42544254-4254-4254-4254-425442544254/destinations/postmanExchange/messages/552"
+----
+
+The following *curl* command gets a message:
+
+[source,xml,linenums]
+----
+curl -X GET -H "Authorization: bearer 42544254-4254-4254-4254-425442544254" -H "Cache-Control: no-cache" -H "Postman-Token: 42544254-4254-4254-4254-425442544254" "https://mq-qa-us-east-1.anypoint.mulesoft.com/api/v1/organizations/42544254-4254-4254-4254-425442544254/environments/42544254-4254-4254-4254-425442544254/destinations/postmanQueue/messages?poolingTime=10000&batchSize=1&lockTtl=10000"
+----
+
+[[expostbro]]
+=== Example: Postman, Studio, and Browser
+
+This example lets you access the Anypoint MQ APIs from these products:
+
+* xref:postsetup[Postman]
+* xref:studiosetup[Anypoint Studio]
+* xref:browsersetup[A Browser]
+
+[[postsetup]]
+==== Postman Set Up
+
+The link:https://www.getpostman.com/[Postman] application provides a platform for accessing the Anypoint MQ APIs.
+After downloading and installing Postman, supply this information to create an environment:
+
+* xref:getoeb[Organization ID]
+* xref:getoeb[Environment ID]
+* xref:getoeb[Bearer (Authentication) Token]
+* Host ID (from Anypoint Platform/MQ)
+* Client ID (from Anypoint Platform/MQ)
+* Client Secret (from Anypoint Platform/MQ)
+* A queue name - You can set this in Postman
+
+After you are able to authorize to an Anypoint MQ API, publish a message, consume the message, and get the lock ID from the returned information in the Body.
+
+For example, this information is returned from the consume (GET) command:
+
+[source,xml,linenums]
+----
+{
+    "properties": {
+      "anotherUserDefinedHeader": "Random stuff",
+      "userDefinedHeader": "User defined stuff"
+    },
+    "headers": {
+      "messageId": "514",
+      "lockId": "<lockIDvalue>",
+      "created": "Fri, 24 Jun 2016 21:17:57 GMT",
+      "deliveryCount": "2"
+    },
+    ...
+----
+
+After you have the lock ID, you can add it to your Postman environment to facilitate future requests.
+
+[[studiosetup]]
+=== Anypoint Studio Set Up
+
+Anypoint Studio lets you create a Mule application that uses the Anypoint MQ connector.
+The steps in this section are summarized. For more information, see the link:/anypoint-mq/mq-studio[Anypoint Studio guide] in the Anypoint MQ documentation set.
+
+To set up Studio for use with Anypoint MQ:
+
+. Use link:https://anypoint.mulesoft.com/#/signin[Anypoint Platform] > *MQ* > *Client Apps* to get Client ID and Client Secret values.
+. If you have not done so, download and install link:https://www.mulesoft.com/platform/studio[Anypoint Studio].
+. Download the *Anypoint MQ* connector using Anypoint Exchange.
+. Create a new Mule Project.
+. Search for "http" and drag the HTTP connector to the Canvas.
+. Click the *Connector Configuration* green plus icon to configure the connector.
+. In the Global Element Properties window, click *OK* (take the default settings).
+. Search for "mq" and drag the Anypoint MQ connector to the Canvas.
+. Click the *Connector Configuration* green plus icon to configure the connector.
+. In the Global Element Properties window, copy the Anypoint Platform > MQ > Client Apps > Client ID and Client Secret one at a time to the clipboard and then paste into Studio.
+. Click OK to exit the Global Element Properties window.
+. In the connector properties window, set *Operation* to consume.
+. Set the *Destination* to the name of the queue you created in Postman.
+. Search for "log" and drag the Logger to the Canvas. Set the *Message* to the `#[payload]` value.
+. Right-click the project name in the Package Explorer window and click *Run As* > *Mule Application*.
+. Ensure that the Console messages end with the "DEPLOYED" value.
+
+Go back to Postman and publish a new message.
+
+[[browsersetup]]
+=== Browser Set Up
+
+Browse to this address: link:0.0.0.0:8081[0.0.0.0:8081].
+The browser displays the message sent by Postman, which the Anypoint MQ connector received, and the HTTP connector sent to the browser.
+
+
+
+[[mqadminapi]]
 == Anypoint MQ Administration Portal
 
 link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/45045/versions/46698[Administration API] - Create and manage applications, queues, and exchanges.
@@ -57,6 +207,7 @@ link:https://anypoint.mulesoft.com/apiplatform/repository/v2/organizations/68ef9
 
 image:mq-rest-admin-portal.png[mq-rest-admin-portal]
 
+[[mqbrokerapi]]
 == Anypoint MQ Broker Portal
 
 link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/25547/versions/27130[Broker API] - Publish, consume, ack, and nack messages between queues and exchanges.
@@ -65,6 +216,7 @@ link:https://anypoint.mulesoft.com/apiplatform/repository/v2/organizations/68ef9
 
 image:mq-rest-broker-portal.png[mq-rest-broker-portal]
 
+[[mqstatapi]]
 == Anypoint MQ Statistics Portal
 
 link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/45827/versions/47525/pages/60090[Statistics API] - Perform statistical analysis of queue performance.
