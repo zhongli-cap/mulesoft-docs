@@ -3,7 +3,7 @@
 
 *Select*
 
-*Latest version: 2.6.0*
+*Latest version: 2.7.0*
 
 The Microsoft Dynamics Customer Relationship Management (CRM) connector lets you access Microsoft Dynamics CRM’s SOAP Organization Service. You can add this connector to an Anypoint Studio flow.
 
@@ -269,6 +269,39 @@ For these cases, there are optional connection configuration parameters:
 
 Configure the proxy that is used by the connector. This can be specified in the connector's Global Element configuration, under the `Proxy` tab.
 The value of the proxy address has to be in the format `{hostname/IP}:{port}`. For example, if the proxy is running in the same server under the port 8080: `127.0.0.1:8080` or `localhost:8080`.
+
+== Metadata caching
+
+The connector does cache metadata by default.
+
+Metadata is retrieved for data sense and also for allow completing some operations. Default configuration is the recommended way to use the connector, but there might be scenarios where often changes on metadata requires not to use this caching feature.
+
+The metadata retrievers are grouped within three categories as described below:
+
+. Data sense: As data sense requires all entities to be retrieved, the entities retriever does that and caches it by entity to be reused between different calls. In addition, data sense also exposes attributes for each entity, and this is done by an attributes retriever. For data sense the attributes retriever that is used gets all entitiy's attributes and caches it (for each one of the entities for which you perform a data sense operation).
+. Attributes: Some operations within the connector require just to retrieve referenced (by the operation) attributes from a entity. The default attribute retriever for these operations works optimizing data throughput doing single attribute querying, while also doing caching. You can configure these operations (Create, Update, CreateMultiple, UpdateMultiple) behavior to share the data sense retriever if works better on your scenario (ie. if you often create/update entities using most of its attributes).
+. Relationships: This particular retriever that gets relationships information, and caches it, is just used for the following operations: Associate and Dissasociate.
+
+In the table shown below you can find custom configuration settings to disable metadata caching on particular subsets of operations and/or to customize the retrievers behavior on particular cases.
+
+[cols=",",options="header",]
+|===
+|Setting |Usage |Values
+|org.mule.module.dynamicscrm.metadata.retrievers.nocache |Disable caching for all metadata retrievers |1- disabled, otherwise enabled
+|org.mule.module.dynamicscrm.metadata.retrievers.entities.nocache |Disable caching for entities metadata retriever used with data sense only |1- disabled, otherwise enabled
+|org.mule.module.dynamicscrm.metadata.retrievers.relationships.nocache |Disable caching for relationships metadata retriever |1- disabled, otherwise enabled
+|org.mule.module.dynamicscrm.metadata.retrievers.attributes.nocache |Disable caching for attributes metadata retriever |1- disabled, otherwise enabled
+|org.mule.module.dynamicscrm.metadata.retrievers.attributes.share | Share attributes metadata retriever (for metadata scopes and connector's operations). Set this value to '1' to use the full attribute metadata retriever for operations as well as metadata scopes |1- shared, otherwise use single attribute retriever for operations
+|===
+
+These system settings can be passed to the VM executing the mule app by doing:
+
+[source, code, linenums]
+----
+-Dorg.mule.module.dynamicscrm.metadata.retrievers.nocache=1
+----
+
+As example.
 
 == Operations
 
