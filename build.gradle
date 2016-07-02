@@ -1,0 +1,144 @@
+// TODO
+// * add development/production modes and change behavior accordingly
+//   - goal is to make this usable in CI
+// * undo change to _templates/default.template after buildHtml
+// * add mode to run jetty in background
+// * combine css (need to update template as well)
+// * set outputs.dir for custom tasks
+buildscript {
+  configurations.create('builder')
+  configurations.create('singlePageBuilder')
+
+  repositories {
+    mavenLocal()
+    ivy {
+      url 'https://s3-us-west-2.amazonaws.com/docs-site-builder'
+      layout 'pattern', { artifact '[artifact]-[revision].[ext]' }
+    }
+    jcenter()
+  }
+
+  dependencies {
+    classpath 'com.eriwen:gradle-css-plugin:2.12.0'
+    classpath 'com.palominolabs.gradle.task:gradle-git-clone-task:0.0.2'
+    builder 'com.mulesoft.documentation.builder:mule-docs-builder:1.0.0-SNAPSHOT'
+    // NOTE jar for single-page builder is not available on s3, so much be built and installed locally
+    singlePageBuilder 'com.mulesoft.documentation.builder.previewer:mule-docs-single-page-builder:1.0.0-SNAPSHOT'
+  }
+}
+
+import com.palominolabs.gradle.task.git.clone.GitCloneTask
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.RepositoryBuilder
+
+apply plugin: 'css'
+
+group = 'com.mulesoft.documentation'
+ext {
+  siteDir = '_site'
+}
+
+task cloneAssetsRepo(type: GitCloneTask) {
+  dir = file('_assets')
+  enabled = !dir.exists()
+  uri = 'https://github.com/mulesoft/mulesoft-docs-site-assets'
+  def branchName = 'staging'
+  treeish = 'origin/' + branchName
+  trySshAgent = false
+  doLast {
+    // checkout staging branch properly; should be fixed upstream (https://github.com/palominolabs/gradle-git-clone-task)
+    def git = new Git(new RepositoryBuilder().readEnvironment().findGitDir(dir).build())
+    def create = !git.branchList().call().find { it.name.equals('refs/heads/' + branchName) }
+    git.checkout().setCreateBranch(create).setName(branchName).setStartPoint(treeish).call()
+  }
+}
+
+task setup(group: 'Build', description: 'Prepares the build.') {
+  dependsOn cloneAssetsRepo
+}
+
+task clean(type: Delete, group: 'Build', description: 'Deletes the site output directory.') {
+  delete siteDir
+}
+
+// FIXME site builder should accept a custom templates directory
+task copyTemplates(type: Copy) {
+  dependsOn setup
+  from '_assets/_templates'
+  into '_templates'
+}
+
+task buildHtml(type: JavaExec, group: 'Build', description: 'Builds the HTML pages.') {
+  dependsOn copyTemplates
+  //mustRunAfter copyTemplates
+  classpath = buildscript.configurations.builder
+  main = 'com.mulesoft.documentation.builder.Client'
+  args = ['-s', '.', '-d', siteDir, '-ghr', 'https://github.com/mulesoft/mulesoft-docs', '-ghb', 'master', '-url', 'http://localhost:8000']
+  maxHeapSize = '2g'
+  //outputs.dir siteDir
+  doLast {
+    new Git(new RepositoryBuilder().readEnvironment().findGitDir(file('.')).build())
+      .checkout().addPath('_templates').call()
+  }
+}
+
+// pass file to build using -Dfile=path/to/file.adoc
+task buildSingleHtml(type: JavaExec, group: 'Build', description: 'Builds a single HTML page.') {
+  classpath = buildscript.configurations.singlePageBuilder
+  main = 'com.mulesoft.documentation.builder.previewer.Client'
+  args = ['-s', System.getProperty('file') || '', '-d', '_tmp']
+}
+
+task copyAssets(type: Copy) {
+  dependsOn setup
+  mustRunAfter buildHtml
+  from('_assets') {
+    exclude 'README.md'
+    exclude '_*/**'
+    //exclude 'css/*.less'
+  }
+  into siteDir
+  //outputs.dir siteDir
+}
+
+css {
+  source {
+    main {
+      css {
+        srcDir '_assets/css'
+        include '*.css'
+        include '*.less'
+      }
+    }
+  }
+}
+
+lesscss {
+  dependsOn setup
+  mustRunAfter copyAssets
+  source = css.source.main.css.asFileTree
+  dest = file("$siteDir/css/")
+}
+
+//def cssDir = "app/styles/"
+//def cssSrc = ["file1.css","file2.css"]
+//
+//combineCss {
+//    source = cssSrc.collect {cssDir+it}
+//    dest = "${buildDir}/all.css"
+//}
+
+task build(group: 'Build', description: 'Builds the site.') {
+  //dependsOn setup, buildHtml, copyAssets, lesscss
+  dependsOn setup, buildHtml, copyAssets
+  mustRunAfter clean
+}
+
+task serve(type: JettyRun, group: 'Tools', description: 'Runs the site using a local preview server.') {
+  mustRunAfter build
+  classpath = files()
+  contextPath ''
+  httpPort 8000
+  reload 'automatic'
+  webAppSourceDirectory file(siteDir)
+}
