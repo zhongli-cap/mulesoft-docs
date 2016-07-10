@@ -1,0 +1,289 @@
+= Build Your API
+:keywords: api, raml, json, gateway
+
+// Obsolete doc (kris 6.30.2016)
+
+To complete this step of the walkthrough, you need the RAML file that you created in your design step. If you didn't complete that step, you can jump in here using link:_attachments/t-shirt.raml[this RAML file].
+
+[NOTE]
+--
+If you are using Studio 6, check our link:/quickstarts/implement-and-test[Quickstart for implementing and testing an API] for a glimpse of Studio's new features involved in this process.
+--
+
+== About Anypoint Studio
+
+Anypoint Studio is an Eclipse-based IDE that includes built-in support for creating RAML-based APIs. If you don't already have the latest version installed, update to the latest version from within Studio by going to *Help* > *Check for Updates*. If you don't have Studio at all, you can download the latest version from the link:http://www.mulesoft.com/platform/mule-studio[download page].
+
+If you need an introduction to working with Anypoint Studio, see the link:/mule-fundamentals/v/3.7/anypoint-studio-essentials[Anypoint Studio Essentials].
+
+== Build Your Anypoint Studio Project
+
+. Create a *New Mule Project* from *File* > *New* > *Mule Project*.
+. Set the following fields in the new project wizard:
++
+[cols=",",options="header",]
+|===
+|Field |Value
+|Project Name |`my-raml-implementation`
+|Runtime |Mule Server 3.7.n EE
+|Add APIkit components |From RAML file or URL
+|API Definition | Download link:_attachments/t-shirt.raml[this RAML file] and point to its location on your disk.
+|===
++
+image:api-walk-build-new-mule-project.png[api-walk-build-new-mule-project]
++
+. Notice the folder structure that was created in the package explorer of the project. You build your API's functionality in the `t-shirt.xml` file, located in the `src/main/app` folder.
++
+image:api-walk-build-pkgex.png[api-walk-build-pkgex, width="293"]
++
+. Take a look at the flows that were generated in your project.
+** A main flow receives requests via the HTTP Connector and then routes them based on their full path to the right flow. The APIkit Router's workings are based on the RAML definition. Once a message completes its transition through the flow it was forwarded to, it returns to the main flow to be sent back to the requester through the output branch of the HTTP Connector.
++
+image:router+flow.png[router+flow]
++
+** A flow for every operation described on your RAML file. This is where we build up the functionality of your API.
++
+image:other+flows+initial+state.png[other+flows+initial+state]
++
+[WARNING]
+If you rename any of these flows, APIKit Router cannot find them, as it relies on flow names to locate flows.
++
+** There's also a set of standard `400` error messages, which are always generated. You can customize the messages by changing what the action of the Set Payload element. Keep in mind that these flows override the `400` responses you define in your RAML.
++
+image:exceptions.png[exceptions]
++
+. On the first flow, click the HTTP Connector, which opens this element's properties editor in the tab under the canvas. Next to the *Connector Configuration* field, click the edit icon to set the properties for the connector's global element. Change the port value (set to 8081 by default) into a dynamic property by writing `${http.port}` instead. You must now assign a value to the property `http.port`.
+. To assign a value, open the file `mule-app.properties` in your project's `src/main/app` folder in the package explorer. You can open this file as a text file in Studio and edit it right there on the spot. In this file simply add a line with the following:
++
+[source,code]
+----
+http.port=8081
+----
++
+. Then save changes.
+. On each of the three flows that are linked to the three operations of your API, delete the *Set Payload* elements that appear by default.
+. In the palette menu on the right of the screen, in the `connectors` section, look for the *link:/mule-user-guide/v/3.7/web-service-consumer[Web Service Consumer]* building block. Drag one of these into every one of these three flows.
++
+image:other+flows+w+wsc.png[other+flows+w+wsc]
++
+All three of them display error messages, this is because they're not yet configured. In Studio you can edit the attributes of an element by clicking it, which opens a properties editor tab in the lower section of the screen.
+. Click the first of the Web Service Consumer building blocks. Then, in the properties editor tab, click the green plus sign next to the Connector Configuration field to create a new link:/mule-fundamentals/v/3.6/global-elements[Global Element].
++
+image:get+to+a+GE.png[get+to+a+GE]
++
+A new window opens. Fill in the fields with the following:
++
+[cols=",",options="header",]
+|===
+|Field |Value
+|Name |Web_Service_Consumer
+|WSDL location |http://tshirt-service.cloudhub.io/?wsdl
+|Service |TshirtServicePortTypeService
+|Port |TshirtServicePortTypePort
+|Address |http://tshirt-service.cloudhub.io/
+|===
++
+[TIP]
+As soon as you fill in the WSDL Location field, the rest gets automatically filled as this WSDL doesn't offer any alternatives for the other values.
++
+image:GE.png[GE]
++
+. Click OK.
+. Back in the properties editor of the Web Service Consumer, select the Connector Configuration that you just created, `Web_Service_Consumer`. The Web Service Consumer element now reads the WSDL and displays the different operations available in the `Operation` field.
++
+image:WSC+configured.png[WSC+configured]
++
+In each instance of the Web Service Consumer in your project, pick the same Connector Configuration that you created for the first out of the dropdown menu, then pick in each case the operation that matches the flow as per the table below:
++
+[cols=",",options="header",]
+|===
+|Flow |Operation
+|`get:/products:t-shirt-config` |ListInventory
+|`get:/orders/{orderId}/status:t-shirt-config` |TrackOrder
+|`post:/orders:t-shirt-config` |OrderTShirt
+|===
++
+Your flows now all call out to the Web service, generating requests with the XML message structures that the Web service expects in each case. There's still a problem: the messages that arrive to your API are in a different JSON format, so you still need to map this incoming data to the expected one... and then also map the outgoing data to the requester's expected format.
+. Download the file link:_attachments/JSON-example-files.zip[JSON-example-files.zip] and uncompress it. Here you find samples of the expected inputs and desired outputs, you can use them as references to know how to build your mappings.
+. In the palette menu on the right of the screen, in the components section, look for the DataWeave transformer, labelled as *Transform Message*. Include five instances of this element in your project. Drag a DataWeave transformer and place it to the right of the first Web Service Consumer, then add two more of them on each of the other two flows, one on the left and one on the right of each of the Web Service Consumers.
++
+image:other+flows+w+dw.png[other+flows+w+dw]
++
+. Click the first Transform Message element you placed, the one on the `get:/products:t-shirt-config` flow. Notice that the properties editor of the DataWeave element is split into two areas, one for a visual representation of the mapping between input and output, the another for describing the transform in link:/mule-user-guide/v/3.7/dataweave[DataWeave language]. Thanks to Studio's intelligent use of metadata, the available inputs are already available, you can navigate the tree to see the Web Service Consumer outputs from the selected operation in your WSDL.
++
+image:input+example.png[input+example]
++
+You must now use them to construct DataWeave's output following the structure of the example:
++
+[source,json,linenums]
+----
+[{
+    "productCode": "TS",
+    "size": "S",
+    "description": "Small T-shirt",
+    "count": 30
+ }]
+----
++
+To produce that output, you must write this transform into the source section (located to the right of the "Input" and "Output" trees):
++
+[source,dataweave,linenums]
+----
+%dw 1.0
+%output application/json
+---
+ [{
+    "productCode": payload.ListInventoryResponse.*inventory.productCode,
+    "size": payload.ListInventoryResponse.*inventory.size,
+    "description": payload.ListInventoryResponse.*inventory.description,
+    "count": payload.ListInventoryResponse.*inventory.count
+}]
+----
++
+[TIP]
+Use autocomplete to help you write out the full path to each of the elements that come in the input. The code produced by the autocomplete might have slightly different syntax from the provided example, but it produces the same results.
++
+. Click the 'Preview' button to display a sample output, note that it matches the desired output:
++
+image:dw-prevew-button.png[preview]
+. Right-click on the input section and select *Edit Sample Data* to provide sample values to your input, these will be used to construct your output preview. Fill in the scaffold structure with mock values, note how the preview section is updated in real time to show how the provided input would be processed. For example if you provide the below XML as a sample input:
++
+[sample,xml,linenums]
+----
+<?xml version='1.0' encoding='UTF-8'?>
+<ns0:ListInventoryResponse xmlns:ns0="http://mulesoft.org/tshirt-service">
+ <inventory>
+   <productCode>12334</productCode>
+   <size>Large</size>
+   <description>MuleSoft T-shirt</description>
+   <count>1</count>
+ </inventory>
+</ns0:ListInventoryResponse>
+----
++
+You will obtain the following sample output:
++
+[sample,json,linenums]
+----
+[
+  {
+    "productCode": [
+      "12334"
+    ],
+    "size": [
+      "Large"
+    ],
+    "description": [
+      "MuleSoft T-shirt"
+    ],
+    "count": [
+      "1"
+    ]
+  }
+]
+----
+
+. Move on to the first DataWeave transformer in the `get:/orders/{orderId}/status:t-shirt-config` flow. Two fields are required for the output:
+** `email` (which is an inbound property of the incoming message)
+** `orderId` (which arrives as a parameter in the URI path)
+. In this case you can easily create the needed transform by simply dragging and dropping fields from the input to the output. Drag 'flowvars.orderId' onto 'orderId' and 'http.query.params.email' onto 'email'
++
+The DataWeave code to populate those fields as desired looks like this:
++
+[source,dataweave,linenums]
+----
+%dw 1.0
+%output application/xml
+%namespace ns0 http://mulesoft.org/tshirt-service
+---
+{
+  ns0#TrackOrder: {
+    email: inboundProperties."http.query.params".email,
+    orderId: flowVars.orderId
+ }
+}
+----
++
+. Move on to the next DataWeave element. To construct the output, you must check the examples once again, this time this is the desired structure:
++
+[source,json,linenums]
+----
+{
+  "orderId": "4321",
+  "status": "Delivered",
+  "size": "M"
+}
+----
++
+These are the same three fields that are sent as an output of the Web Service Consumer, however they are in a different order from the one produced by the Web Service Consumer, so you must specify each individually. Here's what your transform should look like:
++
+[source,dataweave,linenums]
+----
+%dw 1.0
+%output application/java
+---
+{
+    "orderId": payload.TrackOrderResponse.orderId,
+    "status": payload.TrackOrderResponse.status,
+    "size": payload.TrackOrderResponse.size
+}
+----
++
+. The first mapping in `post:/orders:t-shirt-config` flow is even easier, you can simply Drag and Drop the entire Payload parent element, from 'Payload : Json' onto 'XML<OrderTshirt>'. When promted simply choose 'auto assign' fields.
++
+[source,dataweave,linenums]
+----
+%dw 1.0
+%output application/xml
+%namespace ns0 http://mulesoft.org/tshirt-service
+---
+{
+    ns0#OrderTshirt: {
+        size: payload.size,
+        email: payload.email,
+        name: payload.name,
+        address1: payload.address1,
+        address2: payload.address2,
+        city: payload.city,
+        stateOrProvince: payload.stateOrProvince,
+        postalCode: payload.postalCode,
+        country: payload.country
+    }
+}
+----
++
+In the second Transform Message element, the desired output must only have one field, that is easily attainable from the payload:
++
+[source,json,linenums]
+----
+{
+    "orderId": "4321"
+}
+----
++
+This is the transform you must write to carry out this transformation, which you can create by simply dragging 'OrderTshirtResponse.orderId' onto 'orderId':
++
+[source,dataweave,linenums]
+----
+%dw 1.0
+%output application/java
+---
+{
+    "orderId": payload.OrderTshirtResponse.orderId
+}
+----
++
+. Save your project, then export it to a deployable zip. Click on *File* > *Export*, from *Mule* select *Anypoint Studio Project to Mule Deployable Archive*, click *Next* and click *Finish*.
+. You're all set and ready to deploy!
+
+[TIP]
+====
+If you haven't been following through these steps and building your own project, that's okay, but you need to have something to work with on the next steps of the walkthrough.
+
+In that case, download link:_attachments/my-raml-implementation.zip[this file] – it's what you would have as a result of following the steps in this page.
+In order to utilize this file as your project simply go to Studio, click on "File", then "Import", select "Anypoint Studio generated Deployable Archive (zip)" and import your downloaded zip file.
+====
+
+== Next
+
+The next step is to *link:/anypoint-platform-for-apis/walkthrough-deploy-to-runtime[deploy your API].
