@@ -1,0 +1,99 @@
+= Accessing an API Behind a Firewall
+:keywords: firewall, mixed content, cors, proxy, same-origin, anypoint, api console, api designer, api notebook
+
+Using the following Anypoint Platform browser tools routes calls to your API through a server-side proxy by default:
+
+* API Console
+* API Designer
+* API Notebook
+
+These tools use the proxy to avoid the link:https://en.wikipedia.org/wiki/Same-origin_policy[same-origin] restrictions in browsers. When a browser makes an HTTP request to a domain and that domain returns a page, that page is the _origin domain_. Any scripts running in that page are allowed to make additional requests back to the origin domain only. If a script attempts to make a request to a different domain, the response is normally blocked to prevent the script from gaining access to other sites you visited.
+
+If your API is located behind a firewall that prevents inbound requests, the API is unreachable. You won't be able to use API Console, API Designer, or API Notebook unless you use one of the following ways to avoid same-origin restriction:
+
+* link:/api-manager/accessing-your-api-behind-a-firewall#disable-same-origin-restrictions-in-your-browser[Disable same-origin restrictions] in your browser.
+* link:/api-manager/accessing-your-api-behind-a-firewall#bypass-the-proxy[Bypass the proxy].
+* link:/api-manager/accessing-your-api-behind-a-firewall#use-cors[Use CORS].
+
+Also, consider link:/api-manager/accessing-your-api-behind-a-firewall#disabling-mixed-content-blocking[disabling mixed content blocking].
+
+== Disable Same-Origin Restrictions in your Browser
+
+Another possible solution, especially if you can't implement CORS for your API, is to disable the same-origin restrictions in your browser. Each browser handles these restrictions in a unique way; for example, after launching Google Chrome from the command line to disable the same-origin restrictions and then closing Chrome, your next Chrome session automatically re-enables the restrictions. Internet Explorer's settings persists across application sessions, so you need to change your Internet Options manually. Mozilla Firefox doesn't currently support a way to disable same-origin restrictions without using a custom build of the browser.
+
+Make sure you understand the potential security implications of changing your browser's security settings. You should only use these options for testing on your own web pages because your browser can become vulnerable to malicious scripts and other potential threats. 
+
+==== Google Chrome for Mac OS X
+
+* Open a new Terminal window, paste the following line, and then press *Enter*: `open -a Google\ Chrome --args --disable-web-security`.
+
+==== Google Chrome for Windows
+
+* Open a new Command Prompt window, navigate to the location of the Chrome executable (Chrome.exe), paste the following line, and then press *Enter*: `chrome.exe --disable-web-security`.
+
+==== Mozilla Firefox
+
+You can't disable the same-origin restrictions in Firefox without using a custom build of the browser's source code.
+
+==== Internet Explorer
+
+. Open *Internet Properties*, click the *Security* tab, and then click the *Custom level* button in the *Security level for this zone* section.
+. A *Security Settings* dialog appears. Scroll down the list of security settings and locate the *Miscellaneous* section, and select *Enable* for the *Access data sources across domains* setting.
+. Click *Apply*.
+
+== Bypass the Proxy
+
+If you use the Anypoint Platform tools in an environment that blocks inbound requests using a firewall, bypass the proxy as described in this section.
+
+=== Bypassing the Proxy for the API Console and API Designer
+
+Go to the API Designer for your API. On the right pane, check that the API is behind a firewall, which bypasses the proxy.
+
+image::accessing-your-api-behind-a-firewall-e7a50.png[accessing-your-api-behind-a-firewall-e7a50]
+
+=== Bypassing the Proxy for the API Notebook
+
+Go to the API Notebook for your API. In the initial code cell that creates a client, create a new code cell with the following code to set a new proxy configuration on the client:
+
+*`API.set(client, 'proxy', false);`*
+
+In the line above, `client` represents the name of your client that you used when you called `API.createClient().` For example:
+
+*`API.createClient(<name of client>, ...);`*
+
+Combining these two lines together, the following example creates a new client and then bypass the default proxy:
+
+*`API.createClient('myClient', 'http://api-portal.anypoint.mulesoft.com/my-client/api/test-api/test.raml');`*
+
+*`API.set(myClient, 'proxy', false);`*
+
+== Use CORS
+
+After you bypass a proxy, you still might not be able to use API Console, API Designer, or API Notebook because of same-origin browser restrictions.
+
+* link:/api-manager/building-an-external-oauth-2.0-provider-application#implementing-cors[Implement a CORS policy].
+* link:/api-manager/setting-up-an-api-proxy[Set up an API proxy] and link:/api-manager/cors-policy[apply a CORS Policy].
+
+== Disabling Mixed Content Blocking
+
+When an HTTPS web page retrieves resources from an unsecured HTTP endpoint, the resulting blend of secure and unsecure content is called "mixed content." Browsers block such mixed content and display an error because of the security implications. For example, mixed content introduces the possibility that a man-in-the-middle attacker could have injected malicious site resources (such as scripts) during the request and response. You may encounter this issue when using the API Manager, and it's important to understand how you can mitigate it.
+
+The API Manager browser tools (API Console, API Designer, and API Notebook) are hosted on an HTTPS endpoint. All requests and responses sent between your browser and the platform's servers are encrypted using SSL. In addition, if you're using the default server-side proxy generated by the tools instead of bypassing the proxy, the proxy makes requests to your API and encrypts the responses through SSL so that they can be displayed in the browser without triggering a mixed content error.
+
+If you've disabled the platform's server-side proxy, any requests to your API are no longer routed through this proxy and are instead made directly to it. This situation isn't a problem if your API resides at an HTTPS endpoint, because all communication between the browser and the requested resources is encrypted using SSL. However, if your API has an HTTP endpoint, the API Manager browser tools makes requests to the unsecured HTTP endpoint and your browser blocks the resulting "mixed content" -- a mix of the browser tool's HTTPS (secured) content and your API's HTTP (unsecured) content.
+
+==== Disabling Mixed Content Blocking in your Browser
+
+Each browser presents mixed content errors in slightly different ways, as described in the following support pages.
+
+* link:https://support.google.com/chrome/answer/1342714?hl=en[Google Chrome help page]
+
+*  link:https://support.mozilla.org/en-US/kb/how-does-content-isnt-secure-affect-my-safety[Mixed content blocking in Firefox]
+
+* Microsoft's link:http://support.microsoft.com/kb/2625928[“Only secure content is displayed” notification in Internet Explorer 9 or later]
+
+
+== See Also
+
+* link:http://forums.mulesoft.com[MuleSoft's Forums]
+* link:https://www.mulesoft.com/support-and-services/mule-esb-support-license-subscription[MuleSoft Support]
