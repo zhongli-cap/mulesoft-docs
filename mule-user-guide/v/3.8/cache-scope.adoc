@@ -1,7 +1,12 @@
 = Cache Scope
 :keywords: cache, anypoint, studio
 
-The *Cache Scope* saves on time and processing load by storing and reusing frequently called data. You can put any number of message processors into a cache scope and configure the caching strategy to store the responses (which contain the payload of the response message) produced by the processing that occurs within the scope. Mule's default caching strategy defines how data are stored and reused, but if you want to adjust cache behavior, you can customize a global caching strategy in Mule and make it available for use by all cache scopes in your application.
+The *Cache Scope* is a Mule feature for storing and reusing frequently called data.
+The Cache Scope saves on time and processing load.
+
+== Overview
+
+You can put any number of message processors into a cache scope and configure the caching strategy to store the responses (which contain the payload of the response message) produced by the processing that occurs within the scope. Mule's default caching strategy defines how data are stored and reused, but if you want to adjust cache behavior, you can customize a global caching strategy in Mule and make it available for use by all cache scopes in your application.
 
 Mule sends a message into the cache scope and the parent flow expects an output. The cache scope processes the message, delivers the output to the parent flow and saves the output (that is, caches the response). The next time Mule sends the same kind of message into the cache scope, the cache scope may offer a cached response rather than invoking, again, a potentially time-consuming process.
 
@@ -31,23 +36,25 @@ You can customize a global caching strategy in Mule for the cache scopes in your
 By default, all cache scopes in Mule applications follow the caching strategy procedure described below.
 
 [NOTE]
-The default caching strategy uses an InMemoryObject store and should only be used for testing; on actual implementations, follow the instructions in xref:ccs[Creating a Caching Strategy].
+The default caching strategy uses an InMemoryObjectStore and should only be used for testing; on actual implementations, follow the instructions in xref:ccs[Creating a Caching Strategy].
 
 . A message enters the cache scope.
 . Cache scope determines whether the message’s payload is consumable. A *consumable payload* can only be read once before it is lost – such as a streaming payload – and cannot be cached. +
 * If the message payload _is_ consumable, cache scope always processes the message; nothing is cached and the caching strategy is abandoned.
 * If the message payload _is not_ consumable, cache scope continues to the next step in the caching strategy.
 . Cache scope generates a key to identify the message’s payload. Mule uses an SHA256KeyGenerator and a SHA256 digest to generate a unique key for the message payload.
-. Cache scope compares the newly-generated key to cached responses that it has previously processed and saved in an InMemoryObject store — a container for cached data. In other words, cache scope searches for a “cache hit” it can offer instead of processing the message. +
+. Cache scope compares the newly-generated key to cached responses that it has previously processed and saved in an InMemoryObjectStore — a container for cached data. In other words, cache scope searches for a “cache hit” it can offer instead of processing the message. +
 * Where there is a _cache miss_, cache scope processes the new message and produces a response. Cache scope also saves the resulting response in the object store. (If the response has a consumable payload, it does not cache the response.)
 * Where there is a _cache hit_, the caching strategy uses a DefaultResponseGenerator to generate a response that combines data from both the new request and the cached response. (If the generated response has a consumable payload, it does not cache the response.)
 . Cache scope pushes the response out into the parent flow for continued processing.
 
-=== Object Stores and Clustering
+== Object Stores and Clustering
 
-In Mule 3.4.1 and earlier versions, if you created a caching strategy without configuring an object store, Mule created a default InMemoryObjectStore which did not work as a unified cache for all cluster nodes. Instead, each node had its own cache; to create a unified cache for the cluster it was necessary to configure the application to use a custom managed store.
+In Mule 3.4.1 and earlier versions, if you created a caching strategy without configuring an object store, Mule created a default link:https://www.mulesoft.org/docs/site/3.7.0/apidocs/org/mule/util/store/InMemoryObjectStore.html[InMemoryObjectStore] which did not work as a unified cache for all cluster nodes. Instead, each node had its own cache; to create a unified cache for the cluster it was necessary to configure the application to use a custom managed store.
 
 Starting in Mule 3.5.0, by default new caching strategies use an object store instance that provides a unified cache for all cluster nodes without extra modifications. The exception is the default caching strategy used by the link:/mule-user-guide/v/3.8/cache-scope[Cache Scope], which uses the InMemoryObjectStore and is intended for testing only.
+
+NOTE: Do not use link:https://www.mulesoft.org/docs/site/3.7.0/apidocs/org/mule/util/store/TextFileObjectStore.html[TextFileObjectStore] for a cache as the cache contains more than text content. For a list of all object store types, see the link:https://www.mulesoft.org/docs/site/3.7.0/apidocs/org/mule/util/store/package-summary.html[mule.util.store] package summary. Mule provides the link:https://www.mulesoft.org/docs/site/3.7.0/apidocs/org/mule/util/store/MuleObjectStoreManager.html[MuleObjectStoreManager], which creates object stores.
 
 If you want to enable the old behavior on your caching strategy (that is, provide a cache for each cluster node), you need to configure your application to use a managed store that controls an in-memory store. The configuration for the managed store should be:
 
@@ -146,7 +153,7 @@ Add nested elements beneath your `ee:cache` element to define what processing
 ------
 [tab,title="Studio Visual Editor"]
 ....
-The default caching strategy used by the cache scope uses an InMemoryObjectStore, and is only suitable for testing. For example, processing messages with large payloads may quickly exhaust memory storage and slow the processing performance of the flow. In such a case, you may wish to crate a global caching strategy that stores cached responses in a different type of object store and prevents memory exhaustion.
+The default caching strategy used by the cache scope uses an link:https://www.mulesoft.org/docs/site/3.7.0/apidocs/org/mule/util/store/InMemoryObjectStore.html[InMemoryObjectStore], and is only suitable for testing. For example, processing messages with large payloads may quickly exhaust memory storage and slow the processing performance of the flow. In such a case, you may wish to crate a global caching strategy that stores cached responses in a different type of object store and prevents memory exhaustion.
 
 . In the Cache properties editor, click the radio button next to the *Reference to a strategy field*, and click the green plus sign.
 . Configure the fields in the *Global Element Properties* panel that appears according to the tables below. The only required field is *Name*.
@@ -187,7 +194,7 @@ Example: `keyGenerator-ref="Bean"`
 +
 image:caching_strategy_advanced.png[caching_strategy_advanced]
 
-==== Field Descriptions
+=== Field Descriptions
 
 * *Response Generator* - Specify the name of a Response Generator that directs the cache strategy to use a custom-built Spring bean to generate a response that combines data from both the new request and the cached response. Click the green plus sign next to the field to create a new Spring bean for your caching strategy to reference.
 +
@@ -271,7 +278,7 @@ Configure the following settings for an object store that saves cached responses
 * The expiration interval between polls for expired cached responses
 
 |*managed-store* a|
-Configure the following settings for an object store that saves cached responses in a place defined by ListableObjectSTore:
+Configure the following settings for an object store that saves cached responses in a place defined by ListableObjectStore:
 
 * Store name
 * Persistence of cached responses (true/false)
@@ -428,7 +435,8 @@ Note: This project requires link:_attachments/FibonacciResponseGenerator.java[F
     <flow name="calculateFibonacci">
         <vm:inbound-endpoint path="fibonacci" exchange-pattern="request-response"/>
  <ee:cache cachingStrategy-ref="Caching_Strategy"
-                  filterExpression="#[groovy:message.getInboundProperty('nocache') == null]" doc:name="Cache">
+     filterExpression="#[groovy:message.getInboundProperty('nocache') == null]"
+        doc:name="Cache">
             <logger level="INFO" message="#[payload]"/>
             <expression-component><![CDATA[
                 n = message.inboundProperties['n'];
