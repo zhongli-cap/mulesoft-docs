@@ -18,41 +18,15 @@ You can define a list of `<host>:<port>` or `<host>` brokers to try to connect
   password="my-pwd" />
 ----
 
-The fallbackAddresses attribute is a comma-separated list of "host:port" or "host" brokers, that define fallback brokers to attempt connection to, should the connection to main broker fail. The addresses are used along with the main one every time a connection is attempted: if the first attempt fails (main address), the next address is used to attempt connecting, and so on. This means that the connection only changes if there's a failure and the reconnection strategy is triggered.
+The `fallbackAddresses` attribute is a comma-separated list of brokers that you can specify as "host:port" or "host". The list defines the fallback brokers that AMQP attempts to connect to, should the connection to the main broker (master broker) fail. The addresses are used along with the main one each time a connection is attempted: if the first attempt fails (main address), the next address is used to attempt connecting, and so on. This means that the connection only changes if there's a failure and the reconnection strategy is triggered.
 
 NOTE: Fallback attempts are in order that you define the addresses - the main address is always first and the fallback addresses after.
 
-=== AMQP Fallback FAQ
+=== Reconnection Strategy
 
-The following questions and answers provide additional information on fallback.
+The fallback reconnection strategy makes connection attempts in the order of the brokers that you define in the `fallbackAddresses` attribute. The first broker you specify in the list is called the main address or the master broker. The order you specify subsequent brokers defines the order that each broker is checked if the master broker fails. The non-master brokers are only connected to if the master broker fails. If the master broker fails, control passes to the next broker in the list. If that broker fails and if the master broker has returned to being online, control passes back to the master broker. If the master broker is still offline, control passes to the next broker in the list that is online.
 
-==== Does the fallback come back to the Master broker after a failure, for example when it comes online?
-
-Only if the fallback broker goes down forcing the reconnection logic.
-
-==== What happens if the Failover broker goes down, but the Master is up again? Does it switch back to Master?
-
-Yes, if Master is up when the other goes down, the reconnection strategy runs, and since connecting to Master is the first attempt, it switches to that broker.
-
-==== When the failover broker kicks in, is it during initial connection, or any time after?
-
-Initial connection and when the reconnection strategy is triggered (because a connection problem occurs).
-
-==== Flow is trying to connect to Master, but Master is not responding, does AMQP use failover?
-
-If failover is up, yes. Otherwise it fails.
-
-==== Flow is already connected to Master, which sends and receives messages, but Master goes down; does AMQP connector automatically reconnect to Failover?
-
-Yes, the reconnection strategy kicks in triggering the connection attempts and failover is the choice since it's up.
-
-==== How does Mule's Reconnection Strategy apply when AMQP connector has Failover broker defined?
-
-Will it attempt to reconnect to Master following Reconnection Strategy first, and only when it fails move to Failover? Or… something else?
-
-Exactly like that. AMQP attempts reconnection to Master, only if Master fails, does AMQP move to the fallback addresses that you defined.
-
-It's important to notice that the attempts are in order of definition, with the main address always first and the fallback addresses after.
+If fallback is not set and the master broker is not responding, AMQP fails. If fallback is set and the master broker is not responding, fallback occurs, and control moves to the next broker in the list.
 
 == Listening to Messages with Exchange Redeclaration and Queue Creation
 
