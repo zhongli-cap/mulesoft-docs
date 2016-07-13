@@ -817,9 +817,49 @@ Not:
 select * from emp where id = '#[payload.id]'
 ----
 +
-* *Streaming with the Database connector:* When you enable streaming on your Database connector, you leave the connection, statement, and resultset open after execution. Mule closes these resources when either of the following occurs:
-* The result iterator is consumed
-* There is an exception during the processing of the message (when the result iterator is in the payload of the current message)
+* *Streaming with the Database connector:* When you enable streaming on your Database connector, you leave the connection, statement, and result set open after execution. Mule closes these resources when either of the following occurs:
+** The result iterator is consumed.
+** There is an exception during the processing of the message (when the result iterator is in the payload of the current message).
+
+== User Defined Data Types
+
+In Mule 3.6 and newer, you can define data types for use with the Database connector. This feature provides the ability to use array and struct types in a query, and stored stored procedure parameters and in values returned in result sets.
+
+To use a user defined data type, define the type in the database configuration with the type ID corresponding to the structured data type, for example:
+
+[source,xml,linenums]
+----
+<db:oracle-config name="dbConfig" url="..." user="..." password="..."> 
+    <db:data-types>
+         <!-- java.sql.STRUCT == 2002—>
+         <db:data-type name="CONTACT_DETAILS" id="2002"/>
+         <!-- java.sql.ARRAY == 2003—> 
+         <db:data-type name="CONTACT_DETAILS_ARRAY" id="2003"/>
+  </db:data-types> 
+</db:oracle-config>
+----
+
+For struct values, a `java.sql.Struct` is returned. In order to obtain the information, invoke the `getAttributes` method.
+
+For array values, a `java.sql.Array` is returned. In order to obtain the corresponding Java array, invoke the getArray method on the `java.sql.Array` instance. This requires an open connection to the database, which means that the query returning the array must be executed inside a transactional scope or using streaming.
+
+To work with input parameters of user defined data types, the values must be of type `java.sql.Struct` and `java.sql.Array` or any subclasses provided by the database driver. This means that, for example, the user defined type value returned on a result field can be used as input value in a another query. To create new values, the struct must be created using a java code. See link:https://docs.oracle.com/cd/B28359_01/java.111/b31224/oraoot.htm#i1039476[this example].
+
+The second part of the feature enables the ability to map a `java.sql.Struct` value to a custom Java class, that is, to do type mapping. This means that every time a column or output parameter of a mapped type is returned, instead of getting a `java.sql.Struct`, an instance of the mapped Java class is returned.
+
+The same occurs for arrays, where their elements are of the mapped class.
+For input parameters of a mapped Struct datatype, accepted values are instances of the mapped class instead of `java.sql.Struct` type.
+
+To enable this feature, include a className attribute when defining Struct data types:
+
+[source,xml,linenums]
+----
+<db:oracle-config name="dbConfig" url="..." user="..." password="..."> 
+    <db:data-types> 
+        <db:data-type name="CONTACT_DETAILS" id="2002" className="org.foo.ContactDetails"/> 
+    </db:data-types> 
+</db:oracle-config>
+----
 
 == Example MEL Expression Database URL
 
