@@ -5,7 +5,7 @@ To apply the link:/api-manager/external-oauth-2.0-token-validation-policy[OAuth 
 
 == Prerequisites
 
-Run the external OAuth Provider App on one of the following installations:
+Run the external OAuth provider app on one of the following installations:
 
 * Mule 3.8.0 runtime or later
 * API Gateway runtime 2.0 or earlier
@@ -14,14 +14,14 @@ These runtimes employ the link:/mule-user-guide/v/3.8/http-connector[new HTTP Co
 
 The following resources are required:
 
-* link:https://anypoint.mulesoft.com/exchange/#!/api-gateway-external-oauth2-provider?orgId=1[External OAuth2 Provider Template]
+* link:https://anypoint.mulesoft.com/exchange/#!/api-gateway-external-oauth2-provider?orgId=1[External OAuth2 provider template]
 * link:_attachments/keystore.jks[keystore.jks]
 
 == Customizing the OAuth 2.0 Provider App
 
-The example link:_attachments/provider.txt[OAuth 2.0 Provider] requires very little configuration. The primary configuration task is specifying the same Client Id and Client Secret as the organization where the API is managed. If you nevertheless do want to understand how it works, here's an overview of it's different components.
+The example link:_attachments/provider.txt[OAuth 2.0 provider] requires very little configuration. The primary configuration task is specifying the same client Id and client secret as the organization where the API is managed. The following overview describes the components.
 
-Depending on the OAuth grant type you want to use, the OAuth Provider application may expose two or three endpoints:
+Depending on the OAuth grant type you want to use, the OAuth provider application may expose two or three endpoints:
 
 * `/authorize`: configured as an attribute of the `oauth2-provider:config` element
 * `/access_token`: configured as an attribute of the `oauth2-provider:config` element
@@ -37,7 +37,7 @@ Depending on the OAuth grant type you want to use, the OAuth Provider applicatio
 - Validates user credentials
 
 |`api-platform-gw:client-store` |- Store that retains OAuth client-specific information. If the client sends validation credentials in the body or the query of the request, the OAuth Web service provider simply validates the incoming credentials (client ID and client secret) against the content in the clientStore +
-- Caches client ID and Secret of valid organization's client applications
+- Caches client ID and client secret of valid organization's client applications
 |`api-platform-gw:client-security-provider` |Validates client application's credentials.
 |`mule-ss:security-manager` |- For configuring link:/mule-user-guide/v/3.7/configuring-the-spring-security-manager[Spring Security Manager] +
 - Authenticates resource owners (for example: when the user credentials are validated after the login page). The only situation where this provider is not required, is when the Grant Type is Client Credentials.
@@ -45,9 +45,9 @@ Depending on the OAuth grant type you want to use, the OAuth Provider applicatio
 
 === Implementing CORS
 
-This feature is only available when using Mule 3.8 runtime or API Gateway Runtime version 2.x. Earlier versions of the API Gateway runtime don't support configuring the OAuth Provider with a preFlow. To apply or edit a CORS policy from Anypoint Platform, see link:/api-manager/cors-policy[Applying and Editing a CORS Policy].
+This feature is available only when using Mule 3.8 runtime or API Gateway runtime 2.x. Earlier versions of the API Gateway runtime don't support configuring the OAuth provider with a preFlow. To apply or edit a CORS policy, see link:/api-manager/cors-policy[Applying and Editing a CORS Policy].
 
-You may find that you need to implement CORS on your OAuth Provider. The *preFlow* attribute on the OAuth configuration element offers the possibility to reference a flow that is processed before anything else. Thanks to this attribute, your OAuth Provider configuration can reference an additional flow that has implements a CORS configuration, enabling CORS in both the authorize and the access token listeners.
+You may find that you need to implement CORS on your OAuth Provider. The *preFlow* attribute on the OAuth configuration element makes it possible to reference a flow that is processed before anything else. Using this attribute, your OAuth Provider configuration can reference an additional flow that has implemented a CORS configuration, enabling CORS in both the authorize and the access token listeners.
 
 [source, xml, linenums]
 ----
@@ -73,12 +73,12 @@ In the above example, the "myCorsFlow" flow configures CORS to allow requests fr
 
 == End-to-End Example Implementation
 
-In this example of how to build the OAuth Provider application, you configure Mule 3.8.0 runtime or later to use the same Client Id and Client Secret as the organization where the API is managed.
+In this example of how to build the OAuth Provider application, you configure API Gateway runtime 2.x or later to use the same client Id and client Secret as the organization where the API is managed.
 
-. Configure Mule 3.8.0 runtime or later as follows:
+. Download link:https://www.mulesoft.com/ty/dl/api-gateway[API Gateway 2.0] version or later and configure the runtime.
 +
-Alternatively, download link:https://www.mulesoft.com/ty/dl/api-gateway[API Gateway 2.0] version or later and configure the runtime.
-.. Log into link:https://anypoint.mulesoft.com/[Anypoint platform] and get the *client_id* and *client_secret* of your organization or of one of its Business Groups. For information, see  link:/api-manager/tutorial-set-up-and-deploy-an-api-proxy[the tutorial for setting up and deploying a proxy] and the section "Manual Deploy to CloudHub API Gateway":
+.. Log into link:https://anypoint.mulesoft.com/[Anypoint platform] and get the link:/api-manager/browsing-and-accessing-apis#accessing-your-application-client-id-and-client-secret[client_ID and client_secret] of your organization or of one of its Business Groups.
++
 .. Edit the `./config/wrapper.conf` file from the API Gateway software distribution to add these parameters:
 +
 [source,java,linenums]
@@ -87,15 +87,42 @@ wrapper.java.additional.7=-Danypoint.platform.client_id=<your org client ID>
 wrapper.java.additional.8=-Danypoint.platform.client_secret=<your org client-secret>
 ----
 +
-*Note*: The numbers in these parameters (`wrapper.java.additional.` _n_) must run sequentially in order starting with 1 on the top parameter in the file.
+The numbers in these parameters (`wrapper.java.additional.` _n_) must run sequentially in order starting with 1 on the top parameter in the file.
 +
-The following is an example of the wrapper.conf file with the Client ID and Client Secret statements:
+The following is an example of the wrapper.conf file with the client ID and client secret statements:
 +
-image:ApiGwSettings.png[ApiGwSettings]
+[source,xml,linenums]
+----
+#wrapper.java.additional.<n>=-Dmule.clusterNodeId=1
+#wrapper.java.additional.<n>=-Dmule.clusterSize=2
+#############################
+
+
+#######################################################################################
+# Anypoint Platform Settings
+#######################################################################################
+# The following option is mandatory and identifies your Mule instance against
+# the Anypoint Platform.
+#
+# wrapper.java.additional.<n>=-Danypoint.platform.client_id=c2a5ce1b9e924743bd2e332ddc538def
+# wrapper.java.additional.<n>=-Danypoint.platform.client_secret=e633886bf99546adAAD7B7FE9D4961E7
+#
+# For the client to use a proxy when communicating back to the Anypoint Platform, you
+# need to configure the following properties
+#
+# wrapper.java.additional.<n>=-Danypoint.platform.proxy_host=XXXXXXXX
+# wrapper.java.additional.<n>=-Danypoint.platform.proxy_port=XXXXXXXX
+# wrapper.java.additional.<n>=-Danypoint.platform.proxy_username=XXXXXXXX
+# wrapper.java.additional.<n>=-Danypoint.platform.proxy_password=XXXXXXXX
+#
+# On-Prem Configuration
+#
+# wrapper.java.additional.<n>=-Danypoint.platform.on_prem=false
+----
 +
-.. Edit the `api-gateway` domain to support HTTPS. This domain is used by the proxies you deploy to the API Gateway, and allows for multiple proxies to share a single port. By default this domain only enables HTTP communications, to also enable HTTPS, you must edit it and provide HTTPS credentials in it.
+.. Edit the `api-gateway` domain to support HTTPS. This domain is used by the proxies you deploy to the API Gateway, and allows for multiple proxies to share a single port. By default this domain only enables HTTP communications. To also enable HTTPS, edit provide HTTPS credentials.
 +
-Open the file *mule-domain-config.xml* in the folder `/domains/api-gateway` of your API Gateway directory and edit its contents. Note that there is a second link:http://httplistener-config[http:listener-config] element in it that is commented out, you must uncomment this element and then fill in the fields relative to the keystore. For this example you can use the provided keystore you can download from the prerequisites section of this document.
+Open the file *mule-domain-config.xml* in the folder `/domains/api-gateway` of your API Gateway directory and edit its contents. Uncomment the second link:http://httplistener-config[http:listener-config] element and then fill in the fields relative to the keystore. Use the link:_attachments/keystore.jks[provided keystore].
 +
 [source,xml,linenums]
 ----
@@ -106,8 +133,8 @@ Open the file *mule-domain-config.xml* in the folder `/domains/api-gateway` of 
 </http:listener-config>
 ----
 +
-. Deploy an app with an API - This is the API that should be protected by the OAuth policy
-. Start the API Gateway
+. Deploy an app with an API - This is the API that should be protected by the OAuth policy.
+. Start the API Gateway.
 . Copy `./examples/apps/leagues-rest` (from the Gateway home) to the `/apps` folder within your gateway installation. +
 +
 Copy the entire `leagues-rest` directory from the software examples folder.
@@ -172,12 +199,11 @@ image:ext-oauth2-api-status.png[ext-oauth2-api-status]
 
 ==== External OAuth Provider
 
-. From Anypoint Studio, access Anypoint Exchange and download the .zip file for one of these two applications: +
+. From Anypoint Studio, access Anypoint Exchange and download the .zip file for one of the following applications: +
 .. link:https://anypoint.mulesoft.com/exchange/#!/api-gateway-external-oauth2-provider?orgId=1[External OAuth2.0 server for Anypoint Platform]
 .. link:https://anypoint.mulesoft.com/exchange/#!/external-AES-template-LDAP?orgId=1[External OAuth 2.0 server for Anypoint Platform with LDAP Validation]
 +
-[NOTE]
-The first of these is very basic and relies on simple validation of credentials, it's intended for testing and demo purposes. The second one uses LDAP validation and is better suited for a proper implementation in production.
+The first application relies on simple validation of credentials, it's intended for testing and demo purposes. The second one uses LDAP validation and is better suited for a proper implementation in production.
 +
 OR download the OAuth2 Provider Template file in the Prerequisite section of this tutorial
 +
@@ -222,7 +248,7 @@ scopes=
 supported.grant.types=AUTHORIZATION_CODE RESOURCE_OWNER_PASSWORD_CREDENTIALS CLIENT_CREDENTIALS IMPLICIT
 ----
 +
-. Note these three endpoint paths, which are used in future steps:
+. There are three endpoint paths, which you need to use in future steps:
 +
 [source,code,linenums]
 ----
