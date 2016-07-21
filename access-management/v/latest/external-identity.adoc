@@ -75,26 +75,16 @@ You must provide the following information in the form:
 |Sign Out URL |URL to redirect sign out requests, so users both sign out of the Anypoint Platform and have their SAML user's status set to signed out.
 |===
 
-=== Federated Organizations - Map Users to Anypoint Platform Roles
+==== Verify SAML Information
 
-As of November 2014, Anypoint Platform provides a feature to help you map users in a federated organization's LDAP group to an Anypoint link:/access-management/roles.adoc[Role].
-
-This requires that your Anypoint Platform organization utilizes an external identity provider such as link:https://www.pingidentity.com/en/products/pingfederate.html[PingFederate].
-
-This feature enables users in an organization to sign in to Anypoint Platform using the same organizational credentials and access permissions that an organization maintains using LDAP. +
-This ensures credential security and maintains organizational roles for accessing privileged information.
-
-To support this feature you first need to configure an external identity following any of the methods described above, and then follow the two steps described below:
-
-===== Verify SAML Information
-
-The SAML assertion is an XML file that is issued by the external identity provider.
+The SAML assertion is an XML file that is issued by the external identity provider. This assertion must be *signed* in order for our end to verify its integrity, but *unencrypted*, since the assertion itself is POSTed through HTTPS.
 
 Log into Anypoint Platform and click the *External Identity* tab to verify your organization's Identity management information.
 
 image::external-identity-a496a.png[external-identity-a496a]
 
-Verify that the **group_attribute **value is set to the correct attribute name. In the example above, the attribute is named *memberOf*. You can see a sample SAML assertion with that attribute below:
+Verify that the *group_attribute* value is set to the correct attribute name. +
+In the example above, the attribute is named *memberOf*. You can see a sample SAML assertion with that attribute below:
 
 [source,xml,linenums]
 ----
@@ -106,7 +96,25 @@ Verify that the **group_attribute **value is set to the correct attribute name. 
 </saml:Attribute>
 ----
 
-All other information on the tab is provided when registering an organization to use Anypoint Platform. If any information needs to be changed, log into the  link:https://www.mulesoft.com/support-login[MuleSoft Support Portal] and submit a request.
+All other information on the tab is provided when registering an organization to use Anypoint Platform. If any information needs to be changed, log into the  link:https://www.mulesoft.com/support-login[MuleSoft Support Portal] and submit a request. +
+All attribute names must match on both the IdP and Anypoint Platform´s side.
+
+
+[NOTE]
+Importing and exporting assertion metadata is currently not supported.
+// SPs usually support configuring them and exporting metadata to be imported in the IdP.
+
+
+=== Federated Organizations - Map Users to Anypoint Platform Roles
+
+As of November 2014, Anypoint Platform provides a feature to help you map users in a federated organization's LDAP group to an Anypoint link:/access-management/roles.adoc[Role].
+
+This requires that your Anypoint Platform organization utilizes an external identity provider such as link:https://www.pingidentity.com/en/products/pingfederate.html[PingFederate].
+
+This feature enables users in an organization to sign in to Anypoint Platform using the same organizational credentials and access permissions that an organization maintains using LDAP. +
+This ensures credential security and maintains organizational roles for accessing privileged information.
+
+To support this feature you first need to configure an external identity following any of the methods described above, and then follow the two steps described below:
 
 ===== Configure Roles
 
@@ -149,6 +157,20 @@ image::external-identity-cfb1e.png[]
 . Click *Set names*.
 .. If you want to map more than one attribute name to the selected role, you can click on the *Add more* option and add another attribute.
 . Repeat this process for each role that you would like mapped to an external group.
+
+
+=== Considerations for User Management
+
+Enabling SSO for your users has a few implications on your Anypoint Platform Account.
+
+* If you configure and IdP to handle user information assertion, the login URL for accessing Anypoint Platform will then be `https://anypoint.mulesoft.com/login/{yourorgDomain}`.
+* Your IdP needs to be configured to send both Username and Email in your assertion, and your Anypoint Platform needs to be configured to map them to the expected attribute name. Otherwise the login fails with a 403 unauthorized error message.
+* With External Identity enabled, the invite button is disabled and no new non-federated users can be added. +
+A possible workaround when adding new non-federated users to your federated organization is to disable SSO, invite your desired new users and re-enabling SSO. +
+Existing non-federated users continue to work as normal, with some exceptions:
++
+** If their session times out, they will be redirected to the Federated Identity login page, instead of the generic one.
+** Links and bookmarks that identify the organization will redirect the user to the Federated login, which will fail for non-federated users.
 
 == Client Management
 
