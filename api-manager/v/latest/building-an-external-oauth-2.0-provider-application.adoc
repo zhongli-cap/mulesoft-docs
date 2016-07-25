@@ -1,7 +1,9 @@
 = Building an External Provider
 :keywords: oauth,raml,ldap
 
-To apply the link:/api-manager/external-oauth-2.0-token-validation-policy[OAuth 2.0 Access Token Enforcement Using External Provider policy], you must build and deploy a separate OAuth provider application that verifies the validity of OAuth 2.0 credentials. The policy references the OAuth provider application when applying it. To facilitate building the OAuth provider application, you can download a template applications from Anypoint Exchange, make some configuration changes, and deploy it to the Anypoint platform.
+To apply the link:/api-manager/external-oauth-2.0-token-validation-policy[OAuth 2.0 Access Token Enforcement Using External Provider policy], you first build and deploy a separate OAuth provider application that verifies the validity of OAuth 2.0 credentials. When you apply the OAuth 2.0 Access Token Enforcement Using External Provider policy, you specify the OAuth provider endpoint in `Access Token validation endpoint url`:
+
+image::external-oauth-2.0-token-validation-policy-ba3c0.png[external-oauth-2.0-token-validation-policy-ba3c0,height=375,width=404]
 
 == Prerequisites
 
@@ -12,46 +14,98 @@ Run the external OAuth provider application on one of the following installation
 
 These runtimes employ the link:/mule-user-guide/v/3.8/http-connector[new HTTP Connector] whereas earlier runtimes use the link:/mule-user-guide/v/3.8/deprecated-http-transport-reference[deprecated endpoint-based HTTP transport].
 
-The following resources are required:
+=== Template Applications
 
-* One of the following external OAuth2 provider templates.
-+
+Download one of the following OAuth2 provider templates:
 
-The first application relies on simple validation of credentials, it's intended for testing and demo purposes. The second one uses LDAP validation and is better suited for a proper implementation in production.
+* link:https://anypoint.mulesoft.com/exchange/#!/api-gateway-external-oauth2-provider?orgId=1[External OAuth2.0 server for Anypoint Platform]
 +
-** link:https://anypoint.mulesoft.com/exchange/#!/api-gateway-external-oauth2-provider?orgId=1[External OAuth2.0 server for Anypoint Platform]
-** link:https://anypoint.mulesoft.com/exchange/#!/external-AES-template-LDAP?orgId=1[External OAuth 2.0 server for Anypoint Platform with LDAP Validation]
-* link:_attachments/keystore.jks[keystore.jks]
+This template relies on simple validation of credentials and is intended for testing and demo purposes.
++
+* link:https://anypoint.mulesoft.com/exchange/#!/external-AES-template-LDAP?orgId=1[External OAuth 2.0 server for Anypoint Platform with LDAP Validation]
++
+This template uses LDAP validation and is better suited for a proper implementation in production.
+
+
+=== Keystore
+
+Download the link:_attachments/keystore.jks[keystore.jks] that is required for configuring the OAuth Provider.
 
 == Customizing the OAuth 2.0 Provider App
 
-The example link:_attachments/provider.txt[OAuth 2.0 provider] requires very little configuration. The primary configuration task is specifying the same client Id and client secret as the organization where the API is managed. The following overview describes the components.
+To build the OAuth provider application:
 
-Depending on the OAuth grant type you want to use, the OAuth provider application may expose two or three endpoints:
+. Download one of the link:/api-manager/building-an-external-oauth-2.0-provider-application#template-applications[template applications] from Anypoint Exchange. 
+. Import the downloaded OAuth2 provider template .zip file into Anypoint Studio as an *Anypoint Studio Generated Deployable Archive (.zip)*, and make sure it is using Mule 3.8.0 or API Gateway 2.x Runtime.
+. Specify the same client Id and client secret as the organization where the API is managed.
+. Configure auto-discovery.
+. Copy the downloaded `keystore.jks` file to `src/main/resources`.
+. Set the following properties in `src/main/resources/mule.dev.properties`
++
+*For single authentication:*
++
+[source,code,linenums]
+----
+# Properties to use in a development environment
+key.store.password=mule123
+key.store.key.password=mule123
+key.store.path=keystore.jks
+admin.name=name
+admin.password=password
+validate.endpoint.path=validate
+authorization.endpoint.path=authorize
+access.token.endpoint.path=access_token
+scopes=
+supported.grant.types=AUTHORIZATION_CODE RESOURCE_OWNER_PASSWORD_CREDENTIALS CLIENT_CREDENTIALS IMPLICIT
+----
++
+*For LDAP authentication:*
++
+[source,code,linenums]
+----
+# Properties to use in a development environment
+key.store.password=mule123
+key.store.key.password=mule123
+key.store.path=keystore.jks
+ 
+ldap.userDn=cn=Manager,dc=my-domain,dc=com
+ldap.password=root
+ldap.url=ldap://localhost:389/dc=my-domain,dc=com
+ldap.search.filter.1=ou=people,dc=my-domain,dc=com
+ldap.search.filter.2=(uid={0})
+validate.endpoint.path=validate
+authorization.endpoint.path=authorize
+access.token.endpoint.path=access_token
+scopes=
+supported.grant.types=AUTHORIZATION_CODE RESOURCE_OWNER_PASSWORD_CREDENTIALS CLIENT_CREDENTIALS IMPLICIT
+----
++
+. There are three endpoint paths, which you need to use in future steps:
++
+[source,code,linenums]
+----
+validate.endpoint.path=validate
+authorization.endpoint.path=authorize
+access.token.endpoint.path=access_token
+----
++
+. If you're deploying your OAuth 2 provider to the same server as your proxy, change the port where it's hosted, as the default one overlaps with your proxy. In `src/main/resources` for the file `common.properties` and change the `http.port` property to anything other than 8082, in this example we use 8083. +
+. Open the project `config.xml` file.
+. Go to the Global Elements tab, under the canvas
+. Edit the OAuth Provider module: +
++
+image:OAuthProviderModule.png[OAuthProviderModule]
++
+. Remove the default `READ WRITE` from *Scopes*, so you can use API Console.  +
+.. In "Configuration XML" leaving defaultScopes="" and scopes=""
+.. In userValidation.xml: within validateTokenFlow, scopes="" 
+.. In link:http://oauth2-providervalidate[oauth2-provider:validate] element.
+. Deploy the provider to CloudHub or on-premises.
 
-* `/authorize`: configured as an attribute of the `oauth2-provider:config` element
-* `/access_token`: configured as an attribute of the `oauth2-provider:config` element
-* `/validate`: configured as the address of the HTTP Listener Connector in the flow
-
-[width="100%",cols="50%,50%",options="header",]
-|===
-|Component |Explanation
-|`oauth2-provider:config` |This component encapsulates most of the configurations required to implement OAuth, both for generating tokens or authorization codes, and for validating them. It implicitly exposes two endpoints for assigning authorization codes and tokens. It is then referenced by a matching element in the flow.
-|`ss:authentication-manager` |
-- Spring bean that defines an authentication manager and provider +
- +
-- Validates user credentials
-
-|`api-platform-gw:client-store` |- Store that retains OAuth client-specific information. If the client sends validation credentials in the body or the query of the request, the OAuth Web service provider simply validates the incoming credentials (client ID and client secret) against the content in the clientStore +
-- Caches client ID and client secret of valid organization's client applications
-|`api-platform-gw:client-security-provider` |Validates client application's credentials.
-|`mule-ss:security-manager` |- For configuring link:/mule-user-guide/v/3.7/configuring-the-spring-security-manager[Spring Security Manager] +
-- Authenticates resource owners (for example: when the user credentials are validated after the login page). The only situation where this provider is not required, is when the Grant Type is Client Credentials.
-|===
 
 === Implementing CORS
 
-This feature is available only when using Mule 3.8 runtime or API Gateway runtime 2.x. Earlier versions of the API Gateway runtime don't support configuring the OAuth provider with a preFlow. To apply or edit a CORS policy, see link:/api-manager/cors-policy[Applying and Editing a CORS Policy].
+This feature is available only when using Mule 3.8 runtime or API Gateway runtime 2.x. Earlier versions of the API Gateway runtime don't support configuring the OAuth provider to implement CORS. To apply or edit a CORS policy, see link:/api-manager/cors-policy[Applying and Editing a CORS Policy].
 
 You may find that you need to implement CORS on your OAuth Provider. The *preFlow* attribute on the OAuth configuration element makes it possible to reference a flow that is processed before anything else. Using this attribute, your OAuth Provider configuration can reference an additional flow that has implemented a CORS configuration, enabling CORS in both the authorize and the access token listeners.
 
@@ -75,6 +129,31 @@ You may find that you need to implement CORS on your OAuth Provider. The *preFlo
 ----
 
 In the above example, the "myCorsFlow" flow configures CORS to allow requests from any origin. This flow is referenced in the OAuth 2.0 Provider via the *preFlow-ref* attribute.
+
+=== Exposing Additional Endpoints
+
+
+Depending on the OAuth grant type you want to use, the OAuth provider application can expose the following endpoints:
+
+* `/authorize`: configured as an attribute of the `oauth2-provider:config` element
+* `/access_token`: configured as an attribute of the `oauth2-provider:config` element
+* `/validate`: configured as the address of the HTTP Listener Connector in the flow
+
+[width="100%",cols="50%,50%",options="header",]
+|===
+|Component |Explanation
+|`oauth2-provider:config` |This component encapsulates most of the configurations required to implement OAuth, both for generating tokens or authorization codes, and for validating them. It implicitly exposes two endpoints for assigning authorization codes and tokens. It is then referenced by a matching element in the flow.
+|`ss:authentication-manager` |
+- Spring bean that defines an authentication manager and provider +
+ +
+- Validates user credentials
+
+|`api-platform-gw:client-store` |- Store that retains OAuth client-specific information. If the client sends validation credentials in the body or the query of the request, the OAuth Web service provider simply validates the incoming credentials (client ID and client secret) against the content in the clientStore +
+- Caches client ID and client secret of valid organization's client applications
+|`api-platform-gw:client-security-provider` |Validates client application's credentials.
+|`mule-ss:security-manager` |- For configuring link:/mule-user-guide/v/3.7/configuring-the-spring-security-manager[Spring Security Manager] +
+- Authenticates resource owners (for example: when the user credentials are validated after the login page). The only situation where this provider is not required, is when the Grant Type is Client Credentials.
+|===
 
 
 == End-to-End Example Implementation
@@ -203,115 +282,38 @@ image:ext-oauth2-api-status.png[ext-oauth2-api-status]
 +
 . The proxy application should be working at `https://localhost:8082/leagues/teams`
 
-==== External OAuth Provider
-
-If you have not already downloaded one of the OAuth2 provider templates, listed in <<Prerequisites>>, do so now.
-
-. Import the downloaded OAuth2 provider template .zip file into Anypoint Studio as an *Anypoint Studio Generated Deployable Archive (.zip)*, make sure it is using API Gateway 2.x Server Runtime.
-. Copy the `keystore.jks` – provided in the prerequisite section – file to `src/main/resources`
-. Set the following properties in `src/main/resources/mule.dev.properties`
-+
-*For single authentication:*
-+
-[source,code,linenums]
-----
-# Properties to use in a development environment
-key.store.password=mule123
-key.store.key.password=mule123
-key.store.path=keystore.jks
-admin.name=name
-admin.password=password
-validate.endpoint.path=validate
-authorization.endpoint.path=authorize
-access.token.endpoint.path=access_token
-supported.grant.types=AUTHORIZATION_CODE RESOURCE_OWNER_PASSWORD_CREDENTIALS CLIENT_CREDENTIALS IMPLICIT
-----
-+
-*For LDAP authentication:*
-+
-[source,code,linenums]
-----
-# Properties to use in a development environment
-key.store.password=mule123
-key.store.key.password=mule123
-key.store.path=keystore.jks
- 
-ldap.userDn=cn=Manager,dc=my-domain,dc=com
-ldap.password=root
-ldap.url=ldap://localhost:389/dc=my-domain,dc=com
-ldap.search.filter.1=ou=people,dc=my-domain,dc=com
-ldap.search.filter.2=(uid={0})
-validate.endpoint.path=validate
-authorization.endpoint.path=authorize
-access.token.endpoint.path=access_token
-scopes=
-supported.grant.types=AUTHORIZATION_CODE RESOURCE_OWNER_PASSWORD_CREDENTIALS CLIENT_CREDENTIALS IMPLICIT
-----
-+
-. There are three endpoint paths, which you need to use in future steps:
-+
-[source,code,linenums]
-----
-validate.endpoint.path=validate
-authorization.endpoint.path=authorize
-access.token.endpoint.path=access_token
-----
-+
-. In case you're deploying your OAuth 2 provider to the same server as your proxy, you need to change the port where it's hosted, as the default one  overlaps with your proxy. To do so, look in `src/main/resources` for the file `common.properties` and change the `http.port` property to anything other than 8082, in this example we use 8083. +
-If you're deploying both OAuth 2 provider and proxy to two different servers, this step isn't necessary.
-. Open the project’s `mule-` `config.xml` file in Studio
-. Go to the Global Elements tab, under the canvas
-. Edit the OAuth Provider module: +
-+
-image:OAuthProviderModule.png[OAuthProviderModule]
-+
-. If you want to test the API through the console, Scopes must be empty (defaults are "READ WRITE"). +
-..  "Configuration XML" leaving defaultScopes="" and scopes=""
-.. userValidation.xml: within validateTokenFlow, scopes="" in link:http://oauth2-providervalidate[oauth2-provider:validate] element.
-. Configure the parameters in Studio’s Gateway 2.0 runtime
-. From the project directory, open the file mule-project.xml
-. Add the client_id and client_secret from your organization to these runtime Environment variables: +
- +
-`anypoint.platform.client_id=<your org client secret>` +
- `anypoint.platform.client_secret=<your org client ID>` +
- +
-image:AESExtProvider.png[AESExtProvider]
-
-. Run External OAuth2 Provider as Mule Application. A "DEPLOYED" status message for the service provider application should be shown in the console.
-
-=== Apply the External OAuth2 Policy
+=== Applying the External OAuth2 Policy to the API
 
 . Add the RAML snippet to the API's RAML in Designer. The updated RAML should look like link:_attachments/api-v2.raml[this one].
-. If everything went correctly, you are able to select "OAuth 2.0" from a dropdown menu in the link:https://localhost:8082/leagues-console[application console].
-. Open the API version page of the API, then the policies tab
-. Apply AES external policy providing the validation URL (in this case  https://localhost:8083/validate ).  +
-If you are going to use the console, no scopes must be provided and CORS policy must be applied as well.
+. Select "OAuth 2.0" from a drop-down in the link:https://localhost:8082/leagues-console[application console].
+. On the API version page of the API, on the *Policies* tab, apply AES external policy providing the validation URL (in this case  https://localhost:8083/validate ).  +
+If you are going to use the API Console, do not specify scopes. Do apply the CORS policy.
 +
-. Open the `https://localhost:8082/console` and try the teams resource. This time a 403 status code returns as no OAuth credentials were present in your request.
+. Open the `https://localhost:8082/console` and try the teams resource. A 403 status code returns because you did not provide OAuth credentials in your request.
 
 == Testing the External OAuth2 Policy
 
-In the above example, you verified that the policy correctly rejects requests that don't have any credentials in them. To make sure things are well configured, you should also verify that a request with the right credentials does get through to the API.
+In the above example, you verified that the policy correctly rejects requests that don't include credentials. Now, verify that a request with the right credentials does get through to the API.
 
 . Obtain OAuth credentials: +
 .. If your API still doesn't have a Portal, on the API Portal section of the API Version page, select *Create* *New Portal* out of the dropdown menu
 .. Then click on *View* *Live Portal*  to enter the editor, and there click the *Live Portal* link to see it as users of your portal would see it.
-.. Click the *Request API Access* button to register an application to your API
+.. Click the *Request API Access* button to register an application to access your API.
 .. Register a new application to the API (for this tutorial, you can leave Redirect URI empty), then click  *Request API Access*
-.. Back in your API Version page, see the *Application* tab in the lower section, you should see application you just registered listed there. Get the client ID and secret for that application.
+.. On the API Version page, see the *Application* tab in the lower section, you should see application you just registered listed there. Get the client ID and secret for that application.
 .  Open `https://localhost:8082/console` 
-. Through the API Console UI, try to send a request the teams resource. Fill in the fields with the following:
+. Through the API Console UI, try to send a request the teams resource. Fill in the fields as follows:
 .. Security Scheme →  OAuth2
 .. Authorization Grant → Implicit
 .. Client ID → Use the one you obtained from the application you registered in the previous step:
 +
 image:ext-oauth2-client-id.png[ext-oauth2-client-id]
 +
-. Click *GET,* and you are prompted for the username and password that you set up in the configuration OAuth 2.0 external provider application (in this example, username: `name` password: `password` )
+. Click *GET,* and you are prompted for the username and password that you configured in the OAuth 2.0 external provider application: For example, username: `name` password: `password` )
 +
 image:ext-oauth2-ping-api.png[ext-oauth2-ping-api]
 +
-.  *Login and Authorize*. You should see a 200 status code with the response
+.  *Login and Authorize*. A 200 status code with the response appears.
 +
 image:ext-oauth2-login-and-auth.png[ext-oauth2-login-and-auth]
 

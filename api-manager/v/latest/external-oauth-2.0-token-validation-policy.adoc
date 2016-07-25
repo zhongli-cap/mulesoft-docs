@@ -5,13 +5,13 @@ The OAuth 2.0 Access Token Enforcement Using External Provider policy enforces t
 
 image::oauth+policy1.png[oauth+policy1,height=300,width=377]
 
-. The client application requests a token. The way the request occurs depends on the OAuth grant type being used, but the request must occur before any request can be sent to the API.
-. The OAuth Provider returns a token, which can optionally be related to a scope or set of scopes.
+. The client application requests a token. The request based on an OAuth grant must occur before any request can be sent to the API.
+. The OAuth Provider returns a token, which can specify a scope of access using the link:https://tools.ietf.org/html/rfc6749#page-23`scope` request parameter. 
 . The client application sends a request to the API, which includes the received token either as an authentication header or a query parameter
 . The OAuth 2.0 Access Token Enforcement Using External Provider Policy intercepts this request and validates the token against the validation URL of the OAuth provider. If scopes are provided in the policy, the policy also assures that the token is valid for those specific scopes.
-. If the token is properly validated, it is whitelisted and kept on record for as long as it doesn't expire. Any further requests that contain this token aren't validated against the OAuth provider. If the token isn't properly validated, a `403` error message is returned to the client application.
+. If the token is properly validated, it is whitelisted and kept on record until expiration. Any further requests that contain this token aren't validated against the OAuth provider. If the token isn't properly validated, a `403` error message is returned to the client application.
 . If the token is valid, the request is forwarded to the API.
-. The API returns whatever it must return to the client application.
+. The API responds to the client application.
 
 The OAuth 2.0 Token Validation Using External Provider policy supports HTTPS communication for configuring a single OAuth provider for multiple APIs. One of the following runtime versions are required:
 
@@ -36,17 +36,31 @@ If your API is defined using RAML (recommended), your RAML securitySchemes must 
 
 ==== OAuth Dance URIs
 
-Within the RAML securitySchemes definition, you must include URIs for the authorization and access token. 
+Within the RAML securitySchemes definition, include URIs for the authorization and access token. 
 
-* *`authorizationUri`* |Example: https://oauth2-provider.cloudhub.io/authorize
-* *`accessTokenUri`* |Example: https://oauth2-provider.cloudhub.io/access_token
+* *`authorizationUri`* |Example: https://oauth2provider.cloudhub.io/authorize
+* *`accessTokenUri`* |Example: https://oauth2provider.cloudhub.io/access_token
 
-In the mule-app.properties file, host must be 0.0.0.0. Port should be set to `${http.port}`. For HTTP, specify `http.port=8081` and for HTTPS, specify `http.port=8082`.
+Set mule-app.properties. For example:
+
+* host = 0.0.0.0
+* port = `${http.port}`
+* HTTP endpoint:`http.port=8081`
+* HTTPS endpoint: `http.port=8082`
 
 
 ==== Grant Types
 
-You need to configure a policy to match the grant types specified in your RAML securitySchemes. The following table shows the mapping of the RAML grant types to the grant type names in the policy configuration. 
+You need to configure a policy to match the grant types specified in your RAML securitySchemes. The RAML syntax for the authorizationGrants setting is:
+
+----
+settings:
+   authorizationUri: https://oauth2provider.cloudhub.io/authorize
+   accessTokenUri:  https://oauth2provider.cloudhub.io/access_token
+   authorizationGrants: [authorization_code, password, client_credentials, implicit]
+----
+
+The following table shows the mapping of the RAML grant types to the grant type names in the policy configuration. 
 
 [width="99a",cols="33a,33a,33a",options="header"]
 |===
@@ -57,15 +71,6 @@ You need to configure a policy to match the grant types specified in your RAML s
 |`[code]` |Authorization Code |Yes
 |===
 
-The RAML syntax is, for example:
-
-----
-settings:
-   authorizationUri: https://external-oauth2-provider5939.cloudhub.io/authorize
-   accessTokenUri:  https://external-oauth2-provider5939.cloudhub.io/access_token
-   authorizationGrants: [authorization_code, password, client_credentials, implicit]
-----
-
 == Configuring the OAuth 2.0 Token Validation Policy
 
 Before applying this policy, modify the API RAML code to support OAuth authentication and deploy an OAuth provider application, as previously described.
@@ -74,36 +79,15 @@ Configure the following OAuth 2.0 Token Validation policy:
 
 * *Scopes*
 +
-In the optional Scopes field, enter a space-separated list of supported OAuth scopes, such as `read write`. These should match one or more of the scopes defined on the referenced OAuth 2.0 Provider application. If the OAuth 2.0 Provider application defines no scopes, leave this field blank. If you plan to use API Console to simulate the API, leave scopes blank and apply the CORS policy.
+In the optional Scopes field, you can enter a space-separated list of supported OAuth link:https://tools.ietf.org/html/rfc6749#page-23[scopes], such as `read write`. Specify scopes that match one or more of the scopes defined on the referenced OAuth 2.0 Provider application. If the OAuth 2.0 Provider application defines no scopes, leave this field blank. If you plan to use API Console to simulate the API, leave scopes blank and apply the CORS policy.
 +
 * *Access Token Validation Endpoint URL*
 +
-The URL to the external OAuth 2.0 Provider used for granting the access token, for example `auto-provider.cloudhub.io`
+The URL of the external OAuth 2.0 Provider used for granting the access token, for example `https://oauth2provider.cloudhub.io/validate`
 +
 image::external-oauth-2.0-token-validation-policy-ba3c0.png[external-oauth-2.0-token-validation-policy-ba3c0,height=375,width=404]
 
-=== Creating an External OAuth Provider Application
-
-To create an external application to reference in this policy, follow the steps below:
-
-. From Anypoint Studio, access Anypoint Exchange and download the .zip file for one of these applications:
-+
-.. link:https://anypoint.mulesoft.com/exchange/#!/api-gateway-external-oauth2-provider?types=template[External OAuth2.0 server for Anypoint Platform]
-.. link:https://anypoint.mulesoft.com/exchange/#!/external-AES-template-LDAP?types=template[ExternalOAuth 2.0 Server for Anypoint Platform with LDAP Validation]
-+
-The External OAuth2.0 server for Anypoint Platform relies on a simple validation of credentials, and is intended for testing and demo purposes. The ExternalOAuth 2.0 Server for Anypoint Platform with LDAP Validation uses LDAP validation and is suitable for production.
-+
-. Import the downloaded .zip file into Anypoint Studio as an *Anypoint Studio Generated Deployable Archive (.zip)*
-. Open the `mule.dev.properties` file in the folder `src/main/resources`
-. Fill in the required credentials in this file:
-+
-Check the template documentation if you have any doubts about what each of these fields must contain.
-+
-. link:/api-manager/deploying-your-api-or-proxy[Deploy] your OAuth 2.0 provider application, either to CloudHub or on premises.
-
-For more details, see link:/api-manager/building-an-external-oauth-2.0-provider-application[Building an External OAuth 2.0 Provider Application]
-
-== Using an API Protected by the OAuth 2.0 Token Validation Policy
+== Using an API Protected by OAuth 2.0 Access Token Enforcement Using External Provider
 
 Depending on the OAuth grant type you want to use, the OAuth Provider application might expose two or three endpoints:
 
@@ -113,7 +97,7 @@ Depending on the OAuth grant type you want to use, the OAuth Provider applicatio
 
 Depending on the grant type being used, you might have to use only `/access_token` , to both `/authorize` and `/access_token`, or to none of them. In whichever case, accessing them is not handled by this policy, this must be done before attempting to send requests to the API that's protected by the policy.
 
-Once a token is obtained, you must include it in all requests sent to the API. There are two ways you can include it:
+After a token is obtained, you must include it in all requests sent to the API. There are two ways you can include it:
 
 [width="99a",cols="33a,33a,33a",options="header"]
 |===
@@ -125,7 +109,7 @@ Once a token is obtained, you must include it in all requests sent to the API. T
 
 When a request is received, the OAuth 2.0 Token Validation Policy sends a request to the `/validate` URL of the OAuth provider to ensure the token's validity.
 
-== Testing That Your OAuth Validation Works
+== Testing OAuth 2.0 Access Token Enforcement Using External Provider
 
 You can test an API that has the policy applied using the API Notebook and API Console after registering an API within a portal in the platform.
 
@@ -147,4 +131,4 @@ You can modify this code to change the name of the header being created.
 == See Also
 
 * link:/api-manager/building-an-external-oauth-2.0-provider-application[Building an External OAuth 2.0 Provider Application]
-* link:/api-manager/aes-oauth-faq[AES OAuth FAQ]
+* link:/api-manager/aes-oauth-faq[OAuth Providers, Current and Deprecated]
