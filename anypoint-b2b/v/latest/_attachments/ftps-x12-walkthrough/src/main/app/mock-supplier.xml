@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:x12-edi="http://www.mulesoft.org/schema/mule/x12-edi" xmlns:ftps="http://www.mulesoft.org/schema/mule/ftps" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ftps http://www.mulesoft.org/schema/mule/ftps/current/mule-ftps.xsd
+http://www.mulesoft.org/schema/mule/x12-edi http://www.mulesoft.org/schema/mule/x12-edi/current/mule-x12-edi.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <ftps:config name="basic-ftps"  doc:name="FTPS: Basic Configuration"/>
+    <flow name="receive-and-process-850-from-consumer-flow">
+        <ftps:read config-ref="basic-ftps" filePath="/demo/supplier-inbox/" fileName="*.dat" pollingFrequency="55000" doc:name="Receive 850 from Consumer"/>
+        <byte-array-to-string-transformer doc:name="Byte Array to String"/>
+        <x12-edi:read config-ref="X12_EDI" doc:name="Parse 850"/>
+        <set-payload value="#[ ['TransactionSets' : [ 'v005010' : [ '997' : payload.FunctionalAcksGenerated ] ] ] ]" doc:name="Set Payload"/>
+        <x12-edi:write config-ref="X12_EDI" doc:name="Write 997"/>
+        <ftps:write config-ref="basic-ftps" filePath="/demo/consumer-inbox/" doc:name="Send 997 to Consumer"/>
+    </flow>
+</mule>
