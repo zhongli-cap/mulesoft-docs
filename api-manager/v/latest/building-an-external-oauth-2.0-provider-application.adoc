@@ -1,20 +1,16 @@
 = Building an External OAuth Provider
 :keywords: oauth,raml,ldap
 
-To apply the link:/api-manager/external-oauth-2.0-token-validation-policy[OAuth 2.0 Access Token Enforcement Using External Provider policy], you first build and deploy a separate OAuth provider application that verifies the validity of OAuth 2.0 credentials.
-
-You can build the provider by downloading a template from Exchange and making configuration changes.
-
-== Prerequisites
-
-Run the external OAuth provider application on one of the following installations:
+To apply the link:/api-manager/external-oauth-2.0-token-validation-policy[OAuth 2.0 Access Token Enforcement Using External Provider policy], you first build and deploy a separate OAuth provider application that verifies the validity of OAuth 2.0 credentials. Build external OAuth provider application on one of the following installations:
 
 * Mule 3.8.0 runtime or later
 * API Gateway runtime 2.0 or earlier
 
-These runtimes employ the link:/mule-user-guide/v/3.8/http-connector[new HTTP Connector] whereas earlier runtimes use the link:/mule-user-guide/v/3.8/deprecated-http-transport-reference[deprecated endpoint-based HTTP transport].
+These releases employ the link:/mule-user-guide/v/3.8/http-connector[ HTTP Connector] whereas earlier runtimes use the link:/mule-user-guide/v/3.8/deprecated-http-transport-reference[deprecated endpoint-based HTTP transport], which is not suitable for use with the provider.
 
-=== Provider Template Application
+To build the provider, you can download a template from Exchange and make configuration changes.
+
+== Prerequisites
 
 Download one of the following OAuth2 provider templates:
 
@@ -26,70 +22,16 @@ This template relies on a simple validation of credentials and is intended for t
 +
 This template uses LDAP validation and suitable for production.
 
-
-=== Keystore
-
 Download the link:_attachments/keystore.jks[keystore.jks] that is required for configuring the OAuth Provider.
 
-== Configuring Endpoint Paths
-
-One of the key configuration tasks is specifying the following endpoint paths in the mule properties file of the provider:
-
-[source,code,linenums]
-----
-validate.endpoint.path=validate
-authorization.endpoint.path=authorize
-access.token.endpoint.path=access_token
-----
-
-You also specify one of these endpoints when you apply the policy to the API. You deploy the provider, and then apply the policy to the API, specifying the endpoint of the provider in `Access Token validation endpoint url`:
-
-image::external-oauth-2.0-token-validation-policy-ba3c0.png[external-oauth-2.0-token-validation-policy-ba3c0,height=375,width=404]
-
-== Configuring Scopes
-
-Another key configuration task is specifying scopes of access using the link:https://tools.ietf.org/html/rfc6749#page-23[scope] request parameter. An OAuth scope is an client configuration for accessing the API to read or write to the resource, for example.
-
-Remove the default `READ WRITE` from *Scopes* if you want to use API Console to simulate the API, and specify no scopes using an empty string ("").
-
-Clients can have a subset of scopes that you configure in the Provider. Clients that are configured to have scopes take precedence over default scopes, or no scopes, specified in the provider.
-
-In the config.xml, `defaultScopes` is the attribute that specifies no scopes (an empty string) or a space-separated list of the default scopes a client will have. For example, in this config.xml snippet no scopes are defined:
-
-[source, xml, linenums]
-----
-    <oauth2-provider:config
-        name="oauth2provider"
-        providerName="oauth2provider"
-        resourceOwnerSecurityProvider-ref="single-user-security-provider"
-        clientSecurityProvider-ref="single-user-client-security-provider"
-        clientStore-ref="single-user-client-store"
-
-        defaultScopes=""
-        supportedGrantTypes="${supported.grant.types}"
-        authorizationEndpointPath="${authorization.endpoint.path}"
-        accessTokenEndpointPath="${access.token.endpoint.path}"
-
-        enableRefreshToken="true"
-        listenerConfig-ref="https.listener" doc:name="OAuth provider module" port="8083" scopes="${scopes}">
-    </oauth2-provider:config>
-----
-
-The `scopes="${scopes}"` refers to the following blank property: `scopes=`.
-
-== Configuring HTTPS
-
-Apply HTTPS and deploy the proxy as described in link:/api-manager/setting-up-an-api-proxy#https-with-the-client-app-on-cloudhub[Using HTTPS] and shown in the example link:/api-manager/building-an-external-oauth-2.0-provider-application#end-to-end-example-implementation[implementation of the provider].
-
-== Procedure for Configuring the OAuth 2.0 Provider App
+== Configuration Overview
 
 To build the OAuth provider application:
 
-. Download one of the link:/api-manager/building-an-external-oauth-2.0-provider-application#template-applications[template applications] from Anypoint Exchange.
 . Import the downloaded OAuth2 provider template .zip file into Anypoint Studio as an *Anypoint Studio Generated Deployable Archive (.zip)*, selecting the Mule 3.8.0 or API Gateway 2.x Runtime.
-. Specify the same client Id and client secret as the organization where the API is managed.
+. Specify the client Id and client secret of the organization you use to  the API is managed.
 . Copy the downloaded `keystore.jks` file to `src/main/resources`.
-. Set the following properties in `src/main/resources/mule.dev.properties`
+. Set the following properties in `src/main/resources/mule.dev.properties`.
 +
 *For single authentication:*
 +
@@ -133,70 +75,16 @@ supported.grant.types=AUTHORIZATION_CODE RESOURCE_OWNER_PASSWORD_CREDENTIALS CLI
 . Open the `config.xml` file in Studio.
 . On the Global Elements tab, under the canvas, edit the OAuth Provider module to remove the default `READ WRITE` from *Scopes*:
 +
-image:OAuthProviderModule.png[OAuthProviderModule]
-+
-. , so you can use API Console.  +
-.. In "Configuration XML" accept defaultScopes="" and scopes=""
+.. In Configuration XML, accept `defaultScopes=""` and `scopes=""`
 .. In userValidation.xml: within validateTokenFlow, specify scopes="" in link:http://oauth2-providervalidate[oauth2-provider:validate] element.
-. link:/api-manager/deploying-your-api-or-proxy[Deploy] your OAuth 2.0 provider application, either to CloudHub or on premises.
-
-
-=== Implementing CORS
-
-This feature is available only when using Mule 3.8 runtime or API Gateway runtime 2.x. Earlier versions of the API Gateway runtime don't support configuring the OAuth provider to implement CORS. To apply or edit a CORS policy, see link:/api-manager/cors-policy[Applying and Editing a CORS Policy].
-
-You may find that you need to implement CORS on your OAuth Provider. The *preFlow* attribute on the OAuth configuration element makes it possible to reference a flow that is processed before anything else. Using this attribute, your OAuth Provider configuration can reference an additional flow that has implemented a CORS configuration, enabling CORS in both the authorize and the access token listeners.
-
-[source, xml, linenums]
-----
-  <flow name="myCorsFlow">
-      <cors:validate publicResource="true"/>
-  </flow>
-
-  <oauth2-provider:config
-      name="external-oauth2-provider"
-      preFlow-ref="myCorsFlow"
-      providerName="Ping API"
-      resourceOwnerSecurityProvider-ref="single-user-security-provider"
-      clientSecurityProvider-ref="single-user-client-security-provider"
-      clientStore-ref="single-user-client-store"
-      tokenTtlSeconds="86400"
-      enableRefreshToken="true"
-      listenerConfig-ref="https.listener">
-  </oauth2-provider:config>
-----
-
-In the above example, the "myCorsFlow" flow configures CORS to allow requests from any origin. This flow is referenced in the OAuth 2.0 Provider via the *preFlow-ref* attribute.
-
-=== Exposing Additional Endpoints
-
-
-Depending on the OAuth grant type you want to use, the OAuth provider application can expose the following endpoints:
-
-* `/authorize`: configured as an attribute of the `oauth2-provider:config` element
-* `/access_token`: configured as an attribute of the `oauth2-provider:config` element
-* `/validate`: configured as the address of the HTTP Listener Connector in the flow
-
-[width="100%",cols="50%,50%",options="header",]
-|===
-|Component |Explanation
-|`oauth2-provider:config` |This component encapsulates most of the configurations required to implement OAuth, both for generating tokens or authorization codes, and for validating them. It implicitly exposes two endpoints for assigning authorization codes and tokens. It is then referenced by a matching element in the flow.
-|`ss:authentication-manager` |
-- Spring bean that defines an authentication manager and provider +
- +
-- Validates user credentials
-
-|`api-platform-gw:client-store` |- Store that retains OAuth client-specific information. If the client sends validation credentials in the body or the query of the request, the OAuth Web service provider simply validates the incoming credentials (client ID and client secret) against the content in the clientStore +
-- Caches client ID and client secret of valid organization's client applications
-|`api-platform-gw:client-security-provider` |Validates client application's credentials.
-|`mule-ss:security-manager` |- For configuring link:/mule-user-guide/v/3.7/configuring-the-spring-security-manager[Spring Security Manager] +
-- Authenticates resource owners (for example: when the user credentials are validated after the login page). The only situation where this provider is not required, is when the Grant Type is Client Credentials.
-|===
+. link:/api-manager/deploying-your-api-or-proxy[Deploy] the OAuth 2.0 provider application to CloudHub or on premises.
 
 
 == End-to-End Example Implementation
 
 In this example of how to build the OAuth Provider application, you configure API Gateway runtime 2.x or later to use the same client Id and client Secret as the organization where the API is managed.
+
+You need to configure HTTPS and deploy the proxy as described in link:/api-manager/setting-up-an-api-proxy#https-with-the-client-app-on-cloudhub[Using HTTPS] and shown in the example link:/api-manager/building-an-external-oauth-2.0-provider-application#end-to-end-example-implementation[implementation of the provider]
 
 . Download link:https://www.mulesoft.com/ty/dl/api-gateway[API Gateway 2.0] version or later and configure the runtime.
 +
@@ -260,15 +148,7 @@ Open the file *mule-domain-config.xml* in the folder `/domains/api-gateway` of 
 . Start API Gateway Runtime.
 . Copy `./examples/apps/leagues-rest` (from the Gateway home) to the `/apps` folder within your gateway installation. +
 +
-. Open the Leagues app by browsing to http://localhost:8080/api/teams resource.
-+
-image:LeaguesListing.png[LeaguesListing]
-+
-. Open the RAML console at http://localhost:8080/console/.
-+
-You can make calls to the Leagues API using its simple UI.
-+
-image:LaLiga.png[LaLiga]
+You can open the Leagues app by browsing to http://localhost:8080/api/teams resource, look at the RAML file, and use API Console to simulate calling the app.
 +
 . Log into link:https://anypoint.mulesoft.com/[Anypoint platform].
 . Register an API in Anypoint platform named `External AES Tutorial` and version `1.0`.
@@ -312,9 +192,7 @@ baseUri: http://localhost:8080/api
 . Click *API Status* > *Configure endpoint* to create an link:/api-manager/https-api-proxy-example[HTTPS API proxy]. Fill in the required information using HTTPS to match the previous configuration of the gateway. 
 +
 . Click *Save*.
-. Download the latest version of the proxy.
-+
-image:ext-oauth2-api-status.png[ext-oauth2-api-status]
+. Download the proxy. Select *Download proxy (for latest gateway version)*.
 +
 . Test that the proxy application is running at `https://localhost:8082/leagues/teams`
 
@@ -344,7 +222,7 @@ In the previous section, you verified that the policy correctly rejects requests
 .. Authorization Grant → Implicit
 .. Client ID → Use the credentials of the registered application:
 +
-image:ext-oauth2-client-id.png[ext-oauth2-client-id]
+image:ext-oauth2-client-id.png[ext-oauth2-client-id,height=538,width=322]
 +
 . Click *GET,* and you are prompted for the user name and password that you set up in the configuration OAuth 2.0 external provider application (in this example, username: `name` password: `password` )
 +
@@ -354,7 +232,114 @@ image:ext-oauth2-ping-api.png[ext-oauth2-ping-api]
 +
 A 200 status code and response appears.
 +
-image:ext-oauth2-login-and-auth.png[ext-oauth2-login-and-auth]
+image:ext-oauth2-login-and-auth.png[ext-oauth2-login-and-auth,height=614,width=314]
+
+== Configuration Reference
+
+Key configuration tasks in building a provider are:
+
+* Configure endpoint paths
+* Configure scopes 
+* Apply CORS (optional)
+* Expose additional endpoints
+
+=== Configuring Endpoint Paths
+
+One of the key configuration tasks is specifying the following endpoint paths in the mule properties file of the provider:
+
+[source,code,linenums]
+----
+validate.endpoint.path=validate
+authorization.endpoint.path=authorize
+access.token.endpoint.path=access_token
+----
+
+You also specify one of these endpoints when you apply the policy to the API. You deploy the provider, and then apply the policy to the API, specifying the endpoint of the provider in `Access Token validation endpoint url`:
+
+image::external-oauth-2.0-token-validation-policy-ba3c0.png[external-oauth-2.0-token-validation-policy-ba3c0,height=375,width=404]
+
+=== Configuring Scopes
+
+Another key configuration task is specifying scopes of access using the link:https://tools.ietf.org/html/rfc6749#page-23[scope] request parameter. An OAuth scope is an client configuration for accessing the API to read or write to the resource, for example.
+
+Remove the default `READ WRITE` from *Scopes* if you want to use API Console to simulate the API, and specify no scopes using an empty string ("").
+
+Clients can have a subset of scopes that you configure in the Provider. Clients that are configured to have scopes take precedence over default scopes, or no scopes, specified in the provider.
+
+In the config.xml, `defaultScopes` is the attribute that specifies no scopes (an empty string) or a space-separated list of the default scopes a client will have. For example, in this config.xml snippet no scopes are defined:
+
+[source, xml, linenums]
+----
+    <oauth2-provider:config
+        name="oauth2provider"
+        providerName="oauth2provider"
+        resourceOwnerSecurityProvider-ref="single-user-security-provider"
+        clientSecurityProvider-ref="single-user-client-security-provider"
+        clientStore-ref="single-user-client-store"
+
+        defaultScopes=""
+        supportedGrantTypes="${supported.grant.types}"
+        authorizationEndpointPath="${authorization.endpoint.path}"
+        accessTokenEndpointPath="${access.token.endpoint.path}"
+
+        enableRefreshToken="true"
+        listenerConfig-ref="https.listener" doc:name="OAuth provider module" port="8083" scopes="${scopes}">
+    </oauth2-provider:config>
+----
+
+The `scopes="${scopes}"` refers to the following blank property: `scopes=`.
+
+=== Applying CORS
+
+To apply the CORS policy, see link:/api-manager/cors-policy[Applying and Editing a CORS Policy].
+
+You may find that you need to implement CORS on your OAuth Provider. The *preFlow* attribute on the OAuth configuration element makes it possible to reference a flow that is processed before anything else. Using this attribute, your OAuth Provider configuration can reference an additional flow that has implemented a CORS configuration, enabling CORS in both the authorize and the access token listeners.
+
+[source, xml, linenums]
+----
+  <flow name="myCorsFlow">
+      <cors:validate publicResource="true"/>
+  </flow>
+
+  <oauth2-provider:config
+      name="external-oauth2-provider"
+      preFlow-ref="myCorsFlow"
+      providerName="Ping API"
+      resourceOwnerSecurityProvider-ref="single-user-security-provider"
+      clientSecurityProvider-ref="single-user-client-security-provider"
+      clientStore-ref="single-user-client-store"
+      tokenTtlSeconds="86400"
+      enableRefreshToken="true"
+      listenerConfig-ref="https.listener">
+  </oauth2-provider:config>
+----
+
+In the above example, the "myCorsFlow" flow configures CORS to allow requests from any origin. This flow is referenced in the OAuth 2.0 Provider via the *preFlow-ref* attribute.
+
+=== Exposing Additional Endpoints
+
+Depending on the OAuth grant type you want to use, the OAuth provider application can expose the following endpoints:
+
+* `/authorize`: configured as an attribute of the `oauth2-provider:config` element
+* `/access_token`: configured as an attribute of the `oauth2-provider:config` element
+* `/validate`: configured as the address of the HTTP Listener Connector in the flow
+
+[width="100%",cols="50%,50%",options="header",]
+|===
+|Component |Explanation
+|`oauth2-provider:config` |This component encapsulates most of the configurations required to implement OAuth, both for generating tokens or authorization codes, and for validating them. It implicitly exposes two endpoints for assigning authorization codes and tokens. It is then referenced by a matching element in the flow.
+|`ss:authentication-manager` |
+- Spring bean that defines an authentication manager and provider +
+ +
+- Validates user credentials
+
+|`api-platform-gw:client-store` |- Store that retains OAuth client-specific information. If the client sends validation credentials in the body or the query of the request, the OAuth Web service provider simply validates the incoming credentials (client ID and client secret) against the content in the clientStore +
+- Caches client ID and client secret of valid organization's client applications
+|`api-platform-gw:client-security-provider` |Validates client application's credentials.
+|`mule-ss:security-manager` |- For configuring link:/mule-user-guide/v/3.7/configuring-the-spring-security-manager[Spring Security Manager] +
+- Authenticates resource owners (for example: when the user credentials are validated after the login page). The only situation where this provider is not required, is when the Grant Type is Client Credentials.
+|===
+
 
 == See Also
 
