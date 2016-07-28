@@ -5,7 +5,7 @@ This way you can compose, debug and test custom API policies within Studio, usin
 
 [NOTE]
 --
-The custom policy editor is still in beta and is available only for Enterprise Edition users for link:/release-notes/anypoint-studio-6.1-with-3.8-runtime-release-notes[Anypoint Studio 6.1] and newer.
+The custom policy editor is still in beta and is available only for Enterprise Edition users of link:/release-notes/anypoint-studio-6.1-with-3.8-runtime-release-notes[Anypoint Studio 6.1] and newer.
 --
 
 == Assumptions
@@ -19,14 +19,6 @@ It also assumes that you are familiar with link:/mule-fundamentals/v/3.8/anypoin
 --
 For this beta release, Studio only supports policy creation and edition through XML.
 --
-
-//////
-TODO
-
-  Mention the autocomplete feature
-//////
-
-
 
 In order to create a Policy Project:
 
@@ -63,3 +55,45 @@ TODO
 
   Add steps for running configurations when applying policies
 //////
+
+== Know Limitations
+
+Being a beta release, the Custom Policy Editor for Studio has some limitations. Keep the following points in mind when designing and testing your custom policy:
+
+=== Limitations for the Configuration File
+
+* XML validation for sections within the policy configuration file (such as `{{#isWsdlEndpoint}} {{/isWsdlEndpoint}}`) is not supported. Policies configured using sections such as the one in the example below will run, but the editor won´t validate them before running.
++
+[source,XML,linenums]
+----
+<mule:processor-chain name="{{policyId}}-build-response">
+       <mule:set-property propertyName="http.status" value="403"/>
+       {{#isWsdlEndpoint}}
+         <mule:set-property propertyName="Content-Type" value="text/xml"/>
+         <mule:set-payload value="#[soapFault('client', _invalidClientMessage)]"/>
+       {{/isWsdlEndpoint}}
+
+       {{^isWsdlEndpoint}}
+         <mule:set-property propertyName="Content-Type" value="application/json"/>
+         <mule:set-payload value="#[_invalidClientMessage]"/>
+       {{/isWsdlEndpoint}}
+   </mule:processor-chain>
+----
+
+=== Limitations for the Definition File
+
+* The only supported YAML types for the policy definition file are: `String`, `Boolean`, `Int`, `Expression` and `IpAddress`.
+* The `hasContract` boolean to define wether this custom policy has credentials defined to access other APIs or not, is currently not supported.
+* Studio does not validate the `gatewayCompatibility` attribute
+* `requiredCharacteristics` and `providedCharacteristics` fields are not validated from Studio
+* The `{{order}}` attribute from the YAML file is not supported. The order of the policy is overwritten by the other set in the *Run Configurations.* screen.
+
+=== Limititations for Studio
+
+* Importing and exporting custom policies from API Platform is not supported
+* Importing custom policies from Exchange is not supported
+* As stated earlier, this feature is currently aimed for local testing. Currently it´s not possible to run your custom policies against your APIs in API Manager and validate them there.
+* You can only configure one `ApiName` and `ApiVersion` attribute in the Run Configuration.
+* The Visual Debugger does not support debugging of custom policies.
+* There is no MUnit support
+* Maven support for Custom Policies is not supported
