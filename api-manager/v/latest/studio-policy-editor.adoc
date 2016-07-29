@@ -20,41 +20,169 @@ It also assumes that you are familiar with link:/mule-fundamentals/v/3.8/anypoin
 For this beta release, Studio only supports policy creation and edition through XML.
 --
 
-In order to create a Policy Project:
+When creating a new API Custom Policy Project, a link:/api-manager/creating-a-policy-walkthrough#create-the-policy-configuration-file[policy configuration file] (xml) and a link:/api-manager/creating-a-policy-walkthrough#create-the-custom-policy-definition[policy definition file] (yaml) are created automatically.
 
-. Right click in your *Package explorer* and select, *New* and *Mule Custom Policy Project (beta)*.
-. Give a Name to your Policy Project
-
-This creates a link:/api-manager/creating-a-policy-walkthrough#create-the-policy-configuration-file[policy configuration file] (xml) and a link:/api-manager/creating-a-policy-walkthrough#create-the-custom-policy-definition[policy definition file] (yaml).
-
-Note that when the XML editor opens the configuration file, both the `<before>` and `<after>` tags are marked with an error. This is because when creating a custom policy using the policy editor, none of those tags can be empty.
+When the XML editor opens the configuration file, both the `<before>` and `<after>` tags are declared and marked as an error. If you don´t need those tags, remove them, as when creating a custom policy using the policy editor, those tags can´t be empty.
 
 The configuration file also contains a link:/api-manager/applying-custom-policies#using-pointcuts[<pointcut> tag] with two link:/api-manager/applying-custom-policies#referencing-properties[reference properties]:
 
 * `{{ apiName }}`
 * `{{ apiVersionName }}`.
 
-These variables are relevant (but not fully required) to associate your custom policy to an underlying API. More details are given in the <<Apply the Custom Policy in Your Local Deployment, deployment  instructions>> below.
-
+These variables are relevant (but not fully required) to associate your custom policy to an underlying API. More details are given in the <<Applying the Custom Policy in Your Local Deployment, deployment  instructions>> below.
 
 == Designing a Custom Policy in Studio
 
-//////
-TODO
-  Add design steps for custom policies
-  Good practices
-  Example
-//////
+This walkthrough shows you how you can design a custom policy using the Policy Editor in Studio. +
+In order to create a custom policy project:
+
+. Right click in your *Package explorer* and select, *New* and *API Custom Policy Project (beta)*.
+. Give a Name to your Policy Project
+. The XML Editor opens with a default template for a policy configuration file. +
+For the purpose of this walkthrough, we are focusing this example on a simple policy that blocks any POST requests to your API´s endpoint.
++
+. Copy the following XML Custom Policy and paste it in the XML file that was created with your new Custom Policy Project:
++
+[source,XML,linenums]
+----
+<policy xmlns="http://www.mulesoft.org/schema/mule/policy" xmlns:mule="http://www.mulesoft.org/schema/mule/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/policy http://www.mulesoft.org/schema/mule/policy/current/mule-policy.xsd
+						http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+						http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd"
+						id="12345" policyName="MEL Message Protection Policy">
+
+  <!-- Response message in case of rejecting a message -->
+  <mule:processor-chain xmlns:mule="http://www.mulesoft.org/schema/mule/core" name="policyViolation">
+      <mule:logger message="Policy 12345 filtered the message #[message.getId()] based on MEL query" level="DEBUG" />
+	  <mule:set-property propertyName="http.status" value="403"/>
+      <mule:set-property propertyName="Content-Type" value="application/json"/>
+      <mule:set-payload value='{ "error" : "Policy 12345: {{ denied-message }}"}'/>
+   </mule:processor-chain>
+
+  <!-- Expression filter to be used on incoming messages -->
+  <before>
+      <mule:set-variable variableName="evaluated" value="{{ query }}" />
+  	  <mule:message-filter xmlns:mule="http://www.mulesoft.org/schema/mule/core" onUnaccepted="policyViolation">
+		<mule:expression-filter xmlns:mule="http://www.mulesoft.org/schema/mule/core" expression="#[!evaluated]" name="MELProtectionFilter"/>
+      </mule:message-filter>
+  </before>
+
+  <!-- Pointcuts specify where this policy takes effect. It refers to an specific Api and Version -->
+  <pointcut>
+      <api-platform-gw:api-pointcut apiName="{{ apiName }}" apiVersion="{{ apiVersionName }}"/>
+  </pointcut>
+
+</policy>
+----
++
+[NOTE]
+--
+Since we are no using an `<after>` tag, we are not including it in the Policy Configuration File.
+--
++
+. Copy the following YAML definition and paste it in the YAML file that was created with your new Custom Policy Project:
++
+[source,YAML,linenums]
+----
+  id: message-protection
+  name: MEL Message Protection Policy
+  description: Specifies an MEL *query* expression which when evaluated against incoming messages and returning true, rejects the incoming message.
+  category: Security
+  type: custom
+  standalone: true
+  requiresConnectivity: false
+  providedCharacteristics: [Message protection]
+  requiredCharacteristics: []
+  configuration:
+    - propertyName: query
+      name: MEL query
+      description: MEL query expression to be used for filtering each message
+      type: expression
+      sensitive: false
+      optional: false
+    - propertyName: denied-message
+      name: Violation message
+      description: A message to display when an incoming message is filtered
+      type: string
+      sensitive: false
+      defaultValue: You shall not POST
+      optional: false
+----
++
+. Save your changes.
+
+You have succesfully designed a custom policy that simply prevents the client from sending a POST request. Whenever the client sends a POST request, your application returns a message informing the policy Id that´s being infringed, along with an error message `You shall not POST`.
 
 == Applying the Custom Policy in Your Local Deployment
 
-Custom policies are independent of the APIs to which you want to apply them. In order to _point_ a policy to an API (or several), you need to link:/api-manager/applying-custom-policies#customizing-a-pointcut[customize the pointcut conditions] to meet your needs. You can either set up an API name and a version (using the reference properties mentioned earlier), or a regex expression to match it with endpoints and resources.
+Custom policies are independent of the APIs to which you want to apply them. +
+You can configure and define a custom policy, and _point_ it to one or several APIs by link:/api-manager/applying-custom-policies#customizing-a-pointcut[customizing the pointcut conditions]. You can either set up an API name and a version (using the reference properties mentioned earlier), or a regex expression to match it with endpoints and resources.
 
-//////
-TODO
+However, when designing a custom API in Studio, you need to have at least one local Mule project to deploy and apply the policy. +
+In order to test how the policy created above behaves when applied to an API, we are creating a simple Mule Project using a variation of the Leagues API example used in link:/api-manager/applying-custom-policies[Applying custom policies] page:
 
-  Add steps for running configurations when applying policies
-//////
+. Download link:/_atachments/LeagueAPIexample.raml[this RAML API definition] and import it to Studio, so APIKit Studio plugin can automatically generate the flows for your Mule application.
+. Go to the "Global Elements" tab, and _Create_ a new API Autodiscovery element. Assign an API Name, Version and select the flow that contains your APIKit router component as your main flow reference.
++
+[NOTE]
+--
+The API Autodiscovery element is necessary if you want to leave the `apiName` and `apiVersionName` placeholder properties in your .yaml definition file. You can additionally replace the API name and version in your policy´s configuration file.
+--
+//   Current bug:
+//   Manually add API Autodiscovery namespaces:
+//     http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+//     http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd
++
+. If your Studio deployment is using Mule 3.8 or APIGateway 2.2 or later, remember to set your gatekeeper property in your `mule-app.properties` file.
++
+[source,Properties,linenums]
+----
+anypoint.platform.gatekeeper=false
+----
+
+You can also apply this policy to an existing API Mule Project in your Package Explorer, however, make sure to either configure a proper *API Autodiscovery* element, or manually point your custom policy pointcut to that specific API.
+
+Now that you have one Project to which apply this newly created policy, it´s time to locally deploy everything together. +
+In order to do so:
+
+. Right click in your policy project, and select *Run as* and *Run Configurations...*
+. The run configuration screen for custom policies is shown:
++
+image::studio-policy-editor-8a38d.png[]
++
+. Select an API Custom Policy Project and a Mule Domain or Project to launch
++
+[NOTE]
+--
+If you configured and API Autodiscovery element for your projects, when you select the Mule Project, the apiName and apiVersionName properties are automatically updated.
+--
++
+. Note that the `denied-message` property defined earlier in the policy definition file is already configured using the default value, however since the defaultValue configuration parameter does not apply to Expression types, the `query` property needs to be manually updated.
+. Click the `Value` field in the query property section and paste the following MEL expression:
++
+[source,MEL,linenums]
+----
+#[message.inboundProperties['http.method'] == 'POST']
+----
++
+This MEL expression identifies if the request uses a POST method.
+. Click *Run*
+
+If you inspect your console logs, depending on your logging settings, you might notice an INFO message letting you know that the policy was correctly applied:
+---
+com.mulesoft.module.policies.lifecyle.PolicyRegistryLifecycleManager: Policy policy.xml was correctly applied
+---
+
+In order to test if the policy is being applied, open POSTMAN (or any other similar application to send requests) and try to POST anything to `0.0.0.0:8081/api/teams`, the response should be allign to your configured policy:
+
+[source,json,linenums]
+----
+{
+  "error": "Policy 12345: You shall not POST"
+}
+----
+
 
 == Know Limitations
 
