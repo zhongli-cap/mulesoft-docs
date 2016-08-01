@@ -232,6 +232,31 @@ Keep in mind that after submitting an item, it is added to the Exchange with an
 
 image:publish.png[publish]
 
+== Audit Logs
+
+Audit Logs is a logging feature in Anypoint Exchange v1.7.0 and later that lets private Exchange administrators view a log of all actions in their Exchange. Logged events include creating, adding, and deleting items, publishing, edits, and more--essentially any action that occurs when users use Exchange.
+
+Information in the logs are kept indefinitely.
+
+*Note:* To enable Audit Logs access, each user must have the Exchange Administrator role, Organization Administrator role, and there must be at least one Exchange item created for the private Exchange.
+
+To enable audit logging:
+
+. Log into link:https://anypoint.mulesoft.com/#/signin[Anypoint Platform].
+. Click *Access Management* and *Roles*.
+. In the Roles menu, enable access to the *Exchange Administrator* and *Organization Administrators* for each user who needs to see the logs.
+. Perform activity on the Exchange, such as adding an item, publishing an item, etc. This puts activities in the log so you can view them.
+. Click *Access Management* > *Audit Logs*.
+. Click *Products* and click *Exchange*:
++
+image:exchange-audit-logs.png[exchange-audit-logs]
+
+To view the log:
+
+. Log into Anypoint Platform and click *Access Management* > *Audit Logs*
+. Under the *Payload* column of the Exchange listing, click the blue download button. Exchange saves a copy of the logs in the `payload.txt` file.
+. Open the payload.txt file using a text editor or a browser.
+
 == Submitting Templates and Examples to a Private Exchange
 
 Templates and examples are both submitted to the Exchange in the same way. You can add multiple template versions to work with different Mule runtime versions, just click the *Add Versions* button and then *Done* after filling in the version information. For each version you add, you have three options for linking to the Mule Project itself:
@@ -244,8 +269,8 @@ For your project to be automatically importable into Studio via  Exchange, it mu
 
 If you use the *January 2015 - Update Site 1* version of Anypoint Studio or newer, exporting your project already produces a zip file that has the necessary structure. To expose your Mule Project on  Exchange:
 
-* Select *File* > *Export*
-* Then pick Mule > *Anypoint Studio Project to Mule Deployable Archive (includes Studio metadata)*
+* Select *File* > *Export*.
+* Pick Mule > *Anypoint Studio Project to Mule Deployable Archive (includes Studio metadata)*
 +
 image:export.png[export]
 +
@@ -286,6 +311,8 @@ image:import3.png[import3]
 image:using1.png[using1]
 
 
+
+
 === RAML APIs
 
 If you have a link:http://raml.org[RAML] definition file that describes your API, or if you have an API Portal to document it interactively, you can expose these to others in your organization using Exchange. If someone in your organization wants to connect to your API via the link:/mule-user-guide/v/3.8/http-request-connector[HTTP Request Connector] in Anypoint Studio, referencing the API's RAML file exposes the API's metadata, making integration a lot easier. See the <<Referencing a RAML File>> section above for more information. If your API is registered in the Anypoint Platform for APIs, you can also link to its portal from  Exchange, which provides very versatile interactive tools for easing your internal user's engagement with it.
@@ -303,6 +330,44 @@ When integrating through a Web Service Consumer connector, you can choose to pro
 *Search WSDL in Exchange* link to see a list of the published WSDLs in Anypoint Exchange.
 
 To add multiple API versions to your Exchange entry, just click the *Add Versions* button, and then *Done* after filling in the version information. For each version you add, also include a link to the API's *WSDL* definition file.
+
+== Install Private Exchange Connector in Studio
+
+In Anypoint Exchange 1.7.0 and later, you can create a connector in Anypoint Studio, list it in Exchange, and install it in Studio. This feature lets organizations use a private Exchange to install their connectors in Studio the same way that MuleSoft installs its connectors using Exchange. Organizations use a private Exchange to list connectors that they create for their internal services, and enable private Exchange users to view details and install the connector for use in their Studio applications.
+
+To use this feature:
+
+. Download and install Maven and the Anypoint Connector DevKit Plugin. For more information, see link:/anypoint-connector-devkit/v/3.8/[Anypoint Connector DevKit].
+. Create a new Anypoint Connector Project. Add to the project as needed.
+. Use Studio to export the connector as a zip file. Right-click the project name in Package Explorer and click *Export* > *Mule* > *Anypoint Connector Update Site*, *Next*, specify the path to save the zip file, and click *Finish*.
+. Open the zip file. Open the `content.xml` file with a text editor and search for the `id=` value followed by the `version=` value. In the following example, the last line shows the id as: `org.mule.tooling.ui.extension.my-connector.3.5.0.feature.group` and version as: `version='1.0.0.201607271521'` -- This id string is the Feature ID that we refer to shortly. Feature IDs always look like `org.mule.tooling.ui.extension.{anything}.feature.group`.
++
+[source,code,linenums]
+----
+<?xml version='1.0' encoding='UTF-8'?>
+<?metadataRepository version='1.1.0'?>
+<repository name='file:/Users/me/AnypointStudio/workspace/my-connector/target/update-site/ - metadata' type='org.eclipse.equinox.internal.p2.metadata.repository.LocalMetadataRepository' version='1.0.0'>
+  <properties size='2'>
+  ...
+  </properties>
+  <units size='4'>
+    <unit
+    ...
+    </unit>
+    <unit id='org.mule.tooling.ui.extension.my-connector.3.5.0.feature.group' version='1.0.0.201607271521' singleton='false'>
+----
++
+. In Anypoint Exchange, click *Add item* > *Connector*. Complete the information about the connector. Scroll down and click *Add version*.
+. In the Versions menu, put the version string (`1.0.0.201607271521` on the previous example) in the *Connector version* and the Feature ID string (`org.mule.tooling.ui.extension.my-connector.3.5.0.feature.group` on the previous example) in  *Feature ID* fields. The following example shows how the fields are completed:
++
+image:exchange-versions.png[exchange-versions]
++
+. Provide the link to the repository containing the connector's zip file. *Note:* The repository where you serve the connector from must support basic authentication for access.
+. Optionally, provide a link to the connector's documentation.
+. Click *Done*. Exchange resolves the actual connector version from the Feature ID you specified.
+. Scroll back up and click *Save new item*.
+. Click *Publish* to make the connector item available to users.
+. Test the connector by going to Anypoint Studio, clicking the Exchange icon, and locating your new connector. Install the connector.
 
 == Business Groups in Private Exchanges
 
@@ -329,7 +394,7 @@ A user only belongs to a sub org because an administrator assigns to a user the 
 
 Any user that belongs to an organization to see the artifacts of that org (top level org). So if I’m a member of “org 1” and I don’t have any permissions, I can see published artifacts in org 1.
 
-In the Nav bar drop down, this user is going to see only the Org1 option.
+In the Nav bar drop down, this user sees only the Org1 option.
 
 If a user is invited to BG 1.1 without an Exchange role assigned, but with other role assigned, like  API creator -  View of the artifacts, the user sees 1.1.
 
