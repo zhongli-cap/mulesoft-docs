@@ -7,7 +7,7 @@ This document is for a technical audience possessing basic knowledge of FTPS, X1
 === Prerequisites
 
 * Anypoint Studio with Mule Server 3.7.x EE runtime
-* FTPS Connector 1.0.0, Partner Manager Connector 1.x, and X12 Module 1.x installed
+* FTPS Connector 1.x, Partner Manager Connector 2.x, and X12 Module 1.x installed
 * Anypoint Platform account
 * Amazon S3 bucket for FTPS and EDI file storage (optional)
 
@@ -42,27 +42,39 @@ all B2B exchanges while the actual files exchanged are stored on an Amazon S3 bu
 == Partnership Set Up
 
 The first stage of the solution is to create a partnership in Anypoint Partner Manager between your organization and the
-supplier. A partnership identifies who your partner is, and establishes the parameters in which B2B data is exchanged
-between you and your partner. Furthermore, it allows this data to be tracked and viewed from Anypoint Partner Manager.
-
-=== Create Partnership
-
-. Login into Anypoint Partner Manager.
-. Click *Trading Partners* found on the left hand side menu.
-. Press *New Partner* on the upper right hand side corner.
-. Enter _My Supplier_ as *Company Name* and press *Save*.
-
-With a partnership in place, we can configure the partner's FTPS and X12 identities in addition to setting the runtime
-parameters in which the FTPS Connector and X12 Module operate when sending to the supplier or receiving from said
 supplier.
 
+A partnership:
+
+* Identifies of your Company
+* Identifies your partner
+* Establishes the parameters by which B2B data is exchanged between you and your partner
+* Allows this data to be tracked and viewed from Anypoint Partner Manager
+
+=== Set Up Home Organization Identifiers
+
+. Login into Anypoint Partner Manager.
+. On the left menu, click *Trading Partners*.
+. Click on the top partner in the list, "Your company".
+. On the left menu, click *X12* under *FORMAT DEFAULTS*.
+. Enter _MOUNTAINOUT_ as *Interchange ID (ISA)*, Select *ZZ (Mutually Defined)* from the *Interchange ID qualifier (ISA)* and press *Save*.
+
 === Set Up FTPS
-. Sign up for an FTPS cloud service (for example, see https://hostedftp.com/signup).
-. Click the *FTPS* transport settings on the left side of the menu.
+. On the left menu, click *Endpoints* under *CONFIGURATION*.
+. In the top right, Click New.
+. In the *Endpoint* section, fill in the fields as shown in the table below:
 +
-image:b2b_ftps_walk_04.png[b2b_ftps_04]
+[cols=",",]
+|===
+|*Field* |*Value*
+|Name |FTPS Send
+|Protocol |FTPS
+|Type |Send
+|Default |TRUE
+|===
 +
-. Enter the following values in the *FTPS Settings - Inbound* sections:
+. Make sure Default for My Supplier is checked
+. Enter the following values in the *Settings* sections:
 .. In the *Server Address* field, the address for the server you procured in Step 1.
 .. In the *Port* field, enter the number of the port for your server (typically 21).
 .. In the *User Name* field, the username for the account you created on the FTPS cloud service you procured in Step 1.
@@ -70,20 +82,35 @@ image:b2b_ftps_walk_04.png[b2b_ftps_04]
 .. _Passive_ in the *Transfer Mode* field
 .. _Explicit_ in the *SSL Mode* field
 . Leave checkbox, *Enable server validation field* unchecked.
-. Reuse those fields values to fill in the *FTPS Settings - Outbound* section.
-. Click Save.
-
-=== Set Up X12
-
-. Go to the home organization settings and open the *X12* settings. Select *ZZ* from the *Interchange ID qualifier*
-drop-down list. Enter _MOUNTAINOUT_ in the *Interchange ID* text box.
-. Return to the *Trading Partners* page and select *My Supplier* from your list of partners. Click the *X12* format settings found on the left hand side menu.
-. In the *Inbound* section, fill in the fields as shown in the table below:
+. Press *Save*.
+. In the top right, Click New.
+. In the *Endpoint* section, fill in the fields as shown in the table below:
 +
 [cols=",",]
 |===
 |*Field* |*Value*
-|Interchange sender ID qualifier (ISA 05) |ZZ
+|Name |FTPS Receive
+|Protocol |FTPS
+|Type |Receive
+|Default |TRUE
+|===
++
+. Reuse your *FTPS Send* fields values to fill in the *Settings* section for *FTPS Receive*.
+.. Set _/demo/consumer-inbox/_ as *Path*
+.. Set _*.dat_ as *File Name*
+.. Set _20000_ as *Polling Frequency*
+. Click Save, then press *Endpoints* with the back arrow on the left menu.
+
+=== Set Up X12
+
+. On the left menu, click *X12* under *FORMAT DEFAULTS*.
+. Enter _My Supplier_ as *Interchange ID (ISA)*, Select *ZZ (Mutually Defined)* from the *Interchange ID qualifier (ISA)*.
+. In the *Inbound* section, fill in the fields as shown in the table below: 
++
+[cols=",",]
+|===
+|*Field* |*Value*
+|Interchange sender ID qualifier  (ISA 05) |ZZ
 |Interchange sender ID (ISA 06) |MY-SUPPLIER
 |Require unique GS control numbers (GS 06) |FALSE
 |===
@@ -107,37 +134,6 @@ drop-down list. Enter _MOUNTAINOUT_ in the *Interchange ID* text box.
 |===
 +
 . Press *Save*.
-
-
-=== Setup FTPS Transactions
-
-The settings configured in the 'Setup FTPS' section are meant to be reused by all inbound and outbound transactions within the application. Now we need to create transactions for exchanging files with the supplier.
-
-To send the 850 to the supplier, create an Outbound Transaction:
-
-. Click  *Transactions* in the left side of the menu.
-. Click  *New* in the top right corner.
-. In the *Transaction* section, select _Outbound_ from the *Direction* the drop-down menu.
-. Select _X12_ as *Standard*, _4010_ as *Version* and _850 (Purchase Order)_ as *Message Type* in the *Format* section.
-. In the *Transport* section, select _FTPS_ from the *Type* the drop-down menu.
-. Uncheck *Use default Outbound FTPS for partner* and enter the following details:
-** /demo/supplier-inbox/ as *Path*
-** Leave the *File Name* field empty, the FTPS connector assigns a name for it automatically.
-. Click  *Save*.
-+
-Now the inbound transaction for receiving the 997 file from the supplier needs to be created:
-+
-. Click  *Transactions* on the left  side of the menu.
-. Click  *New* on the top right corner.
-. In the *Transaction* section, select _Inbound_ from the *Direction* the drop-down menu.
-. Select _X12_ as *Standard*, _4010_ as *Version* and _997_ as *Message Type* in the *Format* section.
-. In the *Transport* section, select _FTPS_ from the *Type* the drop-down menu.
-. Uncheck *Use default Inbound FTPS for partner* and enter the following details:
-* _/demo/consumer-inbox/_ as *Path*
-* _*.dat_ as *File Name*
-* _20000_ as *Polling Frequency*
-. Click  *Save*.
-
 
 == Mule Project Set Up
 
@@ -173,10 +169,11 @@ Manager:
 +
 image:B2B_AS2EDI_13.png[B2B_AS2EDI_13]
 +
-Remember, the home organization settings is accessed by clicking on the home organization settings link on the upper
-right corner, next to the home icon:
+The home organization settings are accessed by clicking on the home Trading Partners in the left menu, then clicking on the organization Partner:
 +
 image:B2B_AS2EDI_11.png[B2B_AS2EDI_11]
++
+On the left menu, click *Administration* under *PARTNERS*. Here is the list of Environment, make sure to select the one you have created the Partner in. Click *Create a new API key* to generate a new API Key.
 +
 image:B2B_AS2EDI_12.png[B2B_AS2EDI_12]
 +
@@ -187,7 +184,7 @@ image:B2B_AS2EDI_12.png[B2B_AS2EDI_12]
 . Remain in the *Global Elements* view to create a FTPS Connector config by going to *Create* >
 *Connector Configuration* > *FTPS: Partner Manager Configuration*. Name it _b2b-based-ftps_.
 . Enter _My Supplier_ as *Partner Name*.
-. Select _EDI_X12_ from the *Standard* drop-down list.
+. Select _X12_ from the *Standard* drop-down list.
 
 
 === Create X12 Module Config
