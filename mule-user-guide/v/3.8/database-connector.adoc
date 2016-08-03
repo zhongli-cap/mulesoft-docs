@@ -20,13 +20,21 @@ The Database connector lets you perform predefined queries or dynamically constr
 
 == Prerequisites
 
-This document assumes that you are familiar with databases in general and with link:http://www.w3schools.com/sql/sql_syntax.asp[SQL syntax]. Furthermore, to complete the examples presented here, we assume that you have access to the database that you are to connect to, and that you have downloaded the proper <<Adding the Database Driver For Database Engines Supported Out of the Box, database driver>> for your database.
+This document assumes that you are familiar with databases in general and with link:http://www.w3schools.com/sql/sql_syntax.asp[SQL syntax]. Furthermore, to complete the examples presented here, we assume that you have access to the database that you are to connect to, and that you have downloaded the proper database driver for your database.
 
-== Basic Usage
+== Overview
 
-To use a Database connector in your Mule application:
+To use a Database connector in your Mule application, check whether your *database engine* is supported out-of-the-box.
 
-. Check whether your *database engine* is supported in <<Database Engines Supported Out of the Box, Database Engines Supported Out of the Box>>; if it is not, then you must perform a few steps to configure your project to support the database driver for your database engine.
+The database connector currently includes out of the box support for Oracle, MySQL and Derby engines.
+
+All other database engines – including MS SQL – are supported by the *Generic Database Configuration* option.
+
+[WARNING]
+====
+Note that the steps below differ depending on whether you connect to one of the databases supported out-of-the-box or not -- follow as per your use case.
+====
+
 . Configure a *Database global element* where you define:
 .. Your database's location and connection details
 .. Advanced connection parameters such as connection pooling
@@ -34,7 +42,7 @@ To use a Database connector in your Mule application:
 .. Contains the query to perform on the database
 .. References the Database Global Element
 
-However, to really take advantage of the design-time power of the connector, use it in conjunction with *DataWeave* (replaces DataMapper), which can extract message metadata and assist in transforming it to a different data format or structure. For more information, see link:/mule-user-guide/v/3.8/dataweave[DataWeave].
+To really take advantage of the design-time power of the connector, use it in conjunction with *DataWeave* (replaces DataMapper), which can extract message metadata and assist in transforming it to a different data format or structure. For more information, see link:/mule-user-guide/v/3.8/dataweave[DataWeave].
 
 == Supported Operations
 
@@ -51,94 +59,78 @@ The database connector supports the following operations:
 [TIP]
 You can run a *TRUNCATE* query on the database by selecting *Update* as the operation.
 
+
+== Database Connector Global Element Configuration
+
+Follow these steps to set up and test a connection to your database by creating a reusable *global element* for the database connector to reference.
+
+. Click a database connector building block that you have included in your flow.
++
+image:database-connector-56a11.png[]
+[TIP]
+You can use the *Poll* scope to monitor changes to your database and trigger subsequent actions.
++
+. Select the type of *database global element* to configure by clicking the green plus sign and navigate the dropdown to the applicable database engine. Or edit an existing configuration by clicking the "Edit" icon.
++
+//image:database-connector-fd04e.png[]
+image:add-db-config.png[add-db-config 1]
++
+. Choose a type of database global element to set up.
++
+image:choose-global-type.png[choose.global.type]
++
+(Select *Generic Database Configuration* if yours is not listed if you are not using an out-of-the-box configuration, i.e. MySQL, Derby, Oracle)
++
+. For MySQL database connection, you must fill out these fields in the *Global Element Properties* screen:
+
+* *Host*
+* *Port*
+* *User*
+* *Password*
+* *Database*
+
+. Specify the database engine driver on the Global Element Properties window. In this case, the *MySQL Connector/J* driver was retrieved from the link:http://dev.mysql.com/downloads/connector/j/[MySQL Connector/J Download site].
++
+image:database-connector-380c4.png[db config props]
++
+////
+The diagram and section below describe how to address these requirements and troubleshoot connection issues.
+image:modif_flowchart.png[modif_flowchart]
+////
+
+. At this point, the database connection should be confirmed via *Test Connection* button.
+. Make sure a valid query has been specified for the database connector building block(s) before running your app.
+
 == Fields That Support MEL Expressions
 
-In Mule version 3.7 and later, the following connector fields support MEL expressions. For a usage example, see <<Example MEL Expression Database URL, Example MEL Expression Database URL>>.
+In Mule version 3.7 and later, the following connector fields support MEL expressions. For a usage example, see <<Example MEL Expression for Database URL, Example MEL Expression for Database URL>>.
 
 
 [width="100%",cols="25,25,25,25",options="header"]
 |===
 |*Generic* |*Derby* |*Oracle* |*MySQL*
-|url |user |user |user
-|driverClassName |password |password |password
-|Properties inside connection-properties element |url |host |database
-|- |driverClassName |instance |host
-|- |Properties inside connection-properties element |url |url
-|- |- |driverClassName |driverClassName
-|- |- |Properties inside connection-properties element |Properties inside connection-properties element
+|*url* |*user* |*user* |*user*
+|*driverClassName* |*password* |*password* |*password*
+|Properties inside *connection-properties* element |*url* |*host* |*database*
+|- |*driverClassName* |*instance* |*host*
+|- |Properties inside *connection-properties* element |*url* |*url*
+|- |- |*driverClassName* |*driverClassName*
+|- |- |Properties inside *connection-properties* element |Properties inside *connection-properties* element
 |===
 
-== Database Connector Configuration Basics
-
-Click a database connector building block that you have included in your flow, for example:
-
-image:database-connector-3109e.png[db in a flow]
-
-Select the type of database to configure by clicking the green plus sign and navigating the dropdown to the applicable database engine. Select *Generic Database Configuration* if yours is not listed. In this example, we have configured a MySQL database.
-
-image:database-connector-443c2.png[db props window]
-
-Note the required connection parameters are entered on the Global Element Properties popup, and the appropriate database driver JAR has been included.
-
-image:database-connector-c1bf1.png[mysql db params]
-
-After selecting a connector for the database you must first add the database driver to your Mule project, then configure, at minimum, its required parameters and a global database connector element. The diagram and section below describe how to address these requirements.
-
-image:modif_flowchart.png[modif_flowchart]
-
-=== Database Engines Supported Out of the Box
-
-The database connector currently includes out of the box support for three database engines:
-
-* Oracle
-* MySQL
-* Derby
-
-All other database engines – including MS SQL – are supported by the *Generic Database Configuration* option.
-
-[WARNING]
-====
-Note that the steps below differ depending on whether you connect to one of the databases supported out of the box or not -- follow only those that correspond to your use case.
-====
+=== Adding a Generic Database Driver
 
 When using the *Generic* Database Configuration, you manually import the driver for your database engine, or preferably add it as a Maven dependency and specify the driver class as one of the connection parameters. This allows you to use the database connector with any database engine for which you have a driver.
 
 For details on configuring the database connector for any of the above scenarios, see the sections below.
 
-==== Adding the Database Driver For Database Engines Supported Out of the Box
-
-For database engines supported out of the box, the mot straightforward way to add the database driver is to use the *Add File* button in the global element configuration window. The following is a brief summary of the steps required to create a global database connector and add the driver. For full configuration details including connection parameters and advanced settings, see <<Configuring the Connector for Database Engines Supported Out of the Box>> below.
-
-To add the database driver for a database engine supported out of the box:
-
-. Ensure that you have downloaded the database driver and that it is available on your machine.
-. Drag a *Database* building block from the Studio palette onto the canvas.
-. Click the *Database* building block to open its properties editing window.
-. Click the green plus icon to the right of *Connector configuration* to create a database global element for this database connector:
-+
-image:add-db-config.png[add-db-config]
-+
-. Studio displays the *Choose Global Type* window, shown below. Select your supported database engine from the list, for example Oracle.
-+
-image:choose-global-type.png[choose.global.type]
-+
-. Studio displays the *Global Element Properties* window, shown below. At the bottom of the window you find the *Required dependencies* section. Click *Add File* to add the *.jar* file for your database driver.
-+
-image:add-driver-oracle.png[add driver for oracle]
-+
-. Browse to and select the *.jar* file for your database driver. The driver is automatically added to the project.
-+
-Should you need to modify the driver after installation (for example when upgrading the driver version) you can use the same configuration window. The *Add File* button is replaced by a *Modify* button (as shown below with an installed MySQL driver). Clicking *Modify* allows you to edit the Java build path for the project.
-
-image:installed_mysql_driver.png[installed_mysql_driver]
-
-== Configuring the Connector for Database Engines Supported Out of the Box
+== Configuration Details for Database Engines Supported Out of the Box
 
 Currently, the following database engines are supported out of the box:
 
-* Oracle
-* MySQL
-* Derby
+* *Oracle*
+* *MySQL*
+* *Derby*
 
 This section explains how to configure a database connector for use with any of these databases.
 
@@ -166,7 +158,7 @@ _OR_ +
 *Configure via spring-bean* +
 _OR_ +
 *Database URL* |Use to define the details needed for your connector to actually connect with your database. When you have completed the configuration, click *Test Connection...* to confirm that you have established a valid, working connection to your database.
-|*Required dependencies* |Click *Add File* to add the database driver to your project. See <<Adding the Database Driver For Database Engines Supported Out of the Box, Adding the Database Driver For Database Engines Supported Out of the Box>> above for details.
+|*Required dependencies* |Click *Add File* to add the database driver to your project.
 |===
 
 image:oracle_global_elem.png[oracle_global_elem]
@@ -182,7 +174,7 @@ _OR_ +
 *Configure via spring-bean* +
 _OR_ +
 *Database URL* |Use to define the details needed for your connector to actually connect with your database. When you have completed the configuration, click *Test Connection* to confirm that you have established a valid, working connection to your database.
-|*Required dependencies* |Click *Add File* to add the database driver to your project. See <<Adding the Database Driver For Database Engines Supported Out of the Box, Adding the Database Driver For Database Engines Supported Out of the Box>> above for details.
+|*Required dependencies* |Click *Add File* to add the database driver to your project.
 |===
 
 .MySQL global element using DB configuration parameters
@@ -321,7 +313,7 @@ image:referenced-libraries-in-proj.png[referenced-libraries-in-proj pack_explore
 [IMPORTANT]
 After adding the database driver for a database engine not supported out of the box, you need to enter the fully qualified name of the driver class in the global element referenced by the database connector. For details, see the next section.
 
-==== Configuring for Generic Database
+==== Configuration for Generic Database
 
 [tabs]
 ------
@@ -336,7 +328,7 @@ After adding the database driver for a database engine not supported out of the 
 |*Name* |Use to define unique identifier for the global database connector element in your application.
 |*Configure via spring-bean* |*Optional.* Configure this database connection by the Spring bean referenced in *DataSource Reference*. Mutually exclusive with *Database URL*.
 |*Database URL* |*Optional* (can also be configured with *Configure via spring-bean*). The URL for the database connection. Mutually exclusive with *Configure via spring-bean*.
-|*Driver Class Name* |Fully-qualified driver class name of the driver for your database, which must be already imported into your project. (For details on importing the driver, see <<Adding the Database Driver For Database Engines Supported Out of the Box>> above.) You can enter the full name in the empty field or click *...* to browse the available driver classes.
+|*Driver Class Name* |Fully-qualified driver class name of the driver for your database, which must be already imported into your project. You can enter the full name in the empty field or click *...* to browse the available driver classes.
 
 When browsing the available driver classes, type the beginning of the driver class name (which you can check by clicking the driver file under Referenced Libraries in the Package Explorer). Studio displays the list of classes provided by the driver.
 
@@ -363,6 +355,7 @@ image:generic-db-global-elem-props.png[generic-db-global-elem-props]
 * Acquire Increment
 * Prepared Statement Cache Size
 * Max Wait Millis
+
 |*Use XA Transactions* |Enable to indicate that the created datasource must support extended architecture (XA) transactions. Default: *false*.
 |===
 ....
@@ -888,7 +881,7 @@ To enable this feature, include a className attribute when defining Struct data 
 </db:oracle-config>
 ----
 
-== Example MEL Expression Database URL
+== Example MEL Expression for Database URL
 
 The following example shows the Mule 3.7 and newer change where you can specify a MEL expression in the Database URL field. See also <<Fields That Support MEL Expressions, Fields That Support MEL Expressions>>.
 
