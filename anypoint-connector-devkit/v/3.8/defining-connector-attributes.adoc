@@ -9,34 +9,15 @@ This document assumes you are familiar with the link:/anypoint-connector-devkit
 
 == @Configurable Annotation
 
-The connector's attributes are defined using the `@Configurable` annotation on the class private attributes. These attributes are later assigned in the connector's global configuration dialog. In addition to the `@Configurable` annotation, these attributes need public getters and setters (not shown). Since DevKit 3.8.x, all @Configurable parameters must be placed inside the @Config class instead of the @Connector. 
+The connector's attributes are defined using the `@Configurable` annotation, which provide for essential fields, at least from a user perspective. Since DevKit 3.8, all `@Configurable` parameters must be placed inside the "Config" class _instead of_ the `@Connector`. These attributes are later assigned in the connector's global configuration dialog. In addition to the `@Configurable` annotation, these attributes need public getters and setters (not shown).
 
 [NOTE]
 ====
 * A `@Connector` can have any number of simple or complex `@Configurable` attributes.
-* `@Configurable` attributes are mandatory from a user perspective.
+*
 
-Since DevKit 3.8, all @Configurable parameters must be placed inside the `@Config` class _instead of_ the `@Connector`.
 ====
 
-For example:
-
-[source,java, linenums]
-----
-@Connector(name="barn", schemaVersion="1.0", friendlyName="Barn", minMuleVersion="3.6")
-public class BarnConnector
-{
-    @Configurable
-    private String key;
-
-    public String getKey() {
-        return key;
-    }
-    public void setKey(String key) {
-        this.key = key;
-    }
-}
-----
 
 XML configuration:
 
@@ -49,26 +30,23 @@ image:configurable-screenshot.png[configurable-screenshot]
 
 == @Optional Annotation
 
-As mentioned before, @Configurable attributes are mandatory. If we want to make them optional we need to mark them with the `@Optional` annotation. 
+As mentioned before, `@Configurable` attributes are mandatory. If we want to make them optional we need to mark them with the `@Optional` annotation. 
 
 [source,java, linenums]
 ----
-@Connector(name="barn", schemaVersion="1.0", friendlyName="Barn", minMuleVersion="3.6")
-public class BarnConnector
-{
-    @Configurable
-    @Optional
-    private String key;
+public abstract class AbstractAnalyticsConfig {
 
-    public String getKey() {
-        return key;
-    }
-    public void setKey(String key) {
-        this.key = key;
-    }
+...
+
+  @Configurable
+    @Optional
+    @Placement(group = "Proxy Settings")
+    @FriendlyName(value = "Host")
+    private String proxyHost;
 }
 ----
 
+////
 XML configuration:
 
 [source,xml, linenums]
@@ -84,6 +62,7 @@ The following is also valid since assigning a value is optional:
 ----
 
 image:optional-screenshot.png[optional-screenshot]
+////
 
 == @Default Annotation
 
@@ -93,22 +72,16 @@ For example:
 
 [source,java, linenums]
 ----
-@Connector(name="barn", schemaVersion="1.0", friendlyName="Barn", minMuleVersion="3.6")
-public class BarnConnector
-{
+public abstract class AbstractAnalyticsConfig {
+    ...
     @Configurable
-    @Default("testKey")
-    private String key;
-
-    public String getKey() {
-        return key;
+    @Default("0")
+    @Placement(group = "Connection")
+    private int connectionTimeout;
     }
-    public void setKey(String key) {
-        this.key = key;
-    }
-}
 ----
 
+////
 XML configuration:
 
 [source,xml, linenums]
@@ -124,6 +97,8 @@ If the `key` attribute is not present it implicitly is assigned the value `test
 ----
 
 image:default-screenshot.png[default-screenshot]
+
+////
 
 [NOTE]
 Whenever an attribute is marked as `@Default`, it's implicitly `@Optional` as well.
@@ -159,14 +134,18 @@ Use this annotation to identify a field or method parameter as a password or, mo
 
 [source,java, linenums]
 ----
-@Connect
-public void connect(@ConnectionKey String username, @Password String password)
-        throws ConnectionException {
-     ...
-}
+    /**
+     * Password used to authenticate against the proxy.
+     */
+    @Configurable
+    @Optional
+    @Password
+    @Placement(group = "Proxy Settings")
+    @FriendlyName(value = "Password")
+    private String proxyPassword;
 ----
 
-image:password-screenshot.png[password-screenshot]
+//image:password-screenshot.png[password-screenshot]
 
 == @Summary Annotation 
 
