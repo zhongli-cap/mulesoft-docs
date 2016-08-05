@@ -14,8 +14,98 @@ MUnit Coverage provides metrics for:
 * *Flow coverage*: Refers to any of the following `Flows`, `Sub-flows`, and `Batch jobs`.
 
 == Calculating Coverage
-// TODO
-// Import how coverage is calulated from PDF
+
+The MUnit Coverage Module unit of measure is the link:/mule-fundamentals/v/3.8/begin-with-the-basics#message-processors[message processor]. +
+MUnit calculates coverage by counting all the message processors that have been executed as result of the MUnit test being run and comparing that number with the amount of message processors that compose the whole application. +
+Although the reports arrange the resulting information by flow and configuration file, the calculations are run against the number of message processors.
+
+As a general rule each XML node inside a top-level XML node is a message processor. That is each node inside a flow, sub-flow, catch, batch. +
+_Top-level elements_ are not message processors.
+
+Given the nature of XML structure this definition might lead to confusion, mostly when it comes to _container elements_ (XML containing child elements). +
+In order to avoid such confusion here is a list of the most common message processors that are containers in Mule and how they are accounted by the MUnit Coverage:
+
+* *Container Elements Considered Message Processors*
+** Enricher
+** Processor chain
+** Choice Router (but not the _when_ or _otherwise_ conditions)
+** Until Successful
+** First Successful
+** Scatter Gather
+** For Each
+** Round Robin
+** Splitter
+* *Container Elements Not Considered Message Processors*
+** Batch Step
+** Catch
+** Catch ref
+** Choice Exception Strategy
+
+=== Considerations For Calculating Coverage
+
+==== Not Drawable Nodes
+
+If you are using older versions of the Mule Runtime, some older message processors might not have a graphical representation in the studio canvas. +
+For example, using a ´processor-chain´ component (deprecated since Mule 3.2), in a link:/mule-user-guide/v/3.8/routers#first-successful[first successful] router displays only two from the three message processors that MUnit considers to calculate coverage:
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image::munit-coverage-report-494f6.png[]
+....
+[tab,title="XML or Standalone Editor"]
+....
+<flow name="tomFlow">
+   <first-successful>
+       <processor-chain name="chain">
+   	    <logger level="INFO"/>
+       </processor-chain>
+   </first-successful>
+</flow>
+....
+------
+
+Comparing the example above, the `processor-chain` message processor is omitted from the Studio canvas. +
+This does not occur if we use a `sub-flow` instead:
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image::munit-coverage-report-e7d85.png[]
+....
+[tab,title="XML or Standalone Editor"]
+....
+<flow name="tomFlow">
+  <first-successful>
+      <sub-flow name="chain">
+        <logger level="INFO"/>
+      </sub-flow>
+  </first-successful>
+</flow>
+....
+------
+
+==== Catch Exception Strategies
+
+Since this release, `Catch Exception Strategies` are being accounted for coverage calculation. +
+A flow with a catch exception strategy that is not executed by the MUnit tests, will not reach 100% percent coverage.
+
+Global Catch Exception Strategies are going to be listed in the reports at the same level as the Flows/Sub-flows. However, Global Catch Exception Strategies that are not referenced, will not be accounted for coverage. +
+That means, if no component refers to the global catch exception strategy coverage will still be 100%.
+
+==== Known Issues
+
+So far we have found only a couple of scenarios where coverage may not be reported properly. +
+Unfortunately those cases cannot be fixed from MUnit. Issues were created in the proper products in order to address them.
+
+In order to make them easy to ID we list the scenarios where coverage might be reported incorrectly:
+
+* First Successful component (with no processor chain in all its paths)
+* Sub-flow containing scatter gather
+
+
 
 == Coverage in Maven
 You can run coverage reports for your Mule application using the MUnit Maven Pluging by following the instructions in link:/munit/v/1.2.1/munit-maven-support#coverage[Munit Maven Plugin section].
