@@ -11,7 +11,7 @@ A REST or SOAP project that uses APIkit has the following parts:
 
 image::apikit-basic-anatomy-f5e73.png[apikit-basic-anatomy-f5e73]
 
-You use the link:/api-manager/designing-your-api#simulating-calls-to-the-api[API Console] or a SOAP testing tool, such as link:https://en.wikipedia.org/wiki/SoapUI[SoapUI], to simulate calls to the API. Currently an APIkit Console equivalent is not available for WSDL-based APIs. 
+You use the link:/api-manager/designing-your-api#simulating-calls-to-the-api[APIkit Console] or a SOAP testing tool, such as link:https://en.wikipedia.org/wiki/SoapUI[SoapUI], to simulate calls to the API. Currently an APIkit Console equivalent is not available for WSDL-based APIs.
 
 == Main Flow
 
@@ -19,21 +19,23 @@ The main flow for a RAML-based API manages these functions:
 
 * Exposes the API using HTTP or Jetty.
 * Routes requests between the interface and the backend flows based on the HTTP request.
-* References exception strategies specially designed to produce HTTP-status-code-friendly responses.
+* References exception strategies that produce HTTP-status-code responses.
 
 image:apikitmainflow.png[apikitmainflow]
 
 APIkit Router tasks include routing messages, serializing responses, and validating payloads, headers, query-params, and uri-params. Message routing consists of routing incoming API requests to existing Mule flows and returning outgoing HTTP response codes to exceptions.
 
-The main flow for a WSDL-based API manages the first two tasks. The logic in the main flow accepts requests, sends responses, and facilitates communication between the interface and API processes. The main flow typically consists of HTTP Listener and SOAP Router components. 
+The main flow for a WSDL-based API manages the first two tasks. The logic in the main flow accepts requests, sends responses, and facilitates communication between the interface and API processes. The main flow typically consists of HTTP Listener and SOAP Router components.
 
-== Backend Flows 
+image::apikit-basic-anatomy-c4249.png[apikit-basic-anatomy-c4249]
 
-APIkit or APIkit for SOAP generates a backend flow for each link:/apikit/apikit-basic-anatomy#interface[resource-action pairing] pairing in a RAML or for each operation in a WSDL. For example, the RAML interface receives the GET request for sales of T-shirts. The backend flow accesses a database to look up sales data and responds to the request.
+== Backend Flows
+
+APIkit generates a backend flow for each link:/apikit/apikit-basic-anatomy#interface[resource-action pairing] pairing in a RAML. APIkit for SOAP generates a backend flow for each operation in a WSDL. For example, the RAML interface receives the GET request for sales of T-shirts. The backend flow accesses a database to look up sales data and responds to the request.
 
 image:backend.png[backend]
 
-The APIkit supports the following flow naming conventions: 
+APIkit and APIkit for SOAP support the following flow naming conventions, respectively:
 
 * RAML: `<action>:<resource path configuration name>`
 +
@@ -43,7 +45,7 @@ Example: post:/sales:application/json:api-config
 +
 Example: OrderTshirt:/TshirtService/TshirtServicePort/api-config
 
-After generating backend flows, you integrate them with functional processes that take the expected input and produce resulting output. Studio infers from the RAML what the metadata will be in the input of a flow and exposes this information through link:/mule-user-guide/v/3.8/datasense[DataSense].
+After generating backend flows, you integrate them with functional processes that take the expected input and produce output. Studio infers from the RAML information about the metadata for the input of a flow and exposes this information through link:/mule-user-guide/v/3.8/datasense[DataSense].
 
 In a REST API, input data might arrive in the following forms:
 
@@ -52,9 +54,7 @@ In a REST API, input data might arrive in the following forms:
 * uri parameters
 * headers
 
-=== Backend Flows and APIkit Console
-
-Backend flows mock responses of the REST API for simulating calls to the API. Using DataWeave with APIkit for SOAP, you can provide XML responses to the SOAP requests. Each RAML-based backend flow has one or more message processors for simulating calls to the API in APIkit Console. The simulation is based on the content of the example responses in RAML.
+Backend flows mock responses of the REST API for simulating calls to the API. Each RAML-based backend flow has one or more message processors for simulating calls to the API in APIkit Console. The simulation is based on the content of the example responses in RAML.
 
 The message processors in each backend flow accept requests and mock the expected action upon a resource. In the `get:/machines:apiConfig` backend flow of the link:/apikit/apikit-tutorial[APIkit tutorial] the message processors set a property on the message and set the payload of a message to display vending machine names listed in the RAML example. The name of each backend flow corresponds to the resource-action pairing. For example, the XML code for the backend flow named `get:/machines:apiConfig` maps to the RAML resource `/machines` and its nested `get:` action.
 
@@ -87,19 +87,25 @@ The message processors in each backend flow accept requests and mock the expecte
             }
 ----
 
+Using link:/apikit/apikit-for-soap#hit-the-endpoint[DataWeave with APIkit for SOAP], you can provide XML responses to the SOAP requests in backend flows.
+
 === Interface
 
-The interface defines the API, designating resources that contain or access data and specify actions, such as GET and PUT, on the example data. This relationship in REST is called _resource-action pairing_. The interface exposes internal data assets requested by the REST service.
+The interface defines the API, designating resources that contain or access data and specify actions, such as GET and PUT, on the example data.
+
+==== REST Interface
+
+This relationship between REST resources and actions is called _resource-action pairing_. The interface exposes internal data assets requested by the REST service.
 
 You can write a RAML interface using the built-in Studio editor or API Designer in link:https://anypoint.mulesoft.com[Anypoint Platform]. Alternatively, when you link:/apikit/apikit-tutorial#creating-a-new-project[create the APIkit project], you can import a RAML from a file system into Studio or reference the URL of an externally located RAML.
 
-=== SOAP Interface
+==== SOAP Interface
 
-The interface defined by a WSDL file exposes a set of link:http://www.w3.org/TR/wsdl#_services[services]. Each service has a set of operations. The underlying type of data is XML defined by schemas within the WSDL file or by an imported XSD file.
+The interface defined by a WSDL file exposes a number of link:http://www.w3.org/TR/wsdl#_services[services]. Each service has a set of operations. The underlying type of data is XML defined by schemas within the WSDL file or by an imported XSD file.
 
-== Error Handling 
+== Error Handling
 
-APIkit facilitates handling errors for RAML- and WSDL-based APIs.
+APIkit and APIkit for SOAP facilitates handling errors for RAML- and WSDL-based APIs, respectively.
 
 === RAML-Based Exception Strategy Mappings
 
@@ -107,17 +113,28 @@ APIkit facilitates RAML-based error handling by generating global exception stra
 
 [cols="10a,60a,30a",options="header"]
 |===
-| Status Code | Exception| Message |
-| 400 | org.mule.module.apikit.exception.BadRequestException | Bad request |
-| 404 | org.mule.module.apikit.exception.NotFoundException | Resource not found |
-| 405 | org.mule.module.apikit.exception.MethodNotAllowedException | Method not allowed |
-| 406 | org.mule.module.apikit.exception.NotAcceptableException | Not acceptable |
-| 415 | org.mule.module.apikit.exception.UnsupportedMediaTypeException | Unsupported media type |
+| Status Code | Exception| Message
+| 400 | org.mule.module.apikit.exception.BadRequestException | Bad request
+| 404 | org.mule.module.apikit.exception.NotFoundException | Resource not found
+| 405 | org.mule.module.apikit.exception.MethodNotAllowedException | Method not allowed
+| 406 | org.mule.module.apikit.exception.NotAcceptableException | Not acceptable
+| 415 | org.mule.module.apikit.exception.UnsupportedMediaTypeException | Unsupported media type
 |===
+
+The following example of the HTTP 400 response shows the construction of the exception strategies:
+
+[source,xml,linenums]
+----
+<apikit:mapping statusCode="400">
+   <apikit:exception value="org.mule.module.apikit.exception.BadRequestException" />
+   <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+   <set-payload value="{ &quot;message&quot;: &quot;Bad request&quot; }" doc:name="Set Payload"/>
+</apikit:mapping>
+----
 
 Every time a message throws an exception, APIkit checks to see if the exception matches the value of any of the `apikit:exceptions` defined in the project. The main flow in an APIkit project references these mappings to send HTTP error responses: an HTTP status code and corresponding plain-language message.
 
-* In the event of a match, APIkit returns an HTTP-status-code-friendly response using the property and payload defined in the exception mapping. For example, if an exception matches the following package name, APIkit returns a `400` error which indicates that the content of the request was bad:
+* In the event of a match, APIkit returns a friendly, HTTP-status-code response using the property and payload defined in the exception mapping. For example, if an exception matches the following package name, APIkit returns a `400` error which indicates that the content of the request was bad:
 +
 `org.mule.module.apikit.exception.BadRequestException`
 +
@@ -134,54 +151,11 @@ You can adjust or add to the default exception strategy mappings, but if you do,
         </apikit:mapping>
 ----
 
-If you remove _all_ exception mappings, errors thrown in the project elicit a `500 Internal Server Error` response. 
-
-APIkit generates several global exception strategy mappings that the main flow references to send error responses in HTTP-status-code format. Defined at a global level of the project in the XML config, this standard set of exception strategy mappings ensure that anytime a backend flow throws an exception, the API responds to the caller with an HTTP-status code and corresponding plain-language message. For example, when a request cannot find a resource, the API responds with a proper error 404 error indicating that the resource cannot be found. You can enhance the provided exception strategies, which are skeletal and intended for use as a template. 
-
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-image::apikit-tutorial-ce60c.png[]
-....
-[tab,title="XML Editor"]
-....
-[source,xml,linenums]
-----
-<apikit:mapping-exception-strategy name="api-apiKitGlobalExceptionMapping">
-        <apikit:mapping statusCode="404">
-            <apikit:exception value="org.mule.module.apikit.exception.NotFoundException" />
-            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }" doc:name="Set Payload"/>
-        </apikit:mapping>
-        <apikit:mapping statusCode="405">
-            <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException" />
-            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Method not allowed&quot; }" doc:name="Set Payload"/>
-        </apikit:mapping>
-        <apikit:mapping statusCode="415">
-            <apikit:exception value="org.mule.module.apikit.exception.UnsupportedMediaTypeException" />
-            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Unsupported media type&quot; }" doc:name="Set Payload"/>
-        </apikit:mapping>
-        <apikit:mapping statusCode="406">
-            <apikit:exception value="org.mule.module.apikit.exception.NotAcceptableException" />
-            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }" doc:name="Set Payload"/>
-        </apikit:mapping>
-        <apikit:mapping statusCode="400">
-            <apikit:exception value="org.mule.module.apikit.exception.BadRequestException" />
-            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Bad request&quot; }" doc:name="Set Payload"/>
-        </apikit:mapping>
-    </apikit:mapping-exception-strategy>
-----
-....
-------
+If you remove _all_ exception mappings, errors thrown in the project elicit a `500 Internal Server Error` response.
 
 == SOAP Faults
 
-APIkit for SOAP maps any faults defined by the WSDL to WSDL operations. For example, the TshirtFault is mapped to OrderTshirt, ListInventory, and TrackOrder, as described in the [APIkit for SOAP tutorial]. You use DataWeave to specify the message presented to the user.
+APIkit for SOAP maps any faults defined by the WSDL to operations defined by the WSDL. For example, the TshirtFault is mapped to OrderTshirt, ListInventory, and TrackOrder, as described in the link:/apikit/apikit-for-soap#using-typed-faults[APIkit for SOAP tutorial]. You use DataWeave to specify the message presented to the user.
 
 == How APIkit Works with RAML
 
