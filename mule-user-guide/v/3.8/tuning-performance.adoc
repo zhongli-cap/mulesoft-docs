@@ -1,6 +1,6 @@
 = Tuning Performance
 
-A Mule application is a collaboration of a set of flows. Conceptually, messages are processed by flows in three stages:
+A Mule ESB application is a collaboration of a set of flows. Conceptually, messages are processed by flows in three stages:
 
 . The message being received by the inbound connector
 . The message being processed
@@ -74,7 +74,7 @@ Concurrent user requests = `maxThreadsActive` + `maxBufferSize`
 
 Where `maxThreadsActive` is the number of threads that run concurrently and `maxBufferSize` is the number of requests that can wait in the queue for threads to be released.
 
-*Note*:  `maxBufferSize` defines the maximum number of requests that are buffered instead of requesting a new thread. At first, a new thread is created to handle each new inbound request until reaching `minThreads`. After that, subsequent requests are buffered until `maxBufferSize` requests are queued. Then new threads are created to handle the buffered requests until `maxThreads` is reached.
+*Note*:  `maxBufferSize` defines the maximum number of requests that are buffered instead of requesting a new thread. New threads create until reaching `minThreads`. After that, a request is buffered until `maxBufferSize` requests are queued. Then new threads create until `maxThreads` is reached.
 
 In other words, if you configure a threading profile with `poolExhaustedAction=WAIT` with a `maxBufferSize` greater than zero, the thread pool does not grow from `minThreads` towards `maxThreads` until the queue completely fills up.
 
@@ -145,35 +145,43 @@ The default threading profile, used by components and by endpoints for dispatchi
 
 *Attributes of <default-threading-profile...>*
 
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
+[cols=",",options="header"]
 |===
-a|
-*Name*
+|Name |Description
 
- a|
-*Type*
-
- a|
-*Required*
-
- a|
-*Default*
-
- a|
-*Description*
-
-|maxThreadsActive |integer |no |  |The maximum number of threads that will be used.
-|maxThreadsIdle |integer |no |  |The maximum number of idle or inactive threads that can be in the pool before they are destroyed.
-|doThreading |boolean |no |true |Whether threading should be used (default is true).
-|threadTTL |integer |no |  |Determines how long an inactive thread is kept in the pool before being discarded.
-|poolExhaustedAction |WAIT/DISCARD/DISCARD_OLDEST/ABORT/RUN |no |  |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks. Possible values are: WAIT (wait until a thread becomes available; don't use this value if the minimum number of threads is zero, in which case a thread may never become available), DISCARD (throw away the current request and return), DISCARD_OLDEST (throw away the oldest request and return), ABORT (throw a RuntimeException), and RUN (the default; the thread making the execute request runs the task itself, which helps guard against lockup).
-|threadWaitTimeout |integer |no |  |How long to wait in milliseconds when the pool exhausted action is WAIT. If the value is negative, it will wait indefinitely.
-|maxBufferSize |integer |no |  |Determines how many requests are queued when the pool is at maximum usage capacity and the pool exhausted action is WAIT. The buffer is used as an overflow.*
+|`maxThreadsActive` |The maximum number of threads that will be used. +
+*Type*: `integer` +
+*Required*: no +
+*Default*: none
+|`maxThreadsIdle` |The maximum number of idle or inactive threads that can be in the pool before they are destroyed. +
+*Type:* `integer` +
+*Required:* no +
+*Default:* none
+|`doThreading` |Whether threading should be used (default is true). +
+*Type:* `boolean` +
+*Required:* no +
+*Default:* true
+|`threadTTL` |Determines how long an inactive thread is kept in the pool before being discarded. +
+*Type*: `integer` +
+*Required*: no +
+*Default*: none
+|`poolExhaustedAction` |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks. Possible values are: WAIT (wait until a thread becomes available; don't use this value if the minimum number of threads is zero, in which case a thread may never become available), DISCARD (throw away the current request and return), DISCARD_OLDEST (throw away the oldest request and return), ABORT (throw a RuntimeException), and RUN (the default; the thread making the execute request runs the task itself, which helps guard against lockup). +
+*Type*: `WAIT`/`DISCARD`/`DISCARD_OLDEST`/`ABORT`/`RUN` +
+*Required*: no +
+*Default*: none 
+|`threadWaitTimeout` |How long to wait in milliseconds when the pool exhausted action is WAIT. If the value is negative, it will wait indefinitely. +
+*Type*: `integer` +
+*Required*: no +
+*Default*: none
+|`maxBufferSize` |Determines how many requests are queued when the pool is at maximum usage capacity and the pool exhausted action is WAIT. The buffer is used as an overflow.* +
+*Type*: `integer` +
+*Required*: no +
+*Default*: none
 |===
 
 *Any BlockingQueue may be used to transfer and hold submitted tasks. The use of this queue interacts with pool sizing:
 
-* If fewer than corePoolSize threads are running, the Executor always prefers adding a new thread rather than queuing. *Note*: `corePoolSize` is an attribute of the underlying implementation.
+* If fewer than corePoolSize threads are running, the Executor always prefers adding a new thread rather than queuing. *Note*: `corePoolSize` is an attribute of the underlying implementation.
 * If corePoolSize or more threads are running, the Executor always prefers queuing a request rather than adding a new thread.
 * If a request cannot be queued, a new thread is created unless this would exceed maximumPoolSize, in which case, the task is rejected.
 
@@ -187,41 +195,49 @@ The default receiving threading profile, which modifies the default-threading-pr
 
 *Attributes of <default-receiver-threading-profile...>*
 
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
+[cols=",,",options="header"]
 |===
-a|
-*Name*
+|Name |Description
 
- a|
-*Type*
-
- a|
-*Required*
-
- a|
-*Default*
-
- a|
-*Description*
-
-|maxThreadsActive |integer |no |  |The maximum number of threads that will be used.
-|maxThreadsIdle |integer |no |  |The maximum number of idle or inactive threads that can be in the pool before they are destroyed.
-|doThreading |boolean |no |true |Whether threading should be used (default is true).
-|threadTTL |integer |no |  |Determines how long an inactive thread is kept in the pool before being discarded.
-|poolExhaustedAction |WAIT/DISCARD/DISCARD_OLDEST/ABORT/RUN |no |  |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks. Possible values are: WAIT (wait until a thread becomes available; don't use this value if the minimum number of threads is zero, in which case a thread may never become available), DISCARD (throw away the current request and return), DISCARD_OLDEST (throw away the oldest request and return), ABORT (throw a RuntimeException), and RUN (the default; the thread making the execute request runs the task itself, which helps guard against lockup).
-|threadWaitTimeout |integer |no |  |How long to wait in milliseconds when the pool exhausted action is WAIT. If the value is negative, it will wait indefinitely.
-|maxBufferSize |integer |no |  |Determines how many requests are queued when the pool is at maximum usage capacity and the pool exhausted action is WAIT. The buffer is used as an overflow.*
+|`maxThreadsActive` |The maximum number of threads that will be used. +
+*Type*: `integer` +
+*Required*: no +
+*Default*: none
+|`maxThreadsIdle` |The maximum number of idle or inactive threads that can be in the pool before they are destroyed. +
+*Type*: `integer` +
+*Required*: no +
+*Default*: none
+|`doThreading` |Whether threading should be used (default is true). +
+*Type:* `boolean` +
+*Required:* no +
+*Default:* true
+|`threadTTL` |Determines how long an inactive thread is kept in the pool before being discarded. +
+*Type*: `integer` +
+*Required*: no +
+*Default*: none
+|`poolExhaustedAction` |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks. Possible values are: WAIT (wait until a thread becomes available; don't use this value if the minimum number of threads is zero, in which case a thread may never become available), DISCARD (throw away the current request and return), DISCARD_OLDEST (throw away the oldest request and return), ABORT (throw a RuntimeException), and RUN (the default; the thread making the execute request runs the task itself, which helps guard against lockup). +
+*Type*: `WAIT`/`DISCARD`/`DISCARD_OLDEST`/`ABORT`/`RUN` +
+*Required*: no +
+*Default*: none 
+|`threadWaitTimeout` |How long to wait in milliseconds when the pool exhausted action is WAIT. If the value is negative, it will wait indefinitely. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`maxBufferSize` |Determines how many requests are queued when the pool is at maximum usage capacity and the pool exhausted action is WAIT. The buffer is used as an overflow.*  +
+*Type*: `integer`  +
+*Required*: no +
+*Default*: none
 |===
 
-*Any BlockingQueue may be used to transfer and hold submitted tasks. The use of this queue interacts with pool sizing: 
+*Any BlockingQueue may be used to transfer and hold submitted tasks. The use of this queue interacts with pool sizing: 
 
-* If fewer than corePoolSize threads are running, the Executor always prefers adding a new thread rather than queuing. *Note*: `corePoolSize` is an attribute of the underlying implementation.
+* If fewer than corePoolSize threads are running, the Executor always prefers adding a new thread rather than queuing. *Note*: `corePoolSize` is an attribute of the underlying implementation.
 * If corePoolSize or more threads are running, the Executor always prefers queuing a request rather than adding a new thread.
 * If a request cannot be queued, a new thread is created unless this would exceed maximumPoolSize, in which case, the task is rejected.
 
-If you configure a threading profile with poolExhaustedAction=WAIT and a maxBufferSize of a positive value, the thread pool does not grow from maxThreadsIdle (corePoolSize) towards maxThreadsActive (maxPoolSize) _unless_ the queue is completely filled up.
+If you configure a threading profile with poolExhaustedAction=WAIT and a maxBufferSize of a positive value, the thread pool does not grow from maxThreadsIdle (corePoolSize) towards maxThreadsActive (maxPoolSize) _unless_ the queue is completely filled up.
 
-See also the previous maxBufferSize note.
+See also the previous maxBufferSize note.
 
 === Default Dispatcher Threading Profile
 
@@ -229,43 +245,52 @@ The default dispatching threading profile, which modifies the default-threading-
 
 *Attributes of <default-dispatcher-threading-profile...>*
 
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
-|===
-a|
-*Name*
-
- a|
-*Type*
-
- a|
-*Required*
-
- a|
-*Default*
-
- a|
-*Description*
-
-|maxThreadsActive |integer |no |  |The maximum number of threads that will be used.
-|maxThreadsIdle |integer |no |  |The maximum number of idle or inactive threads that can be in the pool before they are destroyed.
-|doThreading |boolean |no |true |Whether threading should be used (default is true).
-|threadTTL |integer |no |  |Determines how long an inactive thread is kept in the pool before being discarded.
-|poolExhaustedAction |WAIT/DISCARD/DISCARD_OLDEST/ABORT/RUN |no |  |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks. Possible values are: WAIT (wait until a thread becomes available; don't use this value if the minimum number of threads is zero, in which case a thread may never become available), DISCARD (throw away the current request and return), DISCARD_OLDEST (throw away the oldest request and return), ABORT (throw a RuntimeException), and RUN (the default; the thread making the execute request runs the task itself, which helps guard against lockup).
-|threadWaitTimeout |integer |no |  |How long to wait in milliseconds when the pool exhausted action is WAIT. If the value is negative, it will wait indefinitely.
-|maxBufferSize |integer |no |  |Determines how many requests are queued when the pool is at maximum usage capacity and the pool exhausted action is WAIT. The buffer is used as an overflow.*
+[cols=",",options="header"]
 |===
 
-*Any BlockingQueue may be used to transfer and hold submitted tasks. The use of this queue interacts with pool sizing: 
+|Name |Description
+
+|`maxThreadsActive` |The maximum number of threads that will be used. +
+*Type*: `integer` +
+*Required*: no +
+*Default*: none
+|`maxThreadsIdle` |The maximum number of idle or inactive threads that can be in the pool before they are destroyed. +
+*Type*: `integer` +
+*Required*: no +
+*Default*: none
+|`doThreading` |Whether threading should be used (default is true). +
+*Type:* `boolean` +
+*Required:* no +
+*Default:* true
+|`threadTTL` |Determines how long an inactive thread is kept in the pool before being discarded. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`poolExhaustedAction` |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks. Possible values are: WAIT (wait until a thread becomes available; don't use this value if the minimum number of threads is zero, in which case a thread may never become available), DISCARD (throw away the current request and return), DISCARD_OLDEST (throw away the oldest request and return), ABORT (throw a RuntimeException), and RUN (the default; the thread making the execute request runs the task itself, which helps guard against lockup). +
+*Type*: `WAIT`/`DISCARD`/`DISCARD_OLDEST`/`ABORT`/`RUN` +
+*Required*: no +
+*Default*: none 
+|`threadWaitTimeout` |How long to wait in milliseconds when the pool exhausted action is WAIT. If the value is negative, it will wait indefinitely. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`maxBufferSize` |Determines how many requests are queued when the pool is at maximum usage capacity and the pool exhausted action is WAIT. The buffer is used as an overflow.* +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|===
+
+*Any BlockingQueue may be used to transfer and hold submitted tasks. The use of this queue interacts with pool sizing: 
 
 * If fewer than corePoolSize threads are running, the Executor always prefers adding a new thread rather than queuing. *Note*: `corePoolSize` is an attribute of the underlying implementation.
 * If corePoolSize or more threads are running, the Executor always prefers queuing a request rather than adding a new thread.
 * If a request cannot be queued, a new thread is created unless this would exceed maximumPoolSize, in which case, the task is rejected.
 
-If you configure a threading profile with `poolExhaustedAction=WAIT` and a maxBufferSize of a positive value, the thread pool does not grow from `maxThreadsIdle` (corePoolSize) towards `maxThreadsActive` (`maxPoolSize`) _unless_ the queue is completely filled up. See also the previous maxBufferSize note.
+If you configure a threading profile with `poolExhaustedAction=WAIT` and a maxBufferSize of a positive value, the thread pool does not grow from `maxThreadsIdle` (corePoolSize) towards `maxThreadsActive` (`maxPoolSize`) _unless_ the queue is completely filled up. See also the previous maxBufferSize note.
 
 == Connector Level
 
-The `<receiver-threading-profile>` and `<dispatcher-threading-profile>` elements can be set in the `<connector>`element to configure the threading profiles for that connector. Following are details on each of these elements.
+The `<receiver-threading-profile>` and `<dispatcher-threading-profile>` elements can be set in the `<connector>`element to configure the threading profiles for that connector. Following are details on each of these elements.
 
 === Receiver Threading Profile
 
@@ -273,39 +298,47 @@ The threading profile to use when a connector receives messages.
 
 *Attributes of <receiver-threading-profile...>*
 
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
+[cols=",",options="header"]
 |===
-a|
-*Name*
+|Name |Description
 
- a|
-*Type*
-
- a|
-*Required*
-
- a|
-*Default*
-
- a|
-*Description*
-
-|maxThreadsActive |integer |no |  |The maximum number of threads that will be used.
-|maxThreadsIdle |integer |no |  |The maximum number of idle or inactive threads that can be in the pool before they are destroyed.
-|doThreading |boolean |no |true |Whether threading should be used (default is true).
-|threadTTL |integer |no |  |Determines how long an inactive thread is kept in the pool before being discarded.
-|poolExhaustedAction |WAIT/DISCARD/DISCARD_OLDEST/ABORT/RUN |no |  |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks. Possible values are: WAIT (wait until a thread becomes available; don't use this value if the minimum number of threads is zero, in which case a thread may never become available), DISCARD (throw away the current request and return), DISCARD_OLDEST (throw away the oldest request and return), ABORT (throw a RuntimeException), and RUN (the default; the thread making the execute request runs the task itself, which helps guard against lockup).
-|threadWaitTimeout |integer |no |  |How long to wait in milliseconds when the pool exhausted action is WAIT. If the value is negative, it will wait indefinitely.
-|maxBufferSize |integer |no |  |Determines how many requests are queued when the pool is at maximum usage capacity and the pool exhausted action is WAIT. The buffer is used as an overflow.*
+|`maxThreadsActive` |The maximum number of threads that will be used. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`maxThreadsIdle` |The maximum number of idle or inactive threads that can be in the pool before they are destroyed. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`doThreading` |Whether threading should be used (default is true). +
+*Type:* `boolean` +
+*Required:* no +
+*Default:* true
+|`threadTTL` |Determines how long an inactive thread is kept in the pool before being discarded. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`poolExhaustedAction` |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks. Possible values are: WAIT (wait until a thread becomes available; don't use this value if the minimum number of threads is zero, in which case a thread may never become available), DISCARD (throw away the current request and return), DISCARD_OLDEST (throw away the oldest request and return), ABORT (throw a RuntimeException), and RUN (the default; the thread making the execute request runs the task itself, which helps guard against lockup). +
+*Type*: `WAIT`/`DISCARD`/`DISCARD_OLDEST`/`ABORT`/`RUN` +
+*Required*: no +
+*Default*: none 
+|`threadWaitTimeout` |How long to wait in milliseconds when the pool exhausted action is WAIT. If the value is negative, it will wait indefinitely. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`maxBufferSize` |Determines how many requests are queued when the pool is at maximum usage capacity and the pool exhausted action is WAIT. The buffer is used as an overflow.* +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
 |===
 
-*Any BlockingQueue may be used to transfer and hold submitted tasks. The use of this queue interacts with pool sizing: 
+*Any BlockingQueue may be used to transfer and hold submitted tasks. The use of this queue interacts with pool sizing: 
 
-* If fewer than corePoolSize threads are running, the Executor always prefers adding a new thread rather than queuing. *Note*: `corePoolSize` is an attribute of the underlying implementation.
+* If fewer than corePoolSize threads are running, the Executor always prefers adding a new thread rather than queuing. *Note*: `corePoolSize` is an attribute of the underlying implementation.
 * If corePoolSize or more threads are running, the Executor always prefers queuing a request rather than adding a new thread.
 * If a request cannot be queued, a new thread is created unless this would exceed maximumPoolSize, in which case, the task is rejected.
 
-If you configure a threading profile with poolExhaustedAction=WAIT and a maxBufferSize of a positive value, the thread pool does not grow from maxThreadsIdle (corePoolSize) towards maxThreadsActive (maxPoolSize) _unless_ the queue is completely filled up. See also the previous maxBufferSize note.
+If you configure a threading profile with poolExhaustedAction=WAIT and a maxBufferSize of a positive value, the thread pool does not grow from maxThreadsIdle (corePoolSize) towards maxThreadsActive (maxPoolSize) _unless_ the queue is completely filled up. See also the previous maxBufferSize note.
 
 === Dispatcher Threading Profile
 
@@ -313,50 +346,58 @@ The threading profile to use when a connector dispatches messages.
 
 *Attributes of <dispatcher-threading-profile...>*
 
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
+[cols=",", options="header"]
 |===
-a|
-*Name*
+|Name |Description
 
- a|
-*Type*
-
- a|
-*Required*
-
- a|
-*Default*
-
- a|
-*Description*
-
-|maxThreadsActive |integer |no |  |The maximum number of threads that will be used.
-|maxThreadsIdle |integer |no |  |The maximum number of idle or inactive threads that can be in the pool before they are destroyed.
-|doThreading |boolean |no |true |Whether threading should be used (default is true).
-|threadTTL |integer |no |  |Determines how long an inactive thread is kept in the pool before being discarded.
-|poolExhaustedAction |WAIT/DISCARD/DISCARD_OLDEST/ABORT/RUN |no |  |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks. Possible values are: WAIT (wait until a thread becomes available; don't use this value if the minimum number of threads is zero, in which case a thread may never become available), DISCARD (throw away the current request and return), DISCARD_OLDEST (throw away the oldest request and return), ABORT (throw a RuntimeException), and RUN (the default; the thread making the execute request runs the task itself, which helps guard against lockup).
-|threadWaitTimeout |integer |no |  |How long to wait in milliseconds when the pool exhausted action is WAIT. If the value is negative, it will wait indefinitely.
-|maxBufferSize |integer |no |  |Determines how many requests are queued when the pool is at maximum usage capacity and the pool exhausted action is WAIT. The buffer is used as an overflow.*
+|`maxThreadsActive` |The maximum number of threads that will be used. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`maxThreadsIdle` |The maximum number of idle or inactive threads that can be in the pool before they are destroyed. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`doThreading` |Whether threading should be used (default is true). +
+*Type:* `boolean` +
+*Required:* no +
+*Default:* true
+|`threadTTL` |Determines how long an inactive thread is kept in the pool before being discarded. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`poolExhaustedAction` |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks. Possible values are: WAIT (wait until a thread becomes available; don't use this value if the minimum number of threads is zero, in which case a thread may never become available), DISCARD (throw away the current request and return), DISCARD_OLDEST (throw away the oldest request and return), ABORT (throw a RuntimeException), and RUN (the default; the thread making the execute request runs the task itself, which helps guard against lockup). +
+*Type*: `WAIT`/`DISCARD`/`DISCARD_OLDEST`/`ABORT`/`RUN` +
+*Required*: no +
+*Default*: none
+|`threadWaitTimeout` |How long to wait in milliseconds when the pool exhausted action is WAIT. If the value is negative, it will wait indefinitely. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`maxBufferSize` |Determines how many requests are queued when the pool is at maximum usage capacity and the pool exhausted action is WAIT. The buffer is used as an overflow.* +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
 |===
 
-*Any BlockingQueue may be used to transfer and hold submitted tasks. The use of this queue interacts with pool sizing: 
+*Any BlockingQueue may be used to transfer and hold submitted tasks. The use of this queue interacts with pool sizing: 
 
-* If fewer than corePoolSize threads are running, the Executor always prefers adding a new thread rather than queuing. *Note*: `corePoolSize` is an attribute of the underlying implementation.
+* If fewer than corePoolSize threads are running, the Executor always prefers adding a new thread rather than queuing. *Note*: `corePoolSize` is an attribute of the underlying implementation.
 * If corePoolSize or more threads are running, the Executor always prefers queuing a request rather than adding a new thread.
 * If a request cannot be queued, a new thread is created unless this would exceed maximumPoolSize, in which case, the task is rejected.
 
-If you configure a threading profile with poolExhaustedAction=WAIT and a maxBufferSize of a positive value, the thread pool does not grow from maxThreadsIdle (corePoolSize) towards maxThreadsActive (maxPoolSize) _unless_ the queue is completely filled up. See also the previous maxBufferSize note.
+If you configure a threading profile with poolExhaustedAction=WAIT and a maxBufferSize of a positive value, the thread pool does not grow from maxThreadsIdle (corePoolSize) towards maxThreadsActive (maxPoolSize) _unless_ the queue is completely filled up. See also the previous maxBufferSize note.
 
 == Flow Level
 
-The threading profile for a flow can be on any of the asynchronous processing strategies, for example `<queued-asynchronous-processing-strategy>`. In particular, you can set the attributes:
+The threading profile for a flow can be on any of the asynchronous processing strategies, for example `<queued-asynchronous-processing-strategy>`. In particular, you can set the attributes:
 
-* `maxThreads` – The maximum number of threads that will be used when under load. (Same as `maxThreadsActive`)
-* `minThreads` – The number of idle threads that will kept in the pool when there is no load. (Same as `maxThreadsIdle`)
-* `threadTTL` – Determines how long an inactive thread is kept in the pool before being discarded.
-* `poolExhaustedAction` – The action to take when no threads are available.
-* `threadWaitTimeout` – How long to wait for a thread to become available.
-* `maxBufferSize` – how many requests are queued when no threads are available.
+* `maxThreads` – The maximum number of threads that will be used when under load. (Same as `maxThreadsActive`)
+* `minThreads` – The number of idle threads that will kept in the pool when there is no load. (Same as `maxThreadsIdle`)
+* `threadTTL` – Determines how long an inactive thread is kept in the pool before being discarded.
+* `poolExhaustedAction` – The action to take when no threads are available.
+* `threadWaitTimeout` – How long to wait for a thread to become available.
+* `maxBufferSize` – how many requests are queued when no threads are available.
 
 == Queued Asynchronous Processing Strategy
 
@@ -364,41 +405,55 @@ Decouples the recieving of a new message from it's processing using a queue. The
 
 *Attributes of <queued-asynchronous-processing-strategy...>*
 
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
+[cols=",",options="header"]
 |===
-a|
-*Name*
+|Name |Description
 
- a|
-*Type*
-
- a|
-*Required*
-
- a|
-*Default*
-
- a|
-*Description*
-
-|name |name |no |  |The name used to identify the processing strategy.
-|maxThreads |integer |no |  |The maximum number of threads that will be used when under load.
-|minThreads |integer |no |  |The number of idle threads that will kept in the pool when there is no load.
-|threadTTL |integer |no |  |Determines how long an inactive thread is kept in the pool before being discarded.
-|poolExhaustedAction |WAIT/DISCARD/DISCARD_OLDEST/ABORT/RUN |no |  |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks. Possible values are: WAIT (wait until a thread becomes available; don't use this value if the minimum number of threads is zero, in which case a thread may never become available), DISCARD (throw away the current request and return), DISCARD_OLDEST (throw away the oldest request and return), ABORT (throw a RuntimeException), and RUN (the default; the thread making the execute request runs the task itself, which helps guard against lockup).
-|threadWaitTimeout |integer |no |  |How long to wait in milliseconds when the pool exhausted action is WAIT. If the value is negative, it will wait indefinitely.
-|maxBufferSize |integer |no |  |Determines how many requests are queued when the pool is at maximum usage capacity and the pool exhausted action is WAIT. The buffer is used as an overflow.*
-|queueTimeout |integer |no |  |The timeout used when taking messages from the service queue.
-|maxQueueSize |integer |no |  |Defines the maximum number of messages that can be queued.
+|`name` |The name used to identify the processing strategy. +
+*Type*: `name` +
+*Required*: no  +
+*Default*: none
+|`maxThreads` |The maximum number of threads that will be used when under load. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`minThreads` |The number of idle threads that will kept in the pool when there is no load. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`threadTTL` |Determines how long an inactive thread is kept in the pool before being discarded. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`poolExhaustedAction` |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks. Possible values are: WAIT (wait until a thread becomes available; don't use this value if the minimum number of threads is zero, in which case a thread may never become available), DISCARD (throw away the current request and return), DISCARD_OLDEST (throw away the oldest request and return), ABORT (throw a RuntimeException), and RUN (the default; the thread making the execute request runs the task itself, which helps guard against lockup). +
+*Type*: `WAIT`/`DISCARD`/`DISCARD_OLDEST`/`ABORT`/`RUN` +
+*Required*: no +
+*Default*: none
+|`threadWaitTimeout` |How long to wait in milliseconds when the pool exhausted action is WAIT. If the value is negative, it will wait indefinitely. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`maxBufferSize` |Determines how many requests are queued when the pool is at maximum usage capacity and the pool exhausted action is WAIT. The buffer is used as an overflow.* +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`queueTimeout` |The timeout used when taking messages from the service queue. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
+|`maxQueueSize` |Defines the maximum number of messages that can be queued. +
+*Type*: `integer` +
+*Required*: no  +
+*Default*: none
 |===
 
-*Any BlockingQueue may be used to transfer and hold submitted tasks. The use of this queue interacts with pool sizing: 
+*Any BlockingQueue may be used to transfer and hold submitted tasks. The use of this queue interacts with pool sizing: 
 
-* If fewer than corePoolSize threads are running, the Executor always prefers adding a new thread rather than queuing. *Note*: `corePoolSize` is an attribute of the underlying implementation.
+* If fewer than corePoolSize threads are running, the Executor always prefers adding a new thread rather than queuing. *Note*: `corePoolSize` is an attribute of the underlying implementation.
 * If corePoolSize or more threads are running, the Executor always prefers queuing a request rather than adding a new thread.
 * If a request cannot be queued, a new thread is created unless this would exceed maximumPoolSize, in which case, the task is rejected.
 
-If you configure a threading profile with poolExhaustedAction=WAIT and a maxBufferSize of a positive value, the thread pool does not grow from maxThreadsIdle (corePoolSize) towards maxThreadsActive (maxPoolSize) _unless_ the queue is completely filled up. See also the previous maxBufferSize note.
+If you configure a threading profile with poolExhaustedAction=WAIT and a maxBufferSize of a positive value, the thread pool does not grow from maxThreadsIdle (corePoolSize) towards maxThreadsActive (maxPoolSize) _unless_ the queue is completely filled up. See also the previous maxBufferSize note.
 
 *Child Elements of <queued-asynchronous-processing-strategy...>*
 
@@ -413,56 +468,52 @@ a|
  a|
 *Description*
 
-|annotations |0..1 | 
+|annotations |0..1 | 
 |abstract-queue-store |0..1 |The queue store that stortes the queue's elements. If not specified, this is the default-in-memory-queue-store. A placeholder for queue store elements.
 |===
 
 == Pooling Profile Configuration Reference
 
-Each pooled component has its own pooling profile. You configure the pooling profile using the `<pooling-profile>` element on the`<pooled-component>` element.
+Each pooled component has its own pooling profile. You configure the pooling profile using the `<pooling-profile>` element on the`<pooled-component>` element.
 
 === Pooling profile
 
 *Attributes of <pooling-profile...>*
 
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
+[cols=",",options="header"]
 |===
-a|
-*Name*
-
- a|
-*Type*
-
- a|
-Required
-
- a|
-Default
-
- a|
-Description
-
-|maxActive |string |no |  |Controls the maximum number of Mule components that can be borrowed from a session at one time. When set to a negative value, there is no limit to the number of components that may be active at one time. When maxActive is exceeded, the pool is said to be exhausted.
-|maxIdle |string |no |  |Controls the maximum number of Mule components that can sit idle in the pool at any time. When set to a negative value, there is no limit to the number of Mule components that may be idle at one time.
-|initialisationPolicy a|
-INITIALISE_NONE/
-
-INITIALISE_ONE/
-
-INITIALISE_ALL
-
- |no |INITIALISE_ONE |Determines how components in a pool should be initialized. The possible values are: INITIALISE_NONE (will not load any components into the pool on startup), INITIALISE_ONE (will load one initial component into the pool on startup), or INITIALISE_ALL (will load all components in the pool on startup)
-|exhaustedAction a|
-WHEN_EXHAUSTED_GROW/
-
-WHEN_EXHAUSTED_WAIT/
-
-WHEN_EXHAUSTED_FAIL
-
- |no |WHEN_EXHAUSTED_GROW |Specifies the behavior of the Mule component pool when the pool is exhausted. Possible values are: "WHEN_EXHAUSTED_FAIL", which will throw a NoSuchElementException, "WHEN_EXHAUSTED_WAIT", which will block by invoking Object.wait(long) until a new or idle object is available, or WHEN_EXHAUSTED_GROW, which will create a new Mule instance and return it, essentially making maxActive meaningless. If a positive maxWait value is supplied, it will block for at most that many milliseconds, after which a NoSuchElementException will be thrown. If maxThreadWait is a negative value, it will block indefinitely.
-|maxWait |string |no |  |Specifies the number of milliseconds to wait for a pooled component to become available when the pool is exhausted and the exhaustedAction is set to WHEN_EXHAUSTED_WAIT.
-|evictionCheckIntervalMillis |string |no |  |Specifies the number of milliseconds between runs of the object evictor. When non-positive, no object evictor is executed..
-|minEvictionMillis |string |no |  |Determines the minimum amount of time an object may sit idle in the pool before it is eligible for eviction. When non-positive, no objects will be evicted from the pool due to idle time alone.
+|Name |Description
+|`maxActive` |Controls the maximum number of Mule components that can be borrowed from a session at one time. When set to a negative value, there is no limit to the number of components that may be active at one time. When maxActive is exceeded, the pool is said to be exhausted. +
+*Type*: `string` +
+*Required*: no  +
+*Default*: none
+|`maxIdle` |Controls the maximum number of Mule components that can sit idle in the pool at any time. When set to a negative value, there is no limit to the number of Mule components that may be idle at one time. +
+*Type*: `string` +
+*Required*: no  +
+*Default*: none
+|`initialisationPolicy` |Determines how components in a pool should be initialized. The possible values are: INITIALISE_NONE (will not load any components into the pool on startup), INITIALISE_ONE (will load one initial component into the pool on startup), or INITIALISE_ALL (will load all components in the pool on startup) +
+*Type*: `INITIALISE_NONE`/
+`INITIALISE_ONE`/
+`INITIALISE_ALL` +
+*Required*: no  +
+*Default*: `INITIALISE_ONE`
+|`exhaustedAction` |Specifies the behavior of the Mule component pool when the pool is exhausted. Possible values are: "WHEN_EXHAUSTED_FAIL", which will throw a NoSuchElementException, "WHEN_EXHAUSTED_WAIT", which will block by invoking Object.wait(long) until a new or idle object is available, or WHEN_EXHAUSTED_GROW, which will create a new Mule instance and return it, essentially making maxActive meaningless. If a positive maxWait value is supplied, it will block for at most that many milliseconds, after which a NoSuchElementException will be thrown. If maxThreadWait is a negative value, it will block indefinitely. +
+*Type*: `WHEN_EXHAUSTED_GROW`/
+`WHEN_EXHAUSTED_WAIT`/ `WHEN_EXHAUSTED_FAIL` +
+*Required*: no +
+*Default*: `WHEN_EXHAUSTED_GROW`
+|`maxWait` |Specifies the number of milliseconds to wait for a pooled component to become available when the pool is exhausted and the exhaustedAction is set to WHEN_EXHAUSTED_WAIT. +
+*Type*: `string` +
+*Required*: no  +
+*Default*: none
+|`evictionCheckIntervalMillis` |Specifies the number of milliseconds between runs of the object evictor. When non-positive, no object evictor is executed. +
+*Type*: `string` +
+*Required*: no  +
+*Default*: none
+|`minEvictionMillis` |Determines the minimum amount of time an object may sit idle in the pool before it is eligible for eviction. When non-positive, no objects will be evicted from the pool due to idle time alone. +
+*Type*: `string` +
+*Required*: no  +
+*Default*: none
 |===
 
 === Child Elements of <pooling-profile...>
