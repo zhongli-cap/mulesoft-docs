@@ -38,9 +38,11 @@ buildscript {
   //}
 }
 
+defaultTasks 'build'
 group = 'com.mulesoft.documentation'
 
 ext {
+  dryRun = project.hasProperty('dryRun')
   assetsDir = '_assets'
   assetsRepoBranchName = 'staging'
   assetsRepoCommit = "origin/$assetsRepoBranchName"
@@ -65,7 +67,7 @@ task cloneAssetsRepo(type: GitCloneTask) {
   onlyIf { !dir.exists() }
   uri = assetsRepoUri
   treeish = assetsRepoCommit
-  trySshAgent = false
+  //trySshAgent = false
   doLast {
     // checkout staging branch properly
     // TODO should be fixed upstream (https://github.com/palominolabs/gradle-git-clone-task)
@@ -85,11 +87,12 @@ task clean(type: Delete, group: 'Build', description: 'Deletes assets and site d
 
 // TODO site builder should accept a custom templates directory
 task copyTemplates(type: Copy) {
-  if (profile == 'dev') {
-    dependsOn setup
+  // FIXME define variable useTemplatesFromAssets
+  if (profile == 'prod') {
+    enabled = false
   }
   else {
-    enabled = false
+    dependsOn setup
   }
   from "$assetsDir/$templatesDir"
   into templatesDir
@@ -105,7 +108,8 @@ task buildHtml(type: JavaExec, group: 'Build', description: 'Builds HTML pages.'
   jvmArgs = builderJvmArgs
   //outputs.dir siteDir
   doLast {
-    if (profile == 'dev') {
+    // FIXME define variable useTemplatesFromAssets
+    if (profile != 'prod') {
       // NOTE undo changes to templates
       new Git(new RepositoryBuilder().readEnvironment().findGitDir(file('.')).build())
         .checkout().addPath(templatesDir).call()
@@ -130,6 +134,13 @@ task copyAssets(type: Copy) {
   }
   into siteDir
   //outputs.dir siteDir
+
+  // preserve last modified times (futile since git clone doesn't preserve last modification times)
+  //def fileCopyDetails = []
+  //eachFile { fileCopyDetails << it }
+  //doLast {
+  //  fileCopyDetails.each { new File(destinationDir, it.path).setLastModified(it.lastModified) }
+  //}
 }
 
 css {
