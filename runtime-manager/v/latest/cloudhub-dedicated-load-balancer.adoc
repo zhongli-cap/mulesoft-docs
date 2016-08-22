@@ -168,40 +168,63 @@ You can also perform a `GET` request to your endpoint /organizations/{orgid}}/lo
 It is possible to whitelist a list of IP addresses from your load balancers by simply passing it a CIDR block of IPs to whitelist. +
 The whitelist works at the load balancer level, not at the CN certificate level. Make sure you only pass IP addresses.
 
-
 === Managing Certificates
 
 The Cloudhub Load Balancer provides a 2-way SSL client authentication.
 It allows you to provide a `.pem` file certificate to your load balancer´s SSL endpoint to validate client requests.
 
-==== Certificate Validation
+==== Uploading Certificates
+
+The certificate that you upload to your Load Balancer must be contained in one _pem_ encoded and unencrypted file.
+This file must contain the entire certificate chain ordered one after the other, similar to the example section below:
+
+[cols="30a,70a",options="header"]
+|===
+| Certificate | Example
+| The Primary Certificate | -----BEGIN CERTIFICATE----- +
+(Your Primary SSL certificate: your_domain_name.crt) +
+-----END CERTIFICATE-----
+| The Intermediate Certificate | -----BEGIN CERTIFICATE----- +
+(Your Intermediate certificate: DigiCertCA.crt) +
+-----END CERTIFICATE-----
+|===
+
+
+[NOTE]
+--
+It is not necessary to include the root certificate in the certificate chain. However, make sure to include the beginning and end tags on each certificate.
+--
+
+You can upload an SSL-Endpoint to your load balancer when creating one using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-create[cloudhub load-balancer create] or upload a new SSL endpoint to an existing load balancer using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-ssl-endpoint-add[cloudhub load-balancer ssl-endpoint add] command.
+
+===== Certificate Validation
 
 The load balancer passes the certificate data to the API using the http headers below:
 
-===== X-SSL-Client-Verify
+====== X-SSL-Client-Verify
 
 This header returns either `SUCCESS`, `FAILED`, or `NONE`
 Only after `SUCCESS`, the client is verified. +
 It returns `NONE` when the certificate is not present and `FAILED` when other validation problems occur.
 
-===== X-SSL-Client-DN
+====== X-SSL-Client-DN
 
 Contains the full Distinguished Name of the client certificate.
 
-===== X-SSL-Issuer
+====== X-SSL-Issuer
 
 Contains the full Distinguished Name of the issuing certificate.
 
-===== X-SSL-Client-Serial
+====== X-SSL-Client-Serial
 
 Contains the serial number used by the CA to identify the client.
 
-==== Adding Revocation Lists
+===== Adding Revocation Lists
 
 CloudHub Load balancer does not support OCSP, so you need to manage your revocations using CRL. You can add a `crlCert` field under the `certificates` field in your JSON when creating the load balancer and specify your revocations there. +
-It is recommended to use the CloudHub REST API to programatically update your revokation lists.
+It is recommended to use the CloudHub REST API to programmatically update your revocation lists.
 
-==== Certificate Ciphers
+===== Certificate Ciphers
 
 A list of recommended ciphers suites with a good balance between compatibility and security for your SSL endpoint are below: +
 They all offer forward secrecy, except RC4-SHA which is there to support Internet Explorer 8.
