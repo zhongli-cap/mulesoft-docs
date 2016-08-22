@@ -26,22 +26,16 @@ buildscript {
     classpath 'org.ajoberstar:gradle-git:1.5.1-rc.3'
 
     builder 'com.mulesoft.documentation.builder:mule-docs-builder:1.0.0-M1'
-    //builder('com.mulesoft.documentation.builder:mule-docs-builder:1.0.0-SNAPSHOT') {
-    //  exclude group: 'org.asciidoctor', module: 'asciidoctorj-pdf'
-    //  exclude group: 'com.beust', module: 'jcommander'
-    //  exclude group: 'org.jruby', module: 'jruby'
-    //}
-    //builder 'org.jruby:jruby:9.0.5.0'
-
-    // NOTE jar for single-page builder is not available on s3, so much be built and installed locally
     singlePageBuilder 'com.mulesoft.documentation.builder:mule-docs-single-page-builder:1.0.0-M1'
-    //singlePageBuilder('com.mulesoft.documentation.builder.previewer:mule-docs-single-page-builder:1.0.0-SNAPSHOT') {
-    //  exclude group: 'org.asciidoctor', module: 'asciidoctorj-pdf'
-    //  exclude group: 'com.beust', module: 'jcommander'
-    //  exclude group: 'org.jruby', module: 'jruby'
-    //}
-    //singlePageBuilder 'org.jruby:jruby:9.0.5.0'
   }
+
+  // enable upon upgrading to 1.0.0-RC1 (the non-shaded jar)
+  //configurations.all {
+  //  resolutionStrategy {
+  //    // NOTE override JRuby version pulled in by AsciidoctorJ to work around hang in CodeRay
+  //    force 'org.jruby:jruby:9.0.5.0'
+  //  }
+  //}
 }
 
 group = 'com.mulesoft.documentation'
@@ -49,14 +43,17 @@ group = 'com.mulesoft.documentation'
 ext {
   assetsDir = '_assets'
   assetsRepoBranchName = 'staging'
+  assetsRepoCommit = "origin/$assetsRepoBranchName"
   assetsRepoUri = 'https://github.com/mulesoft/mulesoft-docs-site-assets'
-  builderMaxHeapSize = '2g'
+  builderMaxHeapSize = '2500m'
+  builderJvmArgs = ['-Xverify:none', '-XX:+OptimizeStringConcat', '-XX:+UseFastAccessorMethods', '-Djava.net.preferIPv4Stack=true', '-Djava.awt.headless=true']
   docsRepoBranchName = 'master'
   docsRepoUri = 'https://github.com/mulesoft/mulesoft-docs'
   profile = project.hasProperty('profile') ? project.property('profile') : 'dev'
   profileBuildScript = "gradle/$profile-profile.gradle"
   siteDir = '_site'
   siteUri = 'http://localhost:8000'
+  tempDir = '_tmp'
   templatesDir = '_templates'
 }
 
@@ -67,7 +64,7 @@ task cloneAssetsRepo(type: GitCloneTask) {
   dir = file(assetsDir)
   onlyIf { !dir.exists() }
   uri = assetsRepoUri
-  treeish = 'origin/' + assetsRepoBranchName
+  treeish = assetsRepoCommit
   trySshAgent = false
   doLast {
     // checkout staging branch properly
@@ -83,7 +80,7 @@ task setup(group: 'Build', description: 'Prepares the build.') {
 }
 
 task clean(type: Delete, group: 'Build', description: 'Deletes assets and site directories.') {
-  delete assetsDir, siteDir
+  delete assetsDir, siteDir, tempDir
 }
 
 // TODO site builder should accept a custom templates directory
@@ -105,6 +102,7 @@ task buildHtml(type: JavaExec, group: 'Build', description: 'Builds HTML pages.'
   main = 'com.mulesoft.documentation.builder.Client'
   args = ['-s', '.', '-d', siteDir, '-ghr', docsRepoUri, '-ghb', docsRepoBranchName, '-url', siteUri]
   maxHeapSize = builderMaxHeapSize
+  jvmArgs = builderJvmArgs
   //outputs.dir siteDir
   doLast {
     if (profile == 'dev') {
@@ -119,7 +117,7 @@ task buildHtml(type: JavaExec, group: 'Build', description: 'Builds HTML pages.'
 task buildHtmlSingle(type: JavaExec, group: 'Build', description: 'Builds a single HTML page.') {
   classpath = buildscript.configurations.singlePageBuilder
   main = 'com.mulesoft.documentation.builder.previewer.Client'
-  args = ['-s', file(project.hasProperty('file') ? project.property('file') : 'index.adoc').absolutePath, '-d', '_tmp']
+  args = ['-s', file(project.hasProperty('file') ? project.property('file') : 'index.adoc').absolutePath, '-d', tempDir]
 }
 
 task copyAssets(type: Copy) {
