@@ -15,7 +15,7 @@ By using this service to proxy your CloudHub-deployed apps, you can:
 
 [NOTE]
 --
-This is an optional addition to your cloud infrastructure that is not included by default in all CloudHub plans. To enable it, you must first own a link:/runtime-manager/virtual-private-cloud[Virtual Private Cloud].
+This is an optional addition to your cloud infrastructure that is not included by default in all CloudHub plans. To enable it, you must first own a link:/runtime-manager/virtual-private-cloud[Virtual Private Cloud]. +
 This service is designed to have one load balancer per VPC  and although each VPC supports only one domain, you can have multiple environments in the same network, meaning that you can use the same load balancer for your different environments.
 --
 
@@ -48,95 +48,115 @@ In the link above, search among other Mule APIs for the "CloudHub" API and enter
 === Mapping
 
 The load balancer configuration is defined by a list of <<Mapping Rules, mapping rules>> which describe how input URL should be translated into calls to different CloudHub apps.
-When creating a simple matching rule, one input address is literally matched to the defined output: the endpoint of one of your applications.
-Instead of using literal matchings you can also use a *Pattern* to match a variable-like input text to an endpoint. See the <<Pattern Matching, pattern matching>> section.
+
+When creating a simple matching rule, one input address is literally matched to the defined output: the endpoint of one of your applications. +
+Instead of using literal matchings you can also use a *Pattern* to match a variable-like input text to an endpoint.
 
 By using proxy rules, you can map a domain or subdomain to one of your Mule applications that run in CloudHub
 
-=== Pattern Matching
+==== Pattern
 
-A pattern is a string that defines a template for matching an input text. Whatever is placed into curly brackets (`{   }`) is treated as a variable.
+A pattern is a string that defines a template for matching an input text. Whatever is placed into curly brackets (`{   }`) is treated like a variable.
 These variables can contain only letters (a-z) and cannot contain any other characters, such as digits, slashes, etc. The variable values can contain the following characters ‘a-z0-1.&?-_’ but no slashes.
 
-==== Examples
-
-===== Defining a simple rule
+For example, you can literally bind two host names for redirect:
 
 [source,Example,linenums]
 ----
 ‘app.example.com’ -> ‘app/example’
 ----
 
-The example above literally binds these two addresses for redirect.
-
-===== Defining a rule that includes a pattern
+Or you can define a pattern to hold the input value:
 
 [source,Example,linenums]
 ----
-‘{mypattern}.example.com’ -> `app/{mypattern}`
+‘example.com/{mypattern}’ -> `app/{mypattern}`
 ----
 
-The example above causes that both ‘bookings.example.com’ and ‘sales.example.com’ match to `app/bookings` and `app/sales` respectively, as the variable `mypattern` holds this value. For input=”bookings.example.com”, the pattern can be resolved by assigning `_mypattern_=”bookings” and for input=`sales.example.com`, the pattern is resolved asignining `_mypattern_=”sales”
+The example above causes that both ’example.com/bookings’ and ‘example.com/sales’ match to `app/bookings` and `app/sales` respectively, as the variable `mypattern` holds these values. +
+For input=”bookings.example.com”, the pattern can be resolved by assigning `_mypattern_=”bookings” and for input=`sales.example.com`, the pattern is resolved asignining `_mypattern_=”sales”
 
 Depending on your design, you can choose to leverage your internal redirects to your endpoints using patterns or simply literal mappings.
 
-=== Mapping Rules
+== Mapping Rules
 
-A mapping rule is a set of fields (described below) which defines an <<Input URL>> pattern and a set of fields which describes the <<Output URL>> in terms of patterns described above.
+A mapping rule is a set of fields that define an *Input URL*, and a set of fields that describe the *Output URL*.
 
-The rule which is defined first has high priority against other ones defined after it. This means that the first matched rule will be applied. +
-You can create, view and delete existing rules.
-
-
-==== Rule Examples
-
-The table below contains some rule examples:
-
-[cols="10a,20a,20a,20a,10a",options="header"]
-|===
-|Rule # 2+^|Input URL 2+^| Output URL
-|   |  *Domain*    |        *URI*        |       *appName*       |   *appURI*
-| 1 | services.com | {appname}/{region}/ | {appname}             | {region}
-| 2 | mcd.com      |                     | internal-router-proxy |
-| 3 | mcd.com      |                     | {app}-mcd             |
-| 4 | mule.com     | /{group}/{version}/ | {group}               | /{version}/
-| 5 | example.com  | /{app}/             | {app}                 | /
-| 6 | example.com  |                     | default-app           |
-|===
-
-===== Input URL
-
-The _input URL_ is described as the following parameters, which can be specified by the user:
-
-. *Domain* - The load balancer’s domain (This value should remain constant for the same load balancer)
+* The _input URL_ is described using a URI parameter which can be specified by the user:
 . *URI* - a String or Pattern that describes the Input URI.
-
-
-[source,Example,linenums]
-----
-domain=example.com
-URI=/v1/
-----
-
-The input ’echo.example.com/v1/api’ matches with the fields above, in which case the variable app=echo. The input ’echo.example.com/v2/api’ cannot be matched with the pattern above, as ‘v2’ is not in the pattern.
-
-===== Output URL
-
-The _Output URL_ is specified by the following fields. +
-The user can use variable patterns from Input URL.
-
++
+[NOTE]
+--
+The input URL follows the main load balancer’s domain (This value should remain constant for the same load balancer)
+--
++
+* The _Output URL_ is specified by two fields.
 . *appName* - Output CloudHub application name where the request will be forwarded to.
 . *appURI* - the URI string that is passed to the resolved application.
 
-[source,Example,linenums]
-----
-appName={app}
-URI=/hello
-----
+Both input and output URLs can be defined using patterns or literal Strings.
 
-==== Redirect URL
+Mapping rules are attributes of the load balancer's SSL endpoint, which is identified by the certificate name. +
+When you create a mapping rule, you need to specify a certificate CN. Omitting the `[certificateName]` parameter adds the mappings to the default endpoint.
 
-Sets the URI text portion that should be added in the “Location” and “Refresh” header fields of a proxied server response. Suppose a proxied server of your application returned the header field “Location: http://example.com/two/some/uri/”. The directive redirectURI=”/hello”, will change the location header to: “Location: https://example.com/hello/two/some/uri/”
+If your SSL endpoint sets a link:https://en.wikipedia.org/wiki/Wildcard_certificate[wildcard certificate], and you want to use the subdomain portion in a mapping rule, you can use the pre-defined `{inputsubdomain}` variable.
+
+The rule which is defined first has high priority against other ones defined after it. This means that the first matched rule will be applied. +
+You can create, view and delete existing rules using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-add[mappings add], link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-describe[mappings describe] and link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-remove[mappings remove] commands respectively.
+
+=== Rule Examples
+
+The table below contains some rule examples:
+
+[NOTE]
+Given that the external load balancer domain name depends on the unique name you assign to it, assume that the load balancer in these examples is `lb-demo`.
+
+[CAUTION]
+--
+By default your load balancer listens external requests on https and communicates with your workers internally through http. +
+You need to configure your application to listen through `http` on port 8091 for your load balancer to reach it.
+--
+
+==== URL mapping
+
+You can pass the app name as an input URI and map it directly to the app name in CloudHub:
+
+[cols="10a,20a,20a,10a",options="header"]
+|===
+|Rule # |Input URL 2+^| Output URL
+|   |    *URI*   |       *appName*   |   *appURI*
+| 0 | /{app}/    | {app}             | /
+|===
+
+This rule maps `lb-demo.lb.anypointdns.net/{app}` to `{app}.cloudhub.io`. +
+{app} being a pattern for application name you choose to pass.
+
+==== Host mapping
+
+If you have a wildcard certificate (like `*.example.com`), you can use the ´inputSubdomain´ variable to map any subdomain:
+
+[cols="10a,20a,20a,10a",options="header"]
+|===
+|Rule # |Input URL 2+^| Output URL
+|   |  *URI*   |       *appName*    |  *appURI*
+| 0 | /        | {inputSubdomain}   | /
+|===
+This rule automatically maps any request passed to a subdomain of example.com to the corresponding appName. For example:
+
+* Passing `api.example.com` would redirect to `api.cloudhub.io` +
+* Passing `application.example.com` is mapped to `application.cloudhub.io`.
+
+==== 1:1 mapping
+
+If you have only one application, you can map the literal app name.
+
+[cols="10a,20a,20a,10a",options="header"]
+|===
+|Rule # |Input URL 2+^| Output URL
+|   |  *URI*  |   *appName* |   *appURI*
+| 0 | /       |    myApp    | /
+|===
+This maps your default load balancer `lb-demo.lb.anypointdns.net` directly to your app in Cloudhub `myApp.cloudhub.io`.
 
 === Rule Order
 
@@ -163,17 +183,19 @@ The load balancer ID is provided to you when you create it. +
 You can also perform a `GET` request to your endpoint /organizations/{orgid}}/loadbalancers` to get the ID.
 --
 
-=== Whitelists
+== Whitelists
 
-It is possible to whitelist a list of IP addresses from your load balancers by simply passing it a CIDR block of IPs to whitelist. +
-The whitelist works at the load balancer level, not at the CN certificate level. Make sure you only pass IP addresses.
+It is possible to whitelist a list of IP addresses from your load balancers by simply passing it a CIDR block of IPs to whitelist.
 
-=== Managing Certificates
+The whitelist works for inbound connections at the load balancer level, not at the CN certificate level. Make sure you only pass IP addresses. +
+It is recommended that in order to whitelist inbound connections to your load balancer, link:/runtime-manager/deploying-to-cloudhub#static-ips-tab[static IP addresses]
 
-The Cloudhub Load Balancer provides a 2-way SSL client authentication.
+== Managing Certificates
+
+The Cloudhub Load Balancer provides a 2-way SSL client authentication. +
 It allows you to provide a `.pem` file certificate to your load balancer´s SSL endpoint to validate client requests.
 
-==== Uploading Certificates
+=== Uploading Certificates
 
 The certificate that you upload to your Load Balancer must be contained in one _pem_ encoded and unencrypted file.
 This file must contain the entire certificate chain ordered one after the other, similar to the example section below:
@@ -197,34 +219,58 @@ It is not necessary to include the root certificate in the certificate chain. Ho
 
 You can upload an SSL-Endpoint to your load balancer when creating one using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-create[cloudhub load-balancer create] or upload a new SSL endpoint to an existing load balancer using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-ssl-endpoint-add[cloudhub load-balancer ssl-endpoint add] command.
 
-===== Certificate Validation
+==== Certificate Validation
 
 The load balancer passes the certificate data to the API using the http headers below:
 
-====== X-SSL-Client-Verify
+===== X-SSL-Client-Verify
 
 This header returns either `SUCCESS`, `FAILED`, or `NONE`
 Only after `SUCCESS`, the client is verified. +
 It returns `NONE` when the certificate is not present and `FAILED` when other validation problems occur.
 
-====== X-SSL-Client-DN
+===== X-SSL-Client-DN
 
 Contains the full Distinguished Name of the client certificate.
 
-====== X-SSL-Issuer
+===== X-SSL-Issuer
 
 Contains the full Distinguished Name of the issuing certificate.
 
-====== X-SSL-Client-Serial
+===== X-SSL-Client-Serial
 
 Contains the serial number used by the CA to identify the client.
 
-===== Adding Revocation Lists
+==== Adding Revocation Lists
 
-CloudHub Load balancer does not support OCSP, so you need to manage your revocations using CRL. You can add a `crlCert` field under the `certificates` field in your JSON when creating the load balancer and specify your revocations there. +
-It is recommended to use the CloudHub REST API to programmatically update your revocation lists.
+CloudHub Load balancer does not support OCSP, so you need to manage your revocations using CRL.
 
-===== Certificate Ciphers
+You can add a revocation list when creating the load balancer using the ´-crl´ option in your link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-create[load-balancer create] command.
+
+Additionally if your load balancer is already created, you can use the link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/8617/versions/85955[REST API] to update it. +
+You can send a `PATCH` request to the `/organizations/{orgid}/vpcs/{vpcId}/loadbalancers/{lbId}` endpoint adding a `revocationList` element:
+
+[source,json,linenums]
+----
+[
+  {
+    "op": "replace",
+    "path": "/sslEndpoints/0/revocationList",
+    "value": "-----BEGIN X509 CRL-----\nMIIBTTCBtwIBATANBgkqhkiG9w0BAQUFADBXMQswCQYDVQQGEwJBVTETMBEGA1UE\nCBMKU29tZS1TdGF0ZTEhMB8GA1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRk\nMRAwDgYDVQQDEwdvcmcuY29tFw0xNjAzMTUwOTI2MThaFw0xODAzMTUwOTI2MTha\nMBwwGgIJAIBvvO4dJHjhFw0xNjAzMTUwODUwMTZaoA4wDDAKBgNVHRQEAwIBBjAN\nBgkqhkiG9w0BAQUFAAOBgQCCAbGXW+Hnzmd1bXqWsFXfogOsJScoxkJOhhmjui3I\nhTUyO5plGHUBLjBnDkypM+iLfn0W4wPcNj7FZdz4Hu/WLntxwrTtR5YOcfIhEGcq\nwvJq/1+WKUPC6eqGwx0iKOOBIWsaf5CNOOUQMo6RaeTeu8Uba2EGFk1Vu/SoZYAK\nsw==\n-----END X509 CRL-----\n"
+  }
+]
+----
+
+[NOTE]
+--
+It is recommended to use the CloudHub REST API to programmatically update your revocation lists. +
+In order to get the necessary vpcId, and loadbalancerId from the CLI, you can use a link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-describe-json[vpc JSON describe] and link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-describe-json[load-balancer JSON describe] command respectively.
+--
+
+You can send a PATCH request to your load balancer's endpoint to update any other property.
+
+
+==== Certificate Ciphers
 
 A list of recommended ciphers suites with a good balance between compatibility and security for your SSL endpoint are below: +
 They all offer forward secrecy, except RC4-SHA which is there to support Internet Explorer 8.
