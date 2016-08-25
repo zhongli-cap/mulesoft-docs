@@ -15,7 +15,7 @@ By using this service to proxy your CloudHub-deployed apps, you can:
 
 [NOTE]
 --
-This is an optional addition to your cloud infrastructure that is not included by default in all CloudHub plans. To enable it, you must first own a link:/runtime-manager/virtual-private-cloud[Virtual Private Cloud].
+This is an optional addition to your cloud infrastructure that is not included by default in all CloudHub plans. To enable it, you must first own a link:/runtime-manager/virtual-private-cloud[Virtual Private Cloud]. +
 This service is designed to have one load balancer per VPC  and although each VPC supports only one domain, you can have multiple environments in the same network, meaning that you can use the same load balancer for your different environments.
 --
 
@@ -56,7 +56,7 @@ By using proxy rules, you can map a domain or subdomain to one of your Mule appl
 
 ==== Pattern
 
-A pattern is a string that defines a template for matching an input text. Whatever is placed into curly brackets (`{   }`) is treated as a variable.
+A pattern is a string that defines a template for matching an input text. Whatever is placed into curly brackets (`{   }`) is treated like a variable.
 These variables can contain only letters (a-z) and cannot contain any other characters, such as digits, slashes, etc. The variable values can contain the following characters ‘a-z0-1.&?-_’ but no slashes.
 
 For example, you can literally bind two host names for redirect:
@@ -110,6 +110,12 @@ The table below contains some rule examples:
 
 [NOTE]
 Given that the external load balancer domain name depends on the unique name you assign to it, assume that the load balancer in these examples is `lb-demo`.
+
+[CAUTION]
+--
+By default your load balancer listens external requests on https and communicates with your workers internally through http. +
+You need to configure your application to listen through `http` on port 8091 for your load balancer to reach it.
+--
 
 ==== URL mapping
 
@@ -179,8 +185,10 @@ You can also perform a `GET` request to your endpoint /organizations/{orgid}}/lo
 
 == Whitelists
 
-It is possible to whitelist a list of IP addresses from your load balancers by simply passing it a CIDR block of IPs to whitelist. +
-The whitelist works for inbound connections at the load balancer level, not at the CN certificate level. Make sure you only pass IP addresses.
+It is possible to whitelist a list of IP addresses from your load balancers by simply passing it a CIDR block of IPs to whitelist.
+
+The whitelist works for inbound connections at the load balancer level, not at the CN certificate level. Make sure you only pass IP addresses. +
+It is recommended that in order to whitelist inbound connections to your load balancer, link:/runtime-manager/deploying-to-cloudhub#static-ips-tab[static IP addresses]
 
 == Managing Certificates
 
@@ -235,8 +243,32 @@ Contains the serial number used by the CA to identify the client.
 
 ==== Adding Revocation Lists
 
-CloudHub Load balancer does not support OCSP, so you need to manage your revocations using CRL. You can add a `crlCert` field under the `certificates` field in your JSON when creating the load balancer and specify your revocations there. +
-It is recommended to use the CloudHub REST API to programmatically update your revocation lists.
+CloudHub Load balancer does not support OCSP, so you need to manage your revocations using CRL.
+
+You can add a revocation list when creating the load balancer using the ´-crl´ option in your link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-create[load-balancer create] command.
+
+Additionally if your load balancer is already created, you can use the link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/8617/versions/85955[REST API] to update it. +
+You can send a `PATCH` request to the `/organizations/{orgid}/vpcs/{vpcId}/loadbalancers/{lbId}` endpoint adding a `revocationList` element:
+
+[source,json,linenums]
+----
+[
+  {
+    "op": "replace",
+    "path": "/sslEndpoints/0/revocationList",
+    "value": "-----BEGIN X509 CRL-----\nMIIBTTCBtwIBATANBgkqhkiG9w0BAQUFADBXMQswCQYDVQQGEwJBVTETMBEGA1UE\nCBMKU29tZS1TdGF0ZTEhMB8GA1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRk\nMRAwDgYDVQQDEwdvcmcuY29tFw0xNjAzMTUwOTI2MThaFw0xODAzMTUwOTI2MTha\nMBwwGgIJAIBvvO4dJHjhFw0xNjAzMTUwODUwMTZaoA4wDDAKBgNVHRQEAwIBBjAN\nBgkqhkiG9w0BAQUFAAOBgQCCAbGXW+Hnzmd1bXqWsFXfogOsJScoxkJOhhmjui3I\nhTUyO5plGHUBLjBnDkypM+iLfn0W4wPcNj7FZdz4Hu/WLntxwrTtR5YOcfIhEGcq\nwvJq/1+WKUPC6eqGwx0iKOOBIWsaf5CNOOUQMo6RaeTeu8Uba2EGFk1Vu/SoZYAK\nsw==\n-----END X509 CRL-----\n"
+  }
+]
+----
+
+[NOTE]
+--
+It is recommended to use the CloudHub REST API to programmatically update your revocation lists. +
+In order to get the necessary vpcId, and loadbalancerId from the CLI, you can use a link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-describe-json[vpc JSON describe] and link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-describe-json[load-balancer JSON describe] command respectively.
+--
+
+You can send a PATCH request to your load balancer's endpoint to update any other property of your load balancer.
+
 
 ==== Certificate Ciphers
 
