@@ -10,15 +10,26 @@ ext {
   //stagingDestinationDir = '/tmp/html'
 }
 
+task disallowRobots(group: 'Build', description: 'Disallows robots from crawling the site.') {
+  doLast {
+    File robotsConfig = file("$siteDir/robots.txt")
+    if (robotsConfig.file) robotsConfig.text = "User-agent: *\nDisallow: /"
+  }
+}
+
 task publishToStaging(type: Exec, group: 'Publishing', description: 'Synchronizes site output to remote staging server') {
-  mustRunAfter 'build'
   executable 'rsync'
   // transfer status legend: http://stackoverflow.com/questions/4493525/rsync-what-means-the-f-on-rsync-logs/12037164#12037164
   // QUESTION should we use --size-only to ignore timestamp changes?
-  args '-a', '-z', '-i', "-e ssh -i $stagingIdentity", '--delete-delay', "$siteDir/", "$stagingUser@$stagingHost:$stagingDestinationDir/"
+  args '-rtOzi', "-e ssh -i $stagingIdentity", '--delete-delay', "$siteDir/", "$stagingUser@$stagingHost:$stagingDestinationDir/"
   if (dryRun) args = ['-n'] + args
 }
 
-task publish(group: 'Build', description: 'Builds site and copies changes to staging server') {
-  dependsOn 'build', publishToStaging
+task publish(group: 'Build', description: 'Builds site and copies changes to staging server')
+
+afterEvaluate {
+  build.dependsOn disallowRobots
+  disallowRobots.mustRunAfter copyAssets
+  publish.dependsOn build, publishToStaging
+  publishToStaging.mustRunAfter build
 }
