@@ -2,10 +2,6 @@
 // * add mode to run jetty in background
 // * combine css (need to update template as well)
 // * set outputs.dir for custom tasks
-import com.palominolabs.gradle.task.git.clone.GitCloneTask
-import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.lib.RepositoryBuilder
-
 buildscript {
   configurations.create('builder')
   configurations.create('singlePageBuilder')
@@ -22,9 +18,6 @@ buildscript {
 
   dependencies {
     classpath 'com.eriwen:gradle-css-plugin:2.12.0'
-    classpath 'com.palominolabs.gradle.task:gradle-git-clone-task:0.0.2'
-    classpath 'org.ajoberstar:gradle-git:1.5.1-rc.3'
-
     builder 'com.mulesoft.documentation.builder:mule-docs-builder:1.0.0-M1'
     singlePageBuilder 'com.mulesoft.documentation.builder:mule-docs-single-page-builder:1.0.0-M1'
   }
@@ -47,7 +40,7 @@ ext {
   assetsRepoBranchName = 'staging'
   assetsRepoCommit = "origin/$assetsRepoBranchName"
   assetsRepoUri = 'https://github.com/mulesoft/mulesoft-docs-site-assets'
-  builderMaxHeapSize = '2500m'
+  builderMaxHeapSize = project.hasProperty('maxHeapSize') ? project.property('maxHeapSize') : '2500m'
   builderJvmArgs = ['-Xverify:none', '-XX:+OptimizeStringConcat', '-XX:+UseFastAccessorMethods', '-Djava.net.preferIPv4Stack=true', '-Djava.awt.headless=true']
   docsRepoBranchName = 'master'
   docsRepoUri = 'https://github.com/mulesoft/mulesoft-docs'
@@ -59,21 +52,21 @@ ext {
   templatesDir = '_templates'
 }
 
+apply from: 'gradle/git-helper.gradle'
 if (file(profileBuildScript).exists()) apply from: profileBuildScript
 apply plugin: 'css'
 
-task cloneAssetsRepo(type: GitCloneTask) {
-  dir = file(assetsDir)
-  onlyIf { !dir.exists() }
-  uri = assetsRepoUri
-  treeish = assetsRepoCommit
-  //trySshAgent = false
+task cloneAssetsRepo {
+  outputs.dir(assetsDir).upToDateWhen { false }
+  onlyIf { !file("$assetsDir/.gitkeep").file }
   doLast {
-    // checkout staging branch properly
-    // TODO should be fixed upstream (https://github.com/palominolabs/gradle-git-clone-task)
-    def git = new Git(new RepositoryBuilder().readEnvironment().findGitDir(dir).build())
-    def create = !git.branchList().call().find { it.name == "refs/heads/$assetsRepoBranchName" }
-    git.checkout().setCreateBranch(create).setName(assetsRepoBranchName).setStartPoint(treeish).call()
+    if (file("$assetsDir/.git").directory) {
+      git "fetch -q origin", assetsDir
+    }
+    else {
+      git "clone -q $assetsRepoUri $assetsDir", file(assetsDir).parent
+    }
+    git "checkout -q -B $assetsRepoBranchName $assetsRepoCommit", assetsDir
   }
 }
 
@@ -108,11 +101,10 @@ task buildHtml(type: JavaExec, group: 'Build', description: 'Builds HTML pages.'
   jvmArgs = builderJvmArgs
   //outputs.dir siteDir
   doLast {
-    // FIXME define variable useTemplatesFromAssets
+    // FIXME define variable useTemplatesFromAssets instead of checking profile
     if (profile != 'prod') {
-      // NOTE undo changes to templates
-      new Git(new RepositoryBuilder().readEnvironment().findGitDir(file('.')).build())
-        .checkout().addPath(templatesDir).call()
+      // NOTE undo local changes to template(s)
+      git "checkout -- $templatesDir"
     }
   }
 }

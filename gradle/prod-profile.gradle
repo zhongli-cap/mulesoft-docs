@@ -1,52 +1,53 @@
-apply plugin: 'org.ajoberstar.github-pages'
-
 ext {
   assetsRepoBranchName = 'master'
   assetsRepoCommit = "origin/$assetsRepoBranchName"
-  builderMaxHeapSize = '4g'
-  publishMessage = project.hasProperty('buildTag') ? project.property('buildTag') : 'publish changes'
+  publishCommitMessage = project.hasProperty('buildTag') ? project.property('buildTag') : 'publish changes'
   publishRepoBranchName = 'master'
-  publishRepoMirror = file('.gradle/build-output')
-  publishRepoUri = 'https://github.com/mulesoft/mulesoft-docs-build-output'
-  //publishRepoUri = 'git@github.com:mulesoft/mulesoft-docs-build-output.git'
-  publishWorkingDir = '.gradle/build-output-work'
+  publishRepoUri = 'git@github.com:mulesoft/mulesoft-docs-build-output.git'
+  siteDir = '_publish'
   siteUri = 'https://docs.mulesoft.com'
 }
 
-githubPages {
-  repoUri = publishRepoMirror.path
-  targetBranch = publishRepoBranchName
-  commitMessage = publishMessage
-  workingPath = publishWorkingDir
-  pages { from siteDir }
-}
-
-prepareGhPages {
-  mustRunAfter 'build'
-  doFirst {
-    // TODO verify this is a valid clone
-    if (publishRepoMirror.directory) {
-      exec {
-        workingDir publishRepoMirror
-        executable 'git'
-        args 'fetch', '-q', 'origin'
-      }
-      exec {
-        workingDir publishRepoMirror
-        executable 'git'
-        args 'reset', '-q', '--soft', 'FETCH_HEAD'
-      }
+task clonePublishRepo {
+  outputs.dir(siteDir).upToDateWhen { false }
+  doLast {
+    if (file("$siteDir/.git").directory) {
+      git "fetch -q origin $publishRepoBranchName", siteDir
+      git "reset -q --hard origin/$publishRepoBranchName", siteDir
     }
     else {
-      exec {
-        workingDir publishRepoMirror.parentFile
-        executable 'git'
-        args 'clone', '-q', '--bare', '--single-branch', publishRepoUri, publishRepoMirror.name
+      git "clone -q --single-branch --depth 1 $publishRepoUri $siteDir", file(siteDir).parent
+    }
+  }
+}
+
+task prepareSiteDir {
+  inputs.dir siteDir
+  doLast {
+    ant.delete(includeemptydirs: true) {
+      fileset(dir: siteDir, defaultexcludes: false) {
+        exclude(name: '.git/**')
       }
     }
   }
 }
 
-task publish(group: 'Build', description: 'Builds site and commits changes to publish repository.') {
-  dependsOn 'build', publishGhPages
+task publishSiteDir {
+  doLast {
+    git 'add .', siteDir
+    git "commit -q -m \"$publishCommitMessage\"", siteDir
+    // TODO don't push if there are no commits
+    if (!dryRun) git "push -q origin $publishRepoBranchName", siteDir
+  }
+}
+
+task publish(group: 'Build', description: 'Builds site and commits changes to publisher repository.')
+
+afterEvaluate {
+  clean.delete = assetsDir // don't delete _publish directory
+  //copyAssets.outputs.upToDateWhen { false }
+  prepareSiteDir.dependsOn clonePublishRepo
+  publish.dependsOn prepareSiteDir, build, publishSiteDir
+  build.mustRunAfter prepareSiteDir
+  publishSiteDir.mustRunAfter build
 }
