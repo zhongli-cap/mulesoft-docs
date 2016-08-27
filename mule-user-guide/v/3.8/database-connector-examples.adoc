@@ -520,9 +520,9 @@ In this example, a database connector retrieves data from two tables. A link:/a
 
 This example uses link:/mule-user-guide/v/3.8/batch-processing[batch processing], which means that within this Mule app, messages are divided into records and processed asynchronously. Batch processing, in conjunction with *streaming* enabled on the database connector, can be useful to avoid system overload when dealing with large volumes of data.
 
-image:ex.2-batchjob.flow.png[ex.2-batchjob.flow]
+image:database-connector-examples-bf9df.png[ex.2-batchjob.flow]
 
-The database connector is inside a link:/mule-user-guide/v/3.8/poll-reference[poll scope] which, every ten minutes, requests the database connector to perform its configured operation on the database. The database connector performs a database query which returns 100 rows. Mule feeds this data into the DataMapper transformer inside the `Batch Commit` batch scope. DataMapper transforms the input into a CSV file; then, a link:/mule-user-guide/v/3.8/file-connector[file connector] writes the resulting CSV file to disk. A link:/mule-user-guide/v/3.8/logger-component-reference[logger component] logs processed records to the console.
+The database connector is inside a link:/mule-user-guide/v/3.8/poll-reference[poll scope] which, every ten minutes, requests the database connector to perform its configured operation on the database. The database connector performs a database query which returns 100 rows. Mule feeds this data into the DataWeave transformer inside the `Batch Commit` batch scope. DataWeave transforms the input into a CSV file; then, a link:/mule-user-guide/v/3.8/file-connector[file connector] writes the resulting CSV file to disk. A link:/mule-user-guide/v/3.8/logger-component-reference[logger component] logs processed records to the console.
 
 [TIP]
 ====
@@ -671,59 +671,47 @@ The query produces 100 rows of results with data from both tables. The first thr
 
 This resulting data will be transformed to CSV by the DataMapper transformer. The next section explains how to configure the DataMapper transformer while avoiding having to manually map the input/output fields.
 
-=== Configuring DataMapper with DataSense
-
-In order to configure DataMapper to map the data received from the database query into a CSV file, you can take advantage of DataSense, which allows you to avoid manually configuring the input and output fields. To do so, you must configure the database connector _before_ you configure your DataMapper transformer. This way, the DataMapper transformer will be able to tell the database connector to retrieve the input fields from the database, and will then automatically create the mapping based on those input fields.
+=== Configuring DataWeave I/O
 
 To create the batch job in this example, perform these steps:
 
 . Drag a batch scope from the Palette onto the canvas.
-
-. Drag a database connector to the *Input* section of the batch scope.
-
+. Drag a database connector to the *Input* section of the batch scope on the left.
 . Configure the database connector as necessary to retrieve the desired data from the database. This entails all connection parameters as well as the operation, etc. Test the connection to see that it works. When you leave the database connector configuration (i.e. when you click anywhere outside the database connector on the Studio window) the database connector will automatically retrieve metadata using DataSense.
 
 . Drag a batch commit scope to the *Process Records* section of the batch scope.
-
-. Drag a DataMapper transformer into the batch commit scope.
-
+. Drag a DataWeave (*Transform Message*) transformer into the batch commit scope.
 . Drag a file connector into the batch commit scope.
-
 . Finally, drag a logger component in the *On Complete* section of the batch scope.
 
-At this point, you have built your batch job and are ready to configure the DataMapper transformer. Double-click the DataMapper transformer to open its configuration editor, which should look similar to the image below.
+At this point, you have built your batch job and are ready to configure DataWeave. Double-click the DataWeave transformer to open its configuration.
 
-image:ex2.datamapper.raw.png[ex2.datamapper.raw]
+To instruct DataWeave how to process the MySQL data, right click the words "Payload" on the left side of the pane and click *Set Metadata*.
 
-To instruct DataMapper to get the metadata from the database connector, first click *Change Type*. The DataMapper editor changes to allow you to select which connector to receive data from, as shown in the image below.
+image:database-connector-examples-ab246.png[set metadata]
 
-image:ex2.datamapper.conn.select.png[ex2.datamapper.conn.select]
+Define the metadata as *Map*, comprised of *List<Element>*, adding the attributes and their types per the database table attributes.
 
-Click the drop-down menu next to *Connector*, then select `MySQL_Configuration`. This is the global element referenced by the database connector, which contains the parameters to connect to the MySQL database.
+image:database-connector-examples-871e9.png[ex2.datamapper.conn.select]
 
-image:ex2.datamapper.conn.select2.png[ex2.datamapper.conn.select2]
+The image below shows the finished DataWeave transformer configuration.
 
-When you select `MySQL_Configuration`, DataMapper retrieves input metadata from the database connector. This operation takes a few seconds. When the operation completes, click the drop-down menu next to *Operation*, then select `select`. Next, click the drop-down menu next to *Object*, then select `List<Map>`.
+image:database-connector-examples-72b35.png[ex2.finished.dataweave]
 
-image:ex2.datamapper.all.selected.ops.png[ex2.datamapper.all.selected.ops]
+The resulting DataWeave code is auto-generated, and appears next to the above mapping, appearing like this:
 
-In the output mapping pane, click the drop-down menu next to *Type*, then select `CSV`. Next, click the checkbox next to *User Defined*.
-
-At this point, the DataMapper view should look like the image below.
-
-image:ex2.datamapper.CSV.selected.png[ex2.datamapper.CSV.selected]
-
-In the output mapping pane, click *Generate default*, then *Edit Fields*. DataMapper displays the *Define the CSV* editor, which should look like the image below.
-
-image:ex2.Define.the.CSV.png[ex2.Define.the.CSV]
-
-As you can see, DataMapper has used DataSense to gather the relevant metadata from the database, that is, the column names and data types, and has taken them as the input fields. At this point you can modify, add, or remove fields as you wish. For this example, we can leave the fields as they are.
-
-Click *OK* to dismiss the *Define the CSV* window, then click *Create mapping* at the bottom of the DataMapper view. DataMapper automatically maps the input fields to their corresponding output CSV fields.
-
-The image below shows the finished DataMapper transformer configuration.
-
-image:ex2.finished.datamapper.png[ex2.finished.datamapper]
+[source,code,linenums]
+----
+%dw 1.0
+%output application/csv
+---
+payload map ((payload01 , indexOfPayload01) -> {
+	column_0: payload01.first_name,
+	column_1: payload01.last_name,
+	column_2: payload01.no,
+	column_3: payload01.role
+})
+----
 
 If you wish to test this Mule application, you need to perform two additional tasks:
 
@@ -736,7 +724,7 @@ If you wish to test this Mule application, you need to perform two additional ta
 Total Records exported: #[message.payload.getLoadedRecords()], Failed Records: #[message.payload.getFailedRecords()], Processing time: #[message.payload.getElapsedTimeInMillis()]
 ----
 
-When you run the application, DataMapper will output the results to a file connector, which in turn will write them to a file on your local disk. (In this example, the output file is `roles.csv`, which will be written to the root folder of the Mule application.)
+When you run the application, DataWeave will output the results to a file connector, which in turn will write them to a file on your local disk. (In this example, the output file is `roles.csv`.)
 
 When you run the application, the database connector will automatically connect to the database and retrieve the data. If you do not stop the application, it will repeat this operation every ten minutes. The output CSV data will be written to the file that you specified in the file connector. Below are the first lines from the resulting CSV file.
 
@@ -767,11 +755,13 @@ WARN  2014-02-28 14:11:28,702 [[test2].Batch Dispatcher thread] org.mule.api.pr
 INFO  2014-02-28 14:11:28,703 [[test2].Batch Dispatcher thread] com.mulesoft.module.batch.engine.DefaultBatchEngine: Finished execution of onComplete phase for instance 40d3cb27-a0c5-11e3-a3c7-f1f67a172e10 of job db-appBatch1
 ----
 
-== Calling Stored Procedure Using Connector
+== Pass Variable to Stored Procedure Call
 
-=== Set up New Table
+Run this example to update a "bonus" field in a table where salary and bonus amounts are stored. This is not a recommended approach for updating a database, but may prove useful for generating ideas on how to call stored procedures from your Mule applications.
 
-. First set up a new table, `salary`, with the primary key as `emp_no`, with a `salary_amount` and `bonus` entry for each person.
+=== Set up "salary" Table
+
+. First set up a new table in your MySQL database, `salary`, with the primary key as `emp_no`, with a `salary_amount` and `bonus` entry for each person.
 +
 ----
 CREATE TABLE salary (
@@ -887,26 +877,56 @@ INSERT INTO salary (emp_no,salary_amount,bonus) VALUES (1109,50000,1000);
 INSERT INTO salary (emp_no,salary_amount,bonus) VALUES (1110,70000,1000);
 ----
 +
-. Create the stored procedure to update salary based on employee ID.
+. Create a stored procedure to update a bonus amount based on employee ID.
 +
 ----
-CREATE PROCEDURE `add_bonus_by_emp_id`(IN EMP_NO integer,
-IN addlbonus integer)
+CREATE DEFINER=`root`@`localhost` PROCEDURE `add_bonus_by_emp_no`(IN EMP_NO integer,
+IN ADDL_BONUS integer)
 BEGIN
 UPDATE salary
-SET bonus = addlbonus + bonus
+SET bonus = ADDL_BONUS + bonus
 WHERE salary.emp_no=EMP_NO;
-
 END
 ----
 +
-. This would be the call to the procedure to add to someone's bonus passing the employee's ID, `emp_id` as the first argument, with the second argument being the amount to add to the base bonus.
+. Call this procedure to add an amount (for this example $500) to an employee's base bonus based on the employee's ID, `emp_id` as the first argument, with the second argument being the amount to add to the current bonus.
 +
 ----
-call add_bonus_by_emp_id(1070,500);
+call add_bonus_by_emp_id(#[payload],500);
 ----
++
+. Here is the full code for a simple app that calls a stored procedure using an http parameter we set in the HTTP request. `http://localhost:8081/getemps?emp=1065`
++
+[source,code,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
 
-
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" doc:name="HTTP Listener Configuration" />
+    <db:mysql-config name="MySQL_Configuration" host="localhost" port="3306" user="root" password="testymule" database="company" doc:name="MySQL Configuration"/>
+    <http:request-config name="HTTP_Request_Configuration" host="localhost" port="8081" doc:name="HTTP Request Configuration"/>
+    <flow name="stored-proc-exFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/getemps" doc:name="HTTP">
+            <http:response-builder>
+                <http:header headerName="" value=""/>
+            </http:response-builder>
+        </http:listener>
+        <set-payload value="#[message.inboundProperties.'http.query.params'.emp]" doc:name="Set Payload"/>
+        <db:stored-procedure config-ref="MySQL_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[call add_bonus_by_emp_id(#[payload],500);]]></db:parameterized-query>
+        </db:stored-procedure>
+        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+    </flow>
+</mule>
+----
 
 
 == See Also
