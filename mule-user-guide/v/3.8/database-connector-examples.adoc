@@ -757,11 +757,13 @@ INFO  2014-02-28 14:11:28,703 [[test2].Batch Dispatcher thread] com.mulesoft.mo
 
 == Pass Variable to Stored Procedure Call
 
-Run this example to update a "bonus" field in a table where salary and bonus amounts are stored. This is not a recommended approach for updating a database, but may prove useful for generating ideas on how to call stored procedures from your Mule applications.
+Run this example to update a "bonus" field in a table where salary and bonus amounts are stored. This is not a recommended approach for updating a database, especially of this sort, but may prove useful for generating ideas on how to call stored procedures from your Mule applications.
+
+image:database-connector-examples-8b1f9.png[flow pic stored proc]
 
 === Set up "salary" Table
 
-. First set up a new table in your MySQL database, `salary`, with the primary key as `emp_no`, with a `salary_amount` and `bonus` entry for each person.
+. First set up another table in your MySQL database, `salary`, with the primary key as `emp_no`, with a `salary_amount` and `bonus` entry for each person.
 +
 ----
 CREATE TABLE salary (
@@ -889,13 +891,15 @@ WHERE salary.emp_no=EMP_NO;
 END
 ----
 +
-. Call this procedure to add an amount (for this example $500) to an employee's base bonus based on the employee's ID, `emp_id` as the first argument, with the second argument being the amount to add to the current bonus.
+. Call this procedure to add an amount (for this example $500) to an employee's base bonus based on the employee's ID, `emp_no` as the first argument, with the second argument being the amount to add to the current bonus.
 +
 ----
-call add_bonus_by_emp_id(#[payload],500);
+call add_bonus_by_emp_no(#[payload],500);
 ----
 +
-. Here is the full code for a simple app that calls a stored procedure using an http parameter we set in the HTTP request. `http://localhost:8081/getemps?emp=1065`
+. This call is represented in the example by:
+`<db:parameterized-query><![CDATA[call add_bonus_by_emp_no(#[payload],500);]]></db:parameterized-query>`. By the design of the example, the employee is passed as an HTTP parameter. `http://localhost:8081/getemps?emp=1065`
+. Here is the full code for a simple app that calls a stored procedure using an http parameter we set in the HTTP request.
 +
 [source,code,linenums]
 ----
@@ -921,7 +925,7 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
         </http:listener>
         <set-payload value="#[message.inboundProperties.'http.query.params'.emp]" doc:name="Set Payload"/>
         <db:stored-procedure config-ref="MySQL_Configuration" doc:name="Database">
-            <db:parameterized-query><![CDATA[call add_bonus_by_emp_id(#[payload],500);]]></db:parameterized-query>
+            <db:parameterized-query><![CDATA[call add_bonus_by_emp_no(#[payload],500);]]></db:parameterized-query>
         </db:stored-procedure>
         <logger message="#[payload]" level="INFO" doc:name="Logger"/>
     </flow>
