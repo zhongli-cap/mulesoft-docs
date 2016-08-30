@@ -260,11 +260,11 @@ image:metadata_out.png[metadata_out]
 
 == Proxy the Web Service Consumer
 
-See the proxy configuration in context of a call to a weather data SOAP service illustrated by this Mule flow.
+See how to configure a proxy request to the SOAP service in a Mule application. Let's start with this flow that grabs a country name as an HTTP parameter and stores it in a variable for the SOAP service request to a weather data service that spits back all cities for which their is data for the country given.
 
-image:web-service-consumer-2b4aa.png[wsc - proxy config]
+image:web-service-consumer-73a55.png[wsc - proxy config]
 
-To proxy the request to the SOAP service, go to the *Global Elements* tab in Studio, create a new HTTP Request global element and from the *Proxy* tab of the HTTP Request Configuration enter the Host and Port details.
+To proxy the request to the SOAP service, go to the *Global Elements* tab in Studio, create a new HTTP Request global element and from the *Proxy* tab of the HTTP Request Configuration enter the host and port details of the proxy.
 
 image:web-service-consumer-04b36.png[example proxy http req]
 
@@ -272,7 +272,7 @@ Specify your newly created proxy configuration from the *Reference* tab of the _
 
 image:web-service-consumer-e8b7b.png[wsc references tab]
 
-The proxy configuration would take this form in the Mule app:
+The proxy configuration would look similar to this XML block in your Mule application:
 
 [source,xml,linenums]
 ----
@@ -281,8 +281,7 @@ The proxy configuration would take this form in the Mule app:
 </http:request-config>
 ----
 
-Here is the entire flow you could paste into Studio or run directly.
-
+Find here the example flow for reference.
 
 [source,xml,linenums]
 ----
@@ -301,11 +300,11 @@ http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/
     <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8082" doc:name="HTTP Listener Configuration"/>
     <ws:consumer-config name="Web_Service_Consumerweather" wsdlLocation="http://www.webservicex.com/globalweather.asmx?WSDL" service="GlobalWeather" port="GlobalWeatherSoap" serviceAddress="http://www.webservicex.com/globalweather.asmx"  doc:name="Web Service Consumer"/>
     <http:request-config name="HTTP_Request_Configuration" host="www.webservicex.com" port="80" doc:name="HTTP Request Configuration">
-        <http:proxy host="my.example.proxy.com" port="8080"/>
+        <http:proxy host="example.proxy.com" port="8080"/>
     </http:request-config>
     <flow name="soap-wsc-proxy">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/country" doc:name="HTTP"/>
-        <set-variable variableName="CountryName" value="#[message.inboundProperties.'http.query.params'.CountryName]" doc:name="Get Weather for City"/>
+        <set-variable variableName="CountryName" value="#[message.inboundProperties.'http.query.params'.CountryName]" doc:name="Get Cities by Country"/>
         <dw:transform-message doc:name="Transform Message">
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/xml
@@ -318,13 +317,11 @@ http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/
 }]]></dw:set-payload>
         </dw:transform-message>
         <ws:consumer config-ref="Web_Service_Consumerweather" doc:name="Web Service Consumer" operation="GetCitiesByCountry"/>
-        <mulexml:dom-to-xml-transformer doc:name="DOM to XML"/>
         <logger level="INFO" doc:name="Logger"/>
     </flow>
 </mule>
 ----
 
-Hit the endpoint you configured to listen on by entering this or similar address in your browser to test your configurations. `http://localhost:8082/country?CountryName=Mexico`
 
 
 == Securely Connecting to a SOAP Web Service
