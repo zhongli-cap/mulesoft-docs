@@ -1,5 +1,13 @@
 = Web Service Consumer
 :keywords: anypoint studio, studio, mule esb, connector, endpoint, web service, soap, wsdl
+:toc: macro
+:toclevels: 3
+:toc-title: Contents
+
+image:web-service-consumer-0a7fc.png[icon]
+
+toc::[]
+
 
 When developing applications with Mule, users often need to be able to consume a SOAP Web service to acquire data from an external source. In the best case scenario, you can use an existing *Anypoint Connector* in your Mule application to connect to a specific service provider, such as Zuora or Avalara. However, where no service-specific connector exists to facilitate the connection, the quickest, easiest way to consume a Web service from within a Mule application is to use the *Web Service Consumer*.
 
@@ -249,6 +257,75 @@ image:metadata_in.png[metadata_in]
 ==== Message State After Web Service Consumer
 
 image:metadata_out.png[metadata_out]
+
+== Proxy the Web Service Consumer
+
+See the proxy configuration in context of a call to a weather data SOAP service illustrated by this Mule flow.
+
+image:web-service-consumer-2b4aa.png[wsc - proxy config]
+
+To proxy the request to the SOAP service, go to the *Global Elements* tab in Studio, create a new HTTP Request global element and from the *Proxy* tab of the HTTP Request Configuration enter the Host and Port details.
+
+image:web-service-consumer-04b36.png[example proxy http req]
+
+Specify your newly created proxy configuration from the *Reference* tab of the _global element_ for the *Web Service Consumer*.
+
+image:web-service-consumer-e8b7b.png[wsc references tab]
+
+The proxy configuration would take this form in the Mule app:
+
+[source,xml,linenums]
+----
+<http:request-config name="HTTP_Request_Configuration" host="www.webservicex.com" port="80" doc:name="HTTP Request Configuration">
+		<http:proxy host="my.example.proxy.com" port="8080"/>
+</http:request-config>
+----
+
+Here is the entire flow you could paste into Studio or run directly.
+
+
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:ws="http://www.mulesoft.org/schema/mule/ws" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ws http://www.mulesoft.org/schema/mule/ws/current/mule-ws.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8082" doc:name="HTTP Listener Configuration"/>
+    <ws:consumer-config name="Web_Service_Consumerweather" wsdlLocation="http://www.webservicex.com/globalweather.asmx?WSDL" service="GlobalWeather" port="GlobalWeatherSoap" serviceAddress="http://www.webservicex.com/globalweather.asmx"  doc:name="Web Service Consumer"/>
+    <http:request-config name="HTTP_Request_Configuration" host="www.webservicex.com" port="80" doc:name="HTTP Request Configuration">
+        <http:proxy host="my.example.proxy.com" port="8080"/>
+    </http:request-config>
+    <flow name="soap-wsc-proxy">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/country" doc:name="HTTP"/>
+        <set-variable variableName="CountryName" value="#[message.inboundProperties.'http.query.params'.CountryName]" doc:name="Get Weather for City"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%namespace ns0 http://www.webserviceX.NET
+---
+{
+	ns0#GetCitiesByCountry: {
+		ns0#CountryName: flowVars.CountryName as :string
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <ws:consumer config-ref="Web_Service_Consumerweather" doc:name="Web Service Consumer" operation="GetCitiesByCountry"/>
+        <mulexml:dom-to-xml-transformer doc:name="DOM to XML"/>
+        <logger level="INFO" doc:name="Logger"/>
+    </flow>
+</mule>
+----
+
+Hit the endpoint you configured to listen on by entering this or similar address in your browser to test your configurations. `http://localhost:8082/country?CountryName=Mexico`
+
 
 == Securely Connecting to a SOAP Web Service
 
