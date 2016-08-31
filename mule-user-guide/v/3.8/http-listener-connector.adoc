@@ -1218,6 +1218,9 @@ See TLS Configuration for more details.
 . Create a flow with an HTTP Listener Connector, set its *Path* to `/`
 . Create a Global Element for the Connector, set the *Host* to `localhost` and leave the *Port* as the default `8081`.  Select the *HTTPS* *Radio button*.
 . Select the *TLS/SSL* tab. Select the corresponding radio button and either provide your trust store / key store credentials, or add a reference to a global TLS configuration that contains these
++
+image::http-listener-connector-HTTPS-config.png[]
+
 . Complete the flow by adding any other building block after the HTTP Connector, such as a *Logger* component.
 ....
 [tab,title="XML Editor"]
@@ -1248,7 +1251,7 @@ For example:
 <?xml version="1.0" encoding="UTF-8"?>
 
 <mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-    xmlns:spring="http://www.springframework.org/schema/beans" 
+    xmlns:spring="http://www.springframework.org/schema/beans"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
@@ -1324,6 +1327,8 @@ You can customize HTTP incoming connections by:
 ....
 In the global configuration element setup window, the checkbox marked *Use Persistent Connection* defines if a connection established with a client processes several request or just once.  Default value is true, so multiple requests are handled by a single connection.
 
+image::http-listener-connector-connection-attributes.png[]
+
 If the box is checked, then you can also set up the *Connection Idle Timeout*, which defines the number of milliseconds that a connection can remain idle before it is closed. Default value is 30 seconds.
 ....
 [tab,title="XML Editor"]
@@ -1340,6 +1345,39 @@ For example:
 ----
 ....
 ------
+
+== Performance
+
+The HTTP Listener Connector uses dedicated threads to receive the socket connection and then hand off the message to the threads executing the rest of the synchronous flow. The default value for these dedicated threads for the HTTP connector is 128. Meaning that when we select the `Use default worker threading profile` the `maxThreadsActive` ^1^ value is set to 128.
+
+image::http-listener-connector-51981.png[]
+
+Although this default configuration is usually enough, it is possible to tune the max thread value ^2^
+
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+image::http-listener-connector-08229.png[]
+....
+[tab,title="XML or Standalone Editor"]
+....
+[source,xml,linenums]
+----
+<http:listener-config name="HTTP" host="0.0.0.0" port="8081">
+        <http:worker-threading-profile maxThreadsIdle="8" maxThreadsActive="200"/>
+</http:listener-config>
+
+----
+....
+------
+
+A detailed reference can be found in the link:/mule-user-guide/v/3.8/tuning-performance#connector-level[tunningg performance at the connector level] documentation.
+
+The HTTP connector can also be configured to use a link:/mule-user-guide/v/3.8/http-connector#non-blocking-processing[non-blocking processing strategy].
+
+
 
 == See Also
 

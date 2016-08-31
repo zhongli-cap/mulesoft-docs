@@ -1,0 +1,504 @@
+= Zuora Connector
+:keywords: zuora connector, dataweave, datasense, subscription
+:toc: macro
+:toclevels: 2
+
+
+image::zuora-connector-icon.png[]
+
+toc::[]
+
+== Introduction
+
+The Anypoint(TM) Connector for Zuora lets you connect to the Zuora platform. The connector exposes convenient methods for taking advantage of the capabilities of Zuora, allowing you to access the entire Zuora
+functional suite.
+
+The connector executes API calls targeting Zuora’s SOAP API and REST API. All required request headers and error handling are abstracted from you and built into the connector.
+
+Read through this user guide to understand how to set up and configure a basic flow using the connector. Track feature additions, compatibility, limitations and API version updates using the link:/release-notes/zuora-connector-release-notes[Zuora Connector Release Notes]. Review the link:#using-the-connector[connector operations] and see how they work with the message processors specified in the link:http://mulesoft.github.io/zuora-connector/[Technical Reference] alongside the link:https://www.mulesoft.com/exchange#!/?filters=Zuora&sortBy=rank[Demo Applications].
+
+MuleSoft maintains this connector under link:/mule-user-guide/v/3.8/anypoint-connectors#connector-categories[_Select_] support policy.
+
+
+== Prerequisites
+
+This document assumes that you are familiar with Mule,
+link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors], and
+link:/mule-fundamentals/v/3.8/anypoint-studio-essentials[Anypoint Studio Essentials]. To increase your familiarity with Studio, consider completing a link:/mule-fundamentals/v/3.8/basic-studio-tutorial[Anypoint Studio Tutorial]. This page requires some basic knowledge of link:/mule-fundamentals/v/3.8/mule-concepts[Mule Concepts], link:/mule-fundamentals/v/3.8/elements-in-a-mule-flow[Elements in a Mule Flow], and link:/mule-fundamentals/v/3.8/global-elements[Global Elements].
+Further, it assumes you are familiar with Zuora .
+
+
+[[requirements]]
+=== Hardware and Software Requirements
+
+For hardware and software requirements, please visit the link:/mule-user-guide/v/3.8/hardware-and-software-requirements[Hardware and Software Requirements] page.
+
+To use the Zuora connector, you need:
+
+* *Anypoint Studio* - An instance of link:https://www.mulesoft.com/lp/dl/mule-esb-enterprise[Anypoint Studio]. If you do not use Anypoint Studio for development, follow the instructions in <<Configuring Maven Dependencies,Configuring Maven Dependencies>> for your project.
+* A *Zuora account* - Contact Zuora team to learn more about Zuora and how you can obtain an account: link:http://info.zuora.com/talk-to-our-sales-team.html[Zuora].
+* *Zuora WSDL* - To use the SOAP API, a Zuora WSDL must be provided to the connector. Sign into link:https://www.zuora.com/apps/newlogin.do[Zuora Production] or link:https://apisandbox.zuora.com/apps/newlogin.do[Zuora Sandbox], navigate to *Settings*, then click *Z-Billing Settings* > *Download the Zuora WSDL*.
+
+
+=== Compatibility
+
+[width="100%",cols="50a,50a",options="header"]
+|===
+|Application/Service|Version
+|Mule Runtime|Mule Enterprise Edition 3.5.2 and newer
+|Zuora|v75
+|===
+
+[IMPORTANT]
+Starting with v3.0.0, the Zuora connector is licensed commercially with Anypoint Platform as are other link:/mule-user-guide/v/3.8/anypoint-connectors#connector-categories[_Select_] connectors.  Prior versions will remain freely available to the community.
+
+[IMPORTANT]
+Support for TLS1.0 is discontinued in Zuora. If by default the application tries to use TLS1.0, then, when running it, the following VM argument should be added: `-Dhttp.protocols=TLSv1.1,TLSv1.2` This will ensure the fact that TLS1.1 or TLS1.2 will be used for the communication with Zuora.
+
+[NOTE]
+====
+*WSDL Versions*
+
+The Zuora connector can use WSDL versions older than version 75, but only version 75 has been tested in detail.
+====
+
+== Install the Connector
+
+You can install the connector in Anypoint Studio using the instructions in
+link:/mule-fundamentals/v/3.8/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Installing a Connector from Anypoint Exchange].
+
+
+=== Upgrading from an Older Version
+
+If you’re currently using an older version of the connector, a small popup appears in the bottom right corner of Anypoint Studio with an "Updates Available" message.
+
+. Click the popup and check for available updates.
+. Click the Connector version checkbox and click *Next* and follow the instructions provided by the user interface.
+. *Restart* Studio when prompted.
+. After restarting, when creating a flow and using the Object Store Connector, if you have several versions of the connector installed, you may be asked which version you would like to use. Choose the version you would like to use.
+
+Additionally, we recommend that you keep Studio up to date with its latest version.
+
+== Creating a New Project
+
+To use the Zuora connector in a Mule application project:
+
+. In Anypoint Studio, click *File* > *New* > *Mule Project*.
++
+image:new_project.png[Create new project]
+. Enter a name for your new project and leave the remaining options with their default values.
+. If you plan to use Git, select *Create a default .gitignore file* for the project with default ignores for Studio Projects, and then click *Next*.
+. Click *Finish* to create the project.
+
+== Configure the Zuora Global Element
+
+To use the Zuora connector in your Mule application, you must configure a global Zuora element that can be used by the Zuora connector (read more about  link:/mule-fundamentals/v/3.8/global-elements[Global Elements]).
+The global parameters are:
+
+image:zuora-global-element-props.png[zuora-config]
+
+[width="100a",cols="50a,50a",options="header",]
+|===
+|Field |Description
+|*Username* |Enter the username to log into Zuora.
+|*Password* |Enter the corresponding password.
+|*Endpoint* |Enter the address of the endpoint responsible for handling the SOAP requests. The default value
+is *https://apisandbox.zuora.com/apps/services/a/75.0*
+|*Rest Endpoint* |Enter the base of the endpoint responsible for handling the REST requests. The default value
+is *https://apisandbox.zuora.com/apps/api/*
+|*Wsdl Location* |Enter the path to the Zuora WSDL. You can give the absolute path to the file, or
+you can give the relative path to the file, where the parent directory is src/main/resources
+
+|===
+
+[NOTE]
+
+Zuora Connector uses a session id to authenticate to Zuora when executing flows. The life of a session Id
+varies depending on how the Zuora environment is configured. When executing flows, if no reconnection strategy
+is set for the connector, when the session id will be invalidated, the API call will fail.
+To ensure the call will be successful, a reconnection strategy must be created to refresh the session id.
+
+[[using-the-connector]]
+== Using the Connector
+
+The Zuora connector has three message processors. The *Invoke SOAP Service* processor is capable of calling operations specified in the Zuora WSDL and can determine what type of objects the operation expects.
+
+. *Invoke SOAP Service* - Use this processor for calling a Zuora SOAP operation.
++
+The processor uses multi-level DataSense to provide the lists of operations in the input Zuora WSDL, and a list of object types that can be used for the chosen operation. The *Service* dropdown contains the services available in the WSDL file.
++
+image:invoke_soap1.png[invoke-soap-first-step]
++
+The second dropdown, *Operation Name* presents the user with all the available operations from the WSDL
++
+image:invoke_soap2.png[invoke-soap-second-step]
++
+The *Entity* dropdown presents all the available object types for the chosen operation. If the operation does not use an object with a specific type,
+or it uses no input, the *Entity* field will have an *Undefined* value.
++
+image:invoke-soap3.png[invoke-soap-third-step]
++
+[NOTE]
+====
+Observe the syntax for calling an operation from the Zuora SOAP API using the connector. The *Operation* and *Entity* are passed in the `soapMetadataKey` attribute separated by two vertical bars "||"
+[source,xml,linenums]
+----
+<zuora:invoke-soap-service config-ref="Zuora__Basic_Authentication" soapMetadataKey="ZuoraService-Soap-http://api.zuora.com/||create||Account-zObject" doc:name="Create Account"/>
+----
+====
++
+. *Get Export File Content* - This operation returns the content of an export file that contains queried data from Zuora.
+. *Get Export File Stream* - This operation returns a stream that represents an export file that contains queried data from Zuora.
+
+== SOAP Operations Available
+
+For Zuora API version 75, the available SOAP operations are:
+
+. *Amend*: change a subscription. see link:https://knowledgecenter.zuora.com/DC_Developers/SOAP_API/E_SOAP_API_Calls/amend_call[Zuora documentation for Amend].
+. *Create*: create one or more objects of a specific type. See link:https://knowledgecenter.zuora.com/DC_Developers/SOAP_API/E_SOAP_API_Calls/create_call[Zuora documentation for Create].
+. *Delete*: delete one or more objects of the same type. See link:https://knowledgecenter.zuora.com/DC_Developers/SOAP_API/E_SOAP_API_Calls/delete_call[Zuora documentation for Delete].
+. *Execute*: split an invoice into multiple invoices. See link:https://knowledgecenter.zuora.com/DC_Developers/SOAP_API/E_SOAP_API_Calls/execute_call[Zuora documentation for Execute].
+. *Generate*: generate an invoice for a specific customer. See link:https://knowledgecenter.zuora.com/DC_Developers/SOAP_API/E_SOAP_API_Calls/generate_call[Zuora documentation for Generate].
+ . *Get User Info*: retrieve information about the user.
+ . *Login*: takes a user name and a password and logs you in to the Zuora server. See link:https://knowledgecenter.zuora.com/DC_Developers/SOAP_API/E_SOAP_API_Calls/login_call[Zuora documentation for Login].
+ . *Query*: sends a query expression by specifying the object to query, the fields to retrieve from that object, and any filters to determine whether a given object should be queried.
+ See link:https://knowledgecenter.zuora.com/DC_Developers/SOAP_API/E_SOAP_API_Calls/query_call[Zuora documentation for Query].
+ . *Query More*: allows you to request additional results from a previous query() call. See link:https://knowledgecenter.zuora.com/DC_Developers/SOAP_API/E_SOAP_API_Calls/queryMore_call[Zuora documentation for Query More].
+ . *Subscribe*: bundle information required to create at least one new subscription. See link:https://knowledgecenter.zuora.com/DC_Developers/SOAP_API/E_SOAP_API_Calls/subscribe_call[Zuora documentation for Subscribe].
+. *Update*: updates the information in one or more objects of the same type. See link:https://knowledgecenter.zuora.com/DC_Developers/SOAP_API/E_SOAP_API_Calls/update_call[Zuora documentation for Update].
+
+
+Generally speaking, the Zuora connector can be used as an *outbound connector*. A description of this scenario follows.
+
+=== Outbound Scenario
+
+Use as an outbound connector in your flow to push data into Zuora. To use the connector in this capacity, simply place the connector in your flow _at any point after an inbound endpoint_ (see image below).
+
+==== Basic Example
+
+image:zuora-connector-outbound.png[zuora_outbound]
+
+. *File connector* - accepts data from files, such as a CSV, into a flow.
+. *Transform Message* - Transforms data structure and format to produce the output Zuora connector expects.
+. *Zuora connector* (_outbound_) - Connects with Zuora, and performs an operation to push data into Zuora.
+
+=== Connector Namespace and Schema
+
+When designing your application in Studio, the act of dragging the connector from the palette onto the Anypoint Studio canvas should automatically populate the XML code with the connector *namespace* and *schema location*.
+
+*Namespace:* `http://www.mulesoft.org/schema/mule/zuora`
+
+*Schema Location:* `http://www.mulesoft.org/schema/mule/connector/current/mule-zuora.xsd`
+
+[TIP]
+If you are manually coding the Mule application in Studio's XML editor or other text editor, define the namespace and schema location in the header of your *Configuration XML*, inside the `<mule>` tag.
+
+[source, xml,linenums]
+----
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:connector="http://www.mulesoft.org/schema/mule/zuora"
+      xsi:schemaLocation="
+               http://www.mulesoft.org/schema/mule/core
+               http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+               http://www.mulesoft.org/schema/mule/zuora
+               http://www.mulesoft.org/schema/mule/connector/current/mule-zuora.xsd">
+
+      <!-- put your global configuration elements and flows here -->
+
+</mule>
+----
+
+
+=== Using the Connector in a Mavenized Mule App
+
+After you download and install the connector, use the following steps to make the Zuora connector available to inside a Mule application for use and to package the application with the connector.
+If you use Anypoint Studio, it will do this automatically for you.
+
+. Add the repository information to your project's pom.xml file:
++
+[source, xml, linenums]
+----
+<repositories>
+   <repository>
+        <id>mule-ee-releases</id>
+        <name>MuleEE Releases Repository</name>
+        <url>https://repository-master.mulesoft.org/nexus/content/repositories/releases-ee/</url>
+    <repository>
+        <id>mule-ee-snapshots</id>
+        <name>MuleEE Snapshots Repository</name>
+        <url>https://repository-master.mulesoft.org/nexus/content/repositories/ci-snapshots/</url>
+    </repository>
+</repositories>
+----
+
+. Add the module as a dependency to your project for the latest release version:
+
++
+[source, xml, linenums]
+----
+<dependency>
+    <groupId>org.mule.modules</groupId>
+    <artifactId>mule-module-zuora</artifactId>
+    <version>RELEASE</version>
+</dependency>
+----
++
+Or for the latest version:
++
+[source, xml, linenums]
+----
+<dependency>
+    <groupId>org.mule.modules</groupId>
+    <artifactId>mule-module-zuora</artifactId>
+    <version>SNAPSHOT</version>
+</dependency>
+----
++
+. If you plan to use this module inside a Mule application, you need to include it in the packaging process. That way the final zip file that contains your flows and Java code also contains this module and its dependencies. Add a special "inclusion" to the configuration of the Mule Maven plugin for this module as follows:
++
+[source, xml, linenums]
+----
+<plugin>
+    <groupId>org.mule.tools</groupId>
+    <artifactId>maven-mule-plugin</artifactId>
+    <extensions>true</extensions>
+    <configuration>
+        <excludeMuleDependencies>false</excludeMuleDependencies>
+        <inclusions>
+            <inclusion>
+                <groupId>org.mule.modules</groupId>
+                <artifactId>mule-module-zuora</artifactId>
+            </inclusion>
+        </inclusions>
+    </configuration>
+</plugin>
+----
+
+
+== Demo Mule Applications Using Connector
+////
+add links to demos
+////
+
+
+=== Example Use Case
+
+The following example shows how to create an Account, a Contact, then update that Account to an active state and use the created contact for billing:
+
+
+. In Anypoint Studio, click *File* > *New* > *Mule Project*, name the project, and click *OK*.
+. In the search field, type "http" and drag the *HTTP* connector to the canvas. Use 3  *HTTP* connectors to create 3 separate flows. Click the *HTTP* connector,
+click the green plus sign to the right of *Connector Configuration*, and in the next screen, click *OK* to accept the default settings. Name the
+endpoints */create-account*, */create-contact* and */update-account*.
+. In the Search bar type "zuora" and drag the *Zuora* connector onto the canvas. Configure as before.
+. Click the *Invoke SOAP Service* operation. Choose *Create* operation and *Account* object. DataSense brings ibn the structure of the Account as well as the output structure of the Create operation.
+. For the second flow click the *Invoke SOAP Service* operation. Choose *Create* operation and *Contact* object. Datasense brings in the structure of the Contact as well as the output structure of the create operation.
+. For the third flow click the *Invoke SOAP Service* operation. Choose *Update* operation and *Account* object.
+Datasense brings the structure of the Account and brings in the output structure of the update operation.
+ Add *Transform Message* components, one in front of and one after the connector.
+ +
+[NOTE]
+ If "Payload - Unknown" is shown in DataWeave then the method either has no input or it returns nothing. If DataWeave detects any input for the method, it appears as: "Payload - Unknown".
+ +
+
+. The mapping for the three transforms should look like this:
++
+1) transform for creating account image:zuora-transform1.png[transformer-create-account]
++
+2) transform for creating contact image:zuora-transform2.png[transformer-create-contact]
++
+3) transformer for updating account image:zuora-transform3.png[transformer-update-account]
++
++
+. The flows appear as:
++
+image:create-account-flow.png[create-account]
++
+image:create-contact-flow.png[create-contact]
++
+image:update-account-flow.png[update-account]
++
+. After you create the flows, right-click the project name in the  image:package-explorer.png[package-explorer] and click *Run As* > *Mule Application*.
+. Create and post a JSON file that has the structure presented in the transforms at the endpoints that belong to each flow.
+As an example, below are a few valid JSON files:
++
+Create Account Input:
++
+image:account_json.png[create-account]
++
+Create Contact Input(for AccountId, the id from the account created by the previous flow can be used):
++
+image:contact_json.png[create-account]
++
+Update Account Input (for Id, the id from the account created by the first flow can be used. For the other
+  2 fields, the id from the contact created by the second flow can be used):
++
+image:update-account-json.png[create-account]
+
+
+////
+optional
+[tabs]
+-----
+[tab,title="Studio Visual Editor"]
+....
+[tab content goes here]
+....
+[tab,title="XML Editor"]
+....
+[tab content goes here]
+....
+-----
+////
+
+=== Example Use Case - XML
+
+Paste this into Anypoint Studio to interact with the example use case application discussed in this guide.
+
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:zuora="http://www.mulesoft.org/schema/mule/zuora" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/zuora http://www.mulesoft.org/schema/mule/zuora/current/mule-zuora.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <zuora:config name="Zuora__Basic_Authentication" username="${config.username}" password="${config.password}" doc:name="Zuora: Basic Authentication" wsdlLocation="${config.wsdlLocation}" endpoint="${config.endpoint}" restEndpoint="${config.restEndpoint}">
+        <reconnect-forever/>
+    </zuora:config>
+    <flow name="zuora-subscribe-operations-createAccount-demoFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/create-account" doc:name="HTTP"/>
+        <logger message="'Input:'#[payload]" level="INFO" doc:name="Logger"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:input-payload doc:sample="json.json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%namespace ns0 http://api.zuora.com/
+%namespace ns1 http://object.api.zuora.com/
+---
+{
+	ns0#create: {
+		ns0#zObjects: {
+			ns1#AllowInvoiceEdit: false,
+			ns1#AutoPay: false,
+			ns1#Batch: "Batch1",
+			ns1#BillCycleDay: "1",
+			ns1#Currency: "USD",
+			ns1#Name: payload.Name,
+			ns1#PaymentTerm: "Due Upon Receipt",
+			ns1#Status: "Draft"
+		}
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <zuora:invoke-soap-service config-ref="Zuora__Basic_Authentication" soapMetadataKey="ZuoraService-Soap-http://api.zuora.com/||create||Account-zObject" doc:name="Create Account"/>
+
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+        <logger message="'Output:'#[payload]" level="INFO" doc:name="Logger"/>
+    </flow>
+    <flow name="zuora-subscribe-operations-createContact-demoFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/create-contact" doc:name="HTTP"/>
+        <logger message="'Input:'#[payload]" level="INFO" doc:name="Logger"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:input-payload doc:sample="json_1.json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%namespace ns0 http://api.zuora.com/
+%namespace ns1 http://object.api.zuora.com/
+---
+{
+	ns0#create: {
+		ns0#zObjects: {
+			ns1#AccountId: payload.AccountId,
+			ns1#Address1: payload.Address1,
+			ns1#City: payload.City,
+			ns1#Country: "Romania",
+			ns1#FirstName: payload.FirstName,
+			ns1#LastName: payload.LastName,
+			ns1#State: payload.State
+		}
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <zuora:invoke-soap-service config-ref="Zuora__Basic_Authentication" soapMetadataKey="ZuoraService-Soap-http://api.zuora.com/||create||Contact-zObject" doc:name="Create Contact"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+        <logger message="'Output:'#[payload]" level="INFO" doc:name="Logger"/>
+    </flow>
+    <flow name="zuora-subscribe-operations-updateAccount-demoFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/update-account" doc:name="HTTP"/>
+        <logger message="'Input:'#[payload]" level="INFO" doc:name="Logger"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:input-payload doc:sample="json_7.json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%namespace ns0 http://api.zuora.com/
+%namespace ns1 http://object.api.zuora.com/
+---
+{
+	ns0#update: {
+		ns0#zObjects: {
+			ns1#Id: payload.Id,
+			ns1#BillToId: payload.contactId,
+			ns1#SoldToId: payload.contactId,
+			ns1#Status: "Active"
+		}
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <zuora:invoke-soap-service config-ref="Zuora__Basic_Authentication" soapMetadataKey="ZuoraService-Soap-http://api.zuora.com/||update||Account-zObject" doc:name="UpdateAccount"/>
+
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+        <logger message="'Output:'#[payload]" level="INFO" doc:name="Logger"/>
+    </flow>
+  </mule>
+----
+
+
+== Connector Performance
+
+To define the pooling profile for the connector manually, access the *Pooling Profile* tab in the applicable global element for the connector.
+
+For background information on pooling, see link:/mule-user-guide/v/3.8/tuning-performance[Tuning Performance].
+
+
+
+=== Best Practices
+
+. It is advisable to set the Reconnection Strategy to *Reconnect Forever* to make sure that the Session Id can be successfully refreshed.
+. To take full advantage of DataSense functionality with the Zuora connector, design-time best practice dictates that you should build an application in this particular order:
+
+.. *CONFIGURE the connector*
+.. *TEST the connection*
+.. *INITIATE DataSense metadata extraction*
+.. *BUILD the rest of your flow*
+.. *ADD and configure DataWeave*
++
+The objective of this design-time strategy is to set the pieces of the integration puzzle in place, then "glue them together" with DataWeave. Rather than designing a flow sequentially, from the inbound endpoint, this type of "align, then glue together" strategy ensures that you are utilizing DataSense, wherever possible, to pre-populate the information about the structure and format of the input or output data in a Transform Message component. The diagram in the section below prescribes a process that follows this best practice in the context of a flow that uses a Zuora connector. For further information, read link:/mule-user-guide/v/3.8/datasense[DataSense Best Practices].
+To take full advantage of the functionality +
+
+
+== Resources
+
+* Access the link:/release-notes/zuora-connector-release-notes[Zuora Connector Release Notes].

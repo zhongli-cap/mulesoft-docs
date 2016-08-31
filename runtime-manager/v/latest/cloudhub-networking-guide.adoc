@@ -24,6 +24,14 @@ These ports can be referenced via the expressions `${http.port}` and `${https.p
 
 *Important*: On the Mule worker, the CloudHub load balancer proxies port :80 to :8081 for HTTP and proxies port :443 to :8082 for HTTPS. The `http.port` value must be set to port 8081 for HTTP, and the `https.port` value must be set to port 8082 for HTTPS. No other port numbers are supported.
 
+[NOTE]
+--
+For each request that a client makes through CloudHub´s load balancer (_myapp.cloudhub.io_), the load balancer maintains two connections. One connection ​from​ the client and one to your Worker.  For each connection, the load balancer manages an idle timeout of 60 seconds that is triggered when no data is sent over ​either​ connection.  If no data has been sent or received during this time period, the load balancer closes ​both connections.
+
+For connections that take more than 60 seconds to be processed from either side, consider handling the processing asynchronously.
+--
+
+
 == DNS Records
 
 The following DNS records are exposed for your CloudHub applications:
@@ -48,7 +56,7 @@ The only two ports exposed externally are `${http.port}` and `${https.port}`. If
 
 If you wish to expose HTTP services only inside a VPC, these services can be exposed on ports 8091 and 8092, which are open by default on the internal network. In this case, these services are not accessible on the public IPs or the load-balancer, ensuring that they can be accessed securely.
 
-Additional ports can be opened inside the VPC, for example, for JMX based monitoring. You can file a MuleSoft support ticket requesting the ports you want opened.
+Additional ports can be opened inside the VPC, for example, for JMX based monitoring. In order  to do so, refer to the Firewall rules section in out link:/runtime-manager/virtual-private-cloud#firewall-rules[VPC documentation].
 
 == IP Ranges and Static IPs
 
@@ -59,9 +67,9 @@ CloudHub supports allocating a static IP for applications so that they can be wh
 [NOTE]
 Static IPs are not supported for private IP addresses inside a CloudHub VPC and it is only supported for applications with 1 worker.
 
-Sometimes firewalls or infrastructure settings don't let Mule Runtimes reach the Runtime Manager's public services. This might be an issue when registering a Mule Runtime or when starting it and registering it to work with Runtime Manager.
+Sometimes firewalls or infrastructure settings don't let Mule runtimes reach the Runtime Manager's public services. This might be an issue when registering a Mule runtime or when starting it and registering it to work with Runtime Manager.
 
-If you need to whitelist the IPs for the communication between the Mule Agent and the Runtime Manager console, see link:/mule-agent/v/1.4.0/installing-mule-agent#ips-to-whitelist[IPs to Whitelist].
+If you need to whitelist the IPs for the communication between the link:/runtime-manager/runtime-manager-agent[Runtime Manager Agent] and the Runtime Manager console, see link:/runtime-manager/installing-and-configuring-mule-agent#ports-and-ips-to-whitelist[IPs to Whitelist].
 
 == Regional Services
 
@@ -85,13 +93,15 @@ Australia
 
 Deploying to a region also affects your internal and external worker DNS address. For example, if you deploy in Europe, the DNS records for internal and external IPs are `mule-worker-myapp.eu.cloudhub.io` and `mule-worker-internal-myapp.eu.cloudhub.io`.
 
-== Custom Load Balancing Configurations
+== Dedicated Load Balancing Configurations
 
 Under certain circumstances you may want to set up a custom load balancing layer for your Mule workers. For example, if you want to provide a custom domain name or SSL certificates.
 
-Traffic can be routed from your load balancer to CloudHub workers through the internal or external DNS record for your workers. This record contains an IP address for every worker in the application. Your load balancer must support dynamic DNS resolution for this approach to work. It is recommended that you set your DNS timeout to between 20-60 seconds so that any DNS changes are propagated quickly and minimize impact.
+Traffic can be routed from your load balancer to CloudHub workers through the internal or external DNS record for your workers. This record contains an IP address for every worker in the application. It is recommended that you set your DNS timeout to between 20-60 seconds so that any DNS changes are propagated quickly and minimize impact.
 
-Zero downtime deploys are not fully supported in this situation. If you set your DNS timeout low enough, you should not notice any interruptions in services while updating workers. However, since CloudHub is not aware of your load balancer setup, it cannot check to see if the DNS record has been updated and if requests are being propagated correctly. This means there is a small window where it is theoretically possible for service to be interrupted.
+// Zero downtime deploys are not fully supported in this situation. If you set your DNS timeout low enough, you should not notice any interruptions in services while updating workers. However, since CloudHub is not aware of your load balancer setup, it cannot check to see if the DNS record has been updated and if requests are being propagated correctly. This means there is a small window where it is theoretically possible for service to be interrupted.
+
+By configuring your own link:/runtime-manager/virtual-private-cloud[VPC] you can set your own link:/runtime-manager/cloudhub-dedicated-load-balancer[dedicated load balancer] through the link:/runtime-manager/anypoint-platform-cli[Anypoint Platform Command Line Interface].
 
 == See Also
 
@@ -101,12 +111,12 @@ Zero downtime deploys are not fully supported in this situation. If you set your
 * link:/runtime-manager/managing-deployed-applications[Managing Deployed Applications]
 * link:/runtime-manager/managing-cloudhub-applications[Managing CloudHub Applications]
 * link:/runtime-manager/deploying-to-cloudhub[Deploy to CloudHub]
-* link:/runtime-manager/monitoring-applications[Monitoring Applications]
+* link:/runtime-manager/monitoring[Monitoring Applications]
 * link:/runtime-manager/cloudhub-fabric[CloudHub Fabric]
 * link:/runtime-manager/managing-queues[Managing Queues]
 * link:/runtime-manager/managing-schedules[Managing Schedules]
 * link:/runtime-manager/managing-application-data-with-object-stores[Managing Application Data with Object Stores]
-* link:/runtime-manager/cloudhub-cli[Command Line Tools]
+* link:/runtime-manager/anypoint-platform-cli[Command Line Tools]
 * link:/runtime-manager/secure-application-properties[Secure Application Properties]
 * link:/runtime-manager/virtual-private-cloud[Virtual Private Cloud]
 * link:/runtime-manager/penetration-testing-policies[Penetration Testing Policies]

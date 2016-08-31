@@ -2,78 +2,71 @@
 // * add mode to run jetty in background
 // * combine css (need to update template as well)
 // * set outputs.dir for custom tasks
-import com.palominolabs.gradle.task.git.clone.GitCloneTask
-import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.lib.RepositoryBuilder
-
 buildscript {
   configurations.create('builder')
   configurations.create('singlePageBuilder')
 
   repositories {
-    mavenLocal()
-    ivy {
-      url 'https://s3-us-west-2.amazonaws.com/docs-site-builder'
-      layout 'pattern', { artifact '[artifact]-[revision].[ext]' }
+    if (project.hasProperty('useMavenLocal')) {
+      mavenLocal()
     }
     jcenter()
+    maven {
+      url 'https://repository-master.mulesoft.org/nexus/content/repositories/public'
+    }
   }
 
   dependencies {
     classpath 'com.eriwen:gradle-css-plugin:2.12.0'
-    classpath 'com.palominolabs.gradle.task:gradle-git-clone-task:0.0.2'
-    classpath 'org.ajoberstar:gradle-git:1.5.1-rc.3'
-
-    builder 'com.mulesoft.documentation.builder:mule-docs-builder:1.0.0-SNAPSHOT'
-    //builder('com.mulesoft.documentation.builder:mule-docs-builder:1.0.0-SNAPSHOT') {
-    //  exclude group: 'org.asciidoctor', module: 'asciidoctorj-pdf'
-    //  exclude group: 'com.beust', module: 'jcommander'
-    //  exclude group: 'org.jruby', module: 'jruby'
-    //}
-    //builder 'org.jruby:jruby:9.0.5.0'
-
-    // NOTE jar for single-page builder is not available on s3, so much be built and installed locally
-    singlePageBuilder 'com.mulesoft.documentation.builder.previewer:mule-docs-single-page-builder:1.0.0-SNAPSHOT'
-    //singlePageBuilder('com.mulesoft.documentation.builder.previewer:mule-docs-single-page-builder:1.0.0-SNAPSHOT') {
-    //  exclude group: 'org.asciidoctor', module: 'asciidoctorj-pdf'
-    //  exclude group: 'com.beust', module: 'jcommander'
-    //  exclude group: 'org.jruby', module: 'jruby'
-    //}
-    //singlePageBuilder 'org.jruby:jruby:9.0.5.0'
+    builder 'com.mulesoft.documentation.builder:mule-docs-builder:1.0.0-M1'
+    singlePageBuilder 'com.mulesoft.documentation.builder:mule-docs-single-page-builder:1.0.0-M1'
   }
+
+  // enable upon upgrading to 1.0.0-RC1 (the non-shaded jar)
+  //configurations.all {
+  //  resolutionStrategy {
+  //    // NOTE override JRuby version pulled in by AsciidoctorJ to work around hang in CodeRay
+  //    force 'org.jruby:jruby:9.0.5.0'
+  //  }
+  //}
 }
 
+defaultTasks 'build'
 group = 'com.mulesoft.documentation'
 
 ext {
+  dryRun = project.hasProperty('dryRun')
   assetsDir = '_assets'
   assetsRepoBranchName = 'staging'
+  assetsRepoCommit = "origin/$assetsRepoBranchName"
   assetsRepoUri = 'https://github.com/mulesoft/mulesoft-docs-site-assets'
-  builderMaxHeapSize = '2g'
+  builderMaxHeapSize = project.hasProperty('maxHeapSize') ? project.property('maxHeapSize') : '2500m'
+  builderJvmArgs = ['-Xverify:none', '-XX:+OptimizeStringConcat', '-XX:+UseFastAccessorMethods', '-Djava.net.preferIPv4Stack=true', '-Djava.awt.headless=true']
   docsRepoBranchName = 'master'
   docsRepoUri = 'https://github.com/mulesoft/mulesoft-docs'
   profile = project.hasProperty('profile') ? project.property('profile') : 'dev'
   profileBuildScript = "gradle/$profile-profile.gradle"
   siteDir = '_site'
   siteUri = 'http://localhost:8000'
+  tempDir = '_tmp'
   templatesDir = '_templates'
 }
 
+apply from: 'gradle/git-helper.gradle'
 if (file(profileBuildScript).exists()) apply from: profileBuildScript
 apply plugin: 'css'
 
-task cloneAssetsRepo(type: GitCloneTask) {
-  dir = file(assetsDir)
-  onlyIf { !dir.exists() }
-  uri = assetsRepoUri
-  treeish = 'origin/' + assetsRepoBranchName
-  trySshAgent = false
+task cloneAssetsRepo {
+  outputs.dir(assetsDir).upToDateWhen { false }
+  onlyIf { !file("$assetsDir/.gitkeep").file }
   doLast {
-    // checkout staging branch properly
-    // TODO should be fixed upstream (https://github.com/palominolabs/gradle-git-clone-task)
-    def git = new Git(new RepositoryBuilder().readEnvironment().findGitDir(dir).build())
-    def create = !git.branchList().call().find { it.name == "refs/heads/$assetsRepoBranchName" }
-    git.checkout().setCreateBranch(create).setName(assetsRepoBranchName).setStartPoint(treeish).call()
+    if (file("$assetsDir/.git").directory) {
+      git "fetch -q origin", assetsDir
+    }
+    else {
+      git "clone -q $assetsRepoUri $assetsDir", file(assetsDir).parent
+    }
+    git "checkout -q -B $assetsRepoBranchName $assetsRepoCommit", assetsDir
   }
 }
 
@@ -82,16 +75,17 @@ task setup(group: 'Build', description: 'Prepares the build.') {
 }
 
 task clean(type: Delete, group: 'Build', description: 'Deletes assets and site directories.') {
-  delete assetsDir, siteDir
+  delete assetsDir, siteDir, tempDir
 }
 
 // TODO site builder should accept a custom templates directory
 task copyTemplates(type: Copy) {
-  if (profile == 'dev') {
-    dependsOn setup
+  // FIXME define variable useTemplatesFromAssets
+  if (profile == 'prod') {
+    enabled = false
   }
   else {
-    enabled = false
+    dependsOn setup
   }
   from "$assetsDir/$templatesDir"
   into templatesDir
@@ -104,12 +98,13 @@ task buildHtml(type: JavaExec, group: 'Build', description: 'Builds HTML pages.'
   main = 'com.mulesoft.documentation.builder.Client'
   args = ['-s', '.', '-d', siteDir, '-ghr', docsRepoUri, '-ghb', docsRepoBranchName, '-url', siteUri]
   maxHeapSize = builderMaxHeapSize
+  jvmArgs = builderJvmArgs
   //outputs.dir siteDir
   doLast {
-    if (profile == 'dev') {
-      // NOTE undo changes to templates
-      new Git(new RepositoryBuilder().readEnvironment().findGitDir(file('.')).build())
-        .checkout().addPath(templatesDir).call()
+    // FIXME define variable useTemplatesFromAssets instead of checking profile
+    if (profile != 'prod') {
+      // NOTE undo local changes to template(s)
+      git "checkout -- $templatesDir"
     }
   }
 }
@@ -118,7 +113,7 @@ task buildHtml(type: JavaExec, group: 'Build', description: 'Builds HTML pages.'
 task buildHtmlSingle(type: JavaExec, group: 'Build', description: 'Builds a single HTML page.') {
   classpath = buildscript.configurations.singlePageBuilder
   main = 'com.mulesoft.documentation.builder.previewer.Client'
-  args = ['-s', file(project.hasProperty('file') ? project.property('file') : 'index.adoc').absolutePath, '-d', '_tmp']
+  args = ['-s', file(project.hasProperty('file') ? project.property('file') : 'index.adoc').absolutePath, '-d', tempDir]
 }
 
 task copyAssets(type: Copy) {
@@ -131,6 +126,13 @@ task copyAssets(type: Copy) {
   }
   into siteDir
   //outputs.dir siteDir
+
+  // preserve last modified times (futile since git clone doesn't preserve last modification times)
+  //def fileCopyDetails = []
+  //eachFile { fileCopyDetails << it }
+  //doLast {
+  //  fileCopyDetails.each { new File(destinationDir, it.path).setLastModified(it.lastModified) }
+  //}
 }
 
 css {

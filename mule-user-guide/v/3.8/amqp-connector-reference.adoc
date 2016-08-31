@@ -22,7 +22,7 @@ You can create several connectors connected to the same broker for the purpose o
 *Type:* port number +
 *Required:* no +
 *Default:* `5672`
-|`fallbackAddresses` |A comma-separated list of hosts, listed as `<host>` or `<host:port>`. If the connection to the main broker fails, the hosts listed here are the fallback brokers to attempt to connect to.
+|`fallbackAddresses` |A comma-separated list of hosts (brokers), listed as `<host>` or `<host:port>`. If the connection to the main broker fails, the hosts listed here are the fallback brokers to attempt to connect to. For more information, see link:/mule-user-guide/v/3.8/amqp-connector-examples#connection-fallback[Connection Fallback].
 
 *Type:* string +
 *Required:* no +
@@ -44,12 +44,17 @@ You can create several connectors connected to the same broker for the purpose o
 *Default:* `guest`
 |`deliveryMode` |The delivery mode to use when publishing to the AMQP broker.
 
-*Type:* `PERSISTENT` or `NON_PERSISTENT` +
-*Required:* no +
-*Default:* `PERSISTENT`
-|`priority` |The priority to use when publishing to the AMQP broker.
+Possible values are:
 
-*Type:* undefined +
+* `PERSISTENT`
+* `NON_PERSISTENT`
+
+*Type*: string +
+*Required*: no +
+*Default*: `PERSISTENT`
+|`priority` |The priority to use when publishing to the AMQP broker. The priority has possible values from `0` to `9` - default is `0`.
+
+*Type*: byte +
 *Required:* no +
 *Default:* `0`
 |`mandatory` |Tells the server how to react if the message cannot be routed to a queue. If set to true, the server throws an exception for any message that cannot be routed. If set to false, the server silently drops the message.
@@ -69,12 +74,13 @@ You can create several connectors connected to the same broker for the purpose o
 *Default:* none
 |`ackMode` |The acknowledgment mode to use when consuming from the AMQP broker.
 
-*Type:*
+Possible values are:
 
- * `AMQP_AUTO`
- * `MULE_AUTO`
- * `MANUAL`
+* `AMQP_AUTO` - The AMQP broker  considers messages acknowledged once delivered.
+* `MULE_AUTO` - Mule  automatically acknowledges messages when the flow has been processed, if no exception has been encountered. Using asynchronous sub-flows or dispatch may lead to early acknowledgment.
+* `MANUAL` - The AMQP broker expects explicit message acknowledgments.
 
+*Type:* string +
 *Required:* no +
 *Default:* `AMQP_AUTO`
 |`prefetchSize` |The maximum amount of content (measured in octets) that the server delivers. 0 means unlimited.
@@ -102,7 +108,14 @@ You can create several connectors connected to the same broker for the purpose o
 *Type:* integer +
 *Required:* no +
 *Default:* `4`
-|`activeDeclarationsOnly` |Defines if the connector should only do active exchange and queue declarations, or if it can also perform passive declarations to enforce their existence.
+|`activeDeclarationsOnly` |Defines if the connector should only do active exchange and queue declarations, or if it should perform passive declarations to enforce the existence of the queue or exchange.
+
+Possible values:
+
+* `true` - The AMQP connector creates a queue or exchange if it doesn't exist. The connector creates inbound endpoint queues or exchanges. Creating outbound endpoint queues or exchanges are currently not supported. If you give the inbound endpoint a queueName and queueDurable, AMQP connector creates the queue. If you give the inbound endpoint exchangeName and exchangeType, AMQP connector creates the exchange. If you set the routingKey, the connector makes the binding for you.
+* `false` - The AMQP connector assumes the queue or exchange already exists and sends the message to the queue or exchange. If the queue or exchange does not exist, the AMQP connector throws a ShutdownSignalException, a 404 error, and returns reply text starting with `NOT_FOUND`.
+
+For a discussion on active versus passive declarations, see link:http://bitingcode.blogspot.co.uk/2012/03/passive-or-active-queues.html[Passive or active queues?]
 
 *Type:* boolean +
 *Required:* no +
@@ -138,16 +151,17 @@ Endpoint attributes are interpreted differently if they are used on inbound or o
 *Default:* none
 |`exchangeType` |The type of exchange to be declared.
 
-*Type:*
+Possible values are:
 
-* `fanout`
-* `direct`
-* `topic`
-* `headers`
+* `fanout` - Broadcasts all messages the exchange receives to all bound queues.
+* `direct` - A message goes to a specific queue.
+* `topic` - A pattern that determines which queues receive a message. The pattern is a list of words delimited by dots up to 255 characters in length. The pattern can use an asterisk (&#x2217;) to substitute for a single word. A hash tag (&#x0023;) can substitute for zero or more words. For more information, see link:https://www.rabbitmq.com/tutorials/tutorial-five-python.html[RabbitMQ Topics].
+* `headers` - A message is sent to a queue depending on its header attributes.
 
-*Required:* no +
-*Default:* none
-|`exchangeDurable` |The durability of the declared exchange.
+*Type*: string +
+*Required*: no +
+*Default*: none
+|`exchangeDurable` |The durability of the declared exchange. A durable exchange survives a broker restart.
 
 *Type:* boolean +
 *Required:* no +
@@ -157,12 +171,12 @@ Endpoint attributes are interpreted differently if they are used on inbound or o
 *Type:* boolean +
 *Required:* no +
 *Default:* none
-|`numberOfChannels` |The number of channels that are spawned for this inbound endpoint to receive AMQP messages. If not present, the value defined in the connector is used. Otherwise, it is 4.
+|`numberOfChannels` |The number of channels that are spawned for this inbound endpoint to receive AMQP messages. If not present, the value defined in the connector is used. Otherwise, it is `4`.
 
 *Type:* integer +
 *Required:* no +
 *Default:* none
-|`queueDurable` |Specifies if the declared queue is durable.
+|`queueDurable` |Specifies if the declared queue is durable. A durable queue persists to disk and survives a broker restart. *Note:* Messages routed to the queue are not durable.
 
 *Type:* boolean +
 *Required:* no +

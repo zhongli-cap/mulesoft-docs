@@ -1,0 +1,36 @@
+// Command to execute in CI:
+// ./gradlew -g .gradle --no-search-upward -Pprofile=staging -PstagingIdentity=$CREDS -PmaxHeapSize=4g clean publish
+ext {
+  siteUri = 'http://docs-stg.mulesoft.com'
+  stagingUser = 'ec2-user'
+  stagingIdentity = project.hasProperty('stagingIdentity') ? project.property('stagingIdentity') : new File(System.getProperty('user.home'), '.ssh/id_rsa').toString()
+  stagingHost = 'docs-stg.mulesoft.com'
+  stagingDestinationDir = '/usr/share/nginx/html'
+  //stagingUser = System.getProperty('user.name')
+  //stagingHost = 'localhost'
+  //stagingDestinationDir = '/tmp/html'
+}
+
+task disallowRobots(group: 'Build', description: 'Disallows robots from crawling the site.') {
+  doLast {
+    File robotsConfig = file("$siteDir/robots.txt")
+    if (robotsConfig.file) robotsConfig.text = "User-agent: *\nDisallow: /"
+  }
+}
+
+task publishToStaging(type: Exec, group: 'Publishing', description: 'Synchronizes site output to remote staging server') {
+  executable 'rsync'
+  // transfer status legend: http://stackoverflow.com/questions/4493525/rsync-what-means-the-f-on-rsync-logs/12037164#12037164
+  // QUESTION should we use --size-only to ignore timestamp changes?
+  args '-rtOzi', "-e ssh -i $stagingIdentity", '--delete-delay', "$siteDir/", "$stagingUser@$stagingHost:$stagingDestinationDir/"
+  if (dryRun) args = ['-n'] + args
+}
+
+task publish(group: 'Build', description: 'Builds site and copies changes to staging server')
+
+afterEvaluate {
+  build.dependsOn disallowRobots
+  disallowRobots.mustRunAfter copyAssets
+  publish.dependsOn build, publishToStaging
+  publishToStaging.mustRunAfter build
+}
