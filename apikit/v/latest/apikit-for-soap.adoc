@@ -5,7 +5,7 @@ APIkit for SOAP helps you implement a SOAP interface for accessing data resource
 
 Mule EE Runtime is required for using APIkit for SOAP. APIkit for SOAP supports consuming a remote WSDL, such as the link:http://devkit-cookbook.cloudhub.io/soap?wsdl[Cookbook WSDL file]. The following tutorial, however, uses a local WSDL.
 
-=== Create a New Project
+== Create a New Project
 
 To create an APIkit for SOAP using Studio, follow the instructions in this document. The link:/apikit/apikit-reference[APIkit Reference] contains information about the configuration.xml for using APIkit for SOAP from the command line.
 
@@ -14,8 +14,10 @@ To create an APIkit for SOAP project:
 . Check that you are using a version of Studio that includes the Anypoint APIkit SOAP Extension: *Help* > *Installation Details*. If not, link:/anypoint-studio/v/6/download-and-launch-anypoint-studio[install Studio 6.0] or later.
 . Download the example link:_attachments/tshirt2.wsdl[tshirt2.wsdl] file to your local drive.
 . Under the *File menu*, select *New* > *Mule Project*.
-. In the New Mule Project wizard, enter a Name for the project and select an *EE runtime*, for example Mule Server 3.8.1 EE.
-. Click *Add APIkit components* and browse to the tshirt2.wsdl file you downloaded.
++
+The New Mule Project wizard appears.
+. In *Project Name*, enter a name for the project. Select or accept the default *EE runtime*, for example Mule Server 3.8.1 EE.
+. Check the *Add APIkit components* checkbox, and browse to the tshirt2.wsdl file you downloaded.
 . Select a service and port from the drop-down menus. For example, select TshirtService and TshirtServicePort.
 +
 image::apikit-for-soap-47fb8.png[apikit-for-soap-47fb8]
@@ -24,25 +26,34 @@ image::apikit-for-soap-47fb8.png[apikit-for-soap-47fb8]
 +
 The new project having a `src/main/wsdl` folder that contains the WSDL file appears.
 +
-.  Right-click the canvas and run the app.
+.  Right-click a blank area of the canvas and run the project.
 . Go to http://localhost:8081/TshirtService/TshirtServicePort?wsdl.
 +
 The contents of the TShirtService WSDL file appear.
 
-=== Implement a SOAP Fault
+== Implementing an Operation
 
-To implement a SOAP fault, you use the *Transform Message* component to add a message in link:/mule-user-guide/v/3.8/dataweave[*DataWeave*] transformation language.
+By default, each flow you generate in Studio has a payload that identifies the current operation that needs to be implemented by returning a link:http://whatis.techtarget.com/definition/SOAP-fault[SOAP fault].
 
-Use SoapUI, or another SOAP client, to work with the exposed endpoint.
-By default, each generated flow has a payload that identifies the current operation that needs to be implemented by returning a link:http://whatis.techtarget.com/definition/SOAP-fault[SOAP fault].
+In this part of the tutorial, you use the SoapUI tool to identify an operation that you need to implement by requesting  the API that fails. Use the `OrderTshirt` operation to create a request in SOAP UI to place an order for a large t-shirt for John. The API cannot handle this operation and a SOAP fault occurs.
 
-To implement a SOAP fault:
+To resolve the fault, you modify the API. You add the *Transform Message* component to the flow and specify a message in link:/mule-user-guide/v/3.8/dataweave[*DataWeave*] transformation language for responding to the request, effectively implementing the operation. In the DataWeave code, you use the proper namespace to avoid a `soap:Server faultcode` at the beginning of the response to the request.
+
+The *Transform Message* component works on the process side after the endpoint defined in the WSDL has been hit, triggering the main flow of the Mule application to execute, which then calls the backend flow.
+
+To generate a SOAP fault:
 
 . Create a SoapUI project feeding the `http://localhost:8081/TshirtService/TshirtServicePort?wsdl` URL:
 +
 image:soapui-new-project.png[soapui-new-project.png]
 +
-. Use the `OrderTshirt` operation and create a request in SOAP UI by entering some values. For example, put *L* for "Large" between the tags for `<size>` element.
+. Create the request to order the t-shirt by entering some values. For example:
++
+* Enter *L* between the tags for the `<size>` element in the envelope.
++
+* Enter *John* between the `<name>` tags.
++
+. Submit the request.
 +
 The result is the SOAP fault.
 +
@@ -57,19 +68,19 @@ The result is the SOAP fault.
    </soap:Body>
 </soap:Envelope>
 ----
+
+To implement an operation to prevent the SOAP fault:
+
+. Remove the *Set Payload* element from the flow `OrderTshirt:api-config`.
+. Drag a *Transform Message* component from the Mule palette to replace Set Payload.
 +
-. Remove the *Set Payload* element from the flow `OrderTshirt:api-config`, and drag a *Transform Message* component from the Mule palette to replace Set Payload.
+Leave the Source section of the APIkit backend flow empty.
++
 . Select the Transform Message component.
 +
 The user interface displays the input and output for the current operation, `OrderTshirt` as input, and `OrderTshirtResponse` as output.
 +
-. Specify the namespace as follows:
-+
-`%namespace ns0 http://mulesoft.org/tshirt-service`
-+
-When transforming the response to SOAP payload output, add the proper namespace to avoid a `soap:Server faultcode`.
-+
-The following output appears:
+. In the properties editor, specify the payload as follows:
 +
 [source,xml,linenums]
 ----
@@ -85,15 +96,13 @@ The following output appears:
 }
 ----
 +
-The Source section of the APIkit backend flow is intentionally blank. The *Transform Message* component works on the process side after the endpoint defined in the WSDL has been hit, triggering the main flow of the Mule application to execute, which then calls the backend flow.
-+
 image:transform-payload.png[transform-payload.png]
 +
-. Save the project and wait until it redeploys the whole Mule application.
+. Save and rerun the project.
 +
 . Repeat the request.
 +
-The output changed to a valid response:
+The output changes to a valid response:
 
 [source,xml,linenums]
 ----
@@ -106,13 +115,17 @@ The output changed to a valid response:
 </soap:Envelope>
 ----
 
-=== Working with Headers
+== Working with Headers
 
-You can use the information in the header sent by the request under the `apiKey` header element.
+The SoapUI, the request window shows the soap Envelope header.
 
-To do so:
+image::apikit-for-soap-53dc2.png[apikit-for-soap-53dc2]
 
-. Edit the *Transform Message* mapping by adding the following DataWeave script:
+In this part of the tutorial, you modify the API to use header information sent by the request.
+
+. In the SoapUI, modify the request to order the t-shirt by entering some values. For example, enter `987654321` between the `<apiKey>` tags.
+
+. In Studio, edit the *Transform Message* mapping by adding the following DataWeave code:
 +
 [source,xml,linenums]
 ----
@@ -126,7 +139,8 @@ To do so:
 }
 ----
 +
-. Hit the endpoint via SoapUI and check that the response changes to the following:
+. Save and rerun the project.
+. In SoapUI, send a request, and check that the response changes to the following:
 +
 [source,xml,linenums]
 ----
@@ -138,28 +152,41 @@ To do so:
    </soap:Body>
 </soap:Envelope>
 ----
+
+To add a header to the outgoing message to fulfill the expected contract:
+
+. In Studio, open the tshirt2.wsdl in `src/main/wsdl` and scroll to APIUsageInformation element, which is the element expected by the contract. Copy the name of the element to the clipboard.
+. On the canvas, select Transform message in the `OrderTshirt:/TshirtService/TshirtServicePort/api-config` flow, and in the properties editor, click *Add new target*:
 +
-. Add a header to the outgoing message to fulfill the expected contract.
+image::apikit-for-soap-3005f.png[apikit-for-soap-3005f,height=440,width=700]
 +
-* In the “Transform message”, click *Add new target*.
-* Select *property* from the drop-down.
-* Select the value `soap.APIUsageInformation`, expected by the contract.
-* Double-click the `apiCallsRemainin: _Integer_`.
+The selection dialog for selecting a target appears.
 +
-The transformation script looks something like this:
+. Select *property* from the Variable drop-down.
+. In *Variable name*, paste the contents of the clipboard, and add soap. as a prefix:  `soap.APIUsageInformation`.
+. Click OK.
+. Double-click the `apiCallsRemainin: _Integer_`.
 +
-image:adding-header-transform-message.gif[adding-header-transform-message.gif]
+image::apikit-for-soap-41732.png[apikit-for-soap-41732,height=440,width=700]
++
+// removing animation--too hard to read, not appropriate for formal product documentation. kris image:adding-header-transform-message.gif[adding-header-transform-message.gif]
 +
 [source,xml,linenums]
 ----
+%dw 1.0
+%output application/xml
+%namespace ns0 http://mulesoft.org/tshirt-service
+---
 {
-  ns0#APIUsageInformation: {
-    apiCallsRemaining: 10
-  }
+	ns0#APIUsageInformation: {
+		apiCallsRemaining: null
+	}
 }
 ----
 +
-. Hit the same endpoint by executing the OrderTshirt request from SOAPUI. The response envelope from APIkit for SOAP is:
+. Change `null` to `10`.
+. Save and rerun the project.
+. In the SoapUI, hit the same endpoint by executing the OrderTshirt request. The response envelope from APIkit for SOAP is:
 +
 [source,xml,linenums]
 ----
@@ -209,7 +236,7 @@ apiCallsRemaining: 10
 
 === Using Typed Faults
 
-APIkit for SOAP supports the capability typed SOAP Faults. For the `tshirt2.wsdl` file, there is just one typed fault named `TshirtFault`, which is mapped to every operation that the WSDL has: OrderTshirt, ListInventory, and TrackOrder.
+APIkit for SOAP supports typed SOAP Faults. For the `tshirt2.wsdl` file, there is just one typed fault named `TshirtFault`, which is mapped to every operation that the WSDL has: OrderTshirt, ListInventory, and TrackOrder.
 
 To make the ListInventory operation display the typed fault.
 
@@ -257,7 +284,7 @@ You can select either type using any WSDL file, even for those files that do not
 After modifying a WSDL, such as adding an operation or editing a message, regenerate SOAP flows. Because modifying a WSDL is error-prone, before making a change, make a backup, change the attribute, and verify that the change worked.
 
 To update a WSDL file:
-+
+
 . Download link:_attachments/tshirt-modified.wsdl[tshirt-modified.wsdl], copy the entire contents of the downloaded file, and paste it in tshirt2.wsdl, replacing the tshirt2.wsdl content.
 +
 . In Package Explorer, right-click the project and select *Mule* > *Generate SOAP Flows*.
