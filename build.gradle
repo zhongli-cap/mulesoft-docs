@@ -34,6 +34,8 @@ buildscript {
 defaultTasks 'build'
 group = 'com.mulesoft.documentation'
 
+apply from: 'gradle/git-helper.gradle'
+
 ext {
   dryRun = project.hasProperty('dryRun')
   assetsDir = '_assets'
@@ -42,7 +44,10 @@ ext {
   assetsRepoUri = 'https://github.com/mulesoft/mulesoft-docs-site-assets'
   builderMaxHeapSize = project.hasProperty('maxHeapSize') ? project.property('maxHeapSize') : '2500m'
   builderJvmArgs = ['-Xverify:none', '-XX:+OptimizeStringConcat', '-XX:+UseFastAccessorMethods', '-Djava.net.preferIPv4Stack=true', '-Djava.awt.headless=true']
-  docsRepoBranchName = 'master'
+  docsRepoBranchName = System.env.GIT_BRANCH ?
+      System.env.GIT_BRANCH.replaceFirst(/^origin\//, '') :
+      git('rev-parse --abbrev-ref HEAD', '.', true)
+  // NOTE we assume here that all branches reside in the upstream repository
   docsRepoUri = 'https://github.com/mulesoft/mulesoft-docs'
   profile = project.hasProperty('profile') ? project.property('profile') : 'dev'
   profileBuildScript = "gradle/$profile-profile.gradle"
@@ -52,7 +57,6 @@ ext {
   templatesDir = '_templates'
 }
 
-apply from: 'gradle/git-helper.gradle'
 if (file(profileBuildScript).exists()) apply from: profileBuildScript
 apply plugin: 'css'
 

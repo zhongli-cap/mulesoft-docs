@@ -1,24 +1,43 @@
-= CloudHub and Mule
+= Deployment Strategies
 :keywords: cloudhub, cloud, api, runtime manager, arm, mule, mule esb, runtime, on prem, on premises
 
 
-Anypoint Runtime Manager allows you to deploy your Mule applications through the:
+Anypoint Runtime Manager allows you to deploy your Mule applications through:
 
-* Anypoint Runtime Manager's link:https://anypoint.mulesoft.com[Cloud console] to *CloudHub*, or the
-* Anypoint Runtime Manager's link:https://anypoint.mulesoft.com[Cloud console] to *another server* running an instance of Mule runtime (on-prem or on the cloud)
-* On-premises edition of the Anypoint Runtime Manager to *another server* that runs a Mule runtime
+* Anypoint Runtime Manager's link:https://anypoint.mulesoft.com[Cloud console] to *CloudHub*
+* Anypoint Runtime Manager's link:https://anypoint.mulesoft.com[Cloud console] to an *on-prem server* running an instance of Mule runtime
+* On-premises edition of the Anypoint Runtime Manager to an *on-prem server* that runs an instance of Mule runtime *(Beta)*
+////
+* On-premises edition of the Anypoint Runtime Manager to *a Pivotal Cloud Foundry repository* that manages an instance of Mule runtime *(Beta)*
+////
+
 
 [TIP]
 If you are interested in requesting the Anypoint Platform On-premises Edition, please contact your sales representative.
 
 image:arm-vs-ch1.png[diagram1]
 
+////
+[NOTE]
+====
+The On-Premises console of the Anypoint Platform is currently in beta, but it's projected to support all of the same features that the cloud console supports today. It doesn't currently support analytics, or the dashboard or......
+
+
+These capabilities will be added in future releases.
+====
+////
+
+
 Although the link:/mule-fundamentals/v/3.8/begin-with-the-basics[basics of building a Mule application] are the same, the different deployment modalities offer distinct management features. The key reason is that each modality uses a different Agent when communicating with servers.
 
-* When deploying to CloudHub, the old Runtime Manager Agent is used. This legacy agent was originally created for link:/mule-management-console/[Mule Management Console (MMC)].
+* When deploying to CloudHub, the old Mule Agent is used. This legacy agent was originally created for link:/mule-management-console/[Mule Management Console (MMC)].
 * When deploying to a server that you manage, whether through the cloud console or the on-premises Runtime Manager console, the new link:/mule-agent/[Runtime Manager Agent] is used.
 
 Building applications for CloudHub or an on-premises server is easy. However, there are some differences as you move from an on-prem deployment to CloudHub. CloudHub provides more out-of-the-box functionality, such as load balancing, but has some limitations which you may need to adapt your application to. This document illustrates the differences between both deployment environments, link:/runtime-manager/developing-a-cloudhub-application[covers a few best practices when developing an application for CloudHub].
+
+////
+Applications that are deployed through full on-prem will also lack certain monitoring features, such as dashboard and insight
+////
 
 == Management Features
 
@@ -30,7 +49,7 @@ The available modalities offer different management features as each communicate
 
 image:arm-vs-ch2.png[diagram1]
 
-* When deploying to a CloudHub worker, the old agent is used. (this is the same agent used by link:/mule-management-console/[MMC])
+* When deploying to a CloudHub worker, the old Mule agent is used. (this is the same agent used by link:/mule-management-console/[MMC])
 * When deploying to a server you manage – regardless of if you do this through a cloud or on-premise console – the new link:/mule-agent/[Runtime Manager Agent] is used.
 
 Although the long term plan is to converge the features of these deployment mechanisms so that they all offer the whole set of capabilities, currently they differ as follows:
@@ -39,7 +58,7 @@ Although the long term plan is to converge the features of these deployment mech
 |===
 Deploying to a CloudHub worker | Deploying to a server you manage |
 link:/runtime-manager/logs[Logs are handled] by CloudHub | You can configure the Runtime Manager to send data link:/runtime-manager/sending-data-from-arm-to-external-monitoring-software[to External Monitoring Software] such as Splunk or ELK|
-CloudHub has its own link:/runtime-manager/insight[Insight Engine]| You can configure the Runtime Manager to send data link:/runtime-manager/sending-data-from-arm-to-external-monitoring-software[to External Monitoring Software] such as Splunk or ELK|
+CloudHub has its own link:/runtime-manager/insight[Insight Engine]| For on-prem deployments, this feature is in beta. You can also configure the Runtime Manager to send data link:/runtime-manager/sending-data-from-arm-to-external-monitoring-software[to External Monitoring Software] such as Splunk or ELK|
 You can manage link:/runtime-manager/managing-schedules[Schedules] through the Runtime Manager UI | You must use the link:/mule-user-guide/v/3.8/poll-schedulers[Poll Scheduler] element in your flows to schedule tasks |
 CloudHub has its own preconfigured default link:/runtime-manager/managing-application-data-with-object-stores[Object Store] you can reference. To use it, simply add an link:/mule-user-guide/v/3.8/mule-object-stores[Object Store connector] and set its 'config_ref' to point to the default CloudHub Object Store.|
 To use link:/mule-user-guide/v/3.8/mule-object-stores[Object Stores] you must configure your own database to store data |
@@ -47,42 +66,63 @@ To use link:/mule-user-guide/v/3.8/mule-object-stores[Object Stores] you must co
 
 
 
-== Ports and Hosts
+== Load Balancing and Domain Names
 
-CloudHub provides infrastructure for DNS and load balancing for your applications. This means you must configure your applications in a specific way to utilize this information. CloudHub provides two hosts for you: 
+CloudHub includes an optional link:/runtime-manager/cloudhub-dedicated-load-balancer[dedicated Load Balancer] that you can add to your infrastructure for handling the DNS and load balancing for your applications.
+
+Alternatively, you can use the default load balancer configuration that CloudHub includes out of the box. In that case, CloudHub provides two hosts for you: 
 
 * `myapplication.cloudhub.io` - Routes information to the CloudHub load balancer
 * `mule-worker-myapplication.cloudhub.io` - Routes information directly to your CloudHub application, bypassing the load balancer. If you have multiple workers, then this DNS round-robins between them.
 
 To utilize the load balancer, your application must use specific ports that CloudHub allocates for your HTTP and HTTPS endpoints. See link:/runtime-manager/developing-a-cloudhub-application[Developing a CloudHub application] for more details.
 
-== Disk Persistence
+////
 
-CloudHub does not guarantee that writing to disk survives hardware failures. Instead, you must use an external storage mechanism to store information. For small amounts of data, you can use the Object Store. For applications that have large data storage requirements, we recommend use of a cloud service such as Amazon S3. For temporary storage, the File connector is still available and can be used with the /tmp directory.
+If you're using PCF on-premises, this comes with its own load balancer
+
+...something else??
+
+////
+
+
 
 == High Availability
 
-Mule runtime offers high availability capabilities through creating link:/runtime-manager/managing-servers[Clusters and Server Groups]. Clustered Mule instances have link:/mule-user-guide/v/3.8/mule-high-availability-ha-clusters[distributed shared memory]. This shared memory is used to provide persistent VM queues, transactions, and cluster-wide data storage.
+Deploying on-premises (both via the cloud and the on-prem console) offers high availability capabilities through creating link:/runtime-manager/managing-servers[Clusters and Server Groups]. Clustered Mule instances have link:/mule-user-guide/v/3.8/mule-high-availability-ha-clusters[distributed shared memory]. This shared memory is used to provide persistent VM queues, transactions, and cluster-wide data storage.
+
+////
+You can otherwise leverage the virtualized resources of PCF to achieve high-availability.
+////
+
 
 CloudHub provides high availability through link:/runtime-manager/cloudhub-fabric[CloudHub Fabric].  CloudHub Fabric provides a combination of load balancing, persistent message queues, and horizontal scaleout. In addition, the platform also actively monitors services and workers for problems. For example, in the case of hardware failure, CloudHub auto-migrates the application to a different worker using link:/runtime-manager/managing-cloudhub-applications[CloudHub zero downtime updates], minimizing down time.
 
 == Logging
 
-While on-premise applications can use custom log4j properties files, CloudHub provides a link:/runtime-manager/logs[logging service] for allowing logs to be searched, downloaded, or log levels to be customized. See link:/runtime-manager/developing-a-cloudhub-application[Developing a CloudHub application] for more details.
+
+CloudHub provides a link:/runtime-manager/logs[logging service] for allowing logs to be searched, downloaded, or log levels to be customized. See link:/runtime-manager/developing-a-cloudhub-application[Developing a CloudHub application] for more details.
+
+On-premise applications can send data to external tools to manage your logs, see link:/runtime-manager/sending-data-from-arm-to-external-monitoring-software[Sending Data from Runtime Manager to External Monitoring Software]. You can use custom log4j properties files.
+
 
 == Object Store
 
 CloudHub provides an implementation of the user object store. This makes its usage a lot simpler, as you can simply reference the already configured CloudHub object store. It places limits on the usage of this to avoid abuse. These are detailed on the link:/runtime-manager/managing-application-data-with-object-stores[Object Store] page.
 
+Deployments on-premises require that you set up your own objet store, see link:/mule-user-guide/v/3.8/mule-object-stores[Mule object stores].
+
+=== Disk Persistence
+
+Using the CloudHub object store doesn't guarantee that writing to disk survives hardware failures. Instead, you might prefer to use an external storage mechanism to store information. For small amounts of data, you can use the Object Store. For applications that have large data storage requirements, we recommend use of a cloud service such as Amazon S3. For temporary storage, the File connector is still available and can be used with the /tmp directory.
+
 
 == Shared Resource Support
 
 
-When deploying on-premises, it's possible to create 'Domain' mule projects that don't hold any flows, but do hold a set of global configuration elements to share among other apps deployed to the same server. link:/mule-user-guide/v/3.8/shared-resources[Read more]. This is not currently supported for deploying through the Runtime Manager, both for deployments to CloudHub and for deployments to other servers in the cloud and on-premises.
+When deploying on-premises, it's possible to create 'Domain' mule projects that don't hold any flows, but do hold a set of global configuration elements to share among other apps deployed to the same server. link:/mule-user-guide/v/3.8/shared-resources[Read more]. Currently, you can't deploy domains through the Runtime Manager console, even to local servers where they could be needed in some scenarios. In those cases, you can still deploy your domains manually directly on your local server through the command line.
 
 Since each application deployed to CloudHub runs on a separate virtual server, there is no need to use domains.
-
-Currently, you can't deploy domains through the Runtime Manager console, even to local servers where they could be needed in some scenarios. In those cases, you can still deploy your domains manually directly on your local server through the command line.
 
 
 
@@ -92,15 +132,16 @@ The version of JDK that CloudHub implements for all apps built with Mule runtime
 
 Apps built with runtime 3.5.0 or older are deployed with JDK 1.6.
 
-== Managing Properties in CloudHub vs. On-Premises Mule runtimes
+== Managing Properties
 
-Just like with on-premises Mule runtime deployments, applications that you deploy to CloudHub can still bundle their own property placeholder or secure property placeholder files inside the deployable archive file. CloudHub then loads these properties into the application when the application starts.
 
-=== On Mule ESB
+=== For Applications On Premises
 
-With an on-premises Mule runtime, there are several ways you can override property values bundled inside the application.
+With an on-premise Mule runtime you can add properties in several ways. The most common one is to add a 'mule-app.properties' file in the application .zip bundle listing these. The Runtime then loads these properties into the application when the application starts.
 
-. You can configure an external location to add property placeholder or secure property placeholder files to override properties.
+Otherwise, there are several ways you can override the property values in this file bundled inside the application.
+
+. You can configure an external location to add property placeholders or secure property placeholder files to override properties.
 
 . You can set Java system environment variables at deployment time to override properties.
 
@@ -111,15 +152,15 @@ To use the second option, with an on-premises server you could deploy your appli
 mule -M-Dsecret.key=toSecretPassword -M-Denv=prod -M-Ddb.password=secretPassword -app myApp.zip
 ----
 
-In this case all the values typed into the command would only be stored in memory, they are never stored in any file.
+In this case all the values typed into the command would only be stored in memory and must be provided every time, they are never stored in any file.
 
-=== On CloudHub
+=== For Applications On CloudHub
 
-With CloudHub, these techniques to override properties work differently.
+Just like with on-premises Mule runtime deployments, applications that you deploy to CloudHub can still bundle their own property placeholder or secure property placeholder files inside the deployable archive file. CloudHub then loads these properties into the application when the application starts.
 
-The first approach mentioned above (configure a properties file in an external location) is difficult to translate to CloudHub: when an application is deployed into CloudHub it is harder to write override properties files into the file system.
+On CloudHub, it's not recommended to configure an external location to add property placeholders.
 
-The second approach mentioned above (set Java system environment variables at deployment time) is much easier to translate to CloudHub: the *Properties* tab on the Runtime Manager does allow you to specify Java system environment variables which will function in the same way as adding environment variables when you deploy to an on-premises server.
+The easiest way is to use the *Properties* tab on the Runtime Manager to specify Java system environment variables which will function in the same way as adding environment variables when you deploy to an on-premises server.
 
 If you have any property names set in a 'mule-app.properties' file inside your application or in bundled property placeholder files, then when your application is deployed, any entries in the CloudHub Properties tab with the same name will override the matching value bundled with the application.
 
@@ -128,7 +169,6 @@ It is possible to change the behavior of the application to not allow CloudHub p
 
 
 Note that you can flag application properties as secure so that their values are not visible to users at runtime or passed between the server and the console. See link:/runtime-manager/secure-application-properties[Secure Application Properties] for more information.
-
 
 
 == Scheduling
@@ -140,6 +180,12 @@ Outside CloudHub, you can achieve the same by including the link:/mule-user-guid
 == Alerts and Notifications
 
 Both CloudHub and On-premise deployments include the possibility of setting up  link:/runtime-manager/alerts-on-runtime-manager[Alerts] and  link:/runtime-manager/notifications-on-runtime-manager[Notifications] for when certain events occur.
+
+////
+
+on prem tenia??????
+////
+
 
 == Other Components
 

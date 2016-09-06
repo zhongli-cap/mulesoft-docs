@@ -1,5 +1,11 @@
 = MuleSoft Documentation Repository
 :experimental:
+ifdef::env-github[]
+:caution-caption: :fire:
+:note-caption: :paperclip:
+:tip-caption: :bulb:
+:warning-caption: :warning:
+endif::[]
 
 This is the repository for MuleSoft's documentation and contains the source content for the link:http://developer.mulesoft.com/docs[docs site]. 
 
@@ -81,13 +87,35 @@ To run a full build and launch the preview server in one shot, combine the `buil
 
  $ ./gradlew build serve
 
-=== Building the Site for Stating
+=== Building a Single Page for Local Preview
 
-The Gradle build script is also capable of building the site for stating and syncing the output to the staging server.
-The extra tasks and configuration needed for these operations are added when the `profile` property has the value `stating`.
-You can set this property by passing the flag `-Pprofile=stating` to the `gradlew` launch command.
+As an alternative to building the entire site, the Gradle build provides a task named `buildHtmlSingle` to build a single page.
+The generated HTML page only includes the main content, styled to look similar to a page in the full site.
+However, the page does not include any of the site framing (header, footer, site navigation).
 
-To instruct Gradle to clean, build, and publish the stating site, execute the following command:
+To build a single page, use the `gradlew` command to execute the `buildHtmlSingle` task.
+Specify the AsciiDoc document you want to build by passing the `-Pfile=<path>` flag:
+
+ $ ./gradlew buildHtmlSingle -Pfile=runtime-manager/v/latest/deploying-to-cloudhub.adoc
+
+The HTML page will be generated into the _tmp directory.
+You can navigate to that file in your browser to preview it.
+
+[WARNING]
+====
+Due to a bug in the single page docs builder, any images referenced by the page are copied to the wrong directory.
+You can workaround this bug by adding a symlink as follows:
+
+ $ ln -s /tmp/_images _tmp/_images
+====
+
+=== Building the Site for Staging
+
+The Gradle build script is also capable of building the site for staging and syncing the output to the staging server.
+The extra tasks and configuration needed for these operations are added when the `profile` property has the value `staging`.
+You can set this property by passing the flag `-Pprofile=staging` to the `gradlew` launch command.
+
+To instruct Gradle to clean, build, and publish the staging site, execute the following command:
 
  $ ./gradlew clean publish -Pprofile=staging
 
@@ -141,15 +169,40 @@ The following sections describe the MuleSoft Docs publishing style.
 
 === AsciiDoc Conventions
 
-* `[source]` is better than `[source,code]`.
-* Better to use "a" columns in tables such as cols="30a,70a".
+* The width of a table is 100% by default, so only specify a width (as a percentage value) if you want it to be 95% or less.
+* To specify the number of equal-width columns for a table, set the `cols` attribute to a number followed by an asterisk, such as `[cols="3*"]`.
++
+[CAUTION]
+====
+The value of the `cols` attribute should _never_ be a string of repeating commas (e.g., `cols=",,,"`).
+
+The only acceptable formats for the `cols` attribute value are (a) a single number followed by an asterisk (e.g., `3*`) or (b) a comma-separated list of column specs (e.g., `1h,^2,>1`).
+====
+* To allow the column widths of a table to be automatically sized by the browser to fit the contents, add the `autowidth` option, such as `[%autowidth,cols="3*"]`.
+  - By default, adding the `autowidth` option makes the width of the table only as wide as the browser needs it to be.
+  - To force the width of a table with auto-width columns to span the whole page, add the `spread` role, such as `[%autowidth.spread,cols="3*"]`.
++
+NOTE: Until further notice, the width attribute on a table is ignored when the `autowidth` option is used.
+* To apply explicit relative widths to a table's columns, set the `cols` attribute to a comma-separated list of ratio values, such as `[cols="1,2,1"]` (which resolves to `[cols="25%,50%,25%"]`).
+  - The column width percentages are calculated with a precision of up to 4 decimal places.
+* To apply a style to a column, add the letter corresponding to that style after the ratio value, such as `[cols="1h,2,1"]`.
+* Only apply the `a` style to a column if it has complex content, such as lists or source blocks.
+For example, `[cols="1,1a"]`.
+  - If an isolated table cell has complex content (and not the whole column), add the `a` style directly to the cell, such as `a|content here`.
+* To give a table a header row, add the `header` option to the table, such as `[%header,cols="3*"]`.
+  - Option values are additive, so you can specify both the `autowidth` and `header` option using `%header%autowidth`.
+  - A header row is implied if you put a blank line under the first row of the table in the AsciiDoc source.
+* The shorthand syntax for options (e.g., `%autowidth`), roles (e.g., `.spread`), and IDs (e.g., `#anchor`) must always be placed in the first positional argument of the block attribute line, such as `[%header%autowidth.spread,cols="3*"]`.
+* Only add the `source` style to a listing block if you also specify a language (and want it to be syntax highlighted), such as `[source,java]`.
 * Omit `linenums` option on 1 line code examples.
 * Put multi-word examples in a source block instead of a long tick marked string.
 * Tab names should be "Visual Studio Editor" and "XML Editor or Standalone".
 * Only XML or XML procedures can be in an XML tab. It's illogical to put a screenshot in the XML tab.
 * Restrict tables to 2 or 3 columns - multi-column tables can be very difficult to read.
-* Wrap code example lines at spaces, or for Java after a dot. Code lines should be less than 60 characters, especially if you use the \//<n> notation for callouts
-* Until Coderay fixes the spacing for line numbers, don't reference code examples by line numbers. Instead usee \//<1> in the code example and reference the notation in the text below the code example.
+* Wrap code example lines at spaces, or for Java after a dot. Code lines should be less than 60 characters, especially if you use the `// <n>` notation for callouts
+* Until Coderay fixes the spacing for line numbers, don't reference code examples by line numbers.
+Instead use `// <n>` in the code example and reference the notation in the text below the code example.
+* Lists in the AsciiDoc source that use a bullet glyph (U+2022) as the marker are recognized as lists.
 
 === Lists
 
