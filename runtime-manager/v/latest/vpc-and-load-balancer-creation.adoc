@@ -1,0 +1,101 @@
+= Creating a Self-serviced VPC and Load Balacner
+
+image:cloudhub-logo.png[cloudhub]
+
+This tutorial walks you through the creation of a virtual private cloud for your Cloudhub workers, and a dedicated load balancer with custom mapping lists to handle your domain names.
+
+== Prerequisites
+
+This tutorial assumes that you purchased a link:/runtime-manager/virtual-private-cloud[VPC offering], and are familiar with the link:/runtime-manager/cloudhub-architecture[CloudHub architecture].
+
+== Create a VPC
+
+
+[tabs]
+------
+[tab,title="Anypoint Platform UI"]
+....
+image::vpc-and-load-balancer-creation-df931.png[]
+
+. Select the `VPCs` tab from the navigation bar to your left
+. Click the Create VPC option
++
+image::vpc-and-load-balancer-creation-35c7d.png[]
++
+Set the following parameters:
++
+. A VPC name. For this tutorial, name your VPC `vpc-tutorial`.
+. The region to which the VPC is bound. In this case, we are bounding it to `US East`.
+. The size of your VPC in CIDR notation. +
+We are setting it to 10.111.0.0/24 which grants us 256 IP addresses for the VPC -around 30 IP addresses for our workers-.  If you are not sure how to configure this, make sure you follow our link:/runtime-manager/virtual-private-cloud#size-your-vpc[VPC sizing] guide
+. Set an environment to which your VPC is bound. Yo can leave it blank // TODO
+. Set wether this VPC is the default for the region you are creating it. In this case, we are setting it as default.
+. Set the business group to which your VPC is bound. You can leave it blank //TODO
++
+image::vpc-and-load-balancer-creation-97c25.png[]
++
+. Set Firewall rules
+. Add a firewall rule with type 'http.private.port' from `Anywhere`. (the port range is automatically set to `8091`)
+. Click *Create VPC*.
+....
+[tab,title="Anypoint Platform CLI"]
+....
+
+This section shows you how to create the same VPC set up from the Runtime Manager UI, using the Anypoint Platform CLI.
+
+In your environment, link:/runtime-manager/anypoint-platform-cli#logging-in[log in to your organization] and use the link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-create[vpc create] command to create the VPC:
+
+[source,Example]
+----
+cloudhub vpc create vpc-tutorial us-east-1 10.111.0.0/24 --default
+----
+
+In this example, our VPC is called `vpc-tutorial` and is bound to the `us-east-1` region as the default VPC. This means that by default, all environments in this region that are not associated to a VPC, will be associated to the default VPC.
+
+When the operation succeeds, the CLI shows you the details of the newly created VPC.
+
+Once the VPC is created, all outbound traffic is blocked by default. You need to create firewall rules to allow traffic to your VPC. +
+For this example, we are allowing all traffic coming from the `http.private.port` (8091). +
+In order to do so, you need to use the link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-firewall-rules-add[vpc firewall-rules add] command:
+
+[source,Example]
+----
+cloudhub vpc firewall-rules add vpc-tutorial 0.0.0.0/0 tcp 8091
+----
+....
+------
+
+== Create a Load Balancer
+
+Once your VPC is created, you can set up a dedicated load balancer to administrate an SSL endpoint for the CloudHub workers deployed in your VPC. +
+This feature will eventually be built into the Runtime Manager UI, however currently it’s only available as a service that can be used via the link:/runtime-manager/anypoint-platform-cli[Anypoint Command Line Interface].
+
+A load balancer can be created using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-create[load-balancer create]:
+
+[source,Example]
+----
+> cloudhub load-balancer create vpc-tutorial lb-tutorial /Users/fernandomujica/Documents/chvpc/cert.pem /Users/fernandomujica/Documents/chvpc/key.pem --http on --verificationMode on
+----
+
+Also create a mapping rule to redirect traffic from your custom load balancer, to your application:
+
+[source,Example]
+----
+> cloudhub load-balancer mappings add lb-tutorial 0 /{app}/ {app} /
+----
+
+
+
+
+Additionally, load balancers and VPCS can be programmatically managed using the link:/runtime-manager/runtime-manager-api[Cloudhub API] through the endpoints `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/loadbalancers` and `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/vpcs`.
+
+
+
+== Delete a VPC
+
+[NOTE]
+--
+In order to be able to delete a VPC, no load balancers need to be associated to it.
+
+To delete a load balancer, use the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-delete[load-balancer delete] command.
+--
