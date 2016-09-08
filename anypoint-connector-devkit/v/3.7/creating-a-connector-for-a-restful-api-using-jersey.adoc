@@ -26,14 +26,14 @@ The straightforward path described here should produce a working connector for a
 
 In a new connector project:
 
-* Create a `@Connector` class and add authentication logic.
+* Define a configuration from the `@Connector` class. Add authentication logic to the `ConnectorConfig.java`.
 * Create Java classes (unless you are using Maps) that represent any entities passed to or returned from the service operations
 * Build a Jersey-based client in Java that works against the web service API, and converts POJOs or Maps to and from JSON for use in Mule
 * Wrap the Jersey-based client class with the `@Connector` class that integrates it with Mule
 
-The final architecture looks like the image below.
+//The final architecture looks like the image below.
 
-image:jersey-client-architecture.png[jersey-client-architecture]
+//image:jersey-client-architecture.png[jersey-client-architecture]
 
 ////
 == Dropbox RESTful Example Connector
@@ -69,13 +69,13 @@ The connector also exposes a second operation at the Mule level. `LogInfo` logs
 There are several major tasks in developing a connector with Jersey Client; these are outlined below.
 
 . Assuming you've prepared an initial connector project:
-.. Add Jersey and Jackson dependencies to POM.
+.. Add Jersey dependency to POM.
 .. Create any client or entities packages.
 .. Rebuild project with the new dependencies.
 . Create the Jersey Client class.
 .. Enable Jersey Client JSON-POJO mapping.
-. Create the Connector class.
-.. Add OAuth.
+. Write the Connector.java class.
+. Add OAuth to the Config.java class.
 .. Build and test connector.
 . Add an operation.
 .. Add operation to client class, and add required POJOs to project.
@@ -85,13 +85,25 @@ There are several major tasks in developing a connector with Jersey Client; thes
 
 === Prepared Connector Project
 
-Once you have created a connector project as described in link:/anypoint-connector-devkit/v/3.7/creating-an-anypoint-connector-project[Creating an Anypoint Connector Project], you must add Jersey, Jackson, and JSON-related dependencies to the POM, and create packages and classes you use in your connector before adding operations.
+Once you have created a connector project as described in link:/anypoint-connector-devkit/v/3.7/creating-an-anypoint-connector-project[Creating an Anypoint Connector Project], you must add Jersey, Jackson, and JSON-related dependencies (via the Jersey Mule module) to the `pom.xml`, and create packages and classes you use in your connector before adding operations.
 
-==== Adding Dependencies to the POM
+.Jersey dependency to add to `pom.xml`
+[source,xml,linenums]
+----
+<dependencies>
+    <dependency>
+        <groupId>org.mule.modules</groupId>
+        <artifactId>mule-module-jersey</artifactId>
+        <version>${mule.version}</version>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
+----
 
-The following `<dependency>` elements add Jersey, Jackson, and Mule JSON support to your project:
 
 ===== POM Dependencies for Jersey, Jackson, and JSON
+
+You may require these in addition to the Mule Jersey module.
 
 [source,xml, linenums]
 ----
@@ -123,64 +135,6 @@ Add these to the `<dependencies>` element in your POM, along with any other depe
   </dependency>
 ----
 
-===== Dropbox RESTful Connector pom.xml
-The complete POM for the Dropbox sample connector project as generated from the Devkit 3.6 connector Maven archetype is:
-
-[source,xml, linenums]
-----
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>org.mule.samples.devkit</groupId>
-  <artifactId>dropboxrest</artifactId>
-  <version>1.0-SNAPSHOT</version>
-  <packaging>mule-module</packaging>
-  <name>Mule ${serviceName} Cloud Connector</name>
-  <parent>
-      <groupId>org.mule.tools.devkit</groupId>
-      <artifactId>mule-devkit-parent</artifactId>
-      <version>3.6.1</version>
-  </parent>
-  <properties>
-      <junit.version>4.9</junit.version>
-      <mockito.version>1.8.2</mockito.version>
-      <jdk.version>1.7</jdk.version>
-      <category>Cloud Connectors</category>
-      <licensePath>LICENSE.md</licensePath>
-      <devkit.studio.package.skip>false</devkit.studio.package.skip>
-      <serviceName>DropBox REST Sample</serviceName>
-
-      <!-- required for Jersey Client -->
-      <jersey.client.version>1.6</jersey.client.version>
-      <jersey.multipart.version>1.3</jersey.multipart.version>
-  </properties>
-
-  <dependencies>
-    <!-- Add this to use OAuth support in DevKit-->
-    <dependency>
-        <groupId>oauth.signpost</groupId>
-        <artifactId>signpost-core</artifactId>
-        <version>1.2.1.2</version>
-    </dependency>
-
-    <!-- Add this to use Jersey Client -->
-    <dependency>
-        <groupId>com.sun.jersey</groupId>
-        <artifactId>jersey-client</artifactId>
-        <version>${jersey.client.version}</version>
-    </dependency>
-
-    <!-- Add this to use Mule support for JSON -->
-
-    <dependency>
-        <groupId>org.mule.modules</groupId>
-        <artifactId>mule-module-json</artifactId>
-        <version>${mule.version}</version>
-        <scope>provided</scope>
-    </dependency>
-  </dependencies>
-</project>
-----
 
 ==== Creating Packages for Supporting Classes
 
@@ -368,11 +322,11 @@ public class DropboxClient {
 }
 ----
 
-=== Completing the @Connector Class
+=== Completing the @Connector and Config.java Classes
 
-When you create your connector project, Maven generates a scaffold `@Connector` class for you. Now you can enhance it to add needed properties (some of them `@Configurable`), initialize the client class when the `@Connector` is initialized, and add authentication functionality.
+When you create your connector project, Maven generates a scaffold `@Connector` class for you. Initialize the client class when the `@Connector` is initialized, and add authentication functionality in the `ConnectorConfig.java` class (that is where your `@Configurable` properties are defined).
 
-Your connector uses `@Configurable` properties for a few purposes, such as:
+Your connector `Config.java` file uses `@Configurable` properties for a few purposes, such as:
 
 * Changing the API root resource URL and version for the service to target a specific sandbox or test system instead of a production environment
 * Storing authentication-related values the user must configure:
@@ -434,7 +388,6 @@ private DropboxClient client;
   }
 ----
 
-See Integrating Connectors with the Mule Life Cycle for details on the use of the `@Start` annotation.
 
 [NOTE]
 ====
@@ -444,6 +397,7 @@ This example illustrates a useful pattern you can follow in your own connectors.
 * The `@Connector` class instance saves a reference to the client class instance, which can be used to call methods on the client class. This instance can also be used in a `@Stop` method, thus tying the lifecycle of the client class instance to the `@Connector` class instance.
 ====
 
+////
 === Adding OAuth Authentication
 
 Supporting OAuth 1.0a authentication requires that you make changes in both the `@Connector` class and the client class. These changes are outlined below.
@@ -457,7 +411,7 @@ Supporting OAuth 1.0a authentication requires that you make changes in both the�
 ** Access token secret (including setters and getters)
 . Include the client class code to pass OAuth 1.0a request headers with each request.
 
-For a detailed discussion on the code changes required for OAuth support, seelink:/anypoint-connector-devkit/v/3.7/oauth-v1[Implementing OAuth 1.0 Authentication], which references the same code sample used in this discussion.
+For a detailed discussion on the code changes required for OAuth support, see link:/anypoint-connector-devkit/v/3.7/oauth-v1[Implementing OAuth 1.0 Authentication], which references the same code sample used in this discussion.
 
 === Building and Testing your Connector
 
@@ -466,6 +420,7 @@ At this point, your connector project has all the necessary elements to build an
 The process is described in link:/anypoint-connector-devkit/v/3.7/installing-and-testing-your-connector-in-studio[Installing and Testing Your Connector]. 
 
 Building the bare-bones version of the Jersey client connector and installing it in Studio gives you a component in the palette to drag and drop into the canvas. 
+////
 
 == Adding an Operation to the Connector
 
