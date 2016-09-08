@@ -2,7 +2,11 @@
 
 image:cloudhub-logo.png[cloudhub]
 
-This tutorial walks you through the creation of a virtual private cloud for your Cloudhub workers, and a dedicated load balancer with custom mapping lists to handle your domain names.
+== Overview
+
+This tutorial walks you through the creation of a *virtual private cloud* and a *dedicated load balancer* configuring firewall rules and mapping lists.
+
+It also shows you how to create a simple application and deploy it to your new network environment.
 
 == Prerequisites
 
@@ -10,32 +14,58 @@ This tutorial assumes that you purchased a link:/runtime-manager/virtual-private
 
 == Create a VPC
 
-
 [tabs]
 ------
 [tab,title="Anypoint Platform UI"]
 ....
-image::vpc-and-load-balancer-creation-df931.png[]
+
+In order to create a VPC, log in to your Anypoint Platform and follow these steps:
 
 . Select the `VPCs` tab from the navigation bar to your left
 . Click the Create VPC option
 +
+image::vpc-and-load-balancer-creation-df931.png[]
++
+In the screen shown in the image below, you can start passing the parameters to define and configure your VPC:
++
 image::vpc-and-load-balancer-creation-35c7d.png[]
 +
-Set the following parameters:
+. A VPC name. +
+For this tutorial, name your VPC `vpc-tutorial`.
+. The region to which the VPC is bound. +
+In this case, we are bounding it to `US East`.
 +
-. A VPC name. For this tutorial, name your VPC `vpc-tutorial`.
-. The region to which the VPC is bound. In this case, we are bounding it to `US East`.
+[NOTE]
+--
+All VPCs need to be associated to a CloudHub region.
+--
++
 . The size of your VPC in CIDR notation. +
-We are setting it to 10.111.0.0/24 which grants us 256 IP addresses for the VPC -around 30 IP addresses for our workers-.  If you are not sure how to configure this, make sure you follow our link:/runtime-manager/virtual-private-cloud#size-your-vpc[VPC sizing] guide
-. Set an environment to which your VPC is bound. Yo can leave it blank // TODO
-. Set wether this VPC is the default for the region you are creating it. In this case, we are setting it as default.
-. Set the business group to which your VPC is bound. You can leave it blank //TODO
+We are setting it to 10.111.0.0/24 which grants us 256 IP addresses from 10.111.0.0 to 10.111.0.255.
++
+[CAUTION]
+--
+It is not possible to resize a VPC once created. +
+Understanding how to size your VPC is crucial at this point. If you are not sure how to configure this, make sure to follow our link:/runtime-manager/virtual-private-cloud#size-your-vpc[VPC sizing] guide
+--
++
+. Set an environment to which your VPC is bound. +
+For this example, we are leaving the environment blank so every application deployed to US-EAST gets associated to this VPC disregarding to which environment it is being deployed. +
+All VPCs need to also be bound to an link:/access-management/environments[environment] inside your CloudHub organization or business group. +
+
+. Set wether this VPC is the default for the region you are creating it. +
+In this case, we are setting it as default. This means that all environments in this region that are not associated to a VPC will be, by default, associated to this VPC.
+. Set the business group to which your VPC is bound. +
+By leaving it blank, you are associating this VPC to the main organization.
 +
 image::vpc-and-load-balancer-creation-97c25.png[]
 +
 . Set Firewall rules
-. Add a firewall rule with type 'http.private.port' from `Anywhere`. (the port range is automatically set to `8091`)
+. All outbound traffic is blocked by default. You need to create firewall rules to allow traffic to your VPC. +
+The UI suggests us a list of most used firewall rules. For this example, we are adding a firewall rule with type 'http.private.port' from `Anywhere`. Note that the port range is automatically set to `8091`. +
++
+This means that only connections through the port `8091` will be able to connect to the VPC. +
+Remember that your dedicated load balancer proxies external requests internally through port 8091. Allowing only this port allows traffic internally from the load balancer to your workers.
 . Click *Create VPC*.
 ....
 [tab,title="Anypoint Platform CLI"]
@@ -50,7 +80,25 @@ In your environment, link:/runtime-manager/anypoint-platform-cli#logging-in[log 
 cloudhub vpc create vpc-tutorial us-east-1 10.111.0.0/24 --default
 ----
 
-In this example, our VPC is called `vpc-tutorial` and is bound to the `us-east-1` region as the default VPC. This means that by default, all environments in this region that are not associated to a VPC, will be associated to the default VPC.
+In this example:
+
+. Our VPC is called `vpc-tutorial`
+. Is bound to the `us-east-1` region
++
+[NOTE]
+--
+All VPCs need to be associated to a CloudHub region.
+--
++
+. We are setting the size to `10.111.0.0/24`. In CIDR notation, this grants us 256 IP addresses from 10.111.0.0 to 10.111.0.255.
++
+[CAUTION]
+--
+It is not possible to resize a VPC once created. +
+Understanding how to size your VPC is crucial at this point. If you are not sure how to configure this, make sure to follow our link:/runtime-manager/virtual-private-cloud#size-your-vpc[VPC sizing] guide
+--
++
+. We are setting it as default. This means that all environments in this region that are not associated to a VPC will be, by default, associated to this VPC.
 
 When the operation succeeds, the CLI shows you the details of the newly created VPC.
 
@@ -64,6 +112,52 @@ cloudhub vpc firewall-rules add vpc-tutorial 0.0.0.0/0 tcp 8091
 ----
 ....
 ------
+
+You just created a private and isolated network in the US-EAST region and allowed inbound traffic to it through port 8091.
+
+=== Update an Existing VPC
+
+Following the example above, assume you'd like to add an associated environment to `vpc-tutorial`. +
+
+
+[tabs]
+------
+[tab,title="Anypoint Platform UI"]
+....
+
+. Find your VPC from the list of existing VPC in the UI, and select it.
+. Navigate to the "Environments" dropdown menu and select the environment you'd like.
+. Go to the bottom of the page and select "update VPC"
+
+....
+[tab,title="Anypoint Platform CLI"]
+....
+Although it is not possible to update certain values from your VPC through the Anypoint Platform CLI, you can use the link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/8617/versions/85955/pages/107964[Cloudhub API]:
+
+Log in to the CloudHub services passing your credentials through the `https://anypoint.mulesoft.com/accounts/login` endpoint.
+
+Then, update your VPC using a `PUT` request to the `qa.anypoint.mulesoft.com/cloudhub/api/organizations/<yourOrganizationId>/vpcs/<yourVPCId>/` endpoint with a JSON payload:
+
+[source,json,linenums]
+----
+{
+	"associatedEnvironments": [
+		"<EnvironmentId>"
+	]
+}
+----
+
+[NOTE]
+--
+`<EnvironmentId>` needs to be replaced by the Id of the environment to which you want to associate this VPC. +
+You can get the Ids for your environments running a link:/runtime-manager/anypoint-platform-cli#account-environment-list[account environment list] command.
+--
+
+The same applies to update all other properties of your VPC. Follow the link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/8617/versions/85955/pages/107964[Cloudhub API's portal documentation] to know how to update specific resources.
+....
+------
+
+Now we are going to create a Load balancer inside this network, and configure it to be the exposed endpoint to reach your application.
 
 == Create a Load Balancer
 
@@ -83,8 +177,6 @@ Also create a mapping rule to redirect traffic from your custom load balancer, t
 ----
 > cloudhub load-balancer mappings add lb-tutorial 0 /{app}/ {app} /
 ----
-
-
 
 
 Additionally, load balancers and VPCS can be programmatically managed using the link:/runtime-manager/runtime-manager-api[Cloudhub API] through the endpoints `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/loadbalancers` and `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/vpcs`.
