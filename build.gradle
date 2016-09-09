@@ -55,6 +55,7 @@ ext {
   siteUri = 'http://localhost:8000'
   tempDir = '_tmp'
   templatesDir = '_templates'
+  srcTemplatesDir = "$assetsDir/_templates"
 }
 
 if (file(profileBuildScript).exists()) apply from: profileBuildScript
@@ -84,14 +85,9 @@ task clean(type: Delete, group: 'Build', description: 'Deletes assets and site d
 
 // TODO site builder should accept a custom templates directory
 task copyTemplates(type: Copy) {
-  // FIXME define variable useTemplatesFromAssets
-  if (profile == 'prod') {
-    enabled = false
-  }
-  else {
-    dependsOn setup
-  }
-  from "$assetsDir/$templatesDir"
+  dependsOn setup
+  onlyIf { file(srcTemplatesDir).directory }
+  from srcTemplatesDir
   into templatesDir
 }
 
@@ -105,11 +101,8 @@ task buildHtml(type: JavaExec, group: 'Build', description: 'Builds HTML pages.'
   jvmArgs = builderJvmArgs
   //outputs.dir siteDir
   doLast {
-    // FIXME define variable useTemplatesFromAssets instead of checking profile
-    if (profile != 'prod') {
-      // NOTE undo local changes to template(s)
-      git "checkout -- $templatesDir"
-    }
+    // NOTE revert local changes to template(s)
+    if (copyTemplates.didWork) git "checkout -- $templatesDir"
   }
 }
 
