@@ -52,7 +52,6 @@ Understanding how to size your VPC is crucial at this point. If you are not sure
 . Set an environment to which your VPC is bound. +
 For this example, we are leaving the environment blank so every application deployed to US-EAST gets associated to this VPC disregarding to which environment it is being deployed. +
 All VPCs need to also be bound to an link:/access-management/environments[environment] inside your CloudHub organization or business group. +
-
 . Set wether this VPC is the default for the region you are creating it. +
 In this case, we are setting it as default. This means that all environments in this region that are not associated to a VPC will be, by default, associated to this VPC.
 . Set the business group to which your VPC is bound. +
@@ -64,8 +63,8 @@ image::vpc-and-load-balancer-creation-97c25.png[]
 . All outbound traffic is blocked by default. You need to create firewall rules to allow traffic to your VPC. +
 The UI suggests us a list of most used firewall rules. For this example, we are adding a firewall rule with type 'http.private.port' from `Anywhere`. Note that the port range is automatically set to `8091`. +
 +
-This means that only connections through the port `8091` will be able to connect to the VPC. +
-Remember that your dedicated load balancer proxies external requests internally through port 8091. Allowing only this port allows traffic internally from the load balancer to your workers.
+This means that only connections through the port `8091` will be whitelisted inside the VPC. +
+Your dedicated load balancer proxies external requests internally through port 8091. In order to proxy all requests from the load balancer, all applications that we deploy to the VPC must be listening http requests through port 8091.
 . Click *Create VPC*.
 ....
 [tab,title="Anypoint Platform CLI"]
@@ -98,18 +97,29 @@ It is not possible to resize a VPC once created. +
 Understanding how to size your VPC is crucial at this point. If you are not sure how to configure this, make sure to follow our link:/runtime-manager/virtual-private-cloud#size-your-vpc[VPC sizing] guide
 --
 +
-. We are setting it as default. This means that all environments in this region that are not associated to a VPC will be, by default, associated to this VPC.
-
+. We are *not passing* any environment information. +
+Not setting a specific environment makes that every application deployed to US-EAST gets associated to this VPC disregarding to which environment it is being deployed. +
+All VPCs need to also be bound to an link:/access-management/environments[environment] inside your CloudHub organization or business group.
++
+. We are setting it as default. This means that all environments in this region that are not associated to a VPC will be, by default, associated to this VPC. +
+. We are *not passing* any business group information. +
+By doing so, we are associating this VPC to the main organization.
++
 When the operation succeeds, the CLI shows you the details of the newly created VPC.
-
++
 Once the VPC is created, all outbound traffic is blocked by default. You need to create firewall rules to allow traffic to your VPC. +
-For this example, we are allowing all traffic coming from the `http.private.port` (8091). +
 In order to do so, you need to use the link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-firewall-rules-add[vpc firewall-rules add] command:
-
++
 [source,Example]
 ----
 cloudhub vpc firewall-rules add vpc-tutorial 0.0.0.0/0 tcp 8091
 ----
++
+. We are allowing all traffic coming from the `http.private.port` (8091).
++
+This means that only connections through the port `8091` will be whitelisted inside the VPC. +
+Your dedicated load balancer proxies external requests internally through port 8091. In order to proxy all requests from the load balancer, all applications that we deploy to the VPC must be listening http requests through port 8091.
+
 ....
 ------
 
@@ -118,7 +128,6 @@ You just created a private and isolated network in the US-EAST region and allowe
 === Update an Existing VPC
 
 Following the example above, assume you'd like to add an associated environment to `vpc-tutorial`. +
-
 
 [tabs]
 ------
