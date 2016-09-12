@@ -18,17 +18,17 @@ buildscript {
 
   dependencies {
     classpath 'com.eriwen:gradle-css-plugin:2.12.0'
-    builder 'com.mulesoft.documentation.builder:mule-docs-builder:1.0.0-M1'
-    singlePageBuilder 'com.mulesoft.documentation.builder:mule-docs-single-page-builder:1.0.0-M1'
+    builder 'com.mulesoft.documentation.builder:mule-docs-builder:1.0.1'
+    singlePageBuilder 'com.mulesoft.documentation.builder:mule-docs-single-page-builder:1.0.1'
   }
 
-  // enable upon upgrading to 1.0.0-RC1 (the non-shaded jar)
-  //configurations.all {
-  //  resolutionStrategy {
-  //    // NOTE override JRuby version pulled in by AsciidoctorJ to work around hang in CodeRay
-  //    force 'org.jruby:jruby:9.0.5.0'
-  //  }
-  //}
+  configurations.all {
+    resolutionStrategy {
+      // NOTE override JRuby version required by AsciidoctorJ to work around hang in CodeRay
+      // TODO can we figure out why the version specified by the docs builder is not honored?
+      force 'org.jruby:jruby:9.0.5.0'
+    }
+  }
 }
 
 defaultTasks 'build'
@@ -55,6 +55,7 @@ ext {
   siteUri = 'http://localhost:8000'
   tempDir = '_tmp'
   templatesDir = '_templates'
+  srcTemplatesDir = "$assetsDir/_templates"
 }
 
 if (file(profileBuildScript).exists()) apply from: profileBuildScript
@@ -84,14 +85,9 @@ task clean(type: Delete, group: 'Build', description: 'Deletes assets and site d
 
 // TODO site builder should accept a custom templates directory
 task copyTemplates(type: Copy) {
-  // FIXME define variable useTemplatesFromAssets
-  if (profile == 'prod') {
-    enabled = false
-  }
-  else {
-    dependsOn setup
-  }
-  from "$assetsDir/$templatesDir"
+  dependsOn setup
+  onlyIf { file(srcTemplatesDir).directory }
+  from srcTemplatesDir
   into templatesDir
 }
 
@@ -104,11 +100,26 @@ task buildHtml(type: JavaExec, group: 'Build', description: 'Builds HTML pages.'
   maxHeapSize = builderMaxHeapSize
   jvmArgs = builderJvmArgs
   //outputs.dir siteDir
+  doFirst {
+    // NOTE revert residual changes to template(s), which may or may not be managed by git
+    if (!file(srcTemplatesDir).directory) {
+      if (git("status --porcelain $templatesDir", '.', true).startsWith('?? ')) {
+        file(templatesDir).deleteDir()
+      }
+      else {
+        git "checkout -- $templatesDir"
+      }
+    }
+  }
   doLast {
-    // FIXME define variable useTemplatesFromAssets instead of checking profile
-    if (profile != 'prod') {
-      // NOTE undo local changes to template(s)
-      git "checkout -- $templatesDir"
+    // NOTE revert local changes to template(s), which may or may not be managed by git
+    if (file(srcTemplatesDir).directory) {
+      if (git("status --porcelain $templatesDir", '.', true).startsWith('?? ')) {
+        file(templatesDir).deleteDir()
+      }
+      else {
+        git "checkout -- $templatesDir"
+      }
     }
   }
 }
