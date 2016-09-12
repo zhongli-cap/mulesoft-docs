@@ -35,21 +35,25 @@ image:rancher-struct.png[rancher struct]
 |RHEL 7.1 or greater
 |CentOS 7.1 or greater
 .2+|Storage
-|20 GB for `var/lib/docker`
+|30 GB for `var/lib/docker`
 |1 GB for home directory
+.2+|Memory
+|8GB of RAM minimum
+|16GB of RAM recommended
 .2+|Docker
-|Docker engine 1.6.2 or later
+|Docker engine 1.8.0 or later
 |Docker Compose 1.3.1 or later
 .3+|Identity management provider
 |OpenAM 11.0 or later
 |LDAP v3
 |Ping Federate  6.10, 7.1 or 7.2.
-|Network ports|80, 8080, 8081, 443, 8443
+|Network ports|TCP: 80, 8080, 8081, 443, 8443, 9999
+| | UPD: 500, 4500
 |===
 
 
 [WARNING]
-You need to have Docker version 1.8.x. Docker 1.9.X isn't currently compatible with this installation.
+You need to have Docker version 1.8 or later.
 
 Follow the docker installation instructions that are appropriate for your system.   https://docs.docker.com/installation/
 
@@ -57,7 +61,7 @@ Follow the docker installation instructions that are appropriate for your system
 
 Depending on what you wish to install, download the following bundle of configuration files and scripts:
 
-* link:_attachments/anypoint-platform-1.1.0.zip[Anypoint Platform On Premise Edition]: For installing the entire functionality of the Anypoint Platform, including API administration tools.
+* link:_attachments/anypoint-platform-1.1.1.zip[Anypoint Platform On Premise Edition]: For installing the entire functionality of the Anypoint Platform, including API administration tools.
 
 These .zip files contain all of the configuration and installation scripts needed to run Anypoint Platform.
 
@@ -117,7 +121,7 @@ Run the rancher server on the machine you designate to host it.  It occupies a s
 
 [source]
 ----
-> sudo docker run -v /opt/config/logos/:/usr/share/cattle/war/assets/images/logos -d --restart=always -p 9999:8080 rancher/server
+> sudo docker run -v /opt/config/logos/:/usr/share/cattle/war/assets/images/logos -d --restart=always -p 9999:8080 rancher/server:v1.0.1
 ----
 
 After a few minutes, the server will be running and will allow you to access the UI on your browser of choice vía HTTP:  `http://$SERVER_IP:9999`
@@ -148,14 +152,26 @@ One of the hosts you are adding to your cluster needs to be designated as the �
 
 [source]
 ----
-"database" = "true"
+"database_role" = "a"
 ----
 
 image:rancher-assign-db1.png[assign db]
 
 image:rancher-assign-db2.png[assign db2]
 
+You also need to add an application host.  For that you need to add a label to the host to specify the app_role = any. You can execute the Database and application on the same host (16GB of RAM), but for production use we recommend to have DB and application separate.
+
+[source]
+----
+"app_role" = "any"
+----
+
+With that label, all the applications containers will be executed in that host. You can add multiple Application hosts.
+
+
 You can verify that the host now displays this label when viewed on the Hosts screen.
+
+
 
 [NOTE]
 Make sure that exactly *one* single host has this label attached.
@@ -202,7 +218,7 @@ Included with both zip files available for download in this document, there's a 
 > keystore-generation.sh
 ----
 
-Follow the on-screen prompts.  Notice that once executed a new file will be generated from this process named `truststore.jks)`.  This file is required by link:/mule-agent[the Mule Agent] for all runtimes you wish to register to the console because the agent uses 2-way SSL validation.  Before registering a runtime, you must copy this file to the `conf/` folder of that runtime.
+Follow the on-screen prompts.  Notice that once executed a new file will be generated from this process named `truststore.jks)`.  This file is required by link:/mule-agent/v/1.3.0/index[the Mule Agent] for all runtimes you wish to register to the console because the agent uses 2-way SSL validation.  Before registering a runtime, you must copy this file to the `conf/` folder of that runtime.
 
 
 ==== Copy platform config files to `/opt/config`
@@ -237,7 +253,7 @@ To start, click on the *Applications* link on the top nav bar and then click the
 
 image:rancher-add-stack.png[add stack]
 
-Give the newly created stack a name (as a suggestion, name it `anypoint-platform`) and load the `docker-compose.yml` and `rancher-compose.yml` files available as part of either of the two .zip bundles attached at the start of this document.  It’s the equivalent of “rancher-compose create” command.
+Give the newly created stack a name (as a suggestion, name it `anypoint-platform`) and load the `docker-compose-single-db.yml` and `rancher-compose.yml` files available as part of either of the two .zip bundles attached at the start of this document.  It’s the equivalent of “rancher-compose create” command.
 
 image:rancher-add-stack2.png[add stack 2]
 
@@ -348,7 +364,7 @@ Subsequently, to login to Anypoint Platform you can go to `https://$PLATFORM_U
 
 At this point you can begin creating organizations, adding servers, inviting users, etc.
 
-For details on managing API Platform, see link:/access-management/index[Anypoint Platform Administration].
+For details on managing API Platform, see link:/anypoint-platform-administration/index[Anypoint Platform Administration].
 
 
 === Extending to more than 1 host
@@ -394,7 +410,7 @@ image:rancher-application-add-stack3.png[add stack3]
 
 . Configure it for plain HTTP load balancing, like in the following example:
 +
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |*Scale* | Always run one instance of this container on every host (* recommended option)
 |*Name* | http-lb
@@ -423,14 +439,14 @@ image:rancher-add-load-balancer2.png[load balancer]
 Below is an OpenAM configuration. Please replace $OPEN_AM_URL and @PLATFORM_URL for the approapiate URLs.
 
 *Identity Federation Service Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |sign on url | https://$OPEN_AM_URL:8443/openam/saml2/jsp/idpSSOInit.jsp?spEntityID=$PLATFORM_URL&metaAlias=/idp
 |sign out url | https://$OPEN_AM_URL:8443/openam/saml2/jsp/spSingleLogoutInit.jsp?binding=urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect&idpEntityID=$PLATFORM_URL&metaAlias=/idp&RelayState=http://mulesoft.com
 |===
 
 *Admin Token Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |create url | https://$OPEN_AM_URL:8443/openam/json/authenticate
 |username | admin
@@ -438,26 +454,26 @@ Below is an OpenAM configuration. Please replace $OPEN_AM_URL and @PLATFORM_URL 
 |===
 
 *OAuth2 Authorization Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Authorize URL | https://$OPEN_AM_URL:8443/openam/oauth2/authorize
 |===
 
 *OAuth2 Token Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Create URL |https://$OPEN_AM_URL:8443/openam/oauth2/access_token
 |===
 
 *OAuth2 Token Validation Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Validate URL | https://$OPEN_AM_URL:8443/openam/oauth2/tokeninfo
 |Username Token Mapping |
 |===
 
 *OAuth2 Client Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Create Url | https://$OPEN_AM_URL:8443/openam/frrest/oauth2/client/?_action=create
 |Delete Url | https://$OPEN_AM_URL:8443/openam/frrest/oauth2/client/{{client_id}}
@@ -466,7 +482,7 @@ Below is an OpenAM configuration. Please replace $OPEN_AM_URL and @PLATFORM_URL 
 |===
 
 *SAML 2.0*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Issuer |test.openam
 |Public key |asdfasdfasdfasdfasdfasdfasfasdfasdfasdfsfas
@@ -483,14 +499,14 @@ Then sign in to OpenAM with your username and password.
 === OpenAM Configuration (Version 11)
 
 *Identity Federation Service Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |sign on url | https://$OPEN_AM_URL:8443/openam/saml2/jsp/idpSSOInit.jsp?spEntityID=$PLATFORM_URL&metaAlias=/idp
 |sign out url | https://$OPEN_AM_URL:8443/openam/saml2/jsp/spSingleLogoutInit.jsp?binding=urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect&idpEntityID=$PLATFORM_URL&metaAlias=/idp&RelayState=http://mulesoft.com
 |===
 
 *Admin Token Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |create url | https://$OPEN_AM_URL:8443/openam/json/authenticate
 |username | admin
@@ -498,26 +514,26 @@ Then sign in to OpenAM with your username and password.
 |===
 
 *OAuth2 Authorization Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Authorize URL | https://$OPEN_AM_URL:8443/openam/oauth2/authorize
 |===
 
 *OAuth2 Token Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Create URL | https://$OPEN_AM_URL:8443/openam/oauth2/access_token
 |===
 
 *OAuth2 Token Validation Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Validate URL | https://$OPEN_AM_URL:8443/openam/oauth2/tokeninfo
 |Username Token Mapping |
 |===
 
 *OAuth2 Client Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Create Url | https://$OPEN_AM_URL:8443/openam/frrest/oauth2/client/?_action=create
 |Delete Url | https://$OPEN_AM_URL:8443/openam/frrest/oauth2/client/{{client_id}}
@@ -526,7 +542,7 @@ Then sign in to OpenAM with your username and password.
 |===
 
 *SAML 2.0*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Issuer | test.openam
 |Public key | asdfasdfasdfasdfasdfasdfasfasdfasdfasdfsfas
@@ -544,33 +560,33 @@ Then sign in to OpenAM with your username and password.
 Below is a PingFederate configuration. Please replace the $PING_FEDERATE_URL and $PLATFORM_URL with the approapiate URLs.
 
 *Identity Federation Service Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
-Sign on url | https://$PING_FEDERATE_URL:9031/idp/startSSO.ping?PartnerSpId=$PLATFORM_URL
+|Sign on url | https://$PING_FEDERATE_URL:9031/idp/startSSO.ping?PartnerSpId=$PLATFORM_URL
 |Sign out url | https://$PING_FEDERATE_URL:9031/idp/SLO.saml2
 |===
 
 *OAuth2 Authorization Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Authorize URL | https://$PING_FEDERATE_URL:9031/as/authorization.oauth2
 |===
 
 *OAuth2 Token Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Create URL | https://$PING_FEDERATE_URL:9031/as/token.oauth2
 |===
 
 *OAuth2 Token Validation Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Validate URL | https://$PING_FEDERATE_URL:9031/as/token.oauth2
 |Username Token Mapping |
 |===
 
 *OAuth2 Client Provider*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Create Url | https://$PING_FEDERATE_URL:9031/pf-ws/rest/oauth/clients
 |Delete Url | https://$PING_FEDERATE_URL:9031/pf-ws/rest/oauth/clients/{{client_id}}
@@ -579,7 +595,7 @@ Sign on url | https://$PING_FEDERATE_URL:9031/idp/startSSO.ping?PartnerSpId=$PLA
 |===
 
 *SAML 2.0*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |Issuer | dev.mulesoft.com
 |Public key | asdfasdfasdfasdfasdfasdfasfasdfasdfasdfsfas
@@ -597,7 +613,7 @@ Then sign in to OpenAM with your username and password.
 Below is an LDAP configuration. You can use your own LDAP as it's fully configurable and support LDAPs too.
 
 *Connection*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |host |  ldap://$LDAP_URL
 |port | $LDAP_PORT
@@ -608,21 +624,21 @@ Below is an LDAP configuration. You can use your own LDAP as it's fully configur
 |===
 
 *Search Bases*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |user | ou=people,dc=muleforge,dc=org
 |group | ou=groups,dc=muleforge,dc=org
 |===
 
 *DNs*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |user | uid={{username}},ou=people,dc=muleforge,dc=org
 |group | cn={{groupName}},ou=groups,dc=muleforge,dc=org
 |===
 
 *Filters*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |userByUsername | (&(objectClass=inetOrgPerson)(uid={{username}}))
 |userByEmail | (&(objectClass=inetOrgPerson)(mail={{email}}))
@@ -631,7 +647,7 @@ Below is an LDAP configuration. You can use your own LDAP as it's fully configur
 |===
 
 *User Field Mappings*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |username | uid
 |email | mail
@@ -641,7 +657,7 @@ Below is an LDAP configuration. You can use your own LDAP as it's fully configur
 |===
 
 *Group Field Mappings*
-[width="100%",cols="50a,50a",options="header"]
+[%header,cols="2*a"]
 |===
 |groupName | cn
 |id | entryUUID
