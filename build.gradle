@@ -18,17 +18,17 @@ buildscript {
 
   dependencies {
     classpath 'com.eriwen:gradle-css-plugin:2.12.0'
-    builder 'com.mulesoft.documentation.builder:mule-docs-builder:1.0.0-M1'
-    singlePageBuilder 'com.mulesoft.documentation.builder:mule-docs-single-page-builder:1.0.0-M1'
+    builder 'com.mulesoft.documentation.builder:mule-docs-builder:1.0.0'
+    singlePageBuilder 'com.mulesoft.documentation.builder:mule-docs-single-page-builder:1.0.0'
   }
 
-  // enable upon upgrading to 1.0.0-RC1 (the non-shaded jar)
-  //configurations.all {
-  //  resolutionStrategy {
-  //    // NOTE override JRuby version pulled in by AsciidoctorJ to work around hang in CodeRay
-  //    force 'org.jruby:jruby:9.0.5.0'
-  //  }
-  //}
+  configurations.all {
+    resolutionStrategy {
+      // NOTE override JRuby version required by AsciidoctorJ to work around hang in CodeRay
+      // TODO can we figure out why the version specified by the docs builder is not honored?
+      force 'org.jruby:jruby:9.0.5.0'
+    }
+  }
 }
 
 defaultTasks 'build'
@@ -100,9 +100,20 @@ task buildHtml(type: JavaExec, group: 'Build', description: 'Builds HTML pages.'
   maxHeapSize = builderMaxHeapSize
   jvmArgs = builderJvmArgs
   //outputs.dir siteDir
+  doFirst {
+    // NOTE revert residual changes to template(s), which may or may not be managed by git
+    if (!file(srcTemplatesDir).directory) {
+      if (git("status --porcelain $templatesDir", '.', true).startsWith('?? ')) {
+        file(templatesDir).deleteDir()
+      }
+      else {
+        git "checkout -- $templatesDir"
+      }
+    }
+  }
   doLast {
     // NOTE revert local changes to template(s), which may or may not be managed by git
-    if (copyTemplates.didWork) {
+    if (file(srcTemplatesDir).directory) {
       if (git("status --porcelain $templatesDir", '.', true).startsWith('?? ')) {
         file(templatesDir).deleteDir()
       }
