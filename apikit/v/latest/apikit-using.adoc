@@ -208,18 +208,37 @@ image:routerconfig-console.png[routerconfig-console]
 
 To access the console in a browser, go to the full address of your project routing flow and append the console path, `/console` by default, to the end of the address. For example, if your API is hosted at `http://localhost:8081/api`, then the URL for accessing the console is `http://localhost:8081/api/console.`
 
-== Using Policies with APIkit Console
+=== Using Policies with APIkit Console
 
-In releases of APIkit 1.7.3 and earlier, applying a policy to the API that denied any request rendered APIkit Console inaccessible. The APIkit Console flow xml in Anypoint Studio 6.0 and later consists of two configurations to accommodate policies applied to the API endpoint:
+APIkit Console XML code consists of two configurations so you can access APIkit Console even if a policy denies requests to the API:
 
 ----
-    <flow name="api-console">
-        <http:listener config-ref="api-httpListenerConfig" path="/console/*" doc:name="HTTP"/>
-        <apikit:console config-ref="api-config" doc:name="APIkit Console"/>
-    </flow>
+<flow name="api-console">
+   <http:listener config-ref="api-httpListenerConfig" path="/console/*" doc:name="HTTP"/>
+   <apikit:console config-ref="api-config" doc:name="APIkit Console"/>
+</flow>
 ----
 
-The first configuration consists of a listener and is not affected by API policies. Use a URL that is not part of the api namespace, for example `/console` to access a console when using a policy that blocks access. By using this path, you can apply policies to the API. Policies will be applied to `/api/*`. Using the Try It button will result in an error.
+The first configuration has a listener and is not affected by API policies. You use a URL that is not part of the `api` namespace, for example `/console` instead of `/api/console` to access a console when a policy blocks access. Using the *Try It* will result in an error.
+
+The consoleEnabled property only enables or disables the console that is exposed inside of your api namespace ("/api/console"), which is the console configured by the second configuration. 
+
+To disable the console you are exposing in "/console", you need to comment out the "api-6-console" flow; otherwise, you can use the link:/apikit/apikit-reference#apikit-config-attributes[consoleEnabled] property. If you are using a placeholder to enable/disable your console, you can use the following workaround:
+
+----
+<flow name="api-6-console">
+   <http:listener config-ref="api-6-httpListenerConfig" path="/console/*" doc:name="HTTP"/>
+     <choice doc:name="Choice">
+        <when expression="${test}">
+           <apikit:console config-ref="api-6-config" doc:name="APIkit Console"/>
+        </when>
+        <otherwise>
+            <set-payload value="Resource not found" doc:name="Set Payload"/>
+        </otherwise>
+     </choice>
+</flow>
+----
+
 
 === Hosting Additional Consoles
 
