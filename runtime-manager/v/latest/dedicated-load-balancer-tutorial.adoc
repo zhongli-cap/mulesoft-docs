@@ -1,0 +1,118 @@
+= Dedicated Load Balancer Tutorial
+
+image:cloudhub-logo.png[cloudhub]
+
+== Overview
+
+This tutorial walks you through the creation of a *dedicated load balancer* configuring an SSL endpoint for 2-way SSL authentication and mapping lists.
+
+== Prerequisites
+
+This tutorial follows the configuration presented in the link:/runtime-manager/vpc-tutorial[VPC Tutorial] so it assumes that you either completed those instructions or created a VPC and configured it similarly to the example. +
+It is also recommended for you to be familiar with the link:/runtime-manager/cloudhub-architecture[CloudHub architecture].
+
+== Create a Load Balancer
+
+[NOTE]
+This feature will eventually be built into the Runtime Manager UI, however currently it’s only available as a service that can be used via the link:/runtime-manager/anypoint-platform-cli[Anypoint Command Line Interface].
+
+Each load balancer can be associated with one or more *SSL endpoints*. Such endpoints are identified by their certificate names. +
+Certificates are an important component of your dedicated load balancer. When creating a load balancer, at least one SSL endpoint needs to be configured, meaning that each load balancer needs to have _at least_ one certificate associated to it. +
+Understanding how to link:/runtime-manager/cloudhub-dedicated-load-balancer#managing-certificates[manage certificates], is therefore quite useful when managing dedicated load balancers.
+
+==== Provide a Certificate
+
+, create a custom self-signed certificate for the domain `lb-tutorial-cert`. +
+
+. In your terminal type, `cd` to your `Documents` folder:
++
+[source,Example]
+----
+> cd /Users/myuser/Documents/
+----
++
+. Run an openssl request for a new self signed certificate, valid for 10 years:
++
+[source,Example]
+----
+> openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem
+----
++
+. After hitting return, you'll be prompted to complete a few details for your certificate.  +
+As a guide, pass the following values:
++
+[source,Example,linenums]
+----
+Country Name (2 letter code) [AU]: US
+State or Province Name (full name) [Some-State]: California
+Locality Name (eg, city) []:San Francisco
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:Mulesoft
+Organizational Unit Name (eg, section) []: VPC Tutorial
+Common Name (e.g. server FQDN or YOUR name) []: lb-tutorial-cert
+Email Address []:max@mule.com
+----
+
+You created your certificate and private key pair, with a CNAME `lb-tutorial-cert`.
+
+A load balancer can be created using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-create[load-balancer create] command.
+
+[source,Example]
+----
+cloudhub load-balancer create // <1>
+vpc-tutorial // <2>
+lb-tutorial  // <3>
+/Users/myuser/Documents/cert.pem /Users/myuser/Documents/key.pem  // <4>
+--http on // <5>
+--verificationMode on
+----
+
+
+<1> Pass `vpc-tutorial` as the vpc name in which you want to create the VPC.
++
+[NOTE]
+In order to keep consistency among tutorials, we are using components created in the link:/runtime-manager/vpc-tutorial[VPC tutorial].
++
+<2> Name your load balancer `lb-tutorial`.
++
+[NOTE]
+--
+The load balancer's name must be unique. +
+Each load balancer has an internal domain name: `<lb-name>-internal.lb.anypointdns.net` where `<lb-name>` is the name you set here.
+--
++
+<3> Pass the path to a `.pem` file certificate and its key +
+We are using the self-signed certificate created earlier, along with its private key: `cert.pem` and `key.pem`
++
+[NOTE]
+--
+The certificate that you upload to your Load Balancer must be contained in one *_pem_ encoded* and *unencrypted* file. +
+Your private key file needs to be *passphraseless*.
+--
++
+<4> Set the option for the http method to `on`. +
+This sets the load balancer to accept all http requests and forwards it to your default SSL endpoint. In this case, the only ssl endpoint configured is `lb-tutorial-cert`
+<5> Set the option for the verificationMode to `on` +
+This instructs the SSL endpoint to always verify the certificate
+
+Now that your VPC has a dedicated load balancer, create a link:/runtime-manager/cloudhub-dedicated-load-balancer#url-mapping[URL mapping list] to redirect traffic from your load balancer, to your specific application domain name:
+
+[source,Example]
+----
+> cloudhub load-balancer mappings add // <1>
+lb-tutorial // <2>
+0 //<3>
+/{app}/ // <4>
+{app} // <5>
+/
+----
+
+<1> Set `lb-tutorial` as the target for this new mapping rule
+<2> Set the index priority for this mapping rule to `0` +
+This rule now has the first priority.
+<3> Set the input URL as `/{app}/` +
+This rule uses patterns so that every value passed as `{app}` in your load balancer's domain name: `lb-tutorial-internal.lb.anypointdns.net/{app}` gets mapped to the URL set as the output URL.
+<4> Set the output URL to `{app}` +
+So that the domain `lb-tutorial-internal.lb.anypointdns.net/{app}` gets mapped to `{app}.cloudub.io/` using the pattern `{app}` to match your application's name.
+<5> Set the appURI to `/` to redirect to the initial path of your application.
+
+Additionally, load balancers and VPCS can be programmatically managed using the link:/runtime-manager/runtime-manager-api[Cloudhub API] through the endpoints `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/loadbalancers` and `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/vpcs`.
