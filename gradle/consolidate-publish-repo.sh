@@ -7,7 +7,7 @@
 DRY_RUN=false
 QUIET_FLAG=
 MAX_AGE='3 week'
-FREQUENCY='1 hour'
+FREQUENCY='1 month'
 PUBLISH_DIR=_publish
 
 while getopts 'dqa:f:D:' option; do
@@ -42,7 +42,7 @@ fi
 
 GRAFT_COMMIT=`git log -n1 --format=%H --until "$MAX_AGE"`
 
-echo "Consolidating history of build output repository to $GRAFT_COMMIT..."
+echo "Consolidating history of publish repository until $GRAFT_COMMIT..."
 
 echo $GRAFT_COMMIT > .git/info/grafts
 
@@ -65,6 +65,7 @@ rm -f .git/info/grafts
 
 git reflog expire --expire=now --all
 git gc $QUIET_FLAG --prune=now
+# TODO could check for BUILD_ID environment variable instead
 if [ "$DRY_RUN" == "false" ]; then
   git push $QUIET_FLAG --force origin master
   if [ $? -ne 0 ]; then
