@@ -6,7 +6,7 @@
 
 DRY_RUN=false
 QUIET_FLAG=
-MAX_AGE='1 month ago'
+MAX_AGE='1 month'
 FREQUENCY='1 week'
 PUBLISH_DIR=_publish
 
