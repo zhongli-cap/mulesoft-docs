@@ -5,13 +5,15 @@
 # then restoring subsequent commits from that point forward.
 
 DRY_RUN=false
+QUIET_FLAG=
 MAX_AGE='1 month ago'
 FREQUENCY='1 week'
 PUBLISH_DIR=_publish
 
-while getopts 'da:f:D:' option; do
+while getopts 'dqa:f:D:' option; do
   case $option in
     d) DRY_RUN=true ;;
+    q) QUIET_FLAG="--quiet" ;;
     a) MAX_AGE="$OPTARG" ;;
     f) FREQUENCY="$OPTARG" ;;
     D) PUBLISH_DIR="$OPTARG" ;;
@@ -35,18 +37,27 @@ echo 'Consolidating history of build output repository...'
 
 echo $GRAFT_COMMIT > .git/info/grafts
 
-git filter-branch -f --msg-filter "
-  if [ \$GIT_COMMIT == $GRAFT_COMMIT ]; then
-    echo 'consolidate history'
-  else
-    cat
-  fi"
+if [ -z "$QUIET_FLAG" ]; then
+  git filter-branch -f --msg-filter "
+    if [ \$GIT_COMMIT == $GRAFT_COMMIT ]; then
+      echo 'consolidate history'
+    else
+      cat
+    fi"
+else
+  git filter-branch -f --msg-filter "
+    if [ \$GIT_COMMIT == $GRAFT_COMMIT ]; then
+      echo 'consolidate history'
+    else
+      cat
+    fi" > /dev/null
+fi
 rm -f .git/info/grafts
 
 git reflog expire --expire=now --all
-git gc --prune=now
+git gc $QUIET_FLAG --prune=now
 if [ "$DRY_RUN" == "false" ]; then
-  git push --force origin master
+  git push $QUIET_FLAG --force origin master
   cd ..
   rm -rf $PUBLISH_DIR
 fi
