@@ -24,16 +24,13 @@ cd $PUBLISH_DIR
 
 # use schmitt trigger so script only runs every so often
 if [ -z `git log -n1 --format=%H --until "$MAX_AGE $FREQUENCY"` ]; then
+  echo 'No commits to consolidate.'
   exit 0
 fi
 
 GRAFT_COMMIT=`git log -n1 --format=%H --until "$MAX_AGE"`
 
-if [ -z "$GRAFT_COMMIT" ]; then
-  exit 0
-fi
-
-echo 'Consolidating history of build output repository...'
+echo "Consolidating history of build output repository to $GRAFT_COMMIT..."
 
 echo $GRAFT_COMMIT > .git/info/grafts
 
