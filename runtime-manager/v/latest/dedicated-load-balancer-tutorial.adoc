@@ -2,16 +2,14 @@
 
 image:cloudhub-logo.png[cloudhub]
 
-== Overview
-
-This tutorial walks you through the creation of a *dedicated load balancer* configuring an SSL endpoint for 2-way SSL authentication and mapping lists.
-
 == Prerequisites
 
 This tutorial follows the configuration presented in the link:/runtime-manager/vpc-tutorial[VPC Tutorial] so it assumes that you either completed those instructions or created a VPC and configured it similarly to the example. +
 It is also recommended for you to be familiar with the link:/runtime-manager/cloudhub-architecture[CloudHub architecture].
 
-== Create a Load Balancer
+== Overview
+
+This tutorial walks you through the creation of a *dedicated load balancer* configuring an SSL endpoint for 2-way SSL authentication and mapping lists.
 
 [NOTE]
 This feature will eventually be built into the Runtime Manager UI, however currently it’s only available as a service that can be used via the link:/runtime-manager/anypoint-platform-cli[Anypoint Command Line Interface].
@@ -20,7 +18,7 @@ Each load balancer can be associated with one or more *SSL endpoints*. Such endp
 Certificates are an important component of your dedicated load balancer. When creating a load balancer, at least one SSL endpoint needs to be configured, meaning that each load balancer needs to have _at least_ one certificate associated to it. +
 Understanding how to link:/runtime-manager/cloudhub-dedicated-load-balancer#managing-certificates[manage certificates], is therefore quite useful when managing dedicated load balancers.
 
-==== Provide a Certificate
+=== Provide a Certificate
 
 Create a custom self-signed certificate for the domain `lb-tutorial-cert`. +
 
@@ -53,6 +51,8 @@ Email Address []:max@mule.com
 ----
 
 You created your certificate and private key pair, with a CNAME `lb-tutorial-cert`.
+
+== Create a Load Balancer
 
 A load balancer can be created using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-create[load-balancer create] command.
 
@@ -100,4 +100,32 @@ This rule uses patterns so that every value passed as `{app}` in your load balan
 So that the domain `lb-tutorial.lb.anypointdns.net/{app}` gets mapped to `{app}.cloudub.io/` using the pattern `{app}` to match your application's name.
 <5> Set the appURI to `/` to redirect to the initial path of your application.
 
-Additionally, load balancers and VPCS can be programmatically managed using the link:/runtime-manager/runtime-manager-api[Cloudhub API] through the endpoints `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/loadbalancers` and `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/vpcs`.
+== Update an Existing Load Balancer
+
+Although it is not possible to update certain values from your VPC through the Anypoint Platform CLI, you can use the link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/8617/versions/85955/pages/107964[Cloudhub API] to programmatically manage and update your load balancer:
+
+. Log in to the CloudHub services passing your credentials to `https://anypoint.mulesoft.com/accounts/login`.
+. Use the `organizations/{orgid}/vpcs/{vpcId}/loadbalancers/{lbId}` endpoint to update your load balancer.
+
+[NOTE]
+You can use the link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/8617/versions/85955/pages/107964[API Reference] to understand how to interact with the API's resources.
+
+For example, to update the `httpmode` of your load balancer, you need to send a `PATCH` request to the `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/vpcs/{vpcId}/loadbalancers/{lbId}` endpoint with a JSON payload:
+
+[TIP]
+--
+You can query your `{orgid}` sending a GET request to the `/accounts/api/me` endpoint.
+
+Your `{vpcId}` and `{lbId}` values are listed by running a link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-describe-json[cloudhub vpc describe-json] and a link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-describe-json[cloudhub load balancer describe-json] command respectively.
+--
+
+[source,json,linenums]
+----
+[
+  {
+    "op": "replace",
+    "path": "/httpMode",
+    "value": "redirect"
+  }
+]
+----

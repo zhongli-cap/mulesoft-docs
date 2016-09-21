@@ -2,28 +2,89 @@
 
 image:cloudhub-logo.png[cloudhub]
 
-== Overview
-
-This tutorial walks you through the creation of a *virtual private cloud* configuring firewall rules.
-
-It also shows you how to create a simple application and deploy it to your new network environment.
-
 == Prerequisites
 
 This tutorial assumes that you purchased a link:/runtime-manager/virtual-private-cloud[VPC offering], and are familiar with the link:/runtime-manager/cloudhub-architecture[CloudHub architecture].
 
 
-Choose the tool with which you want to operate:
+== Overview
 
-* link:/runtime-manager/create-vpc-ui[Anypoint Platform UI]
-* link:/runtime-manager/create-vpc-cli[Anypoint Platform CL]
+This tutorial walks you through the creation of a *virtual private cloud* configuring firewall rules.
 
+== Create a VPC
 
-== Delete a VPC
+In order to create a VPC, log in to your Anypoint Platform and follow these steps:
+
+. Select the `VPCs` tab from the navigation bar to your left
+. Click the Create VPC option
++
+image:vpc-and-load-balancer-creation-df931.png[]
++
+In the screen shown in the image below, you can start passing the parameters to define and configure your VPC:
++
+image:vpc-and-load-balancer-creation-35c7d.png[]
++
+. A VPC name. +
+For this tutorial, name your VPC `vpc-tutorial`.
+. The region to which the VPC is bound. +
+In this case, we are bounding it to `US East`.
++
+[NOTE]
+--
+All VPCs need to be associated to a CloudHub region.
+--
++
+. The size of your VPC in CIDR notation. +
+We are setting it to 10.111.0.0/24 which grants us 256 IP addresses from 10.111.0.0 to 10.111.0.255.
++
+[CAUTION]
+--
+It is not possible to resize a VPC once created. +
+Understanding how to size your VPC is crucial at this point. If you are not sure how to configure this, make sure to follow our link:/runtime-manager/virtual-private-cloud#size-your-vpc[VPC sizing] guide
+--
++
+. Set an environment to which your VPC is bound. +
+For this example, we are leaving the environment blank so every application deployed to US-EAST gets associated to this VPC disregarding to which environment it is being deployed. +
+All VPCs need to also be bound to an link:/access-management/environments[environment] inside your CloudHub organization or business group. +
+. Set wether this VPC is the default for the region you are creating it. +
+In this case, we are setting it as default. This means that all environments in this region that are not associated to a VPC will be, by default, associated to this VPC.
+. Set the business group to which your VPC is bound. +
+By leaving it blank, you are associating this VPC to the main organization.
++
+image:vpc-and-load-balancer-creation-97c25.png[]
++
+. Set Firewall rules
+. All inbound traffic is blocked by default. You need to create firewall rules to allow traffic to your VPC. +
+The UI suggests us a list of most used firewall rules. For this example, we are adding a firewall rule with type 'http.private.port' from `Anywhere`. Note that the port range is automatically set to `8091`. +
++
+This means that only connections through the port `8091` will be whitelisted inside the VPC. +
+Your dedicated load balancer proxies external requests internally through port 8091. In order to proxy all requests from the load balancer, all applications that we deploy to the VPC must be listening http requests through port 8091.
+. Click *Create VPC*.
 
 [NOTE]
 --
-In order to be able to delete a VPC, no load balancers need to be associated to it.
-
-To delete a load balancer, use the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-delete[load-balancer delete] command.
+Additionally, you can link:/runtime-manager/create-vpc-cli[create a VPC using the Anypoint Platform CLI].
 --
+
+== Update an Existing VPC
+
+. Find your VPC from the list of existing VPC in the UI, and select it.
+. You can update:
+.. Environments +
+You can select one or more specific environment from the drop down menu
+.. Business Groups +
+You can select one or more business group from the drop down menu
+.. Firewall Rules +
+You edit existing firewall rules, or add new ones
+.. Internal DNS
+This option allows you to set a list of internal host names to be resolved using your DNS servers for which you need to provide their public IP addresses:
++
+Whenever those private domains are provided, your worker resolves them using your private DNS, so you can still use the internal host names of your private network.
+. When you finished all your editing, click *Apply Changes*
+
+You just created a private and isolated network in the US-EAST region and allowed inbound traffic to it through port 8091.
+
+From this moment on, any application that is deployed to US-EAST (disregarding the environment used), will be deployed to this VPC. +
+
+
+Learn how to associate a load balancer following the link:/runtime-manager/dedicated-load-balancer-tutorial[load balancer tutorial].
