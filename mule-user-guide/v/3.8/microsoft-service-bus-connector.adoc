@@ -164,29 +164,31 @@ To enable the SSL checks, the certificate must be imported following these steps
 
 In addition to the connection schemes that require username/password, the connector provides a connection which authentication is SAS based (only for Azure) which allows you to set the authentication token for the Service Bus Service without requiring the username/password for it.
 
-As the SAS token schema is URI based (ie. you can assign different authorization access to your resources based on their URIs) the connection supports multiple ways of providing the authentication tokens when needed. The most trivial case is when you have a single profile that authorize all access to an specific root URI which is the base endpoint that your service expose. If you need to provide different access tokens on different resources, then you can use a setting which allows you to configure a list of them according to the resources the connector will need to access during its running time.
+As the SAS token schema is URI based (ie. you can assign different authorization access to your resources based on their URIs) the connection supports multiple ways of providing the authentication tokens needed. The most trivial and simple case is when you have a single profile that authorize accesses to all your resources by using an specific root URI which is the base endpoint that your service expose. If you need to provide different access tokens on different resources, then you can use a setting which allows you to configure a list of them according to the resources the connector will need to access during its running time.
 
-Last but not least, and extending the mechanisms described above to provide the authentication token, there is another mechanism that allows you to implement a custom provider to allow the connector requests for security tokens when needed. It is your responsability to solve each request and return a fresh token every time the connector asks for one. As the token has an expiration time within it, this mechanism allows the connector to re-authenticate with the target queue or topic once the token has expired (this is not allowed with the previous mechanisms described above where the tokens are fixed at configuration time before the flow runs).
+Last but not least, and extending the mechanisms described above to provide the authentication token, there is another mechanism that allows you to implement a custom token provider to allow the connector requests for security tokens when needed. It is your responsability to solve each request and to return a fresh token every time the connector asks for one. As the token has an expiration time within it, this mechanism allows the connector to re-authenticate with the target resource once the token has expired (this is not allowed with the previous mechanisms described above where the tokens are fixed at configuration time before the flow runs).
 
 The following are the available settings for the `Shared Access Signature` connection:
 
 *Service Namespace*: The namespace for the Azure Service Bus Service within your subscription.
 
-*Shared Access Signature*: (Optional) The unique security token when you set up just one security profile to access all your service resources. In this case when the token has expired the connector cannot reconnect automatically and you will need to stop running the flow in order to update the configuration setting with a new token.
+*Shared Access Signature*: (Optional) The unique security token when you set up just one security profile to access all your service resources. In this case when the token has expired the connector cannot reconnect automatically and you will need to stop running the flow in order to update this configuration setting with a new token.
 
 And within the advanced section you can find:
 
-*SAS Tokens List*: (Optional) The list of security tokens the connector will need to access different URIs when the security profiles for each one of them might be different. In this case when any of the tokens has expired the connector cannot reconnect to the URI linked to that token and you will need to stop running the flow in order to update the configuration setting with a new token.
+*SAS Tokens List*: (Optional) The list of security tokens the connector will need to access different URIs when the security profiles for each one of them are different. In this case when any of the tokens has expired the connector cannot reconnect to the URI linked to that token and you will need to stop running the flow in order to update this configuration setting with a new set of tokens.
 
-*SAS Tokens Provider*: (Optional) An Spring bean reference implementing the `org.mule.modules.microsoftservicebus.connection.providers.SharedAccessSignatureProvider` interface. If you set an instance of a token provider here, it is your responsability to provide a fresh token for each URI the connector requires to access (according to your security profiles). In this case each time a token has expired the connector will request for a new one, which will be provided by your implementation, and reconnection to the target URI will be done seamlessly. In order to provide a reference to your own implementation as a Spring bean, refer to the following link:/https://docs.mulesoft.com/mule-user-guide/v/3.8/using-spring-beans-as-flow-components[documentation].
+*SAS Tokens Provider*: (Optional) An Spring bean reference implementing the `org.mule.modules.microsoftservicebus.connection.providers.SharedAccessSignatureProvider` interface. If you set an instance of a token provider here, it is your responsability to provide a fresh token for each URI the connector requires access to (according to your security profiles). In this case each time a token has expired the connector will request for a new one, which will be provided by your implementation, and reconnection to the target URI will be done seamlessly. In order to provide a reference to your own implementation as a Spring bean, refer to the following link:/https://docs.mulesoft.com/mule-user-guide/v/3.8/using-spring-beans-as-flow-components[documentation].
 
 _Note_: At least one of the optional settings shown above must be provided.
 
-In all cases the token format you should provide must comply with the following pattern:
+In all cases the token format you should provide is a `string` that must comply with the following pattern:
 [source, code, linenums]
 ----
 SharedAccessSignature sr=[resource_uri]&sig=[signature]&se=[ttl]&skn=[profile]
 ----
+
+the `sr` parameter value might start with `https` or `amqps` protocol depending on the operation you will perform on the target resource.
 
 As example:
 [source, code, linenums]
