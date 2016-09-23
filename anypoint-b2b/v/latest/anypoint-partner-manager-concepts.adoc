@@ -15,6 +15,8 @@ B2B Transaction Processing Framework enables developers to build a single set of
 
 B2B transaction processing typically proceeds through some combination of the following stages. (The exact processing stages used and the order can vary between companies.)
 
+image:1-functional-architecture.png[1-functional-architecture.png]
+
 ==== Receive
 
 Each incoming transaction from a partner or internal system is delivered through a transport protocol endpoint configured to receive the message.
@@ -26,19 +28,20 @@ Using data that may be inside the message or in incoming metadata (such as http 
 * Map to transform the message into the required target format
 * Endpoint to which the transformed message is to be delivered
 
-==== Normalize
+==== Transform
 
 Each incoming message is translated into the canonical message format for the target service being invoked. This translation is performed dynamically using a map retrieved from the Trading Partner Management (TPM) API.
 
 ==== Validate
 Makes sure the required data is present in the required format. This validation is performed dynamically using a schema retrieved from the Trading Partner Management (TPM) API.
 
-==== Route
+==== deliver
 Using endpoint configuration data retrieved from the Trading Partner Management (TPM) API the flow dynamically delivers the message to the Business Service endpoint address.
 
 === Technical Architecture
 The following diagram shows the primary components of the framework and how these components interact to process B2B transactions.
 
+image:2-b2b-message-processing-framework.png[2-b2b-message-processing-framework.png]
 
 ==== MuleSoft-provided Components
 
@@ -74,8 +77,8 @@ The Resolve flow does the following:
 * Passes the metadata fields to the TPM service to look up the Document Type and associated configuration settings (map, schema, target endpoint) and adds this information to the context headers that travel with the message to be used by later stages.
 * Passes the message to the next processing stage.
 
-===== Normalize Flow
-The Normalize flow:
+===== Transform Flow
+The Transform flow:
 
 * Dynamically applies the configured mapping script from the context header to translate the message into the canonical format for the target Business Service.
 * Does any necessary data translation, such as resolving partner values to your values using lookup tables, functions, and flows.
@@ -89,10 +92,10 @@ The Validate flow:
 * Uses the PMC to track the validation result for the message.
 * Passes the message to the next processing stage.
 
-===== Route Flow
-The Route Flow:
+===== Deliver Flow
+The Deliver Flow:
 
-* Invokes the target service by passing the normalized message to the configured transport endpoint.
+* Invokes the target service by passing the transformed message to the configured transport endpoint.
 * Uses the PMC to track the result from the target service.
 
 ===== Message Payload Persistence Flow
@@ -112,11 +115,10 @@ The replay flow coordinates replaying transactions. It polls the Tracking servic
 . Tracks the fact that the transaction has been replayed.
 . Updates the TPM service to indicate that the replay is complete
 
-
-
-
 === Information Architecture: Partner Manager-configurable entities and terms
 Anypoint Partner Manager stores the following configuration data in order to support the dynamic processing of different transaction types for different trading partners.
+
+image:3-b2b-transaction.png[3-b2b-transaction.png]
 
 ==== Partner
 Represents an external company with which your company does business. Your company itself is also considered a Partner.[3][4]
@@ -185,6 +187,7 @@ Denotes the end-to-end processing of a single instance of a document from the re
 Inbound versus Outbound is always used to denote direction of documents being exchanged between partners. A document from an external partner to the home organization is considered Inbound. A document sent from the home organization to an external partner is considered Outbound.[5][6]
 The following diagram depicts the relationship between these configuration entities relative to the processing of inbound or outbound transactions:
 
+image:4-inbound-outbound.png[4-inbound-outbound.png]
 
 Note that in order to be flexible enough to support the range of possible usage scenarios, this information architecture supports configuration options that are not all needed in every scenario.
 
