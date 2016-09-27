@@ -1,7 +1,7 @@
 = Using APIkit
-:keywords: apikit, rest, console, load balancer
+:keywords: apikit, rest, console, load balancer, configuring path
 
-APIkit 3.8.1 supports RAML 1.0. Earlier versions of APIkit support earlier versions of RAML on API Gateway Runtime or Mule runtime version 3.5.0 or later, as described in the link:/release-notes/apikit-release-notes[release notes]. 
+APIkit 3.8.1 supports RAML 1.0 and 0.8. Versions of APIkit support versions of RAML as described in the link:/release-notes/apikit-release-notes[release notes].
 
 APIkit projects function with on-premises and CloudHub runtimes.
 
@@ -42,6 +42,82 @@ Included in the project are backend flows containing REST resource-action mappin
 
 After simulating calls to a RAML-based API using APIkit Console, and improving or changing behavior, you alter the backend flows to act upon real resources with real data.
 
+== Configuring the Path for Deployment on CloudHub
+
+CloudHub requires a link:/runtime-manager/deploying-to-cloudhub#creating-an-application-name[unique application name] regardless of the region where you deploy the API. You can, for example, add the region name to the application name to ensure uniqueness. For example:
+
+`test-customers-eu`
+
+`test-customers-na`
+
+By default, APIKit adds a base path to each API, namely `/api`. Thus, the final URL of the APIs deployed on CloudHub is:
+
+`http://test-customers.eu.cloudhub.io/api/customers`
+
+`http://acceptance-customer.eu.cloudhub.io/api/customers`
+
+=== Running Multiple Versions of the Same API
+
+To run multiple versions of the same API simultaneously, deploy each API implementation using an unique name. For example, add the version number for uniqueness:
+
+`test-customer-v1.eu.cloudhub.io`
+
+`test-customer-v2.eu.cloudhub.io`
+
+Thus, the final URL of the APIs deployed on CloudHub is:
+
+`http://test-customers-v1.eu.cloudhub.io/api/customers`
+
+`http://acceptance-customers-v1.eu.cloudhub.io/api/customers`
+
+Dropping the environment prefix for production is a MuleSoft best practice. For example:
+
+`http://customers-v1.eu.cloudhub.io/api/customers`
+
+You can setup desired URLs for each CloudHub application by using a custom load balancer. For instance, you can configure `http://api.yourcompany.com/customer/v1` to point to this URL:
+
+http://customers-v1.eu.cloudhub.io/api/customers
+
+== Configuring the Path for Deployment On Premises
+
+By default, APIKit generates a listener having a base path of `/api`. A different application deployed on the same server will attempt to listen on the same context, for example `http://server:port/api/`, which causes a conflict.
+
+To avoid such a conflict, configure each Mule application using a different base path. For example:
+
+`/api/customers`
+
+`/api/products`
+
+If multiple versions of the same application need to run on the same server, add a version designator to the base path. For example:
+
+`/api/customers/v1`
+
+`/api/customer/v1`
+
+Because each server belongs to a different environment, there is no need to include the environment, such as `/test` or `/dev`, in the base path.
+
+Avoid hard-coding URLs in base path. link:/mule-user-guide/v/3.8/mule-application-deployment-descriptor#options[Use different property files] for different deployments:
+
+image::apikit-using-7d817.png[apikit-using-7d817.png]
+
+You can configure a custom load balancer to adjust URLs. For example, `http://api.yourcompany.com/customer/v1` can point to `http://server:port/api/customer/v1`.
+
+== Configuring an HTTP Request
+
+When configuring an HTTP request after deployment, if the API is accessible, not blocked by a policy for example, you can use an HTTP client, such as Postman, to obtain the RAML definition.
+
+. Set up a GET request.
+. Use the following syntax to construct the URL:
++
+`<baseURL>/console/api/?raml`
++
+. Set a Headers key to Accept and the value to `application/raml+yaml`.
+. Send the request.
++
+The RAML code for the API appears in the Body section.
+
+image::apikit-using-adf02.png[apikit-using-adf02,height=602,width=633]
+
 == Changing APIkit Elements
 
 In a RAML-based API, if you change or add exception strategies, you need to adjust link:/apikit/apikit-using#generate-backend-flows-and-reference-exception-strategies[references to exception strategies].
@@ -55,18 +131,25 @@ In a SOAP-based API, if you change the WSDL, regenerate backend flows. Click *Mu
 
 == Backend-First Design Process
 
-You can add APIkit components to an existing design, for example a legacy project that you want to modernize using RAML and APIkit. In this case, you use the backend-first design process to create the RAML or WSDL code within Studio, you need to perform a number of tasks to generate APIkit components:
+If you create a new Studio project without specifying a RAML file, and you check the Add API Components checkbox, APIkit generates a skeletal RAML file and XML config that includes the following things:
+
+* HTTP Listener configuration
+* APIkit Router component
+* Exception strategies flows
+
+After adding the RAML content, you can use APIkit Console to simulate the API.
+
+== Adding APIkit to an Existing Design
+
+You can add APIkit components to an existing design, for example a legacy project that you want to modernize using RAML and APIkit. Create the RAML or WSDL code within Studio as follows:
 
 *RAML-based API*
 
 * Define the RAML.
 * Create a main flow, or use an existing one, that includes an *HTTP Listener* and *APIkit Router*.
-* Create resource-action mappings.
 * link:/apikit/apikit-using#generating-backend-flows[Generate backend flows].
 * Add a link:/apikit/apikit-using#generate-backend-flows-and-reference-exception-strategies[reference to exception strategies] in the main flow.
 * Add an *APIkit Console* component.
-+
-APIkit Console functionality depends on backend flows.
 
 *WSDL-based API*
 
@@ -77,9 +160,9 @@ APIkit Console functionality depends on backend flows.
 
 The generated backend flows contain the core logic of the API, the REST resource-action pairing or SOAP message templates for handling faults.
 
-=== Define the RAML or WSDL in Studio
+=== Define the RAML in Studio
 
-The following procedure describes how to define a RAML-based API in Studio. Similar steps apply to defining a WSDL-based API.
+The following procedure describes how to define a RAML-based API in Studio.
 
 . In the *Package Explorer*, right-click the project name, then select *New* > *RAML API Definition*.
 +
@@ -117,7 +200,19 @@ To change the color scheme of the RAML Editor in Studio.
 . Expand *RAML Editor Preferences*, then select *Color Theme*.
 . Select a color theme and click *OK*.
 
-==== Generate an !include
+=== Define the WSDL in Studio
+
+The following procedure describes how to define a RAML-based API in Studio.
+
+. In the *Package Explorer*, right-click the project name, then select *New* > *Untitled Text File*.
++
+. Type the WSDL definition.
+. Save the file to `src/main/wsdl` and enter a name in *File Name*.
+. Click *OK*.
+
+Alternatively, you can use any text editor to create the API definition, and then drag the file into the `src/main/wsdl` folder of the Studio project.
+
+=== Generate an !include
 
 In RAML-based API designs, you can generate link:https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/#includes[!includes] as follows: 
 
@@ -207,6 +302,55 @@ By default, the console is offered at the same host, port, and path as the routi
 image:routerconfig-console.png[routerconfig-console]
 
 To access the console in a browser, go to the full address of your project routing flow and append the console path, `/console` by default, to the end of the address. For example, if your API is hosted at `http://localhost:8081/api`, then the URL for accessing the console is `http://localhost:8081/api/console.`
+
+=== How to Expose APIkit Console
+
+APIkit Console code consists of two XML configurations. The second one is deprecated:
+
+----
+<flow name="api-console">
+   <http:listener config-ref="api-httpListenerConfig" path="/console/*" doc:name="HTTP"/>
+
+   <apikit:console config-ref="api-config" doc:name="APIkit Console"/>
+</flow>
+----
+
+To access the console having the latest listener configuration, use a URL that is not part of the `api` namespace, for example:
+
+`/console`
+
+This is the recommended way to access the console.
+
+To access the console having the second, deprecated configuration, use a URL that is part of the `api` namespace, for example `/api/console`. This is the old way of accessing the console.
+
+Using the recommended `/console` URL provides access to the console regardless of API policies in effect. Using the deprecated `/api/console` URL can result in failure to access the console. A policy that denies requests to the API can render a console unreachable in the `api` namespace.
+
+The *Try It* functionality will work, or not, depending on the policies applied to the API. Using Try It results in an error in certain cases.
+
+==== Enabling and Disabling APIkit Console
+
+To enable/disable the console when exposing the API in the deprecated way, use the link:/apikit/apikit-reference#apikit-config-attributes[consoleEnabled] property.
+
+To disable the console when exposing the API in the recommended way, follow these steps:
+
+. Add a conditional expression to the api-console flow as shown in the following example:
++
+----
+<flow name="api-console">
+   <http:listener config-ref="api-httpListenerConfig" path="/console/*" doc:name="HTTP"/>
+     <choice doc:name="Choice">
+        <when expression="${test}">
+           <apikit:console config-ref="api-config" doc:name="APIkit Console"/>
+        </when>
+        <otherwise>
+            <set-payload value="Resource not found" doc:name="Set Payload"/>
+        </otherwise>
+     </choice>
+</flow>
+----
++
+. Define the `test` property in mule-app.properties.
+. Set the `test` property to true or false to enable/disable the console.
 
 === Hosting Additional Consoles
 
