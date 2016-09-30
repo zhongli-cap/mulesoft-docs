@@ -364,14 +364,14 @@ The MySQL database `company` contains a table called `employees`, with employ
 
 image:database-connector-examples.adoc-dbtestflow.png[DBtestFlow]
 
-In the Mule application, an inbound link:/mule-user-guide/v/3.8/http-connector[HTTP connector] listens for HTTP GET requests with the form: `http://<host>:8081/?lastname=<parameter>`. The HTTP connector passes the value of `<parameter>` as one of the message properties to a database connector. The database connector is configured to extract this value and use it for the SQL query listed below.
+In the Mule application, an inbound link:/mule-user-guide/v/3.8/http-connector[HTTP connector] listens for HTTP GET requests with the form: `http://<host>:8081/?lastname=<parameter>`. The HTTP connector passes the value of `<parameter>` as an HTTP query parameter to the database connector. The database connector is configured to use MEL to use this value for the SQL query listed below.
 
 [source, code]
 ----
-select first_name from employees where last_name = #[message.inboundProperties['lastname']]
+select first_name from employees where last_name = #[message.inboundProperties.'http.query.params'.lastname]
 ----
 
-As you can see, the link:/mule-user-guide/v/3.8/mule-expression-language-mel[MEL] expression in the SQL query (`\#[message.inboundProperties['lastname']`)references the value of the parameter passed to the HTTP connector. So if the HTTP connector receives `http://localhost:8081/?lastname=Smith`, the SQL query is `select first_name from employees where last_name = Smith`.
+As you can see, the link:/mule-user-guide/v/3.8/mule-expression-language-mel[MEL] expression in the SQL query (`\#[message.inboundProperties.'http.query.params'.lastname]`)references the value of the parameter passed to the HTTP connector. So if the HTTP connector receives `http://localhost:8081/?lastname=Smith`, the SQL query is interpreted by the database as `select first_name from employees where last_name = Smith`.
 
 The database connector instructs the database server to run the SQL query, retrieves the result of the query, and passes it to the object-to-JSON message processor which converts the result to JSON. Since the HTTP connector is configured as request-response, the result is returned to the originating HTTP client.
 
@@ -510,6 +510,32 @@ curl http://<host>:8081/?lastname=<parameter>
 
 Using curl will print the resulting JSON to the terminal's standard output.
 ====
+
+=== SELECT Operation Example Code
+
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+    <db:mysql-config name="MySQL_Configuration" host="localhost" port="3306" user="" password="" database="company" doc:name="MySQL Configuration"/>
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8080" doc:name="HTTP Listener Configuration"/>
+    <flow name="db-connector-select-getresultsetFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/" allowedMethods="GET" doc:name="HTTP"/>
+        <db:select config-ref="MySQL_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[select first_name from employees where last_name = #[message.inboundProperties.'http.query.params'.lastname]]]></db:parameterized-query>
+        </db:select>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+    </flow>
+</mule>
+----
 
 == Example: Retrieve from Database and Batch Write to File
 
