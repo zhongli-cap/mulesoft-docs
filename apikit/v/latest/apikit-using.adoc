@@ -1,19 +1,17 @@
 = Using APIkit
 :keywords: apikit, rest, console, load balancer, configuring path
 
-APIkit 3.8.1 supports RAML 1.0 and 0.8. Versions of APIkit support versions of RAML as described in the link:/release-notes/apikit-release-notes[release notes].
+APIkit 3.8.1 supports RAML 1.0 and 0.8 versions as described in the link:/release-notes/apikit-release-notes[release notes].
 
-APIkit projects function with on-premises and CloudHub runtimes.
+APIkit projects can run on premise or use CloudHub runtimes.
 
-To get started using APIkit in Studio, do one of the following:
+To get started using APIkit in Anypoint Studio, do one of the following:
 
-* Import a RAML or WSDL file from one of the following sources:
-** File system
-** Anypoint Platform
-** A network or internet location
-+
-Refer to the URL of a RAML or WSDL file when you create a new project.
-+
+* From Project Wizard import a RAML or WSDL definition from one of the following sources:
+** Select the file directly from file system.
+** Log into Anypoint Platform.
+** Refer to the URL in a remote location.
+
 * Create the RAML file within an existing Studio project.
 +
 Using this sequence of development is called a link:/apikit/apikit-using#backend-first-design-process[backend-first design].
@@ -44,7 +42,7 @@ After simulating calls to a RAML-based API using APIkit Console, and improving o
 
 == Configuring the Path for Deployment on CloudHub
 
-CloudHub requires a link:/runtime-manager/deploying-to-cloudhub#creating-an-application-name[unique application name] regardless of the region where you deploy the API; therefore, to deploy an API to multiple regions, you need to add the region name to the application name. For example:
+CloudHub requires a link:/runtime-manager/deploying-to-cloudhub#creating-an-application-name[unique application name] regardless of the region where you deploy the API. You can, for example, add the region name to the application name to ensure uniqueness. For example:
 
 `test-customers-eu`
 
@@ -55,6 +53,8 @@ By default, APIKit adds a base path to each API, namely `/api`. Thus, the final 
 `http://test-customers.eu.cloudhub.io/api/customers`
 
 `http://acceptance-customer.eu.cloudhub.io/api/customers`
+
+=== Running Multiple Versions of the Same API
 
 To run multiple versions of the same API simultaneously, deploy each API implementation using an unique name. For example, add the version number for uniqueness:
 
@@ -78,7 +78,7 @@ http://customers-v1.eu.cloudhub.io/api/customers
 
 == Configuring the Path for Deployment On Premises
 
-By default, APIKit generates a listener having a base path of `/api`.  A different application deployed on the same server will attempt to listen on the same context, for example `http://server:port/api/`, which causes a conflict.
+By default, APIKit generates a listener having a base path of `/api`. A different application deployed on the same server will attempt to listen on the same context, for example `http://server:port/api/`, which causes a conflict.
 
 To avoid such a conflict, configure each Mule application using a different base path. For example:
 
@@ -99,6 +99,22 @@ Avoid hard-coding URLs in base path. link:/mule-user-guide/v/3.8/mule-applicatio
 image::apikit-using-7d817.png[apikit-using-7d817.png]
 
 You can configure a custom load balancer to adjust URLs. For example, `http://api.yourcompany.com/customer/v1` can point to `http://server:port/api/customer/v1`.
+
+== Configuring an HTTP Request
+
+When configuring an HTTP request after deployment, if the API is accessible, not blocked by a policy for example, you can use an HTTP client, such as Postman, to obtain the RAML definition.
+
+. Set up a GET request.
+. Use the following syntax to construct the URL:
++
+`<baseURL>/console/api/?raml`
++
+. Set a Headers key to Accept and the value to `application/raml+yaml`.
+. Send the request.
++
+The RAML code for the API appears in the Body section.
+
+image::apikit-using-adf02.png[apikit-using-adf02,height=602,width=633]
 
 == Changing APIkit Elements
 
@@ -259,7 +275,7 @@ The *New Mapping* dialog appears.
 +
 * In the Flow drop-down, select the flow that contains the post action:
 +
-`post:/sales:applicaiton/json:Router`
+`post:/sales:application/json:Router`
 +
 Click *OK*.
 +
@@ -287,7 +303,9 @@ To access the console in a browser, go to the full address of your project routi
 
 === How to Expose APIkit Console
 
-APIkit Console code consists of two XML configurations. The second one is deprecated:
+There are two ways to expose the APIkit Console.
+
+The recommended one is creating a flow dedicated to expose it, for example:
 
 ----
 <flow name="api-console">
@@ -297,17 +315,19 @@ APIkit Console code consists of two XML configurations. The second one is deprec
 </flow>
 ----
 
-To access the console having the latest listener configuration, use a URL that is not part of the `api` namespace, for example:
+One important benefit of this way, is the fact that, as it uses its own listener, the path of the console is not a part of the api namespace. Then you will be able to apply policies to your api without affecting the console.
 
-`/console`
+The second way, now deprecated, is configurating the apikit:config in the following way:
 
-This is the recommended way to access the console.
+----
+ <apikit:config name="apiConfig" raml="api.raml" consoleEnabled="true" consolePath="console"/>
+----
 
-To access the console having the second, deprecated configuration, use a URL that is part of the `api` namespace, for example `/api/console`. This is the old way of accessing the console.
+The console path, when using this configuration, is part of the api namespace, specified in the listener of the main flow. For example, if the api is configured in /api, the console is accessed by hitting /api/console. This causes problems when applying policies to the whole api, as the console is affected by them.
 
-Using the recommended `/console` URL provides access to the console regardless of API policies in effect. Using the deprecated `/api/console` URL can result in failure to access the console. A policy that denies requests to the API can render a console unreachable in the `api` namespace.
 
-The *Try It* functionality will work, or not, depending on the policies applied to the API. Using Try It results in an error in certain cases.
+In both cases, the *Try It* functionality will work, or not, depending on the policies applied to the API. 
+
 
 ==== Enabling and Disabling APIkit Console
 
@@ -333,6 +353,9 @@ To disable the console when exposing the API in the recommended way, follow thes
 +
 . Define the `test` property in mule-app.properties.
 . Set the `test` property to true or false to enable/disable the console.
+
+Important note:
+Using the consoleEnabled property ONLY affects the deprecated way to expose the console. The name of this property was not changed to keep backwards compatibility. 
 
 === Hosting Additional Consoles
 
