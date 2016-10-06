@@ -27,3 +27,52 @@ link:[Anypoint Platform Service Brokers for PCF] Tile
 
 
 == Space Configuration Tool
+
+
+
+== Set up a Hazelcast Server
+
+[NOTE]
+This step is only necessary if you intend to deploy your Mule applications into clusters in PCF.
+
+If you don’t have a hazelcast cluster configured, you must configure one. You must use the mule hazelcast server provided by MuleSoft. See link:/anypoint-platform-on-premises/v/1.5.0/mule-hazelcast-server[Mule Hazelcast server].
+
+Once the cluster is installed, take note of the cluster node IPs and ports and the cluster group name and password. You will need this information to bind Mule runtime instances to the cluster.
+
+=== Hazelcast as PCF user-provided service
+
+In order to allow your Mule applications to pick up the cluster configuration, you must create a user-provided service in PCF for each of the nodes in the Hazelcast cluster that you will be connecting your Mule applications to.
+
+[source]
+----
+cf cups HAZELCAST_NODE_NAME -p ‘{“host”:”HAZELCAST_NODE_IP”,"port":"HAZELCAST_NODE_PORT","clusterId":"HAZELCAST_CLUSTER_GROUP_NAME","clusterPassword":"HAZELCAST_CLUSTER_GROUP_PASSWORD"}'
+----
+
+In the above command, replace the following placeholders:
+* `HAZELCAST_NODE_NAME`: Logical name of the Hazelcast node from the cluster that you are defining. It must start with hazelcast.
+* `HAZELCAST_NODE_IP`: IP to connect to the Hazelcast node
+* `HAZELCAST_NODE_PORT`: Port to connect to the Hazelcast node
+* `HAZELCAST_CLUSTER_GROUP_NAME`: Group name set in the Hazelcast cluster configuration
+* `HAZELCAST_CLUSTER_GROUP_PASSWORD`: Group password set in the Hazelcast cluster configuration
+
+For example:
+
+[source]
+----
+cf cups hazelcast_dev_node1 -p '{"host":"172.16.12.61","port":"5701","clusterId":"dev","clusterPassword":"dev-pass"}'
+----
+
+=== Verify Hazelcast Installation
+
+To verify that your installation was successful, tail the logs of the application after pushing it to PCF and you should find similar entries in the log:
+
+----
+INFO  2016-09-30 16:11:34,430 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastManager: Configuring cluster in client mode
+INFO  2016-09-30 16:11:34,430 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastManager: Configuring cluster with custom hazelcast client configuration
+INFO  2016-09-30 16:11:34,430 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastManager: Hazelcast cluster nodes: 127.0.0.1:5701
+INFO  2016-09-30 16:11:34,430 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastManager: Hazelcast cluster id: #hazelcastClusterId#
+INFO  2016-09-30 16:11:34,443 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastClientInstanceBuilder: Configuring cluster nodes 127.0.0.1:5701
+INFO  2016-09-30 16:11:34,481 [WrapperListener_start_runner] com.hazelcast.core.LifecycleService: HazelcastClient[hz.client_0_clusterOnAmazonHazelcast][3.6.2] is STARTING
+INFO  2016-09-30 16:11:34,724 [WrapperListener_start_runner] com.hazelcast.core.LifecycleService: HazelcastClient[hz.client_0_clusterOnAmazonHazelcast][3.6.2] is STARTED
+INFO  2016-09-30 16:11:34,812 [hz.client_0_clusterOnAmazonHazelcast.user-1] com.hazelcast.core.LifecycleService: HazelcastClient[hz.client_0_clusterOnAmazonHazelcast][3.6.2] is CLIENT_CONNECTED
+----
