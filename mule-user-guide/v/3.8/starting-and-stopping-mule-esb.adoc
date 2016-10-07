@@ -221,7 +221,57 @@ The table below lists some parameters common to Mule, which are not documented i
 |Specify a port or port range for the Mule agent listener that the Management Console binds to. To specify a port range, use `<port>-<port>`, for example `3000-3010`.
 |===
 
-The `$MULE_HOME/conf/wrapper.conf` configuration file includes many more parameters, some of which are by default commented out, but documented in the comments. 
+The `$MULE_HOME/conf/wrapper.conf` configuration file includes many more parameters, some of which are by default commented out, but documented in the comments.
+
+////
+DOCS-1704 section follows:
+////
+
+== Shutting Down Mule
+
+You can shut down Mule using the `mule stop` command that is run from the MULE_HOME/bin directory. When Mule stops,
+inbound endpoints are shut down, and in-flight Mule messages continue to process until the timeout setting elapses and final
+shutdown occurs. 
+
+You can set a timeout value to enable the current flow to complete. However, there is no built in method or utility 
+to check what messages are in flight. You can connect a profiler and see the active threads (or just a thread dump), this should provide you an overview of what's happening at the JVM level.
+
+=== Timeout From wrapper.conf
+
+You can set the timeout value in `wrapper.conf` using the `wrapper.shutdown.timeout` statement where the value is in 
+seconds, for example:
+
+[source]
+wrapper.shutdown.timeout="30"
+
+More information is available in the 
+link:http://wrapper.tanukisoftware.com/doc/english/prop-ping-timeout.html[Tanuki wrapper.shutdown.timeout] page.
+
+=== Shutdown Timeout From a Flow
+
+Alternatively, you can set `shutdownTimeout` to a milliseconds value for a flow; hwoever this is not 
+a global value. 
+
+Example for testing purposes:
+
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:test="http://www.mulesoft.org/schema/mule/test"
+      xsi:schemaLocation="
+    http://www.mulesoft.org/schema/mule/test http://www.mulesoft.org/schema/mule/test/current/mule-test.xsd
+    http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+
+    <configuration shutdownTimeout="10000"/>
+
+    <flow name="TestService">
+        <test:component/>
+    </flow>
+
+</mule>
+----
 
 == See Also
 
