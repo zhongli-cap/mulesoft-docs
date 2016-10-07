@@ -73,16 +73,32 @@ It's assumed that you're forwarding your logs to an on-premises log solution, li
 
 == Create a Load Balancer
 
+You'll likely want to install the Anypoint Platform distributed amongst multiple servers. To support this, you must provide your own load balancer to distribute the traffic between them. You can use any standard tool for creating this load balancer, like nginx. Even if you plan to deploy the platform to a single server, a load balancer is strongly recommended to restrict the ports that are open to just the necessary ones.
 
-Even if you'll have a single node
+////
+(diagrama de lucidchart) ???
+////
 
-En doc de installation  parte de como crear el load balancer  (fijarse diagrama de lucidchart)
+You can configure this load balancer with any strategy you want, but a *round robin* strategy is most often the ideal.
 
-lista de puertos que necesitas tener en el load balancer
-y lista de puertos q tenes que tener abiertos en las maquinas (AKA nodes / minions) x si tienen un firewall esas tambien
+Your load balancer must route the following TCP ports:
 
-para el load balancer podes usar nginx o algún otro load balancer común, y simplemente va a dirigir los mensajes q le llega a los nodes. podes tener un único node, pero igual el load balancer lo necisitás para q sirva como firewall
-al load balancer tenés q configurarlo vos para que haga la distribución, tal vez con un round robbin o lo que quieras
+[%header%autowidth.spread]
+|===
+|Load Balancer Port |Instance Port | Internal Usage
+|`80` | `30080`  | internal nginx redirects to `443`.
+|`443` | `30443` | internal nginx does a proxy pass to the corresponding micro-service in kubernetes.
+|`8889` | `30889` | internal nginx does TCP forwarding to `cloudhub-mcm`.
+|`9500` | `30081` | internal nginx does a proxy pass to the `gravity-site` kubernetes service.
+|`9501` | `30082` | internal nginx does a proxy pass to the `grafana` kubernetes service.
+|===
+
+In every case, your load balancer must listen on the *Load Balancer Port* and redirect incoming requests to the *Instance Port*. Your installation of the Anypoint Platform includes an internal nginx server that listens on each of the *Instance Ports* and then does what's described in *Internal Usage*.
+
+
+[NOTE]
+To configure SSL, you don't need to set this up in your load balancer. You can configure that via the Anypoint Platform UI, see <<section>> or link:/access-management/  ???
+
 
 == Set up SMTP
 
