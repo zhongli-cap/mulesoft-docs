@@ -11,17 +11,7 @@ image:logo-pcf-active.png[link="/runtime-manager/deployment-strategies", title="
 
 If your local infrastructure includes Pivotal Cloud Foundry spaces, you can deploy Mule applications to virtual servers running on dynamically allocated local resources. See link:/runtime-manager/deployment-strategies[Deployment Strategies] for a better understanding of how this works and its current limitations.
 
-Through Pivotal Cloud Foundry, you can also deploy a proxy that can
-link:
-
-
-
-
-
-
-
-
-
+Through Pivotal Cloud Foundry, you can also link:/api-manager/setting-up-an-api-proxy[deploy a proxy application] that can mediate all of the traffic going to a non-Mule app, and through that apply runtime policies.
 
 This page describes the options on the *Deploy Application* panel on the Runtime Manager UI on the Anypoint Platform On-premises Edition.
 
@@ -121,6 +111,8 @@ If your Cloud Foundry is not properly configured yet....  this will take you to 
 
 
 
+
+
 == Application File
 
 Upload a new file for deployment. Click the *Choose file* button, select your application file, and then click *Open*.
@@ -163,6 +155,9 @@ image:
 
 
 When assigning multiple instances to an application, all of your instances are accessed via a single load balancer. This load balancer is automatically created by PCF and distributes the incoming traffic amongst them.
+
+[NOTE]
+Note that if you want your multiple instances to communicate with each other as a cluster, you must <<Bind them to a Hazelcast server, Binding to Hazelcast>>.
 
 
 == Properties Tab
@@ -227,6 +222,47 @@ Just as in the <<Properties Tab>>, you can define key:value pairs for properties
 
 
 
+=== Binding to Hazelcast
+
+If you're deploying your app to multiple instances (by setting the <<Replication Factor>> field) and you want these instances to communicate with each other as a cluster, you must bind them to a Hazelcast service (or several, one per Hazelcast instance).
+
+
+You must first make sure that the service is available, by following the steps in link:/anypoint-platform-on-premises/v/1.5.0/configuring-anypoint-platform-for-pcf#set-up-a-hazelcast-server[Set Up a Hazelcast Server].
+
+Once it's available, you should be able to see it on a drop down in the <<Service Binding Tab>> and you can simply bind your application to this service through the UI. Remember to bind the application to all of the Hazelcast node services you need.
+
+The Mule buildPack will automatically recognize the binding between the Mule application and the Hazelcast cluster and will start the Mule server in cluster mode.
+
+To scale Mule applications that are already deployed, just set the <<Replication Factor>> field. The new Mule nodes will be binded to the same services as the rest. Take into account that by scaling your Mule application you could be imposing too much on your Hazelcast cluster and might have to scale that as well.
+
+////
+in case the UI doesn't work for binding Hazelcast:
+
+To scale Mule applications that are already deployed, just use the cf scale command as you would do usually with any other application.
+
+////
+
+==== Verify Hazelcast Binding
+
+To verify that your Hazelcast binding was successful, tail the logs of the application after pushing it to PCF and you should find similar entries in the log:
+
+----
+INFO  2016-09-30 16:11:34,430 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastManager: Configuring cluster in client mode
+INFO  2016-09-30 16:11:34,430 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastManager: Configuring cluster with custom hazelcast client configuration
+INFO  2016-09-30 16:11:34,430 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastManager: Hazelcast cluster nodes: 127.0.0.1:5701
+INFO  2016-09-30 16:11:34,430 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastManager: Hazelcast cluster id: #hazelcastClusterId#
+INFO  2016-09-30 16:11:34,443 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastClientInstanceBuilder: Configuring cluster nodes 127.0.0.1:5701
+INFO  2016-09-30 16:11:34,481 [WrapperListener_start_runner] com.hazelcast.core.LifecycleService: HazelcastClient[hz.client_0_clusterOnAmazonHazelcast][3.6.2] is STARTING
+INFO  2016-09-30 16:11:34,724 [WrapperListener_start_runner] com.hazelcast.core.LifecycleService: HazelcastClient[hz.client_0_clusterOnAmazonHazelcast][3.6.2] is STARTED
+INFO  2016-09-30 16:11:34,812 [hz.client_0_clusterOnAmazonHazelcast.user-1] com.hazelcast.core.LifecycleService: HazelcastClient[hz.client_0_clusterOnAmazonHazelcast][3.6.2] is CLIENT_CONNECTED
+----
+
+
+
+
+
+
+
 == Deployment Execution
 
 After you complete the above steps, click *Create* and PCF creates the necessary virtual resources, loads an image onto them that includes a Mule Runtime instance and then deploys your application to this Mule Runtime.
@@ -283,36 +319,6 @@ See link:/api-manager/setting-up-an-api-proxy[Setting Up a Proxy].
 If an error occurs and the application cannot be deployed, the application status indicator changes to `Failed`. You are alerted in the status area that an error occurred. Check the log details for any application deployment errors. You need to correct the error, upload the application, and deploy again.
 
 
-////
-== Deploying in Cluster Mode
-
-Need to bind to Hazelcast
-
-Via UI or command line????
-
-
-link:/anypoint-platform-on-premises/v/1.5.0/configuring-anypoint-platform-for-pcf#set-up-a-hazelcast-server[Set Up a Hazelcast Server]
-
-Just bind you PCF Mule application to the Hazelcast user provided service. The Mule buildPack will automatically recognize the binding between the Mule application and the Hazelcast cluster and will start the mule server in cluster mode. Remember to bind the application to all the Hazelcast node services from the cluster.
-
-To scale Mule applications in cluster mode just use the cf scale command as you would do usually with any other application. The new Mule nodes will be binded to the same services as the rest. Take into account that by scaling your Mule application you could be imposing too much on your Hazelcast cluster and might have to scale that as well.
-
-=== Verify Hazelcast Binding
-
-To verify that your Hazelcast binding was successful, tail the logs of the application after pushing it to PCF and you should find similar entries in the log:
-
-----
-INFO  2016-09-30 16:11:34,430 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastManager: Configuring cluster in client mode
-INFO  2016-09-30 16:11:34,430 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastManager: Configuring cluster with custom hazelcast client configuration
-INFO  2016-09-30 16:11:34,430 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastManager: Hazelcast cluster nodes: 127.0.0.1:5701
-INFO  2016-09-30 16:11:34,430 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastManager: Hazelcast cluster id: #hazelcastClusterId#
-INFO  2016-09-30 16:11:34,443 [WrapperListener_start_runner] com.mulesoft.mule.cluster.hazelcast.HazelcastClientInstanceBuilder: Configuring cluster nodes 127.0.0.1:5701
-INFO  2016-09-30 16:11:34,481 [WrapperListener_start_runner] com.hazelcast.core.LifecycleService: HazelcastClient[hz.client_0_clusterOnAmazonHazelcast][3.6.2] is STARTING
-INFO  2016-09-30 16:11:34,724 [WrapperListener_start_runner] com.hazelcast.core.LifecycleService: HazelcastClient[hz.client_0_clusterOnAmazonHazelcast][3.6.2] is STARTED
-INFO  2016-09-30 16:11:34,812 [hz.client_0_clusterOnAmazonHazelcast.user-1] com.hazelcast.core.LifecycleService: HazelcastClient[hz.client_0_clusterOnAmazonHazelcast][3.6.2] is CLIENT_CONNECTED
-----
-
-////
 
 
 == See Also
