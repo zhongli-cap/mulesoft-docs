@@ -304,40 +304,30 @@ information from an object store.
     xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
     xmlns:spring="http://www.springframework.org/schema/beans"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.springframework.org/schema/beans
-    http://www.springframework.org/schema/beans/spring-beans-current.xsd
-    http://www.mulesoft.org/schema/mule/core
-    http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-    http://www.mulesoft.org/schema/mule/http
-    http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-    http://www.mulesoft.org/schema/mule/objectstore
-    http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
-    http://www.mulesoft.org/schema/mule/ee/dw
-    http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
-    http://www.mulesoft.org/schema/mule/ee/tracking
-    http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
-    http://www.mulesoft.org/schema/mule/anypoint-mq
-    http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd">
+    xsi:schemaLocation="http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd">
 
-    <objectstore:config name="ObjectStore__Configuration" partition="employees" doc:name="ObjectStore: Configuration"/>
+    <objectstore:config name="ObjectStore_Configuration" partition="employees" doc:name="ObjectStore: Configuration"/>
     <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <anypoint-mq:config name="Anypoint_MQ_Configuration" doc:name="Anypoint MQ Configuration">
+        <anypoint-mq:provider url="https://mq-us-east-1.anypoint.mulesoft.com/api/v1" clientId="<ID>" clientSecret="<SECRET>"/>
+    </anypoint-mq:config>
     <flow name="objectstore-store-flow">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/store" doc:name="HTTP"/>
-        <objectstore:store config-ref="ObjectStore__Configuration"
-        key="#[message.inboundProperties.'http.query.params'.key]"
-        value-ref="#[message.inboundProperties.'http.query.params'.value]" doc:name="Store"/>
-        <anypoint-mq:consume config-ref="" destination="" doc:name="Anypoint MQ"/>
+        <objectstore:store config-ref="ObjectStore_Configuration" key="#[message.inboundProperties.'http.query.params'.key]" value-ref="#[message.inboundProperties.'http.query.params'.value]" doc:name="ObjectStore"/>
+        <anypoint-mq:consume config-ref="Anypoint_MQ_Configuration" destination="MyDemoQueue" doc:name="Anypoint MQ"/>
         <set-payload value= "OK" doc:name="Set Payload"/>
     </flow>
     <flow name="objectstore-retrieve-employee-flow">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/retrieve" doc:name="HTTP"/>
-        <objectstore:retrieve config-ref="ObjectStore__Configuration"
-        key="#[message.inboundProperties.'http.query.params'.key]" doc:name="Retrieve"/>
+        <objectstore:retrieve config-ref="ObjectStore_Configuration" key="#[message.inboundProperties.'http.query.params'.key]" doc:name="Retrieve"/>
         <logger message="Value: #[payload]" level="INFO" doc:name="Log"/>
         <set-payload value="Value : #[payload]" doc:name="Show"/>
-    </flow>
-    <flow name="object-storeFlow">
-        <anypoint-mq:subscriber config-ref="" destination="" doc:name="Anypoint MQ"/>
     </flow>
 </mule>
 ----
