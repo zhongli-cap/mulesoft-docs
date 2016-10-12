@@ -15,37 +15,115 @@ https://docs.google.com/document/d/1JiAw5w4rYzufbnQgCU2-tD4uDYwjzRZE8_C3dhIvwbg/
 
 == Running the Installer Wizard
 
-The installation wizard automatically configures most of the infrastructure that you need to run the Anypoint Platform On-premises, including Kubernetes and the deployment of Docker containers on this infrastructure.
+The installation wizard automatically configures most of the infrastructure that you need to run the Anypoint Platform On-premises, automating the installation of Kubernetes and the instancing of multiple Docker containers that contain each of the components of the platform.
 
 
+. Download the `anypoint-1.5.0-installer.tar.gz` installation package from support portal
 
-. Download the installation package from support portal ???
-. From the command line, run the command  `gravity install`
+. Uncompress the gzip archive
+
+tar zxvf anypoint-1.5.0-installer.tar.gz
+
+. From the command line, move to the location where you unzipped this archive and run the command  `gravity wizard`
+
+. The script will ask you what interface you want to listen on. Select the IP you want to use out of the list and confirm.
+
+. In the output of this command, look for an address that is signaled by `OPEN THIS IN BROWSER`
 +
-This will open the wizard
-
-
-. ponerle un nombre,
-. pegar licencia (contact your sales rep)
-. seleccionar Manual  (borrar las otras dos opciones linux y queseyo en screnshot)
-. copiar el codigo en cada uno de tus servidores  (tus servidores tienen q tener Redhad 7.2)
-. te pide un mail un usuario y una clave
-
-
-
-
-Dps de correr instalacion, correr CURL command para crear organization,  only then te podes loguear al platform  (esto lo hará sólo el installer de gravitational o es a parte??)
-
-image:install-onprem-6134f.png[]
-
 ----
-curl -s --tlsv1.2 "https://mulesoft.gravitational.io:443/t/501272306637c19857ec3f5f549d858e/node?state_dir=xvdb&devicemapper=xvdc
+OPEN THIS IN BROWSER: https://{HOST}:61009/web/installer/new/gravitational.io/anypoint/{VERSION}?install_token={TOKEN}
 ----
+
++
+For example, it might look like this:
+
++
+----
+OPEN THIS IN BROWSER: https://172.17.0.1:61009/web/installer/new/gravitational.io/anypoint/1.5.0-rc4-87-g174c992?install_token=00000000000000000000000000000000
+----
+p
++
+Paste this address in a web browser to access the wizard
+
+. Paste a licence (contact your sales rep)
+
++
+image:Installer-1.png[licence]
+
+. Name your deployment, then choose a provider ( pick the only available option for this step: *Bare Metal* ). Then click *Continue*.
+
++
+image:Installer2-DeploymenyName.png[name]
+
+. The next screen of the installer will ask you to register your servers as nodes for the instalation. To register these servers, you must run a code on each, which is presented to you in this screen with your specific credentials:
+
++
+image:Installer3-Nodes.png[nodes]
+
++
+////
+((remove credentias from image!!!!))
+////
++
+////
+curl -s --tlsv1.2 "https://mulesoft.gravitational.io:443/t/{TOKEN}/node" | sudo bash
+////
+
++
+The command should look like the example below:
++
+----
+curl -s --tlsv1.2 --insecure "https://mulesoft.gravitational.io:443/t/{TOKEN}/node" | sudo nohup bash &
+----
++
+Copy and paste this command and run it on each of your nodes.
+
+
+. Once this command runs on each of your nodes, they will be visible in the installer's UI. Each will have a set of fields to configure, make sure that the *Docker device* field on each is points to the folder `/dev/xvdc`.
+
+
++
+image:Installer4-3Nodes.png[nodes]
+
++
+[NOTE]
+Ensure that on each of your nodes, the path `/var/lib/data` is setup with enough space
+
+
+. Once all of your nodes are visible and configured, click *Start Installation* to proceed to installing the software.
++
+image:installing-anypoint-start-install.png[button]
+
+. The installer will then transition through several different stages on its own. Wait for this process to finish.
+
++
+image:Installer4-Progress.png[progess]
+
+. The installer will prompt you for the following data:
+
+* organization name
+* username
+* password
+
++
+[NOTE]
+All of the users of your platform will log into accounts that belong to the organization name that you provide here, or a sub-organization within it. See link:/access-management/organization[Organizations] for an overview on how these work.
+
+
 
 
 Once the installation is complete, you're prompted to choose if you want to have your platform exposed through the Operatins Center. The default option is No
 
 ...what is the ops center
+
+
+
+
+
+
+
+
+
 
 
 == Configure Log Forwarding
@@ -75,7 +153,7 @@ It's assumed that you're forwarding your logs to an on-premises log solution, li
 
 == Create a Load Balancer
 
-You'll likely want to install the Anypoint Platform distributed amongst multiple servers. To support this, you must provide your own load balancer to distribute the traffic between them. You can use any standard tool for creating this load balancer, like nginx. Even if you plan to deploy the platform to a single server, a load balancer is strongly recommended to restrict the ports that are open to just the necessary ones.
+You'll likely want to install the Anypoint Platform distributed amongst multiple servers. To support this, you must provide your own load balancer to distribute the traffic between them. You can use any standard tool for creating this load balancer, like Nginx. Even if you plan to deploy the platform to a single server, a load balancer is strongly recommended to restrict the ports that are open to just the necessary ones.
 
 ////
 (diagrama de lucidchart) ???
@@ -92,14 +170,17 @@ Your load balancer must route the following TCP ports:
 |`443` | `30443` | internal nginx does a proxy pass to the corresponding micro-service in kubernetes.
 |`8889` | `30889` | internal nginx does TCP forwarding to `cloudhub-mcm`.
 |`9500` | `30081` | internal nginx does a proxy pass to the `gravity-site` kubernetes service.
-|`9501` | `30082` | internal nginx does a proxy pass to the `grafana` kubernetes service.
+|`9501` | `30083` | internal nginx does a proxy pass to the `grafana` kubernetes service.
 |===
+
 
 In every case, your load balancer must listen on the *Load Balancer Port* and redirect incoming requests to the *Instance Port*. Your installation of the Anypoint Platform includes an internal nginx server that listens on each of the *Instance Ports* and then does what's described in *Internal Usage*.
 
+Additionally, your load balancer should poll the address `HTTPS:10250/healthz` to run a *health check* on your platform servers and confirm that they are accessible.
+
 
 [NOTE]
-To configure SSL, you don't need to set this up in your load balancer. You can configure that via the Anypoint Platform UI, see <<section>> or link:/access-management/  ???
+To configure SSL credentials, you don't need to set them up in your load balancer. You can configure them via the Anypoint Platform UI, see <<section>> or link:/access-management/  ???
 
 
 == Set up SMTP
