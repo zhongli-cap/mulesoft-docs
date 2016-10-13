@@ -16,9 +16,6 @@ You can choose to use this isolated network as it best suites your needs:
 
 As opposed to the default configuration, where all CloudHub workers reside in a link:/runtime-manager/cloudhub-architecture#global-worker-clouds[multi-tenant public cloud], balanced by a link:/runtime-manager/cloudhub-networking-guide#load-balancing[publicly accessible load balancer], the Virtual Private Cloud grants you a logically private and isolated network dedicated to host your CloudHub worker instances. +
 
-All VPCs need to be associated to a CloudHub region and to an environment inside one of your CloudHub organization or business group. +
-You can choose to mark a VPC as *default* for the region in which you created it, meaning that by default, all environments in this region that are not associated to a VPC, will be associated to the default VPC.
-
 Additionally, you can choose to expose or block your custom ports using your own firewall rules, and even block requests to your apps coming from CloudHub's publicly accessible load balancer so you balance your requests using your own dedicated load balancer. +
 Each VPC can host one or more link:/runtime-manager/cloudhub-dedicated-load-balancer[dedicated load balancers] with a _DNS A record_ that you can add to your own DNS CNAME record to point to. This way you can configure your VPC's load balancer to handle requests to your own domain. +
 You can also configure an SSL endpoint with a link:https://en.wikipedia.org/wiki/Subject_Alternative_Name[Subject Alternative Names (SAN)] so the same certificate can be used across all matching rules. This allows you to host your CloudHub applications in a maintainable, secure, and scalable environment, that you can control and administrate.
@@ -33,7 +30,9 @@ In order to properly configure a VPC for your account, you need to keep a few co
 Defining a proper size for your VPC at the beginning is crucial, since once a VPC is created you need to remove all your workers and redeploy them once the change is complete. In order to avoid unnecessary down time, it is recommended to design your VPC to scale accordingly.
 More information can be found in the <<Size Your VPC, VPC size section below>>.
 
-As stated earlier, creating a VPC on its own is the first step. In order for the VPC to be able to host your Workers, it needs to be bound to a business group and a specific CloudHub region, and once it's created, you need to redeploy your applications. More information about this can be found in the <<Deploying to your VPC, deployment section below>>.
+Creating a VPC on its own is the first step. In order for the VPC to be able to host your Workers, it needs to be bound to a business group and a specific CloudHub region, and once it's created, you need to redeploy your applications. +
+All VPCs need to be associated to a CloudHub region and to an environment inside one of your CloudHub organization or business group. You can choose to set a VPC as *default*, associating the VPC to all environments in that region that are not explicitly associated to other VPC.
+More information about this can be found in the <<Deploying to your VPC, deployment section below>>.
 
 You also need to make sure that the firewall rules of your VPC are configured according to your needs. Check the <<Firewall Rules,firewall rules section below>> for more informaion on this.
 
@@ -64,7 +63,15 @@ When planning a VPC size, keep in mind to leave a few spare IP addresses in case
 
 The safe rule of thumb for deciding the size of your VPC subnet is `10 times the maximum number of expected apps to deploy in the VPC`. +
 
-=== Deploying to your VPC
+=== Deploying To Your VPC
+
+When you create a VPC associating it to a region and an environment, every application deployed to that region and environment is automatically deployed to your VPC. +
+You can choose to set your VPC as *default* for a specific region. This means that deploying an application to an environment in that region, that does not have a VPC associated to it, is automatically deployed to the default VPC.
+
+You can have more than one VPC per region.
+
+
+=== VPC Management Permissions
 
 As an organization administrator, you can create a VPC and share it with any business group within your main organization, however once the VPC is inherited by a business group, only the owner of said business group can operate the VPC (i.e. set firewall rules, assign it as default to an environment within that business group, etc). +
 The user who created the VPC is the *VPC Owner* and is the only one who can share the VPC.
@@ -87,18 +94,24 @@ However if such association already exists, it's overwritten by the requested VP
 In CloudHub's default configuration, all applications are hosted in a multi-tenant cloud balanced by a publicly accessible load balancer. +
 When creating your own isolated network, you can create its own firewall rules to block or allow specific IP ranges from reaching your workers. Additionally you can block or allow the ports you want.
 
-If you don´t want your internal workers to be reached by the default load balancer, you need to set up a firewall rule to block requests coming from the port 8081 (which is the port that Cloudhub's load balancer uses to proxy external requests to your workers) and set your application to listen through port ´8091´, which is the port used to communicate internally within your VPC.
+If you don't want your internal workers to be reached by the default load balancer, you need to set up a firewall rule to block requests coming from the port 8081 (which is the port that Cloudhub's load balancer uses to proxy external requests to your workers) and set your application to listen through port ´8091´, which is the port used to communicate internally within your VPC.
 
-You can set these rules using the Anypoint Platform CLI's link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-firewall-rules-add[firewall rule creation command].
+You can set these rules using the Anypoint Platform CLI's link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-firewall-rules-add[firewall rule creation command] or .
 
 === Set up Internal DNS
 
-If you choose to connect other networks to your VPC, you can use your custom private domain names by specifying your custom host names and the DNS server IP address through which resolve them. Any request that matches your specified private host names, will first be resolved using your provided DNS server.
+If you choose to connect other networks to your VPC, you can use your custom private domain names by specifying your custom host names and the DNS server IP address through which resolve them.
+
+Any request that matches your specified private host names, will first be resolved using your provided DNS servers. +
+You can pass as many domains as you need, and up to 3 IP addresses.
+
 
 [NOTE]
+--
 This feature is supported by workers running Mule versions 3.5.x, 3.6.x, 3.7.4-HF1, 3.8.0-HF1, 3.8.1 and newer.
+--
 
-You can configure this feature using the Anypoint Platfrom CLI's link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-dns-servers-set[DNS set command], or when creating the VPC using the UI
+You can configure this feature using the link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-dns-servers-set[Anypoint Platfrom CLI's command], or through the link:/runtime-manager/vpc-tutorial#set-dns[VPC UI].
 
 === VPC Connectivity Methods
 
