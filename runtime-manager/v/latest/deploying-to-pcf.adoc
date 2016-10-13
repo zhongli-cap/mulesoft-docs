@@ -29,7 +29,7 @@ Additionally, you can also deploy to CloudHub through:
 
 [NOTE]
 ====
-Deploying to PCF is only possible via the Anypoint Platform On-Premises Edition. On this modality of deploying, the only runtimes that are supported are Mule runtime 3.7 and higher, as well as API Gateway runtime 2.1.1 and higher.
+Deploying to PCF is only possible via the link:/anypoint-platform-on-premises/v/1.5.0/installing-anypoint-on-premises[Anypoint Platform On-Premises Edition]. You must then link:/anypoint-platform-on-premises/v/1.5.0/configuring-anypoint-platform-for-pcf[configure the integration with PCF]. On this modality of deploying, the only runtimes that are supported are Mule runtime 3.7 and higher, as well as API Gateway runtime 2.1.1 and higher.
 
 
 If you’re interested in requesting the Anypoint Platform on-Premises Edition, please contact your sales representative.
@@ -50,7 +50,7 @@ image::deploying-to-cloudhub-3dcbb.png[deploying-to-cloudhub-3dcbb]
 +
 .  The Deploy Application page opens:
 +
-image::deploying-to-cloudhub-8524f.png[deploying-to-cloudhub-8524f]
+image:deploying-to-pcf-start.png[]
 
 
 
@@ -85,7 +85,7 @@ Every application requires a unique application domain name. The application dom
 
 In the *Deploy Application* dialog, enter a unique application name. Valid names contain alphanumeric characters and dashes, and contain at most 42 characters. If the name is valid, the Runtime Manager alerts you whether it is available or already reserved by another user.
 
-image:DeployAppName.png[DeployAppName]
+image:deploying-to-pcf-appname.png[]
 
 
 == Deployment Target
@@ -96,20 +96,6 @@ The *Deployment Target* field lets you specify where you want to deploy your app
 * On an on-premises server, server group, or cluster
 
 This document focuses on deploying to the Cloud Foundry, for more information on deploying to servers, server groups and clusters, see link:/runtime-manager/deploying-to-your-own-servers[Deploying to Your Own Servers].
-
-[NOTE]
-If your Cloud Foundry is not properly configured yet....  this will take you to a link or something???
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -143,15 +129,7 @@ image:RuntimeVersion2.png[RuntimeVersion2]
 
 Through this field, you can set on how many instances to deploy your application. What each of these instances represents in terms of actual computing power is something that depends on your specific PCF configuration.
 
-image:
-
-
-
-
-
-
-
-
+image:deploying-to-pcf-repli.png[]
 
 
 When assigning multiple instances to an application, all of your instances are accessed via a single load balancer. This load balancer is automatically created by PCF and distributes the incoming traffic amongst them.
@@ -167,17 +145,8 @@ You can also optionally specify properties that your application requires. This 
 
 To create an application property, click the *Properties* tab and set the variable by either using a text  `key=value` format or by using the list format with two text boxes. After you've made the change, click *Apply Changes*. 
 
-image::deploying-to-cloudhub-cff02.png[]
+image:deploying-to-pcf-properties.png[]
 
-These application properties can be used inside your Mule configuration. For example:
-
-[source, xml, linenums]
-----
-<spring:bean id="jdbcDataSource" class="org.enhydra.jdbc.standard.StandardDataSource" destroy-method="shutdown">
-   <spring:property name="driverName" value="com.mysql.jdbc.Driver"/>
-   <spring:property name="url"value="${database.url}"/>
-</spring:bean>
-----
 
 ==== Overriding Properties
 
@@ -200,38 +169,28 @@ Note that you can flag application properties as secure so that their values are
 
 == Service Bindings Tab
 
-You can bind any external service you want to your deployment, and populate this binding with properties that are sent to this service. You could for example bind a database service to your deployment so that the (already existing) database server creates a database instance to match your deployed application. In that case, you'd probably need to send credentials to your database service, and you can send these through properties.
+You can bind any external service you want to your deployment, and populate this binding with properties that are sent to this service. You could for example bind a database service to your deployment so that the (already existing) database server creates a database instance to match your deployed application. In that case, you'd probably need to send credentials to your database service, and you can send these through properties that are specific to that service binding.
 
+On your Pivotal Operations Manager you can register different applications to make available as services. For example you can have multiple instances of Hazelcast or MySQL registering each to a different database server. Once these are registered, you'll be able to see them displayed on the Runtime Manager UI when you open the *Select a Service* dropdown menu:
 
-On your Pivotal Operations Manager you can register different applications to make available as services. For example MySQL or Cassandra. Once these are registered, you'll be able to see them displayed on the Runtime Manager UI:
+image:deploying-to-pcf-services.png[]
 
-image:
-
-
-
-
-
-
-
-
+After selecting one, click the *Add Service* button. You can then add properties that are specific to the service.
 
 
 === Properties for Service Bindings
 
 Just as in the <<Properties Tab>>, you can define key:value pairs for properties that are specific to the corresponding service. Keep in mind that the properties on this tab will only act on the scope of the given service, whilst the properties on the *Properties Tab* will act at a global level over the full deployment.
 
-
-
-
-
+image:deploying-to-pcf-properties.png[]
 
 
 === Binding to Hazelcast
 
-If you're deploying your app to multiple instances (by setting the <<Replication Factor>> field) and you want these instances to communicate with each other as a cluster, you must bind them to a Hazelcast service (or several, one per Hazelcast instance).
+If you're deploying your app to multiple instances (by setting the <<Replication Factor>> field) and you want these instances to communicate with each other as a cluster, you must bind them to a Hazelcast service (or several, one service per Hazelcast instance).
 
 
-You must first make sure that the service is available, by following the steps in link:/anypoint-platform-on-premises/v/1.5.0/configuring-anypoint-platform-for-pcf#set-up-a-hazelcast-server[Set Up a Hazelcast Server].
+You must first make the service available, by following the steps in link:/anypoint-platform-on-premises/v/1.5.0/configuring-anypoint-platform-for-pcf#set-up-a-hazelcast-server[Set Up a Hazelcast Server].
 
 Once it's available, you should be able to see it on a drop down in the <<Service Binding Tab>> and you can simply bind your application to this service through the UI. Remember to bind the application to all of the Hazelcast node services you need.
 
@@ -240,7 +199,7 @@ The Mule buildPack will automatically recognize the binding between the Mule app
 To scale Mule applications that are already deployed, just set the <<Replication Factor>> field. The new Mule nodes will be binded to the same services as the rest. Take into account that by scaling your Mule application you could be imposing too much on your Hazelcast cluster and might have to scale that as well.
 
 ////
-in case the UI doesn't work for binding Hazelcast:
+in case the UI doesn't serve for binding Hazelcast:
 
 To scale Mule applications that are already deployed, just use the cf scale command as you would do usually with any other application.
 
@@ -286,18 +245,9 @@ All of the settings discussed in the steps above can be edited once the applicat
 +
 image:AMC_ManageApplication.png[AMC_ManageApplication] 
 +
-. Click the *Settings* tab:
+. You should now see the *Settings* tab for the application:
 +
-image:
-
-
-
-
-
-
-
-
-
+image:deploying-to-pcf-setup.png[]
 
 
 == Auto-Deploy a Proxy from API Manager
