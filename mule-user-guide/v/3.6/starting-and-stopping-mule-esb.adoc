@@ -137,9 +137,61 @@ For example, to set the logfile that the Wrapper's uses, you could add wrapper.l
 
 == Running Mule As a Unix Daemon
 
-To run Mule as a Unix daemon, you need to write a simple wrapper script for the Mule startup script. Place your wrapper script in your system's appropriate directory (such as `/etc/init.d`) and use your system's init script architecture tools to ensure that your wrapper script is invoked in the runlevels you wish.
+To run Mule as a Unix daemon, you need to write a simple management script for the Mule startup script. Place your management script in your system's appropriate directory (such as `/etc/init.d`) and use your system's init script architecture tools to ensure that your management script is invoked in the runlevels you wish.
 
-Your wrapper script needs to set the required environment for Mule; a sample script is provided below below.
+On some systems, you can set up startup scripts for use with the `service` utility (System V). Consult your operating system's documentation for details.
+
+Here is a sample `init.d` script for Red Hat Enterprise Linux:
+
+[source, code, linenums]
+----
+#!/bin/bash
+# RHEL Mule Init Script
+#
+# chkconfig: 2345 65 64
+# description: Mule ESB service
+
+. /etc/init.d/functions
+#
+if [ -f /etc/sysconfig/mule ]; then
+   . /etc/sysconfig/mule
+fi
+
+# Set JDK related environment
+JAVA_HOME=/usr/java/default
+PATH=$PATH:$JAVA_HOME/bin
+
+# Set Mule related environment
+MULE_HOME=/opt/mule
+MULE_LIB=$MULE_HOME/lib
+PATH=$PATH:$MULE_HOME/bin
+RUN_AS_USER=mule
+MULE_ENV=production
+
+# Export environment variables
+export JAVA_HOME MULE_HOME MULE_LIB PATH MULE_ENV RUN_AS_USER
+
+case "$1" in
+   start)
+      echo "Start service mule"
+      $MULE_HOME/bin/mule start -M-Dspring.profiles.active=$MULE_ENV -M-DMULE_ENV=$MULE_ENV
+      ;;
+   stop)
+      echo "Stop service mule"
+      $MULE_HOME/bin/mule stop
+      ;;
+   restart)
+      echo "Restart service mule"
+      $MULE_HOME/bin/mule restart -M-Dspring.profiles.active=$MULE_ENV -M-DMULE_ENV=$MULE_ENV
+      ;;
+   *)
+      echo "Usage: $0 {start|stop|restart}"
+      exit 1
+      ;;
+esac
+----
+
+Your management script needs to set the required environment for Mule; a more generic sample script is provided below below.
 
 [source, code, linenums]
 ----
@@ -161,7 +213,6 @@ export JAVA_HOME MULE_HOME MULE_LIB PATH
 $MULE_HOME/bin/mule $1 -config <path to mule-conf.xml>
 ----
 
-On some systems, you can set up startup scripts for use with the `service` utility (System V). Consult your operating system's documentation for details.
 
 == Running Mule As a Windows Service
 
