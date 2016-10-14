@@ -1,10 +1,10 @@
-= Workday Connector 8.0
-:keywords: workday, 8.0, connector, install, configure
+= Workday Connector
+:keywords: anypoint studio, esb, connector, endpoint, workday, wsdl
 :imagesdir: _images
 
 == Introduction
 
-The Anypoint Connector for Workday is a closed source Enterprise connector which provides a connection between Workday and third party software. It implements the Workday v26.0 API modules, and interfaces with the Human Capital Management, Financial Management, Student, and System web services. The Workday connector is a SOAP based connector developed with Anypoint Connector DevKit 3.8.2.
+The Anypoint Connector for Workday is a closed source Enterprise connector which provides a connection between Workday and third party software. It implements the Workday v27.0 API modules, and interfaces with the Human Capital Management, Financial Management, Student, and System web services. The Workday connector is a SOAP based connector developed with Anypoint Connector DevKit 3.9.0.
 
 Read through this user guide to understand how to set up and configure a basic flow using the connector. Track feature additions, compatibility, limitations and API version updates with each release of the connector using the link:/release-notes/workday-connector-release-notes[Workday Connector Release Notes]. Review the connector operations and functionality using the link:http://mulesoft.github.io/workday-wsdl-connector[Technical Reference] alongside the link:https://www.mulesoft.com/exchange#!/?filters=Workday&sortBy=rank[demo applications].
 
@@ -22,21 +22,21 @@ To use this connector, you need:
 * A MuleSoft Enterprise License
 
 This document assumes that you are familiar with Mule,
-link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors], and
-link:/anypoint-studio/v/6/[Anypoint Studio Essentials]. To increase your familiarity with Studio, consider completing one or more link:/anypoint-studio/v/6/basic-studio-tutorial[Basic Studio Tutorials]. This page assumes you understand link:/mule-fundamentals/v/3.8/mule-concepts[Mule Concepts], link:/mule-fundamentals/v/3.8/elements-in-a-mule-flow[Elements in a Mule Flow], and link:/mule-fundamentals/v/3.8/global-elements[Global Elements].
+link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors], and link:/anypoint-studio/v/6/[Anypoint Studio Essentials]. To increase your familiarity with Studio, consider completing one or more link:/anypoint-studio/v/6/basic-studio-tutorial[Basic Studio Tutorials]. This page assumes you understand link:/mule-fundamentals/v/3.8/mule-concepts[Mule Concepts], link:/mule-fundamentals/v/3.8/elements-in-a-mule-flow[Elements in a Mule Flow], and link:/mule-fundamentals/v/3.8/global-elements[Global Elements].
+
 
 Here you can find implementation examples within the context of Anypoint Studio, Mule ESB’s graphical user interface, and, also configuration details for doing the same in the XML Editor. 
 
 == Compatibility
 
-Workday connector 8.0 is compatible with:
+Workday WSDL connector is compatible with:
 
 [%header,cols="2*a"]
 |===
 |Application/Service|Version
 |Mule Runtime|EE 3.7.0 or later
 |Anypoint Studio|5.2 or later
-|Workday API|v26.0
+|Workday API|v27.0
 |Java|JDK 7
 |===
 
@@ -45,7 +45,7 @@ Workday connector 8.0 is compatible with:
 === Installing
 
 You can install a connector in Anypoint Studio using the instructions in
-link:/mule-fundamentals/v/3.8/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Installing a Connector from Anypoint Exchange]. However, to use the Workday connector 8.0 in a production environment, you must have an Enterprise license to use Mule.  Contact the link:mailto:info@mulesoft.com[MuleSoft Sales Team] to obtain either of these. Read more about link:/mule-user-guide/v/3.8/installing-an-enterprise-license[Installing an Enterprise License].
+link:/mule-fundamentals/v/3.8/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Installing a Connector from Anypoint Exchange]. However, to use the Workday connector in a production environment, you must have an Enterprise license to use Mule.  Contact the link:mailto:info@mulesoft.com[MuleSoft Sales Team] to obtain either of these. Read more about link:/mule-user-guide/v/3.8/installing-an-enterprise-license[Installing an Enterprise License].
 
 === Upgrading from an Older Version
 
@@ -53,14 +53,16 @@ link:/mule-fundamentals/v/3.8/anypoint-exchange#installing-a-connector-from-anyp
 . Install the Workday connector as described in the previous section.
 . Make sure you have updated the Maven dependencies correctly:
 +
-[source, xml, linenums]
-----
-<dependency>
-    <groupId>org.mule.modules</groupId>
-    <artifactId>workday-connector</artifactId>
-    <version>8.0.0</version>
-</dependency>
-----
+[width="100a",cols="34a,33a,33a",options="header",]
+|===
+|Connector Version |From |To
+|Version until 4.0.1 |`<groupId>org.mule.modules</groupId>` +
+`<artifactId>mule-module-workday</artifactId>` |`<groupId>org.mule.modules</groupId>` +
+`<artifactId>workday-connector</artifactId>`
+|Versions 4.0.1 to 6.0 or above |`<groupId>org.mule.modules</groupId>` +
+`<artifactId>mule-module-workday-<wd_module_name></artifactId>` |`<groupId>org.mule.modules</groupId>` +
+`<artifactId>workday-connector</artifactId>`
+|===
 +
 . It is important to update the flows to: +
 .. Update the existing data mappings
@@ -96,7 +98,7 @@ image:wd6_filenew.png[wd6_filenew]
 
 == Configuring the Global Element
 
-To use the Workday connector in your Mule application, you must configure a global Workday element that can be used by all the Workday connectors in the application (read more about  link:/mule-fundamentals/v/3.8/global-elements[Global Elements].) The Workday connector now offers two global configuration types:
+To use the Workday connector in your Mule application, you must configure a global Workday element that can be used by all the Workday connectors in the application (read more about  link:/mule-fundamentals/v/3.8/global-elements[Global Elements].) The Workday connector now offers two global configuration types:
 
 === Basic Configuration
 
@@ -181,19 +183,19 @@ xmlns:wd-connector="http://www.mulesoft.org/schema/mule/wd-connector"
 
 == Using the Connector
 
-The Workday connector 8.0 is an operation-based connector, which means that when you add the connector to your flow, you need to select a Workday service and an operation for the connector to perform. The Workday connector 8.0 supports the following Workday APIs: Human Resource, Financials, Student, and System.
+The Workday connector is an operation-based connector, which means that when you add the connector to your flow, you need to select a Workday service and an operation for the connector to perform. The Workday connector supports the following Workday APIs: Human Resource, Financials, Student, and System.
 
 === Adding Workday Connector 8.0 to a Flow
 
 . Create a new Mule project in Anypoint Studio.
-. Drag the Workday Connector 8.0 onto the canvas, then select it to open the properties editor.
+. Drag the Workday Connector onto the canvas, then select it to open the properties editor.
 . Configure the connector's parameters: 
 +
 [%autowidth.spread]
 |===
 |*Field* |*Description*
 |*Display Name* |Enter a unique label for the connector in your application.
-|*Connector Configuration* |Select a global Workday connector 8.0 configuration from the dropdown or add a new one by clicking the green plus sign *+*.
+|*Connector Configuration* |Select a global Workday connector configuration from the dropdown or add a new one by clicking the green plus sign *+*.
 |*Operation* |*Invoke*
 |*Service* |Select a Workday service, such as *Financial Management*.
 |*Operation* |Select an operation to perform in the service, such as *Put_Fund*.
@@ -266,7 +268,7 @@ For more information on setting credentials inside a properties file, refer to t
 %namespace ns0 urn:com.workday/bsvc
 ---
 {
-ns0#Put_Fund_Request @(ns0#Add_Only: true , ns0#version: "v26.0"): {
+ns0#Put_Fund_Request @(ns0#Add_Only: true , ns0#version: "v27.0"): {
   ns0#Fund_Data: {
      ns0#Fund_Name: payload.FundName,
        ns0#Fund_Type_Reference: {
@@ -280,7 +282,7 @@ ns0#Put_Fund_Request @(ns0#Add_Only: true , ns0#version: "v26.0"): {
 +
 [source,xml,linenums]
 ----
-<wd:Put_Fund_Response xmlns:wd="urn:com.workday/bsvc" wd:version="v26.0">
+<wd:Put_Fund_Response xmlns:wd="urn:com.workday/bsvc" wd:version="v27.0">
 <wd:Fund_Reference wd:Descriptor="I.M.F">
 <wd:ID wd:type="WID">THE_WID_ID_NUMBER</wd:ID>
 <wd:ID wd:type="Fund_ID">FUND-6-399</wd:ID>
@@ -303,7 +305,7 @@ For this code to work in Anypoint Studio, you must provide the credentials for t
 <mule xmlns:context="http://www.springframework.org/schema/context"
 	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
 	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:wd-connector="http://www.mulesoft.org/schema/mule/wd-connector" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.7.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
 http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
@@ -325,7 +327,7 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 %namespace ns0 urn:com.workday/bsvc
 ---
 {
-ns0#Put_Fund_Request @(ns0#Add_Only: true , ns0#version: "v26.0"): {
+ns0#Put_Fund_Request @(ns0#Add_Only: true , ns0#version: "v27.0"): {
   ns0#Fund_Data: {
      ns0#Fund_Name: payload.FundName,
        ns0#Fund_Type_Reference: {
@@ -347,5 +349,5 @@ ns0#Put_Fund_Request @(ns0#Add_Only: true , ns0#version: "v26.0"): {
 
 * To view the latest changes to the Workday connector, read the link:/release-notes/workday-connector-release-notes[Workday Connector Release Notes]
 * Learn more about working with link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors].
-* For more information on Workday v26.0 API, refer to the link:https://community.workday.com/custom/developer/API/versions/v26.0/index.html[Workday API documentation].
-* Workday v26.0 link:https://community.workday.com/current/wsrelnotes[Release Notes] (Requires Workday Community login)
+* For more information on Workday v27.0 API, refer to the link:https://community.workday.com/custom/developer/API/versions/v27.0/index.html[Workday API documentation].
+* Workday v27.0 link:https://community.workday.com/current/wsrelnotes[Release Notes] (Requires Workday Community login)
