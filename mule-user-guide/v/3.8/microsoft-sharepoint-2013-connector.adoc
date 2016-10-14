@@ -3,7 +3,7 @@
 
 *Select*
 
-*Latest version: 2.1.12*
+*Latest version: 2.2.0*
 
 Microsoft SharePoint is a web application platform for content and document management, intranet portals, collaboration, extranets, websites, and enterprise search.
 
@@ -39,29 +39,42 @@ Supported Microsoft SharePoint authentication on-premise:
 
 * NTLM
 * Claims-based authentication against Microsoft ADFS
+* Security token obtained from Microsoft ADFS
 * Unsupported authentication: Kerberos
 
 Supported Microsoft SharePoint Online authentication:
 
 * Microsoft Online (Office 365) managed users
 * Microsoft Online (Office 365) federated users against Microsoft ADFS
+* Security token obtained from Microsoft Online
 
 ==== Claims-Based Authentication
 
 Configuring the connector to use claims-based authentication requires the following information from the Security Token Service (STS) that to use for authenticating:
 
 * *Sts Url*: The STS endpoint that accepts username and password for authenticating users and understands the WS-Trust 1.3 protocol. When the STS is Microsoft’s ADFS (Active Directory Federation Services), this URL usually is `https://youradfs.com/adfs/services/trust/13/usernamemixed`.
-* *Sts App Identifier*: A string that identifies the Sharepoint site in the STS. It is also known as Relying Party Identifier, Client Identifier, Scope, or Realm. When the STS is Microsoft’s ADFS, this value can be discovered in the AD FS Management console under AD FS at *Trust Relationships* > *Relying Party Trusts* > _(Sharepoint Site’s relying part properties)_ > *Identifiers* tab. +
- +
- You can obtain the STS App Identifier by logging into the Sharepoint Site that you want to be accessed by opening the Site URL in a web browser. If there is more than one authentication provider configured for a site, a drop-down menu lists the options. Select the desired STS to be redirected to the STS’s login page. At this point, the address bar of the web browser contains a URL that includes the following query parameters: +
- +
- `wa=wsignin1.0&wtrealm=uri%3amule%3asp80` +
- +
-The parameter *_wa_* tells the STS that a sign in is being initiated. The *_wtrealm_* contains the URI-encoded value for the Sts App Identifier. In the example, `uri%3amule%3asp80` is `uri:mule:sp80`. The unencoded value is the parameter for the connector’s configuration.
+* *Sts App Identifier*: A string that identifies the Sharepoint site in the STS. It is also known as Relying Party Identifier, Client Identifier, Scope, or Realm. When the STS is Microsoft’s ADFS, this value can be discovered in the AD FS Management console under AD FS at *Trust Relationships* > *Relying Party Trusts* > _(Sharepoint Site’s relying part properties)_ > *Identifiers* tab.
++
+You can obtain the STS App Identifier by logging into the Sharepoint Site that you want to be accessed by opening the Site URL in a web browser. If there is more than one authentication provider configured for a site, a drop-down menu lists the options. Select the desired STS to be redirected to the STS’s login page. At this point, the address bar of the web browser contains a URL that includes the following query parameters: +
++
+`wa=wsignin1.0&wtrealm=uri%3amule%3asp80`
++
+The parameter *_wa_* tells the STS that a signin is being initiated. The *_wtrealm_* contains the URI-encoded value for the Sts App Identifier. In the example, `uri%3amule%3asp80` is `uri:mule:sp80`. The unencoded value is the parameter for the connector’s configuration.
+
+==== Security Token Authentication
+
+In cases where it is not possible to configure a connection depending on username and password, or when you need to authenticate using a custom Security Token Service (STS) (different from the supported ones), the `Security Token Connection` settings allow you to provide the security token that you obtained from your custom STS. This configuration requires you that you set up the following information to use for authenticating:
+
+* *Security Token*: (Optional) A string containing the security token (that is, a full XML document) obtained from your STS to authenticate the connection with your Sharepoint instance. If you don't configure the security token in this setting, you need to provide a `Security Token Provider` as defined in the advanced section's setting detailed below.
+* *Instance Type*: Indicates if the connector should authenticate to an on-premises or an on-line instance as each one provides different endpoints and methods to attach the security token and authenticate the connection.
+
+In addition to the basic configuration shown above, there is an advanced setting where you can provide a `Security Token Provider` instance of your own. This mechanism allows you to obtain the security token using a custom implementation and allows the connector refreshing the connection when the token has expired (which is not the case for when just providing the `Security Token` as XML document).
+
+* *Security Token Provider*: (Optional) A string that references to a Spring bean which should be a class that implements the `org.mule.module.sharepoint.connection.providers.SecurityTokenProvider` interface. Within the implementation you are responsible of providing a security token each time the connector requests one. In order to provide a reference to your own implementation as a Spring bean, refer to the following link:/https://docs.mulesoft.com/mule-user-guide/v/3.8/using-spring-beans-as-flow-components[documentation].
 
 == Install and Configure
 
-To install a connector, see link:/mule-fundamentals//v/3.8/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Installing a Connector from Anypoint Exchange].
+To install a connector, see link:/mule-fundamentals/v/3.8/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Installing a Connector from Anypoint Exchange].
 
 === Configuring Your First Flow
 
@@ -73,10 +86,10 @@ To configure:
 . Click *Create*.
 . In the *Search* text box, type *sharepont*.
 . Click *Microsoft SharePoint* and click *OK*.
-. Choose the Global Type to configure: +
- +
+. Choose the Global Type to configure:
++
 image:WindowsGlobalTypes.png[WindowsGlobalTypes] 
-
++
 . Legacy Connection:
 .. Fill in the *Username*, *Password*, and *Site URL*.
 .. For authentication:
@@ -87,8 +100,8 @@ image:WindowsGlobalTypes.png[WindowsGlobalTypes] 
 
 //^
 
-.. Click *Test Connection* to ensure the connection works correctly: +
- +
+.. Click *Test Connection* to ensure the connection works correctly:
++
 image:SPGlobalElementProps.png[SPGlobalElementProps] 
 
 The other connection types require similar information. 
@@ -101,15 +114,13 @@ To create an Anypoint Studio flow:
 
 . From Anypoint Studio, click *File* > *New* > *Mule Project*.
 . Specify a *Project Name* and click *Finish*.
-. In the Search box, type *http* and drag an *HTTP Endpoint* from the Connectors section to the canvas.
-. In the Search box, type *sharepoint* and drag a Microsoft SharePoint connector instance next to the HTTP Endpoint connector.
-. In the Search box, type *json* and drag an *Object to JSON* transformer next to the Microsoft SharePoint connector. +
-
+. In the Search box, type *http* and drag an *HTTP Connector* to the canvas.
+. In the Search box, type *sharepoint* and drag a Microsoft SharePoint connector instance next to the HTTP connector.
+. In the Search box, type *json* and drag an *Object to JSON* transformer next to the Microsoft SharePoint connector.
 +
 image:SPMuleFlow.png[SPMuleFlow]
 +
-
-. Double-click the HTTP Endpoint. Make sure *Host* is set to *localhost* and *Port* is set to *8081*. Set the *Path* to *query*. Click *OK*.
+. Double-click the HTTP connector. Make sure *Host* is set to *localhost* and *Port* is set to *8081*. Set the *Path* to *query*. Click *OK*.
 . Double-click the Microsoft SharePoint connector and click the green plus symbol.
 . Update the following configuration values: +
 .. From the Connector Configuration list, click the *Microsoft SharePoint* configuration that was previously created.
@@ -151,7 +162,7 @@ sItem"},"Id":4,"ID":4,"Title":"folder"}]
 
 == Operations: Lists and List Items API
 
-Using the Lists and List Items API lets you create, retrieve, update, and delete SharePoint lists and list items.
+Use the Lists and List Items API to create, retrieve, update, and delete SharePoint lists and list items.
 
 === Creating, Updating, and Deleting List Items
 
@@ -194,7 +205,6 @@ If any of these fields are selected to be returned by the query, two types of re
 
 * *not checked*: A summary object containing the reference object's ID and the reference object list's ID:
 +
-
 [source, json, linenums]
 ----
 {
@@ -213,15 +223,14 @@ If any of these fields are selected to be returned by the query, two types of re
     }
 }
 ----
-
-This object can later be used in another connector to retrieve the referenced object +
-together with a for each component: +
- +
- image:MSSPListItemQuery.png[MSSPListItemQuery] 
++
+This object can later be used in another connector to retrieve the referenced object
+together with a for-each component:
++
+image:MSSPListItemQuery.png[MSSPListItemQuery] 
 
 * *checked*. Retrieves the full object graph. In case there is a cycle, the summary reference object displays:
 +
-
 [source, json, linenums]
 ----
 {
@@ -250,9 +259,9 @@ Example *Query Text*:
 
 image:SPExampleQText.png[SPExampleQText]
 
-> Warning: Checking this option may cause large item lists with many reference fields to take a long time to retrieve.
+WARNING: Checking this option may cause large item lists with many reference fields to take a long time to retrieve.
 
-Since version 2.1.10 you can use the _internal_ or _title_ field names in DSQL queries (as well as in other list's operations as detailed below).
+Since version 2.1.10 of this connector you can use the _internal_ or _title_ field names in DSQL queries (as well as in other list's operations as detailed below).
 
 For example for the previous query:
 
@@ -281,7 +290,7 @@ Using _internal_ and/or _title_ field names is supported within the following li
 - Updating an existent item in the list
 - Querying items in the list
 
-> Note: In order to filter by a datetime field type you need to write the value using ISO8601 format when specified in a DSQL clause (eg. Created > 2000-01-01T00:00:00-03:00).
+NOTE: In order to filter by a datetime field type, you need to write the value using ISO8601 format when specified in a DSQL clause (for example, Created > 2000-01-01T00:00:00-03:00).
 
 == Operations: File and Folder API
 
@@ -289,7 +298,7 @@ Using the File and Folder API allows you to create, retrieve, update, and delete
 
 When using the folders operations, the server's relative URL refers to where the folder is or will be. The URL can be in the format _/site/docList/innerFolder_ or in _docList/innerFolder_  format. In the second case, the site specified in the connector's configuration site URL parameter is used.
 
-When using the files operations, the file server relative url refers to a folder server relative URL plus the filename: _/site/docList/innerFolder/filename_ or _docList/innerFolder/filename_.
+When using the files operations, the file server relative URL refers to a folder server relative URL plus the filename: _/site/docList/innerFolder/filename_ or _docList/innerFolder/filename_.
 
 === Creating and Deleting a Folder
 
@@ -326,7 +335,7 @@ In order to upload large files you need to configure your Sharepoint and IIS ser
 - Set connection timeout for IIS site to high value.
 - Set the 'Maximum Allowed Content Length' to 2147483647 for IIS app (at request filtering).
 
-> Note: The Sharepoint REST API (which the connector uses) supports uploading files up to 2GB. When working with large files it's recommended to provide the system local path to the file (_localFilePath_ parameter's value) as it's the most efficient way to upload it through the connector.
+NOTE: The Sharepoint REST API (which the connector uses) supports uploading files up to 2GB. When working with large files it's recommended to provide the system local path to the file (_localFilePath_ parameter's value) as it's the most efficient way to upload it through the connector.
 
 === Getting File Contents
 
@@ -520,11 +529,11 @@ Yes, all supported entities and entity attributes are exposed to Studio by the c
 
 ==== What operations can I perform with the connector?
 
-For the Lists and ListItems API, supported operations include Create, Retrieve, Update and Delete. For Files and Folders, operations include Add, retrieve content, retrieve metadata, delete, check out, undo check out, check in, publish, unpublish, approve, deny, recycle, and copy.
+For the Lists and ListItems API, supported operations include Create, Retrieve, Update, and Delete. For Files and Folders, operations include Add, retrieve content, retrieve metadata, delete, check out, undo check out, check in, publish, unpublish, approve, deny, recycle, and copy.
 
 ==== Are there any examples that show how to use the connector?
 
-Yes, an example project for Anypoint Studio is freely available in the link;_attachments/sharepoint-connector-samples.zip[sharepoint-connector-samples.zip].
+Yes, an example project for Anypoint Studio is freely available in the link:_attachments/sharepoint-connector-samples.zip[sharepoint-connector-samples.zip].
 
 ==== What Mule editions can I use this connector on?
 

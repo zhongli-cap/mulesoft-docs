@@ -1,7 +1,12 @@
-// TODO
+import com.eriwen.gradle.css.tasks.CombineCssTask
+import com.eriwen.gradle.css.tasks.MinifyCssTask
+import java.nio.file.Files
+import java.nio.file.Paths
+
+// .TODO
 // * add mode to run jetty in background
-// * combine css (need to update template as well)
 // * set outputs.dir for custom tasks
+
 buildscript {
   configurations.create('builder')
   configurations.create('singlePageBuilder')
@@ -18,14 +23,14 @@ buildscript {
 
   dependencies {
     classpath 'com.eriwen:gradle-css-plugin:2.12.0'
-    builder 'com.mulesoft.documentation.builder:mule-docs-builder:1.0.1'
-    singlePageBuilder 'com.mulesoft.documentation.builder:mule-docs-single-page-builder:1.0.1'
+    builder 'com.mulesoft.documentation.builder:mule-docs-builder:1.0.5'
+    singlePageBuilder 'com.mulesoft.documentation.builder:mule-docs-single-page-builder:1.0.5'
   }
 
   configurations.all {
     resolutionStrategy {
       // NOTE override JRuby version required by AsciidoctorJ to work around hang in CodeRay
-      // TODO can we figure out why the version specified by the docs builder is not honored?
+      // TODO Gradle does not honor JRuby version declared by docs builder since AsciidoctorJ specifies newer version
       force 'org.jruby:jruby:9.0.5.0'
     }
   }
@@ -34,13 +39,15 @@ buildscript {
 defaultTasks 'build'
 group = 'com.mulesoft.documentation'
 
+apply plugin: 'css'
 apply from: 'gradle/git-helper.gradle'
 
 ext {
   dryRun = project.hasProperty('dryRun')
   assetsDir = '_assets'
-  assetsRepoBranchName = 'staging'
-  assetsRepoCommit = "origin/$assetsRepoBranchName"
+  // TIP to test a remote branch, set assetsRepoBranchName = 'name' and assetsRepoCommit = "origin/$assetsRepoBranchName"
+  assetsRepoBranchName = 'dev-tag'
+  assetsRepoCommit = '7f621d66e055a077de796e7c482f893b51603975'
   assetsRepoUri = 'https://github.com/mulesoft/mulesoft-docs-site-assets'
   builderMaxHeapSize = project.hasProperty('maxHeapSize') ? project.property('maxHeapSize') : '2500m'
   builderJvmArgs = ['-Xverify:none', '-XX:+OptimizeStringConcat', '-XX:+UseFastAccessorMethods', '-Djava.net.preferIPv4Stack=true', '-Djava.awt.headless=true']
@@ -60,17 +67,16 @@ ext {
 
 apply from: 'gradle/git-helper.gradle'
 if (file(profileBuildScript).exists()) apply from: profileBuildScript
-apply plugin: 'css'
 
 task cloneAssetsRepo {
   outputs.dir(assetsDir).upToDateWhen { false }
-  onlyIf { !file("$assetsDir/.gitkeep").file }
+  onlyIf { !Files.isSymbolicLink(Paths.get(assetsDir)) && !file("$assetsDir/.gitkeep").file }
   doLast {
     if (file("$assetsDir/.git").directory) {
       git "fetch -q origin", assetsDir
     }
     else {
-      git "clone -q $assetsRepoUri $assetsDir", file(assetsDir).parent
+      git "clone -q -n $assetsRepoUri $assetsDir", file(assetsDir).parent
     }
     git "checkout -q -B $assetsRepoBranchName $assetsRepoCommit", assetsDir
   }
@@ -80,8 +86,14 @@ task setup(group: 'Build', description: 'Prepares the build.') {
   dependsOn cloneAssetsRepo
 }
 
+task cleanAssets(type: Delete) {
+  onlyIf { !Files.isSymbolicLink(Paths.get(assetsDir)) && !file("$assetsDir/.gitkeep").file }
+  delete assetsDir
+}
+
 task clean(type: Delete, group: 'Build', description: 'Deletes assets and site directories.') {
-  delete assetsDir, siteDir, tempDir
+  dependsOn cleanAssets
+  delete buildDir, siteDir, tempDir
 }
 
 // TODO site builder should accept a custom templates directory
@@ -97,7 +109,7 @@ task buildHtml(type: JavaExec, group: 'Build', description: 'Builds HTML pages.'
   mustRunAfter setup
   classpath = buildscript.configurations.builder
   main = 'com.mulesoft.documentation.builder.Client'
-  args = ['-s', '.', '-d', siteDir, '-ghr', docsRepoUri, '-ghb', docsRepoBranchName, '-url', siteUri]
+  args = ['-s', projectDir.absolutePath, '-d', siteDir, '-ghr', docsRepoUri, '-ghb', docsRepoBranchName, '-url', siteUri]
   maxHeapSize = builderMaxHeapSize
   jvmArgs = builderJvmArgs
   //outputs.dir siteDir
@@ -138,7 +150,7 @@ task copyAssets(type: Copy) {
   from(assetsDir) {
     exclude 'README.md'
     exclude '_*/**'
-    //exclude 'css/*.less'
+    exclude 'css'
   }
   into siteDir
   //outputs.dir siteDir
@@ -151,12 +163,19 @@ task copyAssets(type: Copy) {
   //}
 }
 
+[csslint, combineCss, gzipCss, minifyCss].each { tasks.remove(it) }
+
 css {
   source {
-    main {
+    standard {
       css {
         srcDir "$assetsDir/css"
         include '*.css'
+      }
+    }
+    less {
+      css {
+        srcDir "$assetsDir/css"
         include '*.less'
       }
     }
@@ -166,20 +185,56 @@ css {
 lesscss {
   dependsOn setup
   mustRunAfter copyAssets
-  source = css.source.main.css.asFileTree
-  dest = file("$siteDir/css/")
+  // IMPORTANT must use asFileTree to delay resolution until after assets repo is cloned
+  source = css.source.less.css.asFileTree
+  dest = "${buildDir}/generated-css/mulesoft"
 }
 
-//def cssDir = "app/styles/"
-//def cssSrc = ["file1.css","file2.css"]
-//
-//combineCss {
-//    source = cssSrc.collect {cssDir+it}
-//    dest = "$buildDir/all.css"
-//}
+task combineMulesoftCss(type: CombineCssTask) {
+  source = lesscss
+  dest = "${buildDir}/css/mulesoft.css"
+  doFirst {
+    source = source.files.sort()
+  }
+}
+
+task combineVendorCss(type: CombineCssTask) {
+  dependsOn setup
+  mustRunAfter copyAssets
+  // IMPORTANT must use asFileTree to delay resolution until after assets repo is cloned
+  source = css.source.standard.css.asFileTree
+  dest = "${buildDir}/css/vendor.css"
+  doFirst {
+    source = source.files.sort()
+  }
+}
+
+task minifyMulesoftCss(type: MinifyCssTask) {
+  source = combineMulesoftCss
+  dest = "${buildDir}/css/mulesoft.min.css"
+  yuicompressor {
+    lineBreakPos = 500
+  }
+}
+
+task minifyVendorCss(type: MinifyCssTask) {
+  source = combineVendorCss
+  dest = "${buildDir}/css/vendor.min.css"
+  yuicompressor {
+    lineBreakPos = 500
+  }
+}
+
+task combineAndMinifyCss(type: Copy, group: 'Build', description: 'Combined and minifies CSS files after compiling LESS files to CSS.') {
+  dependsOn minifyMulesoftCss, minifyVendorCss
+  from("${buildDir}/css") {
+    include '*.min.css'
+  }
+  into "${siteDir}/css"
+}
 
 task build(group: 'Build', description: 'Builds site.') {
-  dependsOn setup, buildHtml, copyAssets //, lesscss
+  dependsOn setup, buildHtml, copyAssets, combineAndMinifyCss
   mustRunAfter clean
 }
 

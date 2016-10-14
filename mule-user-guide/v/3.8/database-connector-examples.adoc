@@ -357,21 +357,21 @@ This example simply illustrates how to retrieve data from a database with a data
 
 [NOTE]
 ====
-For simplicity, this example accesses a database directly from an HTTP connector, but this is not a recommended practice. This example is meant to illustrate the concept of a simple SELECT operation, but we do not recommend exposing database functionality directly as an API.
+For simplicity, this example accesses a database directly from an HTTP connector, but this is not a recommended practice. This example is meant to illustrate the concept of a simple SELECT operation, but we do not recommend exposing database functionality directly as an API. To review how HTTP parameters are accessed from Mule messages, see link:/mule-user-guide/v/3.8/http-listener-connector#mapping-between-http-requests-and-mule-messages[Mapping Between HTTP Requests and Mule Messages].
 ====
 
 The MySQL database `company` contains a table called `employees`, with employee information such as first and last names, birth dates, etc.
 
 image:database-connector-examples.adoc-dbtestflow.png[DBtestFlow]
 
-In the Mule application, an inbound link:/mule-user-guide/v/3.8/http-connector[HTTP connector] listens for HTTP GET requests with the form: `http://<host>:8081/?lastname=<parameter>`. The HTTP connector passes the value of `<parameter>` as one of the message properties to a database connector. The database connector is configured to extract this value and use it for the SQL query listed below.
+In the Mule application, an inbound link:/mule-user-guide/v/3.8/http-connector[HTTP connector] listens for HTTP GET requests with the form: `http://<host>:8081/?lastname=<parameter>`. The HTTP connector passes the value of `<parameter>` as an HTTP query parameter to the database connector. The database connector is configured to use MEL to use this value for the SQL query listed below.
 
 [source, code]
 ----
-select first_name from employees where last_name = #[message.inboundProperties['lastname']]
+select first_name from employees where last_name = #[message.inboundProperties.'http.query.params'.lastname]
 ----
 
-As you can see, the link:/mule-user-guide/v/3.8/mule-expression-language-mel[MEL] expression in the SQL query (`\#[message.inboundProperties['lastname']`)references the value of the parameter passed to the HTTP connector. So if the HTTP connector receives `http://localhost:8081/?lastname=Smith`, the SQL query is `select first_name from employees where last_name = Smith`.
+As you can see, the link:/mule-user-guide/v/3.8/mule-expression-language-mel[MEL] expression in the SQL query (`\#[message.inboundProperties.'http.query.params'.lastname]`)references the value of the parameter passed to the HTTP connector. So if the HTTP connector receives `http://localhost:8081/?lastname=Smith`, the SQL query is interpreted by the database as `select first_name from employees where last_name = Smith`.
 
 The database connector instructs the database server to run the SQL query, retrieves the result of the query, and passes it to the object-to-JSON message processor which converts the result to JSON. Since the HTTP connector is configured as request-response, the result is returned to the originating HTTP client.
 
@@ -511,9 +511,35 @@ curl http://<host>:8081/?lastname=<parameter>
 Using curl will print the resulting JSON to the terminal's standard output.
 ====
 
+=== SELECT Operation Example Code
+
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+    <db:mysql-config name="MySQL_Configuration" host="localhost" port="3306" user="" password="" database="company" doc:name="MySQL Configuration"/>
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8080" doc:name="HTTP Listener Configuration"/>
+    <flow name="db-connector-select-getresultsetFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/" allowedMethods="GET" doc:name="HTTP"/>
+        <db:select config-ref="MySQL_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[select first_name from employees where last_name = #[message.inboundProperties.'http.query.params'.lastname]]]></db:parameterized-query>
+        </db:select>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+    </flow>
+</mule>
+----
+
 == Example: Retrieve from Database and Batch Write to File
 
-In this example, a database connector retrieves data from two tables. A link:/anypoint-studio/v/6/datamapper-visual-reference[DataMapper transformer] maps this data to the CSV format. A link:/mule-user-guide/v/3.8/file-connector[file connector] writes the resulting CSV file to disk, and a link:/mule-user-guide/v/3.8/logger-component-reference[logger component] logs processing details to the console.
+In this example, a database connector retrieves data from two tables. DataWeave maps this data to the CSV format. A link:/mule-user-guide/v/3.8/file-connector[file connector] writes the resulting CSV file to disk, and a link:/mule-user-guide/v/3.8/logger-component-reference[logger component] logs processing details to the console.
 
 This example uses link:/mule-user-guide/v/3.8/batch-processing[batch processing], which means that within this Mule app, messages are divided into records and processed asynchronously. Batch processing, in conjunction with *streaming* enabled on the database connector, can be useful to avoid system overload when dealing with large volumes of data.
 
@@ -684,7 +710,7 @@ Datasense should build the input side of your transform. If this is not the case
 
 image:database-connector-examples-ab246.png[set metadata]
 
-image:database-connector-examples-871e9.png[ex2.datamapper.conn.select]
+image:database-connector-examples-871e9.png[ex2.dataweave.conn.select]
 
 The image below shows the finished DataWeave transformer configuration.
 
@@ -893,7 +919,7 @@ call add_bonus_by_emp_no(#[payload],500);
 `<db:parameterized-query><![CDATA[call add_bonus_by_emp_no(#[payload],500);]]></db:parameterized-query>`. By the design of the example, the employee is passed as an HTTP parameter. `http://localhost:8081/getemps?emp=1065`
 . Here is the full code for a simple app that calls a stored procedure using an HTTP parameter we set in the HTTP request. Modify the credentials in the database connector global element for your MySQL instance.
 +
-[source,code,linenums]
+[source,xml,linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 

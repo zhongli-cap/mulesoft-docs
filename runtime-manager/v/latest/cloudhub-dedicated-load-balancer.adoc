@@ -1,6 +1,8 @@
 = CloudHub Load Balancer
 :keywords: cloudhub, runtime manager, arm, load balancing, vanity url, ssl, two way tls,
 
+image:logo-cloud-active.png[link="/runtime-manager/deployment-strategies"]
+image:logo-hybrid-disabled.png[link="/runtime-manager/deployment-strategies"]
 
 == Overview
 
@@ -22,15 +24,15 @@ You can associate multiple environments to the same VPC, meaning that you can us
 == Load Balancer Architecture
 
 Each Load Balancer has an internal domain name.
-The structure is `<lb-name>-internal.lb.anypointdns.net` where `<lb-name>` is the name you gave the load balancer when you created it. This is the reason why the load balancer`s name must be unique.
+The structure is `internal-<lb-name>.lb.anypointdns.net` where `<lb-name>` is the name you gave the load balancer when you created it. This is the reason why the load balancer`s name must be unique.
 
 Additionally, each load balancer has an external domain name that you can ping from outside your network: `<lb-name>.lb.anypointdns.net` where `<lb-name>` is the name you gave the load balancer when you created it.
 
-If you want your load balancer to handle all connections to your application and you don´t want your default domain name for your application publicly exposed, then your application needs to be listening over http on port 8091 or 8092, or you can create a custom mapping policy to redirect outside requests from your load balancer to your specific application.
+If you want your load balancer to handle all connections to your application and you don't want your default domain name for your application publicly exposed, then your application needs to be listening over http on port 8091 or 8092, or you can create a custom mapping policy to redirect outside requests from your load balancer to your specific application.
 
 [NOTE]
 --
-Your load balancer listens for outside requests over https, but it communicates internally with your worker over http. If your Mule application is listening over https, it won´t be able to communicate with your load balancer.
+Your load balancer listens for outside requests over https, but it communicates internally with your worker over http. If your Mule application is listening over https, it won't be able to communicate with your load balancer.
 --
 
 == Using the Load Balancer
@@ -44,6 +46,8 @@ A full description of `loadbalancers` and `vpcs` endpoints is available accesing
 
 In the link above, search among other Mule APIs for the "CloudHub" API and enter its latest version.
 --
+
+In order to be able to create and configure a load balancer, your profile needs to be an link:/access-management/creating-an-account#the-organization-administrator[administrator] of the organization to which the load balancer is associated.
 
 === Mapping
 
@@ -160,22 +164,16 @@ This maps your default load balancer `lb-demo.lb.anypointdns.net` directly to yo
 
 === Rule Order
 
-Rules are grouped into groups by same subdomain name. Groups with longer subdomain names are checked first. So rules with short subdomain name (numbers or symbols) have less priority. The group with empty subdomain name is checked last.
+When creating a _mapping rule_, you need to assign an index to it to define the rule's priority order. +
+A rule defined first, at index `0` has higher priority against other rules defined after it. The higher the index assigned, the less priority the mapping rule has.
 
-Within a group (rules with same subdomain) the rules with longer inputURI expressions are checked first, and if they don’t match, the rules with shorter inputURI expressions are checked.
-
-
-[WARNING]
---
-Rules order is essential.
-It’s highly recommended to pay attention to the rules’ order when creating them as it's currently not possible to edit them.
---
+Rules order is essential and it’s highly recommended to pay attention to the rules’ order when creating them.
 
 ==== Setting a Rule Priority Order
 
-You can set an order when creating the rule using the link:/runtime-manager/anypoint-platform-cli#cloudhub-add-lb-rule[cloudhub-add-lb-rule] command in the Anypoint-CLI by specifying an index value.
+You can set the order of your mapping rules when creating them using the link:https://docs.mulesoft.com/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-add[cloudhub load-balancer mappings add] command in the Anypoint-CLI by specifying an index value.
 
-When using the API, you can't specify a priority order, but you can send a `PUT` request to the endpoint `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/loadbalancers/{loadbalancerId}` and update your rules expressions to match your needs based on the order logic explained above (longer URIs within the same subdomain are checked first).
+When using the API, you can't specify a priority order, but you can send a `PATCH` request to the endpoint `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/loadbalancers/{loadbalancerId}` and update your rules expressions to match your needs based on the order logic explained above.
 
 [NOTE]
 --
@@ -187,13 +185,22 @@ You can also perform a `GET` request to your endpoint /organizations/{orgid}}/lo
 
 It is possible to whitelist a list of IP addresses from your load balancers by simply passing it a CIDR block of IPs to whitelist.
 
-The whitelist works for inbound connections at the load balancer level, not at the CN certificate level. Make sure you only pass IP addresses. +
-It is recommended that in order to whitelist inbound connections to your load balancer, you configure your workers to use link:/runtime-manager/deploying-to-cloudhub#static-ips-tab[static IP addresses]
+The whitelist works for inbound connections at the load balancer level, not at the CN certificate level. Make sure you only pass IP addresses.
 
 == Managing Certificates
 
-The Cloudhub Load Balancer provides a 2-way SSL client authentication. +
-It allows you to provide a `.pem` file certificate to your load balancer´s SSL endpoint to validate client requests.
+Your dedicated Load Balancer provides 2-way SSL client authentication. +
+By providing a certificate and private key pair, you configure an SSL endpoint for your load balancer to validate client requests.
+
+==== Requirements
+
+To associate an SSL endpoint you need to provide:
+
+. One file containing a pem encoded and not encrypted certificate file.
+. A second file containing the private key of your `.pem` certificate.
++
+[CAUTION]
+The private key file needs to be passphraseless
 
 === Uploading Certificates
 
@@ -299,7 +306,7 @@ AES128-SHA
 DES-CBC3-SHA
 ----
 
-ClourHub´s dedicated load balancer supports TLSv1.1 and TLSv1.2. Additionally you can configure TLS v1.0, but bear in mind that such protocol is no longer accepted by PCi compliance due to its significant vulnerabilities.
+ClourHub's dedicated load balancer supports TLSv1.1 and TLSv1.2. Additionally you can configure TLS v1.0, but bear in mind that such protocol is no longer accepted by PCi compliance due to its significant vulnerabilities.
 
 == See Also
 

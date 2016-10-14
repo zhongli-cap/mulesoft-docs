@@ -1,9 +1,7 @@
 = Using Policies
 :keywords: policy, endpoint
 
-A policy is a mechanism for enforcing filters on traffic. These filters generally control authentication, access, allotted consumption, and SLAs. API Manager offers a number of pre-built policies, listed in link:/api-manager/using-policies#available-policies[Available Policies]. You can build custom policies to support your needs if out-of-the-box policies do not. 
-
-You can apply one or more policies to govern your API version at runtime. API Manager enforces policies on APIs having an HTTP/HTTPS endpoint. To apply policies to an API, you need link:/api-manager/creating-your-api-in-the-anypoint-platform[to register] the API in API Manager.
+You apply policies to API versions in API Manager using link:/api-manager/using-policies#applying-and-removing-policies[the procedure] in this document. Policies relate to a particular HTTP/HTTPS endpoint. To apply policies to an API, you need link:/api-manager/creating-your-api-in-the-anypoint-platform[to register] the API in API Manager.
 
 You can apply policies to these types of APIs:
 
@@ -33,9 +31,13 @@ API Version Owner
 +
 * A link:/api-manager/setting-your-api-url[declared endpoint] for your API version
 
-Registration of the API in API Manager is a prerequisite for policy enforcement.
-
 Use an HTTP endpoint instead of Jetty if you want to use rate-limited and throttling policies. Due to a limitation in the Jetty transport, rate-limiting and throttling policies do not work on an API that uses a Jetty inbound endpoint.
+
+== Registering Policies
+
+link:/api-manager/creating-your-api-in-the-anypoint-platform#naming-and-registering-the-api[Registration of the API] in API Manager is a prerequisite for policy enforcement. After you apply policies in API Manager, download the policies to API Gateway runtime or Mule 3.8.0 or later runtime through the runtime Anypoint Platform agent. Policies are stored in each runtime /policies folder. 
+
+Each runtime is configured with the client id and client secret for the API Manager account. This defines the connection between the Anypoint Platform agent and the Anypoint Platform account. 
 
 == Available Policies 
 
@@ -87,7 +89,6 @@ The following table lists the policy, the required characteristic the policy ful
 | XML Threat Protection | Security | XML Threat Protected | None
 |===
 
-
 == Logging of Policy Information
 
 Logs show the order of policies:
@@ -96,6 +97,39 @@ Logs show the order of policies:
 INFO  2015-09-28 15:37:54,214 [[leagues-rest].httpListenerConfig.worker.01] org.mule.api.processor.LoggerMessageProcessor: POLICY A
 INFO  2015-09-28 15:37:54,214 [[leagues-rest].httpListenerConfig.worker.01] org.mule.api.processor.LoggerMessageProcessor: POLICY B
 ----
+
+== Applying and Removing Policies
+
+After declaring an endpoint for your API version, the following tabs on the link:/api-manager/tutorial-set-up-and-deploy-an-api-proxy#navigate-to-the-api-version-details-page[API version details page] become active: Applications, Policies, and SLA Tiers.
+
+To apply a policy to your endpoint:
+
+. Click *Policies* to view the list of available policies for your organization. 
+. Select individual policies to read their descriptions. When you find the one you want to apply, click *Apply*.
+. Depending on the policy, you may need to provide further configuration. See detailed instructions for configuring one of the available policies:
+
+** link:/api-manager/ldap-security-manager[LDAP policy]
+** link:/api-manager/oauth-2.0-provider-and-oauth-2.0-token-enforcement-policies[AES-based OAuth policy set]
+** link:/api-manager/pingfederate-oauth-token-enforcement-policy[PingFederate Policy]
+** link:/api-manager/openam-oauth-token-enforcement-policy[OpenAM Policy]
+** External Authorization
+
+A disabled *Apply* indicates one of the following conditions:
+
+* Another applied policy fulfills the requirement (see the Fulfills column)
+* Another policy must be applied first (see the Requires column)
+
+To remove policies, click *Remove*. To reapply the policy, reconfigure the policy. Your previous configuration is not saved.
+
+== Order of Policies
+
+The order of execution of policies is deterministic and can be configured if you are using one of the following releases:
+
+* Studio 6.0 for creation, deployed to Anypoint Platform with auto-discovery
+* Mule 3.8 unified runtime
+* API Gateway Runtime 2.2.0
+
+For previous versions, the order of execution is undetermined. 
 
 === Default Enforcement Order of Policies
 
@@ -129,36 +163,9 @@ OAuth 2.0 Provider
 Simple Security Manager
 |===
 
-== Applying and Removing Policies
+Custom policies that don't have an order configured will be executed after the Out of the Box policies listed above.
 
-After declaring an endpoint for your API version, the following tabs on the link:/api-manager/tutorial-set-up-and-deploy-an-api-proxy#navigate-to-the-api-version-details-page[API version details page] become active: Applications, Policies, and SLA Tiers.
-
-To apply a policy to your endpoint:
-
-. Click *Policies* to view the list of available policies for your organization. 
-. Select individual policies to read their descriptions. When you find the one you want to apply, click *Apply*.
-. Depending on the policy, you may need to provide further configuration. See detailed instructions for configuring one of the available policies:
-
-** link:/api-manager/ldap-security-manager[LDAP policy]
-** link:/api-manager/oauth-2.0-provider-and-oauth-2.0-token-enforcement-policies[AES-based OAuth policy set]
-** link:/api-manager/pingfederate-oauth-token-enforcement-policy[PingFederate Policy]
-** link:/api-manager/openam-oauth-token-enforcement-policy[OpenAM Policy]
-** External Authorization
-
-A disabled *Apply* indicates one of the following conditions:
-
-* Another applied policy fulfills the requirement (see the Fulfills column)
-* Another policy must be applied first (see the Requires column)
-
-To remove policies, click *Remove*. To reapply the policy, reconfigure the policy. Your previous configuration is not saved.
-
-== Setting the Order of Execution of Policies
-
-You can set the order of execution of applied policies on an application in Anypoint Platform if you are using one of the following releases:
-
-* Studio 6.0 for creation, deployed to Anypoint Platform with auto-discovery
-* Mule 3.8 unified runtime
-* API Gateway Runtime 2.2.0
+=== Setting the Order of Execution of Policies
 
 *To set the order of execution of applied policies:*
 
@@ -191,21 +198,7 @@ When an Organization Owner defines the order of policy enforcement, conflicts ca
 
 You can apply policies to both the API and the console, or to the API only.
 
-The configuration of the console determines how the RAML-based, auto-generated proxy is configured.
-
-In this configuration, the console and the API share the same listener:
-
-`<apikit:config name="apiConfig" raml="api.raml" consoleEnabled="true" consolePath="console" />`
-
-In this configuration, the console is hosted using its own listener.
-
-[source,xml,linenums]
-----
-<flow name="console" doc:name="console">
-    <http:listener config-ref="http-lc-0.0.0.0-8081" path="console" parseRequest="false" />
-    <apikit:console config-ref="proxy-config"/>
-</flow>
-----
+The configuration of the console determines how the RAML-based, auto-generated proxy is configured, as described in link:/apikit/apikit-using#working-with-the-apikit-console["Working with the APIkit Console"].
 
 == Legacy Support
 

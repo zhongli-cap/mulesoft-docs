@@ -1,8 +1,9 @@
 // Command to execute in CI:
 // ./gradlew -g .gradle --no-search-upward -Pprofile=prod -PbuildTag=$BUILD_TAG -PmaxHeapSize=4g clean publish
+// ./gradle/consolidate-publish-repo.sh -q
 ext {
-  assetsRepoBranchName = 'master'
-  assetsRepoCommit = "origin/$assetsRepoBranchName"
+  assetsRepoBranchName = 'prod-tag'
+  assetsRepoCommit = '7f621d66e055a077de796e7c482f893b51603975'
   publishCommitMessage = project.hasProperty('buildTag') ? project.property('buildTag') : 'publish changes'
   publishRepoBranchName = 'master'
   publishRepoUri = 'git@github.com:mulesoft/mulesoft-docs-build-output.git'
@@ -18,7 +19,8 @@ task clonePublishRepo {
       git "reset -q --hard origin/$publishRepoBranchName", siteDir
     }
     else {
-      git "clone -q --single-branch --depth 1 $publishRepoUri $siteDir", file(siteDir).parent
+      // NOTE not using --depth 1 because we need full history to consolidate (for now)
+      git "clone -q $publishRepoUri $siteDir", file(siteDir).parent
     }
   }
 }
@@ -35,10 +37,10 @@ task prepareSiteDir {
 }
 
 task publishSiteDir {
+  onlyIf { !git('status --porcelain', siteDir, true).empty }
   doLast {
     git 'add .', siteDir
     git "commit -q -m \"$publishCommitMessage\"", siteDir
-    // TODO don't push if there are no commits
     if (!dryRun) git "push -q origin $publishRepoBranchName", siteDir
   }
 }
@@ -46,7 +48,7 @@ task publishSiteDir {
 task publish(group: 'Build', description: 'Builds site and commits changes to publisher repository.')
 
 afterEvaluate {
-  clean.delete = assetsDir // don't delete _publish directory
+  clean.delete.retainAll(clean.delete - siteDir) // don't delete _publish directory
   //copyAssets.outputs.upToDateWhen { false }
   prepareSiteDir.dependsOn clonePublishRepo
   publish.dependsOn prepareSiteDir, build, publishSiteDir
