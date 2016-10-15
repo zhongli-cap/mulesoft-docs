@@ -1,0 +1,147 @@
+= Prerequisites for Installing the Anypoint Platform On-premises Edition
+:keywords:anypoint platform, on premises
+
+
+This section contains hardware, software and networking requirements for installing the link:/anypoint-platform-on-premises/v/1.5.0/index[Anypoint Platform on-Premises Edition].
+
+If you cumply with the necessary specs, see the link:/anypoint-platform-on-premises/v/1.5.0/installing-anypoint-platform-on-premises[installation document]
+
+
+== Hardware requirements
+
+For production usage, it’s recommend to have at least 3 servers with the following minimum requirements each:
+
+[%header%autowidth.spread]
+|===
+| Requirement |Value
+|RAM |32GB
+|CPU |8 Cores
+|HDD 1 (OS + AnyPoint data) |500GB
+|HDD 2 (for docker) |100GB
+|Networking (connectivity between hosts)  |1GbE
+|===
+
+When using virtual machines, make sure that they are using different physical servers, otherwise HA won’t work properly.
+
+== Software Requirements
+
+=== Distributions
+
+The following distributions are supported:
+
+* RHEL >= 7.2.x
+* CentOS >= 7.2.x
+
+=== Packages to install
+
+
+*Yum* is an open-source command-line package-management utility for Linux operating systems using the RPM Package Manager.
+
+Through Yum, install the tools Sudo and LVM. You can install both through the following command:
+
+----
+`yum install sudo lvm2`
+----
+
+=== Packages to uninstall
+
+==== Docker
+
+Docker should be uninstalled from the servers running the Anypoint Platform On-premises Edition. The Anypoint Platform installation includes its own packaging of Docker, officially supported by Kubernetes.
+
+==== Local name service
+
+Local caching DNS servers listening on port 53 should be removed, e.g. named, dnsmasq, bind or others.
+
+
+==== Server settings
+
+Make sure that server running installer and servers in the cluster are set to UTC timezone:
+
+----
+sudo unlink /etc/localtime
+sudo ln -s /usr/share/zoneinfo/Etc/GMT /etc/localtime
+----
+
+== Networking Requirements
+
+=== Static IPs
+
+All servers in the cluster should have static private IPv4 assigned to them, these must persist between server restarts. If IPs don’t persist between reboots, the cluster will enter a failed state.
+
+=== VXLAN
+
+This version of Kubernetes sets up overlay VXLAN and uses UDP transport to encapsulate traffic.
+
+There’s also direct communication between components of the cluster via TCP. The table below shows the ports used for inter-host communication:
+
+[%header%autowidth.spread]
+|===
+|Protocol |Port/Range |Purpose
+|TCP |80 |HTTP redirects to HTTPs
+|TCP (TLS) |443 |HTTPS port
+|TCP (TLS) |8889 |WebSocket Port for Runtimes to connect
+|UDP |8472 |Overlay VXLAN network
+|TCP (TLS) |6443 |Kubernetes API server
+|TCP (TLS) |10248 |Kubernetes Kubelet
+|TCP  |7496 |Local monitoring P2p network
+|TCP (TLS) |2380, 7001, 4001 |Etcd distributed Database
+|TCP (TLS/SSH) |3080, 3023, 3024, 3025, 3008, 3009, 3010 |cluster control plane
+|TCP |30000-32767 |Internal services port range
+|===
+
+=== NAT Traffic
+
+Kubernetes overlay network uses NAT in some cases. This requires that servers should be able to send and receive packages with a source and destination that is different from server’s internal IP.
+
+=== SSL Certificate
+
+In order to use the Anypoint Platform, you must provide SSL credentials. You can upload a certificate through the Anypoint Platform UI, see link:/access-management/on-prem-features#security[on-prem features]. This certificate must be trusted by every machine that’s connected to the platform.
+
+=== SMTP Server
+
+Your network must include an SMTP server to manage e-mail alerts that are triggered by the platform.
+
+== Device Requirements
+
+For the platform’s configuration you must assign two dedicated devices for use. One as a system state directory and the other as target for Docker devicemapper configuration. These two directories must exist on every node of your cluster.
+
+[TIP]
+====
+You can create both these directories through the following command:
+----
+sudo mkfs.ext4 /dev/xvdb; sudo mkdir -p /var/lib/data; echo -e "[Mount]\nWhat=/dev/xvdb\nWhere=/var/lib/data\nType=ext4\n[Install]\nWantedBy=local-fs.target" |sudo tee /etc/systemd/system/var-lib-data.mount; sudo systemctl start var-lib-data.mount
+----
+====
+
+=== Anypoint state directory
+This is the directory where persistent Anypoint Platform data is stored.
+
+Unless specified, the system directory (`/var/lib/data` by default) is created on whatever device /var/lib is mounted on. This directory will be automatically formatted and prepared for use.
+
+[TIP]
+This directory can be changed by providing an unformatted device (i.e. /dev/sdb) during installation for use as a state directory.
+
+[NOTE]
+It’s recommended to have at least 100Gb sized device for the Anypoint state directory.
+
+
+
+=== Docker devicemapper
+
+This device provides to Docker’s devicemapper.
+
+Unless specified, Docker configuration defaults to the use of devicemapper in loopback mode (using /dev/loopX devices) which is not recommended for production. To configure Docker to use a dedicated device for devicemapper storage driver, an unformatted device (or a partition) (i.e. /dev/sdc) can be provided during installation. This directory will be automatically configured and set up for use.
+
+Unformatted devices potentially usable for system directory / devicemapper are automatically discovered by agents running on each node. Discovered devices are offered on a drop-down menu for configuration before the installation is started.
+
+[NOTE]
+It’s recommended to have at least 100Gb sized device for the devicemapper directory.
+
+
+=== Disk for Etcd
+
+In production mode, it's highly recommend that you reserve a separate disk for Etcd due to performance and reliabiltiy reasons.
+
+Mount the disk into /var/lib/gravity/planet/etcd
+And the installer will pick up config automatically

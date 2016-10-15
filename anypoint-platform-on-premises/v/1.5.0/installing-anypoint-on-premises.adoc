@@ -1,0 +1,201 @@
+= Installing Anypoint Platform On Premises Edition
+:keywords:anypoint platform, on premises
+
+
+== Overview
+
+The Anypoint Platform On-Premises Edition offers all of the features that are available in the online version of the link:https://anypoint.mulesoft.com[Anypoint Platform] as a service that you can fully run on your local servers, guarded by any security policies you may require.
+
+
+[NOTE]
+The current release of this product is marked as *limited availability*. It is not recommended for production deployments and its implementation requires that you contact MuleSoft's customer success team.
+
+
+This document guides you through the installation process. After completing the steps in this document, you should have the Anypoint Platform already running on your own local network, with which you can deploy and manage applications, register APIs and use Exchange.
+
+
+
+[NOTE]
+====
+Before you begin, make sure that you fulfill the link:/anypoint-platform-on-premises/v/1.5.0/prerequisites-platform-on-premises[Prerequisites] for installing the Anypoint Platform On-premises Edition.
+====
+
+
+== Running the Installer Wizard
+
+The installation wizard automatically configures most of the infrastructure that you need to run the Anypoint Platform On-premises, automating the installation of Kubernetes and the instancing of multiple Docker containers that contain each of the components of the platform.
+
+
+. Download the `anypoint-1.5.0-installer.tar.gz` installation package from support portal
+
+. Uncompress the gzip archive
++
+----
+tar zxvf anypoint-1.5.0-installer.tar.gz
+----
+
+. From the command line, move to the location where you unzipped this archive and run the following command:
++
+----
+`./install`
+----
+
+. The script will ask you what interface you want to listen on. Select the IP you want to use out of the list that is presented and confirm this decision.
+
+. In the output of this command, look for a network address that is signaled by the text `OPEN THIS IN BROWSER`
++
+----
+OPEN THIS IN BROWSER: https://{HOST}:61009/web/installer/new/gravitational.io/anypoint/{VERSION}?install_token={TOKEN}
+----
+
++
+Paste this address in a web browser to access the wizard
+
+Once in the installation wizard, follow the steps below to complete the installation:
+
+. In the first screen, paste your Anypoint Platform licence key. You should get this key from your sales representative. Then click *Continue*.
+
++
+image:Installer-1.png[licence]
+
+[NOTE]
+After applying a new license, it takes about a minute for the installer to recognize it.
+
+. Name your deployment, then choose a provider ( pick the only available option in this case: *Bare Metal* ). Then click *Continue*.
++
+[TIP]
+The name you give here won't affect the network address nor the organization name in the anypoint platform.
+
++
+image:Installer2-DeploymenyName.png[name]
+
+. The next screen the installer will ask you to register each of your servers as nodes. To register these servers, you must run a code in the command line of each. This code is presented to you on this screen with your specific credentials:
+
++
+image:Installer3-Nodes.png[nodes]
+
++
+The command should have the following structure:
++
+----
+curl -s --tlsv1.2 --insecure "https://mulesoft.gravitational.io:443/t/{TOKEN}/node" | sudo bash
+----
++
+Paste and run this command on each of your nodes.
+
+
+. After running this command on a node, it becomes visible in the installer's UI. Each node has a set of fields to configure: an IP address and two devices to reference. For your devices, you can either leave the default references, or you can set up your own, see link:/anypoint-platform-on-premises/v/1.5.0/prerequisites-platform-on-premises#device-requirements[Device Requirements] for details.
+
++
+image:Installer4-3Nodes.png[nodes]
+
++
+[NOTE]
+Ensure that on each of your nodes, both devices are set up with enough space. See link:/anypoint-platform-on-premises/v/1.5.0/prerequisites-platform-on-premises#device-requirements[Device Requirements]
+
+
+. Once all of your nodes are visible and configured, click *Start Installation* to proceed to installing the software.
++
+image:installing-anypoint-start-install.png[button]
+
+. The installer then transitions through several different stages on its own. Wait for this process to finish.
+
++
+image:Installer4-Progress.png[progess]
+
+. The installer finally prompts you to provide the following data:
+
+* organization name
+* username
+* password
+
++
+[NOTE]
+All of the users of your platform will log into accounts that belong to the organization name that you provide here, or a sub-organization within it. See link:/access-management/organization[Organizations] for an overview on how these work.
+
+
+
+
+Once the installation is complete, you're prompted to choose if you want to enable remote help on your application. If you choose to enable this option, this will allow MuleSoft support employees to have access to view info about your platform when and if you request it.
+
+
+== Configure Log Forwarding
+
+[NOTE]
+This section refers to forwarding log data from the Anypoint Platform itself. For instructions on how to forward log data from the Mule servers and applications that run on the platform, see link:/runtime-manager/sending-data-from-arm-to-external-monitoring-software[Sending data from Runtime Manager to External Monitoring Software].
+
+
+The Anypoint Platform uses rsyslog for handling its logging. To forward these logs to remote hosts you must do the following:
+
+. Enter the Anypoint Platform ops center. You enter it through port `9500`, so in a browser you can type `{platform-host}:9500`
+
+. Go to *Logs* > *Settings*
++
+image:installing-anypoint-on-premises-logs1.png[logs]
+. Set the Address on your network where the external software (eg Splunk) resides
++
+image:installing-anypoint-on-premises-logs3.png[logs]
+
+
+[NOTE]
+It's assumed that you're forwarding your logs to an on-premises log solution, like Splunk. It's not supported to send data to a cloud-based log solution, like Splunk Cloud.
+
+== Create a Load Balancer
+
+You'll likely want to install the Anypoint Platform distributed amongst multiple servers. To support this, you must provide your own load balancer to distribute the traffic between them. You can use any standard tool for creating this load balancer, like Nginx. Even if you plan to deploy the platform to a single server, a load balancer is strongly recommended to restrict the ports that are open to just the necessary ones.
+
+////
+(diagrama de lucidchart) ???
+////
+
+You can configure this load balancer with any strategy you want, but a *round robin* strategy is most often the ideal.
+
+This load balancer should be reachable through an IP that is accessible by all machines in your network.
+
+Your load balancer must route the following TCP ports:
+
+[%header%autowidth.spread]
+|===
+|Load Balancer Port |Instance Port | Internal Usage
+|`80` | `30080`  | internal nginx redirects to `443`.
+|`443` | `30443` | internal nginx does a proxy pass to the corresponding micro-service in kubernetes.
+|`8889` | `30889` | internal nginx does TCP forwarding to `cloudhub-mcm`.
+|`9500` | `30081` | internal nginx does a proxy pass to the `gravity-site` kubernetes service.
+|`9501` | `30083` | internal nginx does a proxy pass to the `grafana` kubernetes service.
+|===
+
+
+In every case, your load balancer must listen on the *Load Balancer Port* and redirect incoming requests to the *Instance Port*. Your installation of the Anypoint Platform includes an internal nginx server that listens on each of the *Instance Ports* and then does what's described in *Internal Usage*.
+
+Additionally, your load balancer should poll the address `HTTPS:10250/healthz` to run a *health check* on your platform servers and confirm that they are accessible.
+
+
+[NOTE]
+To configure SSL credentials, you don't need to set them up in your load balancer. You can configure them via the Anypoint Platform UI, see <<section>> or link:/access-management/  ???
+
+
+== Set up SMTP
+
+In order to handle e-mail alerts, you must have an SMTP server configured on your network.
+
+You must direct your local installation of the Anypoint Platform to this server. Currently, setting up SMTP for alert e-mails for link:/api-manager[API Manager] is handled via the link:/access-management/on-prem-features#smtp[Access Management panel], and the SMTP settings for alert e-mails for link:/runtime-manager[Runtime Manager] must be set up manually as explained in link:/anypoint-platform-on-premises/setting-smtp-manually[Setting SMTP Manually]. If you intend to use both tools, make sure you set up both.
+
+== SSL Certificate
+
+In order to use the Anypoint Platform, you must provide SSL credentials. You can upload a certificate through the Anypoint Platform UI, see link:/access-management//access-management/on-prem-features#security[on-prem features]. This certificate must be trusted by every machine that’s connected to the platform.
+
+
+== Handling Third Party Authentication
+
+You can have your users log in to the Anypoint Platform via various third party authentication tools. See link:/access-management/external-identity[External Identity] for how to configure this on each of the available options.
+
+== Adding a Custom Disclaimer Message
+
+You can add a custom message to your login page, that all users in your organization will see every time you log in. To set this custom message, see link:/access-management//access-management/on-prem-features#disclaimer[on-prem features].
+
+== Next Steps
+
+Now that your installation is complete, your platform is ready for being used. You can link:/access-management/creating-an-account#sharing-resources-in-an-organization[invite users] to your Anypoint platform link:/access-management/organization[organization], start link:/runtime-manager/managing-servers[registering servers] so that you can then link:/runtime-manager/deploying-to-your-own-servers[deploy to them], etc.
+
+[NOTE]
+If you then wish to deploy your applications to link:/anypoint-platform-on-premises/v/1.5.0/anypoint-platform-for-pcf[Pivotal Cloud Foundry], after completing the steps in this document you must then complete the steps that link:/anypoint-platform-on-premises/v/1.5.0/configuring-anypoint-platform-for-pcf[Configuring the Anypoint Platform for PCF] guides you through.
