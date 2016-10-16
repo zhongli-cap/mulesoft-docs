@@ -1,28 +1,26 @@
 = Building an External OAuth Provider
 :keywords: oauth,raml,ldap
 
-To manage APIs using the link:/api-manager/external-oauth-2.0-token-validation-policy[OAuth 2.0 Access Token Enforcement Using External Provider policy], you first build and deploy a separate OAuth provider application that verifies the validity of OAuth 2.0 credentials. Build an external OAuth provider application on one of the following installations:
+The OAuth 2.0 Token Validation Using External Provider policy supports HTTPS communication for configuring a single OAuth provider for multiple APIs. To manage APIs using the link:/api-manager/external-oauth-2.0-token-validation-policy[OAuth 2.0 Access Token Enforcement Using External Provider policy], you first build and deploy a separate OAuth provider application that verifies the validity of OAuth 2.0 credentials. 
+
+You can link:_attachments/OAuthProviderStudioArchive.zip[download the OAuthProviderStudioArchive] to import a custom provider, developed by MuleSoft Consulting, into Anypoint Studio. In Studio, you build the provider, and then you run the provider to authenticate credentials against a security service. Once authenticated, the provider can return details to the Mule application for passing an access token to the client. You can use this provider with OAuth 2.0 Access Token Enforcement Using External Provider Policy as an alternative to the MuleSoft builtin LDAP functionality. The AuthenticationProvider implementation is a single class in AuthProvider.java. The artifact contains a sample Mule application that demonstrates how the provider works. Use the provided template to create your own OAuth provider.
+
+Build an external OAuth provider application on one of the following installations:
 
 * Mule 3.8.0 runtime or later
 * API Gateway runtime 2.0 or earlier
++
+To build the provider on API Gateway runtime 2.0 or earlier, see the link:/api-manager/build-oauth2-provider-gateway-2[archive documentation].
 
-These releases employ the link:/mule-user-guide/v/3.8/http-connector[HTTP Connector] whereas earlier runtimes use the link:/mule-user-guide/v/3.8/deprecated-http-transport-reference[deprecated endpoint-based HTTP transport], which is not suitable for use with the provider.
+*To build the provider on Mule Runtime 3.8.x:*
 
-== Building a Provider - Mule Runtime 3.8.x
-
-To build a provider to run on Mule 3.8.x runtime or later, use the following software:
+Use the following software and steps in this procedure:
 
 * Anypoint Studio 6.x with Mule Runtime EE 3.8
-
 * Java JDK 1.8
-
 * Maven 3.3.9
 
-You can link:_attachments/customOAuthProviderStudioArchive.zip[download the customOAuthProviderStudioArchive] developed by MuleSoft Consulting to see how a custom AuthenticationProvider can authenticate credentials against any security service. Once authenticated, the provider can return details to the Mule application for passing an access token to the client. You can use this provider with OAuth 2.0 Access Token Enforcement Using External Provider Policy as an alternative to the MuleSoft builtin LDAP functionality. The AuthenticationProvider implementation is a single class in AuthProvider.java. The artifact contains a sample Mule application that demonstrates how the provider works. Use the template to create your own OAuth provider.
-
-*To build the provider template in Mule Runtime 3.8.x:*
-
-. Set up credentials in the Mule EE Repository. Create or add to the Maven `settings.xml` file. For example, on Linux settings.xml is in `~/.m2/settings.xml`:
+. Set up credentials in the Mule EE Repository. Create or add to the Maven `settings.xml` file. For example, on Linux `~/.m2/settings.xml`:
 +
 [source,xml,linenums]
 ----
@@ -58,30 +56,30 @@ You can link:_attachments/customOAuthProviderStudioArchive.zip[download the cust
   <activeProfiles/>
 </settings>
 ----
-
-. link:https://anypoint.mulesoft.com/login/#/signup[Log into your Anypoint platform] account.
-. link:/api-manager/browsing-and-accessing-apis#accessing-your-application-client-id-and-client-secret[Access your client Id and client Secret].
-. Download the link:_attachments/customOAuthProviderStudioArchive.zip[customOAuthProviderStudioArchive file].
++
+. Download the link:_attachments/OAuthProviderStudioArchive.zip[OAuthProviderStudioArchive].
 . Launch Studio, and choose File > Import.
 +
 The Select dialog appears.
 +
 . Expand Anypoint Studio and select Anypoint Studio generated Deployable Archive.
-. Browse to the customOAuthProviderStudioArchive.zip, and click Finish.
+. Browse to the `OAuthProviderStudioArchive.zip` you downloaded, and click Finish.
+. link:https://anypoint.mulesoft.com/login/#/signup[Log into your Anypoint platform] account.
+. link:/api-manager/browsing-and-accessing-apis#accessing-your-application-client-id-and-client-secret[Access your client Id and client Secret].
 . Enter the client Id and client Secret in *Anypoint Studio* > *Preferences* > *Anypoint Studio* > *Anypoint Platform for APIs*.
 . In Project Explorer, select the project name oauth2-cust-provider, right-click, and select *Run As* > *Mule Application with Maven*.
 +
 The Configure Maven dialog appears.
 +
-. Enter your Maven installation home directory, for example ``/usr/local/Cellar/maven/3.3.9`, and click *Test Maven Configuration*.
+. Enter your Maven installation home directory, and click *Test Maven Configuration*.
 +
-Assuming the test was successful, click OK; otherwise, troubleshoot the problem of finding Maven.
+Assuming the test was successful, click OK; otherwise, troubleshoot the Maven problem.
 +
-The console reports that the app deployed. Proceed to testing the provider.
+The console reports that the app deployed. Next, test the local provider.
 
 === Testing the Local Provider
 
-In this procedure, you deploy the provider locally before deploying it to a server to ensure that the provider returns an OAuth2 access code. You encode the client ID and client secret in base64 according to the link:https://tools.ietf.org/html/rfc2617[HTTP Basic Authentication] specification. This specification has been superseded by RFC 7235, but describes HTTP Basic Authentication better than RFC 7235. These following example shows the syntax for encoding these credentials.
+Test that the provider returns an OAuth2 access code. In this procedure, you deploy the provider locally before deploying it to a server. You encode the client ID and client secret in base64 according to the link:https://tools.ietf.org/html/rfc2617[HTTP Basic Authentication] specification. This specification has been superseded by RFC 7235, but describes HTTP Basic Authentication better than RFC 7235. These following example shows the syntax for encoding these credentials.
 
 *To test the provider:*
 
@@ -94,7 +92,7 @@ The encoded pair appears. For example:
 +
 `NmJlXXXXXXXXXXc0NDZlYmFhNTgzMWQ0NDRhZmNjMmE6MzJkZTE1ZDZZZZZZZZZZZkFEOEJEQUU5QkNGMjc4RDYK`
 +
-. Request a token using the user name/password credentials specified in the project: user max, password `mule`. Include the encoded string from the last step as the Basic Auth header.
+. Request a token using the user name/password credentials specified in the project: user max, password `mule`. Substitute your own base64-encoded credentials for `NmJl...RDYK1`.
 +
 ----
 curl -i -X POST -H "Content-Type: application/x-www-form-urlencoded" -H "Authorization: Basic NmJl...RDYK" -d 'grant_type=password&username=max&password=mule' 'https://localhost:8082/external/access_token' -k
@@ -165,10 +163,10 @@ CloudHub requires these credentials. The credentials you entered in Anypoint Stu
 
 === Testing the Remotely Deployed Provider
 
-To test the remote provider, use the same curl command that you used for testing the provider you ran locally, except change localhost:8082 to the CloudHub URL `https://auth-provider-testing.cloudhub.io` for the provider.
+To test the remote provider, use the same curl command that you used for testing the provider you ran locally, except change localhost:8082 to the CloudHub URL `https://auth-provider-testing.cloudhub.io` for the provider, and of course, substitute your own base64-encoded credentials for `NmJl...RDYK1`.
 
 ----
-curl -i -X POST -H "Content-Type: application/x-www-form-urlencoded" -H "Authorization: Basic NmJlXXXXXXXXXXc0NDZlYmFhNTgzMWQ0NDRhZmNjMmE6MzJkZTE1ZDZZZZZZZZZZZkFEOEJEQUU5QkNGMjc4RDYK" -d 'grant_type=password&username=max&password=mule' 'https://auth-provider-testing.cloudhub.io/external/access_token' -k
+curl -i -X POST -H "Content-Type: application/x-www-form-urlencoded" -H "Authorization: Basic NmJl...RDYK" -d 'grant_type=password&username=max&password=mule' 'https://auth-provider-testing.cloudhub.io/external/access_token' -k
 ----
 
 The output includes the access token and the expiration time in seconds:
@@ -179,13 +177,18 @@ The output includes the access token and the expiration time in seconds:
 
 === Using and Testing OAuth2
 
-In this procedure, you build upon an API Manager tutorial to you create and deploy the JSONPlaceholder service API. You apply the OAuth 2.0 Access Token Enforcement policy to the JSONPlaceholder service API, and then on the portal for the API, request access from an application. You base64-encode the credentials that the application receives to access the JSONPlaceholder service. Using the encoded credentials, you get an access token from the provider and use the token to call the JSONPlaceholder service.
+In this procedure, you build upon an earlier tutorial by applying the OAuth 2.0 Access Token Enforcement policy to the JSONPlaceholder service API. On the portal for the API, you request access from an application. You base64-encode the credentials that the application receives to access the JSONPlaceholder service. Using the encoded credentials, you get an access token from the provider and use the token to call the JSONPlaceholder service.
 
-To call the Auth
+*To use and test OAuth2:*
 
-. Create and deploy the link:/api-manager/designing-your-api#creating-a-raml-1-0-based-api[JSONPlaceholder service API] proxy using API Manager.
-. In the RAML of JSONPlaceholder API, include the RAML snippet required by the OAuth 2.0 Access Token Enforcement policy:
+. Create and deploy the link:/api-manager/designing-your-api#creating-a-raml-1-0-based-api[JSONPlaceholder service API] proxy using API Manager. 
 +
+You can
+link:_attachments/jsonplaceholderapi.zip[download the RAML] for creating the JSONPlaceholder service API.
++
+. In the RAML of JSONPlaceholder API, include the RAML snippet required by the OAuth 2.0 Access Token Enforcement policy. Add the authorization URI, access token URI, and authorization grants: 
++
+[source,yaml,linenums]
 ----
 #%RAML 1.0
 title: placeholder
@@ -196,24 +199,7 @@ securitySchemes:
     description: |
       This API supports OAuth 2.0 for authenticating all API requests.
     type: OAuth 2.0
-    describedBy:
-      headers:
-        Authorization:
-          description: |
-             Used to send a valid OAuth 2 access token. Do not use with the "access_token" query
-             string parameter.
-          type: string
-      queryParameters:
-        access_token:
-          description: |
-             Used to send a valid OAuth 2 access token. Do not use together with the "Authorization"
-             header
-          type: string
-      responses:
-        401:
-          description: |
-            Bad or expired token. This can happen if the user or the API revoked or expired an
-            access token. To fix, you should re-authenticate the user.
+    ...
         403:
           description: |
             Bad OAuth request (wrong consumer key, bad nonce, expired timestamp...). Unfortunately,
@@ -222,16 +208,10 @@ securitySchemes:
       authorizationUri: https://auth-provider-testing.cloudhub.io/external/authorize
       accessTokenUri: https://auth-provider-testing.cloudhub.io/external/access_token
       authorizationGrants: [authorization_code, password, client_credentials, implicit]
-/users:
-  get:
-    description: Retrieve a list of all the users
-    responses:
-      200:
-        body:
-          application/json:
-            example: !include user-example.json
-...
+      ...
 ----
++
+link:_attachments/jsonplaceholderapi.zip[Download the RAML] for this example.
 +
 . link:/api-manager/using-policies#applying-and-removing-policies[Apply the OAuth 2.0 Access Token Enforcement] to the API.
 +
@@ -255,7 +235,7 @@ For example, assume the encoded credentials are YmQ2...UY5NkYK. The provider ret
 +
 ----
 curl -i -X POST -H "Content-Type: application/xAuthorization: Basic YmQ2...UY5NkYK" -d 'grant_type=password&username=max&password=mule' 'https://auth-provider-testing.cloudhub.io/external/access_token' -k
----
+----
 +
 The provider returns the access token:
 +
@@ -280,113 +260,6 @@ Connection: keep-alive
 Postman returns the list of users.
 +
 image::building-an-external-oauth-2.0-provider-application-1da90.png[building-an-external-oauth-2.0-provider-application-1da90]
-
-
-== Provider Configuration Reference
-
-Key configuration tasks in building a provider are:
-
-* Configure endpoint paths
-* Configure scopes
-* Apply CORS (optional)
-* Expose additional endpoints
-
-=== Configuring Endpoint Paths
-
-One of the key configuration tasks is specifying the following endpoint paths in the mule properties file of the provider:
-
-[source,code,linenums]
-----
-validate.endpoint.path=validate
-authorization.endpoint.path=authorize
-access.token.endpoint.path=access_token
-----
-
-You also specify one of these endpoints when you apply the policy to the API. You deploy the provider, and then apply the policy to the API, specifying the endpoint of the provider in `Access Token validation endpoint url`:
-
-image::external-oauth-2.0-token-validation-policy-ba3c0.png[external-oauth-2.0-token-validation-policy-ba3c0,height=375,width=404]
-
-=== Configuring Scopes
-
-Another key configuration task is specifying scopes of access using the link:https://tools.ietf.org/html/rfc6749#page-23[scope] request parameter. An OAuth scope is an client configuration for accessing the API to read or write to the resource, for example.
-
-To use API Console to simulate the API, remove the default `READ WRITE` from *Scopes* and specify no scopes using an empty string ("").
-
-Clients can have a subset of scopes that you configure in the Provider. Clients that are configured to have scopes take precedence over default scopes, or no scopes, specified in the provider.
-
-In the config.xml, `defaultScopes` is the attribute that specifies no scopes (an empty string) or a space-separated list of the default scopes a client will have. For example, in this config.xml snippet no scopes are defined:
-
-[source, xml, linenums]
-----
-    <oauth2-provider:config
-        name="oauth2provider"
-        providerName="oauth2provider"
-        resourceOwnerSecurityProvider-ref="single-user-security-provider"
-        clientSecurityProvider-ref="single-user-client-security-provider"
-        clientStore-ref="single-user-client-store"
-
-        defaultScopes=""
-        supportedGrantTypes="${supported.grant.types}"
-        authorizationEndpointPath="${authorization.endpoint.path}"
-        accessTokenEndpointPath="${access.token.endpoint.path}"
-
-        enableRefreshToken="true"
-        listenerConfig-ref="https.listener" doc:name="OAuth provider module" port="8083" scopes="${scopes}">
-    </oauth2-provider:config>
-----
-
-The `scopes="${scopes}"` refers to the following blank property: `scopes=`.
-
-=== Applying CORS
-
-To apply the CORS policy, see link:/api-manager/cors-policy[Applying and Editing a CORS Policy].
-
-You may find that you need to implement CORS on your OAuth Provider. The *preFlow* attribute on the OAuth configuration element makes it possible to reference a flow that is processed before anything else. Using this attribute, your OAuth Provider configuration can reference an additional flow that has implemented a CORS configuration, enabling CORS in both the authorize and the access token listeners.
-
-[source, xml, linenums]
-----
-  <flow name="myCorsFlow">
-      <cors:validate publicResource="true"/>
-  </flow>
-
-  <oauth2-provider:config
-      name="external-oauth2-provider"
-      preFlow-ref="myCorsFlow"
-      providerName="Ping API"
-      resourceOwnerSecurityProvider-ref="single-user-security-provider"
-      clientSecurityProvider-ref="single-user-client-security-provider"
-      clientStore-ref="single-user-client-store"
-      tokenTtlSeconds="86400"
-      enableRefreshToken="true"
-      listenerConfig-ref="https.listener">
-  </oauth2-provider:config>
-----
-
-In the above example, the "myCorsFlow" flow configures CORS to allow requests from any origin. This flow is referenced in the OAuth 2.0 Provider via the *preFlow-ref* attribute.
-
-=== Exposing Additional Endpoints
-
-Depending on the OAuth grant type you want to use, the OAuth provider application can expose the following endpoints:
-
-* `/authorize`: configured as an attribute of the `oauth2-provider:config` element
-* `/access_token`: configured as an attribute of the `oauth2-provider:config` element
-* `/validate`: configured as the address of the HTTP Listener Connector in the flow
-
-[%header,cols="2*"]
-|===
-|Component |Explanation
-|`oauth2-provider:config` |This component encapsulates most of the configurations required to implement OAuth, both for generating tokens or authorization codes, and for validating them. It implicitly exposes two endpoints for assigning authorization codes and tokens. It is then referenced by a matching element in the flow.
-|`ss:authentication-manager` |
-- Spring bean that defines an authentication manager and provider +
- +
-- Validates user credentials
-
-|`api-platform-gw:client-store` |- Store that retains OAuth client-specific information. If the client sends validation credentials in the body or the query of the request, the OAuth Web service provider simply validates the incoming credentials (client ID and client secret) against the content in the clientStore +
-- Caches client ID and client secret of valid organization's client applications
-|`api-platform-gw:client-security-provider` |Validates client application's credentials.
-|`mule-ss:security-manager` |- For configuring link:/mule-user-guide/v/3.7/configuring-the-spring-security-manager[Spring Security Manager] +
-- Authenticates resource owners (for example: when the user credentials are validated after the login page). The only situation where this provider is not required, is when the Grant Type is Client Credentials.
-|===
 
 
 == See Also
