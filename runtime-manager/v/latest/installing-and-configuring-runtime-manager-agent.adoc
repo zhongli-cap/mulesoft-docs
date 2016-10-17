@@ -25,11 +25,10 @@ Mule 3.7.x and API Gateway 2.x provide an link:/runtime-manager/runtime-manager-
 ====
 
 
-
-
+////
 [INFO]
-If you're link:/runtime-manager/deploying-to-pcf[Deploying to Pivotal Cloud Foundry], then you don't need to worry about installing or configuring the Runtime Manager Agent. In that scenario, the agent functions as usual as the link between the Mule runtimes and the Runtime Manager. However, the same PCF buildPack that automatically creates new runtime instances also creates agent instances and registers these to the Runtime Manager. If you want to change the configuration of your agent instances, you must modify the buildPack.
-
+If you're deploying your applications to a [Pivotal Cloud Foundry] environment, then you don't need to worry about installing or configuring the Runtime Manager Agent. In that scenario, the agent functions as usual as the link between the Mule runtimes and the Runtime Manager. However, the same PCF buildPack that automatically creates new runtime instances also creates agent instances and registers these to the Runtime Manager. If you want to change the configuration of your agent instances, you must modify the buildPack.
+////
 
 == Prerequisites
 
@@ -68,8 +67,9 @@ Note that the latest version of the Mule runtime comes already bundled with this
 You can also find the download links to older versions of the Runtime Manager in the link:/release-notes/runtime-manager-agent-release-notes[release notes page]
 
 == Installing the Agent from the Zip File
-
-. Unzip the `mule-agent-[VERSION].zip` file to the `$MULE_HOME/bin` Mule software distribution folder.
+. Stop Mule or the API Gateway runtime. You can stop Mule with the `./bin stop` command or by killing the process.
+. Expand the `mule-agent-[VERSION].zip` file to the `$MULE_HOME/bin` Mule software distribution folder.
+. When prompted, replace (overwrite) any conflicting files (`amc_setup` and `amc_setup.bat`). 
 +
 [TIP]
 ====
@@ -80,7 +80,7 @@ The agent zip file contains these 3 files.
 * `agent-setup-<version>.jar` - Called by the installation files
 ====
 +
-. Depending on your OS, run `amc_setup` or `amc_setup.bat` on the command line to install the Runtime Manager Agent plugin.
+. Depending on your OS, run `amc_setup` or `amc_setup.bat` on the command line to install or update the Runtime Manager Agent plugin.
 
 
 *See the <<Installation Options>> section below for a the arguments that can be used when running this command.*
@@ -92,15 +92,16 @@ The installed Runtime Manager Agent works correctly with Mule and API Gateway ru
 
 == Updating a Previous Installation
 
-After downloading the Runtime Manager Agent zip file, determine if you can simply update an existing Runtime Manager Agent installation. Check on the corresponding link:/release-notes/runtime-manager-agent-release-notes[release notes].
+After downloading the Runtime Manager Agent zip file, determine if you can simply update an existing Runtime Manager Agent installation. Check on the corresponding link:/release-notes/runtime-manager-agent-release-notes[release notes]. 
 
-Compatible Mule and API Gateway runtimes ship with an older version of the `amc_setup` script. If you already ran an older version of this script to installed an earlier version of the Runtime Manager Agent, then follow these steps to keep your existing Runtime Manager Agent configuration and modifications:
+This section shows you how to update a previous Runtime Manager Agent installation. Otherwise, skip down to [Installation Options](#installation-options) to see how to install a new Runtime Manager Agent for the first time. 
 
 [TIP]
 If you're not sure if a prior version has already been installed, check the `$MULE_HOME/conf` folder. If a previous version was installed, then there should be a `mule_agent.yml` configuration file in that folder.
 
-. Stop Mule or the API Gateway runtime. You can stop Mule with the `./bin stop` command or by killing the process.
-. Unzip the `mule-agent-[VERSION].zip` to the `$MULE_HOME/bin` folder.
+Previous releases of compatible Mule and API Gateway runtimes shipped with an older version of the `amc_setup` script. If you already ran an older version of this script to install an earlier version of the Runtime Manager Agent, then follow these steps to keep your existing Runtime Manager Agent configuration and modifications:
+
+
 . Run `./amc_setup -U` to update the agent version. If you are using Windows, run: `amc_setup.bat -U`.
 +
 [TIP]
@@ -127,20 +128,48 @@ The amc_setup script makes the following changes to your Mule runtime installati
 
 == Installation Options
 
-You can always run `./amc_setup --help` to see the available properties for the installation command.
+If you are not updating a previous Runtime Manager Agent installation, or if you want to change some of the configuration options, then you may need to run the `amc_setup` command with other options.
 
-[TIP]
-On the Runtime Manager console, you can see a full example of the code you need to run by clicking the link:/runtime-manager/managing-servers#add-a-server[Add a Server] button. This sample already includes your specific organization's ID, so it's ready to use in case you don't need to configure anything beyond the default settings.
+There are three different ways to install and configure a Runtime Manager Agent. 
+
+. Connect a Runtime Manager Agent with a Anypoint Platform Runtime Manager cloud-based console.
+. Connect a Runtime Manager Agent with an Anypoint Platform On-Premises Edition Runtime Manager console. 
+. Connect a Runtime Manager Agent with a 3rd party monitoring console. 
+ 
+Each configuration choice has a different set of options for the `amc_setup` command. 
+
+You can run `./amc_setup --help` to see the available options for the installation command. 
+
+Most of the Runtime Manager Agent configuration options add configuration text to the `$MULE_HOME/conf/mule-agent.yml` file. Often you can combine several configuration options into a single `amc_setup` command, or you can add additional configurations later by re-running the `amc_setup` command with different (non-conflicting) options. For example, you can configure a Runtime Manager Agent to communicate with both a Runtime Manager server and with a 3rd party console. 
+
+Normally, you will configure a Runtime Manager Agent to communicate and exchange monitoring information with an Anypoint Platform Runtime Manager cloud console. This type of installation is performed using the `-H` option, using the security token provided by the Anypoint Platform Runtime Manager cloud console. Communication with either type of Anypoint Runtime Manager console is via websockets, and will be configured as a WebSockets transport in the `$MULE_HOME/conf/mule-agent.yml` file. 
+
+You can also configure a Runtime Manager Agent to communicate with other management consoles via one or more REST transports. These configuration options can be used in addition to the `-H` option. Each set of configuration options adds configuration sections to the `$MULE_HOME/conf/mule-agent.yml` file. In addition to using the `amc_setup` command, you can also backup various configuration options and manually edit the `$MULE_HOME/conf/mule-agent.yml`. Also, there are other configuration options that are not possible using the `amc_setup` command, such as extending JMX monitoring to other external services. MuleSoft provides several OpenSource JMX monitoring publishing modules for Cloudwatch, Graphite, Nagios, and Zabbix. The Nagios module is already included in Mule runtime. 
+Cloudwatch publishers: allows users to send JMX metrics to Amazon Cloudwatch.
+
+Graphite: provides Graphite JMX metrics integration.
+
+Nagios: provides integration with Nagios.
+
+Zabbix: module to send metrics to Zabbix instances.
+
+For further information please check the JMX section in Mule Agent documentation.
+  
+
+=== Installing a Mule runtime into an Anypoint Platform Runtime Manager cloud console
+The simplest way to install a new Runtime Manager Agent is to use the `-H` option. 
+
+In the Runtime Manager console, you can see a full example of the code you need to run by clicking the link:/runtime-manager/managing-servers#add-a-server[Add a Server] button. This example command already includes your specific organization's ID, so it's ready to use in case you don't need to configure anything beyond the default settings.
 
 
 Below is a table with the different arguments you can add to the `amc_setup` command. The required arguments differ depending on if you're registering your server to be managed via the cloud console of Runtime Manager, or to be managed by the Anypoint Platform On-Premises Edition (beta).
 
-
+////
 [tabs]
 ------
 [tab,title="Cloud Console"]
 ....
-
+////
 
 [%header,cols="20a,80a"]
 |===
