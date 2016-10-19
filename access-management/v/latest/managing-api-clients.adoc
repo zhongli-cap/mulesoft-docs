@@ -1,0 +1,82 @@
+= Managing API Clients
+
+Client Management allows any client connecting to your application to identify itself using OAuth 2.0.
+
+[NOTE]
+--
+Client management is only available for Enterprise Edition users
+--
+
+[CAUTION]
+Having a single audience (an Anypoint Platform organization) served by multiple issuers (multiple SAML provider instances) is currently not supported.
+
+== openAM
+
+If you want to use openAM for client management and if you're *not using* Anypoint Platform on premises, you need to request that your account be configured in that way, as you can't set this up manually. +
+Work with your MuleSoft account representative to ensure that we are aware of your needs for configuring your organization with openAM.
+
+Complete the link:https://docs.google.com/forms/d/1ZvNUWU3u0lzLk6H5R3lKcEN2Dcyg1zekc1HYtYIcZP0/viewform[OpenAM form] and MuleSoft will get back to you within 48 hours with either the completion of the configuration or follow-up questions to complete the configuration.
+
+[NOTE]
+====
+If you are using Anypoint Platform on premises, you do not need to provide this information to MuleSoft.
+====
+
+== Ping Federate
+
+If you want to use Ping Federate for client management and if you're *not using* Anypoint Platform on premises, you need to request that your account be configured in that way, as you can't set this up manually. +
+Work with your MuleSoft account representative to ensure that we are aware of your needs for configuring your organization with PingFederate.
+
+Complete the link:https://docs.google.com/a/mulesoft.com/forms/d/16ZQjXcLmuXO8140svkjUxywzkZjv01GTgbf_3kfEebQ/viewform[Ping Federate Form]. After you complete this form, MuleSoft gets back to you within 48 hours with either the completion of the configuration or follow-up questions to complete the configuration.
+
+[NOTE]
+====
+If you are using Anypoint Platform on premises, you do not need to provide this information to MuleSoft.
+====
+
+== External Oauth 2.0 Provider
+
+By deploying your application and exposing its API through an link:/api-manager/tutorial-create-an-api-portal[API Portal] you can apply an link:/api-manager/external-oauth-2.0-token-validation-policy[Oauth token validation policy] to manage your clients.
+
+You can generate link:/api-manager/browsing-and-accessing-apis#accessing-your-application-client-id-and-client-secret[API credentials] and grant them to your clients through an *external Oauth service provider*  +
+Learn how to create your own Oauth provider following link:/api-manager/building-an-external-oauth-2.0-provider-application[this tutorial].
+
+
+= Single Log Out
+
+Single log out is important so that a user or user agent can log out of an authenticated environment and ensure that both service providers and identity servers process the log out correctly.
+
+To configure single log out:
+
+. In PingFederate, click the *SP Configuration* for the Anypoint Platform.
+. Go to *Browser SSO* and click *Configure Browser SSO*.
+. Under *SAML Profiles*, ensure that these are set:
+** *IdP-Initiated SSO*
+** *IdP-Initiated SLO*
+** *SP-Initiated SLO*
+. Go to *Protocol Settings* and click *Configure Protocol Settings*.
+. Configure a *SLO Service Url* with the following:
+** *Binding*: POST
+** *Endpoint URL*: Set PARTNER_SP_ID to the correct value: `https://anypoint.mulesoft.com/accounts/logout/receive-id`
++
+It's also possible to control where the user is redirected after signing out. Most customers like to redirect the user to a different page so we allow you to configure that in your PingFederate's service provider configuration. You can add a `redirect_uri` query parameter to the SLO Service URL and the Anypoint Platform routes the user there rather than to the Anypoint Platform sign-in page.
++
+For example, if you want to route the users back to your signin page, make the URL:
++
+[source]
+----
+https://anypoint.mulesoft.com/accounts/logout/receive-id?redirect_uri=https%3A%2F%2Fanypoint.mulesoft.com%2Faccounts%2Flogin%2Fyour-domain
+----
++
+If you want to route the users back to your portal page, make the URL:
++
+[source]
+----
+https://anypoint.mulesoft.com/accounts/logout/receive-id?redirect_uri=https%3A%2F%2Fanypoint.mulesoft.com%2Fapiplatform%2Fyour-domain%2F%23%2Fportals
+----
++
+. Under *Allowable SAML Bindings*, click *Redirect*.
+. Under *Encryption Policy*, make certain that nothing is encrypted.
+. Save and click *Done* out of *Protocol Settings* and *Browser SSO*.
+. When viewing the *SP Configuration* for Anypoint Platform, go to *Credentials*, and click *Configure Credentials*.
+. Under *Signature Verification Settings*, click *Manage Signature Verification Settings*. Set the *Trust Model* to *Unanchored*, and import the link:_attachments/anypoint-platform-slo.pem[attached certificate]. Make it the active certificate.
