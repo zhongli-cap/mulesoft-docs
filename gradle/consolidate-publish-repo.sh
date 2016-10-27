@@ -6,8 +6,8 @@
 
 DRY_RUN=false
 QUIET_FLAG=
-MAX_AGE='3 week'
-FREQUENCY='1 month'
+MAX_AGE='1 month'
+FREQUENCY='1 week'
 REPO_DIR=_publish
 
 while getopts 'dqa:f:D:' option; do

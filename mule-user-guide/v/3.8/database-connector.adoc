@@ -1,8 +1,13 @@
 = Database Connector
 :keywords: database connector, jdbc, anypoint studio, data base, connectors, mysql, stored procedure, sql, derby, oracle
 :imagesdir: ./_images
+:toc: macro
+:toclevels: 2
+
 
 image:database-connector-icon.png[db conn icon]
+
+toc::[]
 
 == Introduction
 
@@ -120,11 +125,7 @@ In Mule version 3.7 and later, the following connector fields support MEL expres
 |- |- |Properties inside `connection-properties` element |Properties inside `connection-properties` element
 |===
 
-=== Adding a Generic Database Driver
 
-When using the *Generic* Database Configuration, you manually import the driver for your database engine, or preferably add it as a Maven dependency and specify the driver class as one of the connection parameters. This allows you to use the database connector with any database engine for which you have a driver.
-
-For details on configuring the database connector for any of the above scenarios, see the sections below.
 
 == Configuration Details for Database Engines Supported Out of the Box
 
@@ -262,6 +263,8 @@ a|`maxPoolSize` +
 * Acquire Increment
 * Prepared Statement Cache Size
 * Max Wait Millis
+
+Note: By default, no pool is used. A single connection is created for every request. You need to configure a Pooling Profile to use a pool.
 |===
 
 *Connection Properties  <db:connection-properties>*
@@ -282,11 +285,13 @@ a|`maxPoolSize` +
 ....
 ------
 
-=== Database Engines Not Supported Out of the Box - Generic Installation
+== Database Engines Not Supported Out of the Box - Generic Installation
 
 All databases that are not configured <<Database Engines Supported Out of the Box>> must be added through the generic database installation, and then configured accordingly.
 
-==== Adding the Database Driver for Generic DB Configuration
+=== Adding a Generic Database Driver
+
+When using the *Generic* Database Configuration, you manually import the driver for your database engine into your application as a referenced library, or preferably add it as a Maven dependency. Remember to later specify the fully qualified driver class as one of the connection parameters in the connector configuration. You can use the database connector with any database engine for which you have a driver.
 
 To install the database driver for a generic installation, follow the steps below.
 
@@ -315,7 +320,8 @@ image:referenced-libraries-in-proj.png[referenced-libraries-in-proj pack_explore
 [IMPORTANT]
 After adding the database driver for a database engine not supported out of the box, you need to enter the fully qualified name of the driver class in the global element referenced by the database connector. For details, see the next section.
 
-==== Configuration for Generic Database
+
+=== Configuration for Generic Database
 
 [tabs]
 ------
@@ -337,7 +343,6 @@ When browsing the available driver classes, type the beginning of the driver cla
 For a list of driver classes of commonly-used database engines, see <<Common Driver Class Specifications, Common Driver Class Specifications>> below.
 |===
 
-*Generic Database Configuration*
 
 image:generic-db-global-elem-props.png[generic-db-global-elem-props]
 
@@ -408,7 +413,7 @@ See also <<Fields That Support MEL Expressions, Fields That Support MEL Expressi
 ....
 ------
 
-==== Common Driver Class Specifications
+=== Common Driver Class Specifications
 
 When you configure a global element for a generic database server, you need to enter the fully qualified name of the driver class as explained in the Driver Class Name cell in the table above. Below are the driver class names provided by some of the most common database drivers.
 
@@ -418,6 +423,16 @@ When you configure a global element for a generic database server, you need to e
 |PostgreSQL |*postgresql-9.3-1101.jdbc3.jar* |*org.postgresql.Driver*
 |MS-SQL |*sqljdbc4.jar* |*com.microsoft.sqlserver.jdbc.SQLServerDriver*
 |===
+
+=== Example Generic Database Connector Configuration for PostgreSQL
+
+Taking PostgreSQL as an example, go to the properties window of the generic database connector configuration, specify the *Driver Class Name* and the connection *URL* as parameters: `org.postgresql.Driver` and `jdbc:postgresql://localhost:5432/tictactoe?password=pass&user=yourusername`. In XML format, this configuration would be:
+
+[source,xml,linenums]
+----
+<db:generic-config name="Generic_Database_Configuration" url="jdbc:postgresql://localhost:5432/tictactoe?password=pass&amp;user=yourusername" driverClassName="org.postgresql.Driver" doc:name="Generic Database Configuration">
+    </db:generic-config>
+----
 
 === Configuring a Database Connector Instance Inside a Flow
 
@@ -843,45 +858,33 @@ select * from emp where id = '#[payload.id]'
 ** The result iterator is consumed.
 ** There is an exception during the processing of the message (when the result iterator is in the payload of the current message).
 
-== User Defined Data Types
+== JDBC Data Types
 
-In Mule 3.6 and newer, you can define data types for use with the Database connector. This feature provides the ability to use array and struct types in a query, and stored stored procedure parameters and in values returned in result sets.
+In Mule 3.6 and newer, you can use link:/mule-user-guide/v/3.7/database-connector-reference#jdbc-data-types[JDBC data types] with the Database connector. This feature provides the ability to use JDBC supported types in a query; for example, array, struct, stored procedure parameters. You can also reference these types from a `resultSet` when querying a database, e.g. this MEL expression would give the first row,`#[payload[0]['resultsetID']]`. Omit the `[0]` index to get the whole result set.
 
-To use a user defined data type, define the type in the database configuration with the type ID corresponding to the structured data type, for example:
+To use a JDBC data type, define the type in the database configuration with the type ID corresponding to the structured data type (`java.sql.STRUCT` has ID of 2002, `java.sql.ARRAY` has ID of 2003):
 
 [source,xml,linenums]
 ----
 <db:oracle-config name="dbConfig" url="..." user="..." password="..."> 
     <db:data-types>
-         <!-- java.sql.STRUCT == 2002—>
          <db:data-type name="CONTACT_DETAILS" id="2002"/>
-         <!-- java.sql.ARRAY == 2003—> 
          <db:data-type name="CONTACT_DETAILS_ARRAY" id="2003"/>
   </db:data-types> 
 </db:oracle-config>
 ----
 
-For struct values, a *java.sql.Struct* is returned. In order to obtain the information, invoke the *getAttributes* method.
+=== Struct Type
 
-For array values, a *java.sql.Array* is returned. In order to obtain the corresponding Java array, invoke the getArray method on the *java.sql.Array* instance. This requires an open connection to the database, which means that the query returning the array must be executed inside a transactional scope or using streaming.
+If you created a type in your database using the syntax `CREATE TYPE xyz AS OBJECT` you have created a struct. The database connector understands this as `java.sql.Struct`. In order to obtain the information about the struct, use MEL to invoke the `getAttributes` method of this Java type.
 
-To work with input parameters of user defined data types, the values must be of type *java.sql.Struct* and *java.sql.Array* or any subclasses provided by the database driver. This means that, for example, the user defined type value returned on a result field can be used as input value in a another query. To create new values, the struct must be created using a java code. See link:https://docs.oracle.com/cd/B28359_01/java.111/b31224/oraoot.htm#i1039476[this example].
+=== Array Type
 
-The second part of the feature enables the ability to map a *java.sql.Struct* value to a custom Java class, that is, to do type mapping. This means that every time a column or output parameter of a mapped type is returned, instead of getting a *java.sql.Struct*, an instance of the mapped Java class is returned.
+For array values, the connector returns `java.sql.Array`. In order to obtain the corresponding Java array, invoke the `getArray` method on the `java.sql.Array` instance. This requires an open connection to the database, which means that the query returning the array must be executed inside a transactional scope or using streaming.
 
-The same occurs for arrays, where their elements are of the mapped class.
-For input parameters of a mapped Struct datatype, accepted values are instances of the mapped class instead of *java.sql.Struct* type.
+[IMPORTANT]
+To work with input parameters of user defined data types, the values must be of type *java.sql.Struct* and *java.sql.Array* or any subclasses provided by the database driver. This means that, the value returned in a result field can be used as an input value in a another query. To create new values, the struct must be created using Java code. See link:https://docs.oracle.com/cd/B28359_01/java.111/b31224/oraoot.htm#i1039476[this example].
 
-To enable this feature, include a className attribute when defining Struct data types:
-
-[source,xml,linenums]
-----
-<db:oracle-config name="dbConfig" url="..." user="..." password="..."> 
-    <db:data-types> 
-        <db:data-type name="CONTACT_DETAILS" id="2002" className="org.foo.ContactDetails"/> 
-    </db:data-types> 
-</db:oracle-config>
-----
 
 == Example MEL Expression for Database URL
 
