@@ -1,80 +1,142 @@
 = Authentication in HTTP Requests
 :keywords: http, authentication, security, users, connectors, anypoint, studio, oauth, basic auth, digest
 
-The HTTP Request Connector supports five types of authentication:
+Use the authentication that you configure in HTTP requests when your Mule app is sending requests to a service that requires authentication. In this case, your app is the client. On the other hand, when you want to protect your API or app from _receiving requests_ from unauthorized access, use an API Manager policy, such as the link:/api-manager/external-oauth-2.0-token-validation-policy[OAuth 2.0 Access Token Enforcement Using External Provider] policy.
+
+The HTTP request connector supports connecting a Mule app to a service that requires any of the following types of authentication:
 
 * <<Basic Authentication>>
-* NTLM authentication
+* NTLM authentication (Mule 3.7 and later)
 * <<Digest Authentication>>
 * *OAuth* authorization with  <<How the Authorization Code Grant Type Works - simplified, Authorization Code>> grant type
 * *OAuth* authorization with <<How the Client Credentials Grant Type Works - simplified, Client Credentials>> grant type
 
-
-[WARNING]
-====
-NTLM Authentication and Preemptive Basic Authentication are only supported on Mule 3.7 and later.
-====
-
-
-If the HTTP service you're sending requests to requires that you authenticate, then you must provide the necessary credentials in the global element that your connector references. These credentials will be added in an authorization header to every request done through an HTTP Request connector that references this global element.
+If the target HTTP service of your request requires that you authenticate, provide the necessary credentials in the global HTTP Request Configuration element that the HTTP request connector references, as shown in the examples in this section. Mule uses the credentials you configure in an authorization header sent with every request through the HTTP request connector.
 
 With OAuth authentication, you can also provide TLS settings to encrypt your OAuth credentials.
 
 == Basic Authentication
 
+This example builds and runs an app in Studio that sends a request to the link:https://developer.github.com/v3[Github API] for user information. The Github API accepts requests for user information on port 443 to https://api.github.com/user. 
+
+To comply with the basic authentication requirements, the app provides the Github user name and password. You configure the HTTP Request Connector to provide these credentials.
+
+This example requires that you have a Github account.
+
+*To call the Github API, first set up an HTTP listen connector:*
+
 [tabs]
 ------
 [tab,title="Studio Visual Editor"]
 ....
-. Drag an HTTP Connector to your canvas, create a new Connector Configuration element for it
-. Select the *Authentication* tab
-. In the Protocol dropdown menu, pick *Basic*
-. Provide your *Username* and *Password* (or references to properties that contain them).
 
-image:authentication-in-http-requests-af80b.png[basic auth for http request]
-....
-[tab,title="XML Editor"]
-....
-Just add a child element to the global element, in it add the user and password attributes.
+. In Studio, create a new Mule project: *File* > *New* > *Mule Project*.
+The New Mule Project dialog appears.
+. In Project Settings, set the following options for the HTTP Listen Connector:
++
+* *Project Name*: `myproject`
+* *Runtime*: Select or accept the default `Mule Server 3.8.0 EE` or later.
+. Drag an HTTP component from the palette to the Source section of the flow.
+. In the properties editor, accept the default *Path* `/` and set *Allowed Methods* to GET.
+. In Connector Configuration, click image:Add-16x16.png[Add-16x16].
++
+The HTTP Request Configuration dialog appears.
+. Click OK to accept the following options:
++
+* Name: HTTP_Request_Configuration
+* Protocol: HTTP
+* Host: 0.0.0.0
+* Port: 8081
++
+. Click OK.
+. Save changes.
++
+The error indicator disappears.
 
-[source, xml, linenums]
+*Next, set up an HTTP request connector:*
+
+. Drag another HTTP connector from the palette, and drop it in the Process area of the flow.
+. In the properties editor, in Connector Configuration, click image:Add-16x16.png[Add-16x16].
++
+The HTTP Request Configuration dialog appears.
++
+. Set the following HTTP Request Configuration options:
++
+* *Name*: Accept `HTTP_Request_Configuration`.
+* *Protocol*: *HTTPS*
+* *Host*: `api.github.com`
+* *Port*: `443`
++
+. On the *Authentication* tab, select *Basic* protocol.
+. In Username, type your Github user name.
+. In Password, type either your Github password or a link:https://github.com/settings/tokens[personal access token].
+. Check the *Preemptive* check box, and click OK.
++
+The pre-emptive option passes the user name and password without waiting for a prompt from the server.
++
+. In the properties editor, set the following options for the HTTP Request connector:
+* *Path*: `/user`
++
+* *Method*: Select GET from the drop-down.
++
+. Save changes.
+
+*Format the output in JSON:*
+
+. Drag a Transform Message component from the palette to the right of the HTTP request component.
+. In the properties editor, change the output of the payload as follows:
++
 ----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP Request Configuration">
-        <http:basic-authentication username="myuser" password="mypass"/>
-    </http:request-config>
+%dw 1.0
+%output application/json
+---
+  payload
+----
 
-<flow name="basicauth_flow">
+*Finally, run the app:*
+
+. Right-click the project name in project explorer, and choose *Run as* > *Mule Application*.
++
+The console shows that the app is deployed.
+. Call the app using the following URL in a browser: `+http://localhost:8081/+`
++
+The Github API returns your user information.
++
+----
+{
+    "login":"kahn",
+    "id":16xxx343,"avatar_url":"https://avatars.githubusercontent.com/u/16xxx343?v=3"`
     ...
-    <http:request config-ref="HTTP_Request_Configuration" path="test" method="GET" />
-
-</flow>
+}
 ----
-
-....
-------
-
-In this example, a GET request is sent to link:http://www.example.com/test[www.example.com/test], adding an "Authorization" header with the provided username and password.
-
-=== Preemptive Basic Auth
-
-You can easily make Basic Auth work preemptively, changing the way credentials are required.
-
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-When configuring the Basic Auth credentials of your connector, tick the *Preemptive* checkbox.
 
 ....
 [tab,title="XML Editor"]
 ....
-Add the attribute `preemptive="true"` on your `basic-authentication`element in the global configuration of the connector:
+
 
 [source, xml, linenums]
 ----
-<http:request-config name="HTTP_Request_Configuration" doc:name="HTTP Request Configuration">
-     <http:basic-authentication username="myuser" password="mypass" preemptive="true"/>
-</http:request-config>
+<?xml version="1.0" encoding="UTF-8"?>
+
+...
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <http:request-config name="HTTP_Request_Configuration" protocol="HTTPS" host="api.github.com" port="443" doc:name="HTTP Request Configuration">
+        <http:basic-authentication username="krishahn" password="7e54652da3e5e3961dca1660a223e4c630cef921" preemptive="true"/>
+    </http:request-config>
+    <flow name="myprojectFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
+        <http:request config-ref="HTTP_Request_Configuration" path="/user" method="GET" doc:name="HTTP"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+  payload]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+</mule>
+ </mule>
+
 ----
 
 ....
