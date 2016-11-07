@@ -126,7 +126,7 @@ In Mule version 3.7 and later, the following connector fields support MEL expres
 |===
 
 
-
+[[config-out-of-box]]
 == Configuration Details for Database Engines Supported Out of the Box
 
 Currently, the following database engines are supported out of the box:
@@ -263,6 +263,8 @@ a|`maxPoolSize` +
 * Acquire Increment
 * Prepared Statement Cache Size
 * Max Wait Millis
+
+Note: By default, no pool is used. A single connection is created for every request. You need to configure a Pooling Profile to use a pool.
 |===
 
 *Connection Properties  <db:connection-properties>*
@@ -285,7 +287,7 @@ a|`maxPoolSize` +
 
 == Database Engines Not Supported Out of the Box - Generic Installation
 
-All databases that are not configured <<Database Engines Supported Out of the Box>> must be added through the generic database installation, and then configured accordingly.
+All databases that are not configured link:#config-out-of-box[Database Engines Supported Out of the Box] must be added through the generic database installation, and then configured accordingly.
 
 === Adding a Generic Database Driver
 
@@ -856,11 +858,16 @@ select * from emp where id = '#[payload.id]'
 ** The result iterator is consumed.
 ** There is an exception during the processing of the message (when the result iterator is in the payload of the current message).
 
-== JDBC Data Types
+== JDBC User-Defined Data Types
 
-In Mule 3.6 and newer, you can use link:/mule-user-guide/v/3.7/database-connector-reference#jdbc-data-types[JDBC data types] with the Database connector. This feature provides the ability to use JDBC supported types in a query; for example, array, struct, stored procedure parameters. You can also reference these types from a `resultSet` when querying a database, e.g. this MEL expression would give the first row,`#[payload[0]['resultsetID']]`. Omit the `[0]` index to get the whole result set.
+In Mule 3.6 and newer, you can use user-defined data types with the Database connector. This feature provides the ability to use JDBC supported types in a query; for example, array, struct, and other types. 
 
-To use a JDBC data type, define the type in the database configuration with the type ID corresponding to the structured data type (`java.sql.STRUCT` has ID of 2002, `java.sql.ARRAY` has ID of 2003):
+To use a JDBC data type, specify the type in the database configuration by the name of the type, along with type ID corresponding to the structured data type.
+
+[TIP]
+See the link:/mule-user-guide/v/3.8/database-connector-reference#jdbc-user-defined-data-types-udt[list of supported types]. 
+
+Here in the example below you can see `java.sql.STRUCT` is referenced using ID of 2002, and `java.sql.ARRAY` as 2003:
 
 [source,xml,linenums]
 ----
@@ -878,10 +885,32 @@ If you created a type in your database using the syntax `CREATE TYPE xyz AS OBJE
 
 === Array Type
 
-For array values, the connector returns `java.sql.Array`. In order to obtain the corresponding Java array, invoke the `getArray` method on the `java.sql.Array` instance. This requires an open connection to the database, which means that the query returning the array must be executed inside a transactional scope or using streaming.
+For array values, the connector returns `java.sql.Array`. In order to obtain the corresponding Java array, invoke the `getArray` method on the `java.sql.Array` instance. This requires an open connection to the database, which means that the query returning the array must be executed inside a link:/mule-user-guide/v/3.8/transactional[transactional scope] or using streaming, checking the box in the connector properties pane.
 
-[IMPORTANT]
-To work with input parameters of user defined data types, the values must be of type *java.sql.Struct* and *java.sql.Array* or any subclasses provided by the database driver. This means that, the value returned in a result field can be used as an input value in a another query. To create new values, the struct must be created using Java code. See link:https://docs.oracle.com/cd/B28359_01/java.111/b31224/oraoot.htm#i1039476[this example].
+[NOTE]
+The value returned in a result set can be used as an input value in another query. You can mine into the result set using MEL and or the For Each component. For example, this MEL expression, `#[payload[0]['resultsetID']]` would give the first row. Omit the `[0]` index to get the whole result set.
+
+=== Passing User-Defined Data Types to Stored Procedure
+
+To pass a user-defined data type to a stored procedure, the data type should be specified in the database configuration with a number `id` identifying the link:/mule-user-guide/v/3.8/database-connector-reference#jdbc-user-defined-data-types-udt[JDBC type] it conforms to. The parameter you pass to the stored procedure should be referenced by the name of the data type:
+
+.Example Database Connector Setup for UDT Parameters
+[source,xml,linenums]
+----
+<db:oracle-config name="Oracle_Configuration" url="jdbc:oracle:thin:@54.175.245.218:1581:xe" user="user" password="4321" >
+    </db:oracle-config>
+    <db:data-type name="INtypename" id="12"/>
+    <!-- VARCHAR id=12  -->
+    <db:data-type name="OUTtypename" id="2002"/>
+    <!-- STRUCT id=2002  -->
+    </db:data-types>
+    ...
+    <db:stored-procedure config-ref="Generic_Database_Configuration" doc:name="Database">
+        <db:parameterized-query><![CDATA[CALL storedprocfnc(:INtypename,:OUTtypename);]]></db:parameterized-query>
+            <db:in-param name="INtypename" value="#[payload]"/>
+            <db:out-param name="OUTtypename" />
+    </db:stored-procedure>
+----
 
 
 == Example MEL Expression for Database URL
