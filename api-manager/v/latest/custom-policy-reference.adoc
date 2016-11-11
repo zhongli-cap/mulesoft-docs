@@ -512,10 +512,6 @@ Although you can use any message processor that is available in Mule to build yo
 
 You can use the following minimal policy configuration file to start building your custom policy:
 
-[tabs]
-------
-[tab,title="Mule 3.8 Runtime, API Gateway 2.x"]
-....
 [source,xml,linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
@@ -544,51 +540,12 @@ You can use the following minimal policy configuration file to start building yo
 </policy> 
 ----
 
-
-....
-[tab,title="Early API Gateway"]
-....
-
-*API Gateway 1.3 and earlier*
-
-[source,xml,linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-<policy xmlns="http://www.mulesoft.org/schema/mule/policy"
-        xmlns:mule="http://www.mulesoft.org/schema/mule/core"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
-        xsi:schemaLocation="http://www.mulesoft.org/schema/mule/policy http://www.mulesoft.org/schema/mule/policy/current/mule-policy.xsd
-                            http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-                            http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd">
- 
-    <before>
-        <mule:set-payload value="PRE" />
-    </before>
- 
-    <after>
-        <mule:set-payload value="POST" />
-    </after>
- 
-    <pointcut>
-       <api-platform-gw:api-pointcut apiName="{{ apiName }}" apiVersion="{{ apiVersionName }}"/>
-    </pointcut>
- 
-</policy> 
-----
-....
-------
-
 == Full Example of a Policy Configuration File
 
 Below is an example of a policy configuration file that implements an IP whitelist filter. It matches the YAML example displayed above, both are needed to create this policy. This XML file references several variables enclosed in curly brackets that the YAML file defines.
 
 The IP whitelist filter policy adds a validation that requires all requests to contain a valid IP Address based on a valid list of IPs  configured.
 
-[tabs]
-------
-[tab,title="Mule 3.8.0 Runtime, API Gateway 2.x"]
-....
 [source,xml,linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
@@ -630,50 +587,3 @@ The IP whitelist filter policy adds a validation that requires all requests to c
 </policy>
 ----
 
-
-....
-[tab,title="Earlier API Gateway"]
-....
-
-*API Gateway 1.3 and earlier*
-
-[source,xml,linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-<policy online="true"
-        xmlns="http://www.mulesoft.org/schema/mule/policy"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xmlns:spring="http://www.springframework.org/schema/beans"
-        xmlns:mule="http://www.mulesoft.org/schema/mule/core"
-        xmlns:ip-filter-gw="http://www.mulesoft.org/schema/mule/ip-filter-gw"
-        xsi:schemaLocation="http://www.mulesoft.org/schema/mule/policy http://www.mulesoft.org/schema/mule/policy/current/mule-policy.xsd
-        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
-        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-        http://www.mulesoft.org/schema/mule/ip-filter-gw http://www.mulesoft.org/schema/mule/ip-filter-gw/current/mule-ip-filter-gw.xsd">
- 
-     <!-- This section is for building response messages when the policy fails. -->
-    <mule:processor-chain name="{{policyId}}-build-response">
-        <mule:set-property propertyName="http.status" value="403"/> <!-- Set HTTP status code to 403 -->
-        <mule:set-property propertyName="Content-Type" value="application/json"/>
-        <mule:set-payload value="#[_ipViolationMessage]"/> <!-- Set the payload to the description of the violation -->
-    </mule:processor-chain>
- 
-    <!-- This is the element that gets injected at the beginning of every flow. According to the pointcut specified below. -->
-    <before>
-        <ip-filter-gw:filter ipAddress="{{ipExpression}}" onUnaccepted="{{policyId}}-build-response">   <!-- If failed, the mule:processor-chain above is executed -->
-            <ip-filter-gw:whitelist>
-                {{#ips}}
-                <ip-filter-gw:ip>{{.}}</ip-filter-gw:ip>
-                {{/ips}}
-            </ip-filter-gw:whitelist>
-        </ip-filter-gw:filter>
-    </before>
- 
-    <!-- Pointcuts specify where this policy takes effect-->
-    <pointcut>
-       <api-platform-gw:api-pointcut apiName="{{ apiName }}" apiVersion="{{ apiVersionName }}"/>
-    </pointcut>
-</policy>
-----
-....
-------
