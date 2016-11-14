@@ -20,6 +20,7 @@ For production usage, it’s recommend to have at least 3 servers with the follo
 |HDD 2 (for System data) | 100GB
 |HDD 3 (for Application data)| 250GB
 |HDD 4 (for Docker) | 100GB
+|HDD 5 (for etcd) | 20GB
 |Networking (connectivity between hosts)  |1GbE
 |===
 
@@ -53,11 +54,15 @@ Once finished adding that disk, create another disk for HDD3, this time at least
 
 image:vmware_add_new_hd_4.png["Size this disk to 250GB"]
 
-And finally, create another disk for HDD4, this time at least 100GB:
+Next, create another disk for HDD4, this time at least 100GB:
 
 image:vmware_add_new_hd_5.png["Size this disk to 100GB"]
 
-When finished, your virtual machine should show 4 disks, similar to the following view:
+Finally, create another disk for HDD5, this time 20GB:
+
+image:vmware_add_new_hd_6.png["Size this disk to 20GB"]
+
+When finished, your virtual machine should show 5 disks, similar to the following view:
 
 image:vmware_done_disks.png["Finished virtual machine settings"]
 
@@ -170,6 +175,21 @@ sudo systemctl daemon-reload
 sudo systemctl start var-lib-gravity.mount
 ----
 
+=== Etcd device
+
+The main purpose of the etcd device is to provide dedicated storage for a distributed database used for cluster coordination. It does not require much space, 20GB should be enough.
+
+This device will be formatted either as `xfs` or `ext4` and mounted as `/var/lib/gravity/planet/etcd`. You can use the following shell snippet to guide this process (be sure to specify the correct device name in 2 places):
+
+----
+sudo mkfs.ext4 /dev/<device name>
+sudo mkdir -p /var/lib/gravity/planet/etcd
+echo -e "[Mount]\nWhat=/dev/<device name>\nWhere=/var/lib/gravity/planet/etcd\nType=ext4\n[Install]\nWantedBy=local-fs.target" | sudo tee /etc/systemd/system/var-lib-gravity-planet-etcd.mount
+sudo systemctl daemon-reload
+sudo systemctl start var-lib-gravity-planet-etcd.mount
+----
+
+
 === Anypoint application data device
 
 The main purpose of applicaiton data directory is storing application configuration and data. The amount of space required should be at minimum 250GB, but might vary depending on your specific usecase. It is important to estimate the minimum size requirements and allocate enough space as a dedicated device ahead of time.
@@ -184,7 +204,7 @@ sudo systemctl daemon-reload
 sudo systemctl start var-lib-data.mount
 ----
 
-=== Docker Device Mapper
+=== Docker device
 
 This device is used by Docker’s Device Mapper storage driver.
 
