@@ -90,7 +90,7 @@ Depending on your MySQL server version, execute the appropriate script in the ta
 
 [NOTE]
 ====
- Creating the database, user and tables with the mysql utility
+Creating the database, user and tables with the `mysql` utility
 
 . Open a terminal and run the `mysql` utility with the following command.
 . `mysql` prompts you for root's user password. Enter the password, and you should see the following `mysql` prompt.
@@ -138,7 +138,7 @@ Configuring MMC to store data on a MySQL database involves two basic tasks:
 * Modifying the file `web.xml` to tell MMC to use MySQL instead of its default database
 * Modifying the file `mmc-mysql.properties` to set the parameters for connecting to the MySQL database
 
-===== Modifying `web.xml`
+===== Modifying web.xml
 
 . In the directory `<MMC_HOME>/WEB-INF`, locate the file `web.xml`, then open it for editing.
 . Locate the `spring.profiles.active` section, shown below.
@@ -164,7 +164,7 @@ Configuring MMC to store data on a MySQL database involves two basic tasks:
 . If you are also planning to <<Persisting Transaction Data>> to MySQL, delete the string `tracking-h2` and replace it with `tracking-mysql`.
 
 [TIP]
-The `spring.profiles.active` section in the `web.xml` configuration file allows you to define what external databases are used for storing environment and/or tracking data. For a quick instructions for all supported database servers, see link:http://www.mulesoft.org/documentation/display/current/Copy+of+Configuring+MMC+for+External+Databases+-+Quick+Reference[Configuring MMC for External Databases - Quick Reference].
+The `spring.profiles.active` section in the `web.xml` configuration file allows you to define what external databases are used for storing environment and/or tracking data.
 
 ===== Modifying `mmc-mysql.properties`
 
@@ -210,7 +210,7 @@ Both actions are described in the following two sections.
 . To check that the MySQL server allows remote database connections, locate the MySQL server configuration file, for example `/etc/mysql/my.cnf`. 
 . Search for the following line.
 
-[source, code, linenums]
+[source]
 ----
 bind-address        = 127.0.0.1
 ----
@@ -220,7 +220,7 @@ bind-address        = 127.0.0.1
 .. 1.  Stop the MySQL server.
 .. Open the configuration file for editing, then comment out the line with a number sign (#), as shown below.
 
-[source, code, linenums]
+[source]
 ----
 # bind-address      = 127.0.0.1
 ----
@@ -231,7 +231,7 @@ bind-address        = 127.0.0.1
 
 . To grant remote database access to your database user, login to MySQL as the MySQL server root user, using the following command.
 
-[source, code, linenums]
+[source]
 ----
 mysql -u root -D mysql -p
 ----
@@ -239,7 +239,7 @@ mysql -u root -D mysql -p
 . Enter the password for root.
 . Obtain the 41-digit hexadecimal representation of the database user's password (in this case, the password for user MMC_STATUS) by running the following command.
 
-[source, code, linenums]
+[source]
 ----
 SELECT * FROM user WHERE User = '<user>';
 ----
@@ -264,14 +264,14 @@ GRANT ALL PRIVILEGES ON <database>.* TO '<user>'@'<host|net>' IDENTIFIED BY PASS
 
 . Tell the MySQL server to reload the grant tables, with the following command.
 
-[source, code, linenums]
+[source]
 ----
 FLUSH PRIVILEGES;
 ----
 
 [NOTE]
 ====
- Details and usage example for the GRANT ALL PRIVILEGES command
+Details and usage example for the GRANT ALL PRIVILEGES command
 
 The value of `<host|net>` can either be a host or network specification. Wildcards are allowed, such as `'MMC_STATUS'@'172.16.0.%'`.
 
@@ -282,7 +282,7 @@ A complete command example follows.
 
 [NOTE]
 ====
- Testing the remote connection with the telnet command
+Testing the remote connection with the telnet command
 
 If you are unsure of the MySQL server configuration, _but are certain that you have connectivity to the MySQL server host and port_ (i.e. you are sure there are no routing issues, firewalls, etc. blocking connectivity), then you can use the `telnet` command to do a remote test of the MySQL server.
 
@@ -336,7 +336,7 @@ Configuring MMC to store Business Events data on a MySQL database involves two b
 * Modifying the file `web.xml` to tell MMC to use MySQL instead of its default database
 * Modifying the file `tracking-persistence-mysql.properties` to set the parameters for connecting to the MySQL database
 
-===== Modifying `web.xml`
+===== Modifying web.xml
 
 . In the directory `<MMC_HOME>/WEB-INF`, locate the file `web.xml`, then open it for editing.
 . Locate the `spring.profiles.active` section, shown below.
@@ -362,9 +362,9 @@ Configuring MMC to store Business Events data on a MySQL database involves two b
 . If you are also planning to <<Persisting Environment Data>> to MySQL, delete the string `env-derby` and replace it with `env-mysql`.
 
 [TIP]
-The `spring.profiles.active` section in the `web.xml` configuration file allows you to define what external databases are used for storing environment and/or tracking data. For a quick instructions for all supported database servers, see link:http://www.mulesoft.org/documentation/display/current/Copy+of+Configuring+MMC+for+External+Databases+-+Quick+Reference[Configuring MMC for External Databases - Quick Reference].
+The `spring.profiles.active` section in the `web.xml` configuration file allows you to define what external databases are used for storing environment and/or tracking data. 
 
-==== Modifying `tracking-persistence-mysql.properties`
+==== Modifying tracking-persistence-mysql.properties
 
 . In the directory `<MMC_HOME>/WEB-INF/classes/META-INF/databases`, locate the file `tracking-persistence-mysql.properties`, then open it for editing.
 . Modify the included settings as needed, according to the table below. In general, the only values that you should need to modify are `mmc.tracking.db.username`, `mmc.tracking.db.password`, `mmc.tracking.db.host`, `mmc.tracking.db.port` and `mmc.tracking.db.dbname`.
@@ -394,7 +394,87 @@ In the root directory of your Web application server, locate the `mmc-data` dir
 [NOTE]
 Before you delete `mmc-data`, make a backup copy of this directory and store it in a safe location. If anything goes wrong with your new database configuration, you can use `mmc-data` to restore the old database configuration while you troubleshoot your new database config in a test environment.
 
-At this point, MMC, is configured to store environment data on the external MySQL database that you specified. 
+At this point, MMC, is configured to store environment data on the external MySQL database that you specified.
+
+== Modifying the Cleanup Script for MySQL
+
+MMC includes a script to perform a routine cleanup of the MMC database, which by default takes place every day at midnight. The current script for MySQL contains a bug which causes MySQL to throw an SQL exception. To avoid this issue, replace the original script with the one provided below, by completing the following steps.
+
+[[newscript]]
+
+[source,java,linenums]
+----
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import com.mulesoft.mmc.tracking.repository.jpa.entities.*
+
+import java.util.Calendar;
+
+def logger = log
+
+def oneWeekAgo = Calendar.getInstance()
+oneWeekAgo.add(Calendar.DAY_OF_MONTH, -7);
+
+log.info("About to delete all tracking details older than "+oneWeekAgo.getTime());
+
+DriverManagerDataSource ds = applicationContext.getBean("dataSource");
+
+Properties properties = new Properties();
+properties.put("openjpa.jdbc.DBDictionary", "mysql");
+properties.put("javax.persistence.jdbc.url", ds.getUrl());
+properties.put("javax.persistence.jdbc.user", ds.getUsername());
+properties.put("javax.persistence.jdbc.password", ds.getPassword());
+properties.put("openjpa.ConnectionDriverName", "com.mysql.jdbc.Driver");
+
+EntityManagerFactory emf = null;
+EntityManager em = null;
+
+try {
+
+    emf = Persistence.createEntityManagerFactory("tracking-persistence-unit", properties);
+
+    em = emf.createEntityManager();
+
+    em.getTransaction().begin();
+
+    em.createNativeQuery("DELETE p FROM EVENT_PROPERTIES p where p.id in (select e.id from EVENTS e where e.transaction_id in (select t.id from TRANSACTION_SUMMARIES t where t.timestamp < ?1))").setParameter(1, oneWeekAgo).executeUpdate();
+
+    em.createNamedQuery(EventEntity.DELETE_OLDER_THAN_QUERY_NAME).setParameter("timestamp", oneWeekAgo).executeUpdate();
+            em.createNamedQuery(TransactionSummaryEntity.DELETE_OLDER_THAN_QUERY_NAME).setParameter("timestamp", oneWeekAgo).executeUpdate();
+
+    em.getTransaction().commit();
+
+} catch (RuntimeException re)
+    {
+        if (em?.getTransaction()?.isActive()) {
+            em.getTransaction().rollback();
+        }
+        throw re;
+    }
+
+finally {
+    em?.close();
+    emf?.close();
+}
+----
+
+=== Replacing the Old Script
+
+. Log in to MMC.
+. Go to the Administration tab, then Admin Shell. You should see the following screen.
++
+image:admin_shell.png[admin_shell]
++
+. Click Cleanup Tracking DB in the column to the right. This displays the contents of the script in the editor box, as shown below.
++
+image:admin_shell2.png[admin_shell2]
++
+. Now you can edit the script as desired. Delete all of the contents of the script, leaving the editor blank.
+. Copy-paste the new script into the editor.
+. Click *Save As* under the editor.
+. In the input field next to *Save As*, type `Cleanup Tracking DB` (case sensitive), then click Save. This causes the xref:newscript[new script] to overwrite the old one.
 
 == See Also
 
