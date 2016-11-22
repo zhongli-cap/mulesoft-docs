@@ -136,11 +136,11 @@ For more information on how to build this configuration file, refer to the link:
 == Configuring Logs for Runtime Manager Agent
 
 [NOTE]
-This configuration is only valid when using Mule Runtime 3.8.2 and later, together with the Runtime Manager agent 1.5.2 and later.
+This configuration is only valid when using the Runtime Manager agent 1.5.2 and later.
 
-If you want to log your Runtime Manager Agent state in a separate file from the other Mule log info, you can set up your log configuration file to do this.
+If you want to log your Runtime Manager Agent state in a different location other than the default 'mule_agent.log' file, you can set up your log configuration file to do this.
 
-You can configure your '$MULE_HOME/conf/log4j2.xml' file to include a 'mule-agent-appender', if included, the Runtime Manager Agent plugin logs messages about its state on a separate file named `mule_agent.log`.
+You can configure your '$MULE_HOME/conf/log4j2.xml' file to include a new Log4j2 Appender called 'mule-agent-appender'. If included, the Runtime Manager Agent plugin will use this appender to log its state.
 
 Your `log4j2.xml` file should include something like the following snippet to enable this functionality:
 
@@ -150,11 +150,21 @@ Your `log4j2.xml` file should include something like the following snippet to en
 
   (...)
 
-        <Syslog name="mule-agent-appender" host="localhost" port="514" protocol="UDP" appName="hybrid-rest" facility="LOCAL6"/>
+    <RollingFile name="mule-agent-appender" fileName="./logs/custom_mule_agent.log" filePattern="./logs/custom_mule_agent.log-%d{MM-dd-yyyy}.log.gz">
+        <PatternLayout>
+            <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>
+        </PatternLayout>
+        <Policies>
+            <TimeBasedTriggeringPolicy />
+            <SizeBasedTriggeringPolicy size="250 MB"/>
+        </Policies>
+    </RollingFile>
 </Appenders>
 ----
 
-This will make the Runtime Manager agent log its syslog data on a file named `mule_agent.log` as well as the `mule_ee.log` file where it logs everything by default.
+The above example makes the Runtime Manager agent log its state to a rolling log file in '$MULE_HOME/logs/custom_mule_agent.log', which rolls on a per day basis and until the file reaches a 250MB size.
+
+Another Log4j2 appender configurations could be found in https://logging.apache.org/log4j/2.x/manual/appenders.html
 
 
 == Exception Handling With Asynchronous Logging
