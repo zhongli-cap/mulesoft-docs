@@ -25,6 +25,16 @@ Understanding how to link:/runtime-manager/cloudhub-dedicated-load-balancer#mana
 
 Create a custom self-signed certificate for the domain `lb-tutorial-cert`. +
 
+[NOTE]
+--
+Keep in mind that self-signed certificates are usually set for testing purposes or specific internal usages. You should not use this self-signed certificate in production.
+
+There are plenty of link:http://www.akadia.com/services/ssh_test_certificate.html[useful tutorials for creating a self-signed certificate].
+
+The following guide shows you how to create a self-signed certificate to use in this example.
+--
+
+
 . In your terminal type, `cd` to your `Documents` folder:
 +
 [source,Example]
@@ -68,18 +78,18 @@ lb-tutorial  // <3>
 --http on // <5>
 --verificationMode on
 ----
-<1> Pass `vpc-tutorial` as the vpc name in which you want to create the load balancer. +
+. Pass `vpc-tutorial` as the vpc name in which you want to create the load balancer. +
 In order to keep consistency among tutorials, we are using components created in the link:/runtime-manager/vpc-tutorial[VPC tutorial].
-<2> Name the load balancer `lb-tutorial`. +
+. Name the load balancer `lb-tutorial`. +
 The load balancer's name must be unique. +
 Each load balancer has an internal domain name: `internal-<lb-name>.lb.anypointdns.net` where `<lb-name>` is the name you set here.
-<3> Pass the path to a `.pem` file certificate and its key +
+. Pass the path to a `.pem` file certificate and its key +
 We are using the self-signed certificate created earlier, along with its private key: `cert.pem` and `key.pem`. +
 The certificate that you upload to the Load Balancer must be contained in one *_pem_ encoded* and *unencrypted* file. +
 Your private key file needs to be *passphraseless*.
-<4> Set the option for the http method to `on`. +
+. Set the option for the http method to `on`. +
 This sets the load balancer to accept all http requests and forwards it to your default SSL endpoint. In this case, the only ssl endpoint configured is `lb-tutorial-cert`
-<5> Set the option for the verificationMode to `on` +
+. Set the option for the verificationMode to `on` +
 This instructs the SSL endpoint to always verify the certificate
 
 When the operation succeeds, the CLI displays the details of the newly created load balancer.
@@ -119,23 +129,30 @@ lb-tutorial // <2>
 /
 ----
 
-<1> Set `lb-tutorial` as the target for this new mapping rule
-<2> Set the index priority for this mapping rule to `0` +
+. Set `lb-tutorial` as the target for this new mapping rule
+. Set the index priority for this mapping rule to `0` +
 This rule now has the first priority.
-<3> Set the input URL as `/{app}/` +
+. Set the input URL as `/{app}/` +
 This rule uses patterns so that every value passed as `{app}` in the load balancer's domain name: `lb-tutorial.lb.anypointdns.net/{app}` gets mapped to the URL set as the output URL.
-<4> Set the output URL to `{app}` +
+. Set the output URL to `{app}` +
 So that the domain `lb-tutorial.lb.anypointdns.net/{app}` gets mapped to `{app}.cloudub.io/` using the pattern `{app}` to match your application's name.
-<5> Set the appURI to `/` to redirect to the initial path of your application.
+. Set the appURI to `/` to redirect to the initial path of your application.
 
 [CAUTION]
 --
-By default your load balancer listens external requests on https and communicates with your workers internally through http. You need to configure your application to listen through http on port 8091 for your load balancer to work.
+By default your load balancer listens external requests on https and communicates with your workers internally through http. +
+If you configured your Mule application within the VPC to listen on https, make sure you set `upstreamProtocol` to https when creating the mapping list using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-add[load-balancer mappings add] command.
 --
 
 == Update an Existing Load Balancer
 
-Although it is not possible to update certain values from your VPC through the Anypoint Platform CLI, you can use the link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/8617/versions/85955/pages/107964[Cloudhub API] to programmatically manage and update your load balancer:
+It is possible to edit the Whitelists, Mapping Rules and SSL Endpoints from the Anypoint Platform CLI.
+
+Remove the existing configuration using `load-balancer whitelist remove`, `load-balancer mappings remove` and `load-balancer ssl-endpoint remove` respectively and add the new configurations.
+
+=== Update an Existing Load Balancer Using the CloudHub API
+
+Although it is not possible to update certain load balancer values through the Anypoint Platform CLI, you can use the link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/8617/versions/85955/pages/107964[Cloudhub API] to programmatically manage and update your load balancer:
 
 . Log in to the CloudHub services passing your credentials to `https://anypoint.mulesoft.com/accounts/login`.
 . Use the `organizations/{orgId}/vpcs/{vpcId}/loadbalancers/{lbId}` endpoint to update your load balancer.

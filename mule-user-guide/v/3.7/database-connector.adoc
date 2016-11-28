@@ -823,7 +823,7 @@ select * from emp where id = '#[payload.id]'
 
 == JDBC Data Types
 
-In Mule 3.6 and newer, you can use link:/mule-user-guide/v/3.7/database-connector-reference#jdbc-data-types[JDBC data types] with the Database connector. This feature provides the ability to use array and struct types in a query, as well as stored procedure parameters, and subsequently reference these types from result sets.
+In Mule 3.6 and newer, you can use link:/mule-user-guide/v/3.7/database-connector-reference#jdbc-data-types[JDBC data types] with the Database connector. This feature provides the ability to use array and struct types in a query, as well as results of stored procedures, and allows you to reference these types from result sets.
 
 To use a JDBC data type, define the type in the database configuration with the type ID corresponding to the structured data type, for example:
 
@@ -847,8 +847,30 @@ In the case of struct values, the database connector returns `java.sql.Struct`. 
 
 For array values, the connector returns `java.sql.Array`. In order to obtain the corresponding Java array, invoke the `getArray` method on the `java.sql.Array` instance. This requires an open connection to the database, which means that the query returning the array must be executed inside a transactional scope or using streaming.
 
-[IMPORTANT]
-To work with input parameters of data types, the values must be of type `java.sql.Struct` and `java.sql.Array` or any subclasses provided by the database driver. This means that, the value returned in a result field can be used as an input value in a another query. To create new values, the struct must be created using Java code. See link:https://docs.oracle.com/cd/B28359_01/java.111/b31224/oraoot.htm#i1039476[this example].
+[NOTE]
+The value returned in a result field can be used as an input value in a another query.
+
+=== Passing User-Defined Data Types to Stored Procedure
+
+To pass a user-defined data type to a stored procedure, the data type should be specified in the database configuration with a number `id` identifying the link:/mule-user-guide/v/3.7/database-connector-reference#jdbc-user-defined-data-types-udt[JDBC type] it conforms to. The parameter you pass to the stored procedure should be referenced by the name of the data type:
+
+.Example Database Connector Setup for UDT Parameters
+[source,xml,linenums]
+----
+<db:oracle-config name="Oracle_Configuration" url="jdbc:oracle:thin:@54.175.245.218:1581:xe" user="user" password="4321" >
+    </db:oracle-config>
+    <db:data-type name="INtypename" id="12"/>
+    <!-- VARCHAR id=12  -->
+    <db:data-type name="OUTtypename" id="2002"/>
+    <!-- STRUCT id=2002  -->
+    </db:data-types>
+    ...
+    <db:stored-procedure config-ref="Generic_Database_Configuration" doc:name="Database">
+        <db:parameterized-query><![CDATA[CALL storedprocfnc(:INtypename,:OUTtypename);]]></db:parameterized-query>
+            <db:in-param name="INtypename" value="#[payload]"/>
+            <db:out-param name="OUTtypename" />
+    </db:stored-procedure>
+----
 
 
 == Example MEL Expression Database URL

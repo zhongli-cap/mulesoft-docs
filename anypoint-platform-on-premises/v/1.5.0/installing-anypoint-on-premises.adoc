@@ -6,11 +6,6 @@
 
 Anypoint Platform On-Premises Edition offers all of the features that are available in the online version of the link:https://anypoint.mulesoft.com[Anypoint Platform] as a service that you can fully run on your local servers, guarded by any security policies you may require.
 
-
-[NOTE]
-The current release of this product is marked as *limited availability*. It is not recommended for production deployments and its implementation requires that you contact MuleSoft's customer success team.
-
-
 This document guides you through the installation process. After completing the steps in this document, you should have Anypoint Platform already running on your own local network, with which you can deploy and manage applications, register APIs and use Exchange.
 
 
@@ -121,8 +116,7 @@ image:installing-anypoint-on-premises-user.png[]
 [NOTE]
 All of the users of your platform will log into accounts that belong to the organization name that you provide here, or a business group within it. See link:/access-management/organization[Organizations] for an overview on how these work.
 
-+
-This screen also prompts you to choose if you want to enable remote assistance on your platform. If you choose to enable this option, this will allow MuleSoft support employees to have access to view info about your platform when and if you request it.
+. After installation is completed, the ops center password has to be reset. Please refer to link:/anypoint-platform-on-premises/v/1.5.0/managing-via-the-ops-center#reset-password[reset password] for more details.
 
 == Create a Load Balancer
 
@@ -144,11 +138,11 @@ Your load balancer must route the following TCP ports:
 [%header%autowidth.spread]
 |===
 |Load Balancer Port |Instance Port | Internal Usage
-|`80` | `30080`  | internal NGINX redirects to `443`.
-|`443` | `30443` | internal NGINX does a proxy pass to the corresponding micro-service in kubernetes.
-|`8889` | `30889` | internal NGINX does TCP forwarding to `cloudhub-mcm`.
-|`9500` | `32009` | internal NGINX does a proxy pass to the `gravity-site` kubernetes service.
-|`9501` | `30083` | internal NGINX does a proxy pass to the `grafana` kubernetes service.
+|`80` | `30080`  | HTTP redirects to HTTPs.
+|`443` | `30443` | HTTPS port
+|`8889` | `30889` | WebSocket Port for Runtimes to connect
+|`9500` | `32009` | Webcenter Access Port
+|`9501` | `30083` | Monitoring Tooling Access Port
 |===
 
 
@@ -170,18 +164,9 @@ To configure SSL credentials, you don't need to set them up in your load balance
 This section refers to forwarding log data from Anypoint Platform itself. For instructions on how to forward log data from the Mule servers and applications that run on the platform, see link:/runtime-manager/sending-data-from-arm-to-external-monitoring-software[Sending data from Runtime Manager to External Monitoring Software].
 
 
-Anypoint Platform uses rsyslog to handle logging. To forward these logs to remote hosts you must do the following:
+Anypoint Platform uses rsyslog to handle logging. To forward these logs to remote hosts you must configure this in the Ops Center.
 
-. Enter the Anypoint Platform ops center. You enter it through port `9500`, so in a browser you can type `{platform-host}:9500`
-
-. Log in using the username and password of the *admin* user that you set up in the final screen of the installation wizard
-
-. Go to *Logs* > *Settings*
-+
-image:installing-anypoint-on-premises-logs1.png[logs]
-. If you are forwarding logs to external software such as Splunk, set the destination and TCP/IP protocol
-+
-image:installing-anypoint-on-premises-logs3.png[logs]
+See link:/anypoint-platform-on-premises/v/1.5.0/managing-via-the-ops-center#configure-log-forwarding[Configure Log Forwarding] for detailed steps on how to do this on the Ops Center.
 
 
 [NOTE]
@@ -193,11 +178,11 @@ It's assumed that you're forwarding your logs to an on-premises log solution, li
 
 In order to handle e-mail alerts, you must have an SMTP server configured on your network.
 
-You must direct your local installation of Anypoint Platform to this server. Currently, setting up SMTP for alert e-mails for link:/api-manager[API Manager] is handled via the link:/access-management/on-prem-features#smtp[Access Management panel], and the SMTP settings for alert e-mails for link:/runtime-manager[Runtime Manager] must be set up manually as explained in link:/anypoint-platform-on-premises/setting-smtp-manually[Setting SMTP Manually]. If you intend to use both tools, make sure you set up both.
+You must direct your local installation of Anypoint Platform to this server. Currently, setting up SMTP for alert e-mails for link:/api-manager[API Manager] is handled via the link:/access-management/on-premises-features#smtp[Access Management panel], and the SMTP settings for alert e-mails for link:/runtime-manager[Runtime Manager] must be set up manually as explained in link:/anypoint-platform-on-premises/v/1.5.0/setting-smtp-manually[Setting SMTP Manually]. If you intend to use both tools, make sure you set up both.
 
 == SSL Certificate
 
-In order to use Anypoint Platform, you must provide SSL credentials. You can upload a certificate through the Anypoint Platform UI, see link:/access-management//access-management/on-prem-features#security[on-prem features]. This certificate must be trusted by every machine that’s connected to the platform.
+In order to use Anypoint Platform, you must provide SSL credentials. You can upload a certificate through the Anypoint Platform UI, see link:/access-management/on-premises-features#security[on-prem features]. This certificate must be trusted by every machine that’s connected to the platform.
 
 
 == Handling Third Party Authentication
@@ -206,11 +191,37 @@ You can have your users log in to Anypoint Platform via various third party auth
 
 == Adding a Custom Disclaimer Message
 
-You can add a custom message to your login page, that all users in your organization will see every time you log in. To set this custom message, see link:/access-management//access-management/on-prem-features#disclaimer[on-prem features].
+You can add a custom message to your login page, that all users in your organization will see every time you log in. To set this custom message, see link:/access-management/on-premises-features#disclaimer[on-prem features].
 
 == Next Steps
 
 Now that your installation is complete, your platform is ready for being used. Users registered in your external identity service should have access to your Anypoint platform link:/access-management/organization[organization]. As an admin you can now add link:/runtime-manager/roles[roles] to these users. You can also start link:/runtime-manager/managing-servers[registering servers] so that you can then link:/runtime-manager/deploying-to-your-own-servers[deploy to them], etc.
+
+See link:/anypoint-platform-on-premises/v/1.5.0/managing-via-the-ops-center[Managing via the Ops Center] for instructions on how to add or remove servers from the platform cluster and other changes you may want to carry out after installation.
+
+== Uninstall and reinstall
+
+If you encounter any difficulties during the setup process, you may choose to attempt reinstallation. Before beginning a new install, you should ensure that all remenants of the original install have been removed. You can do that with the following commands on all nodes:
+
+----
+# remove installed system components
+sudo gravity system uninstall --confirm
+
+# remount and clear platform data
+sudo mount /var/lib/gravity
+sudo rm -rf /var/lib/gravity/*
+
+# remount and clear platform data
+sudo mount /var/lib/gravity/planet/etcd
+sudo rm -rf /var/lib/gravity/planet/etcd/*
+
+# remount and clear application data
+sudo mount /var/lib/data
+sudo rm -rf /var/lib/data/*
+----
+
+Depending on the state of the full or partial install that you are replacing, the above steps may not completely return the system to an installable state. Before beginning reinstall, you should ensure that your system is still setup correctly and meets the minimim disk and resource requirements just as you did intially.
+
 
 [NOTE]
 If you then wish to deploy your applications to link:/anypoint-platform-on-premises/v/1.5.0/anypoint-platform-for-pcf[Pivotal Cloud Foundry], after completing the steps in this document you must then complete the steps that link:/anypoint-platform-on-premises/v/1.5.0/configuring-anypoint-platform-for-pcf[Configuring Anypoint Platform for PCF] guides you through.

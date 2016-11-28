@@ -312,6 +312,49 @@ The connector also supports private queues hosted in a failover cluster or also 
 
 `ClusterName\private$\QueueName`
 
+The MSMQ API used by the connector requires you to specify the target address using the `Format Names` style mostly when working with remote queues, as well as queues having custom configuration options, and `Direct Format Names`.
+
+Direct format names are used to reference public or private queues without accessing the directory service. Direct format names are used when performing the following operations:
+
+. Sending messages directly to a computer.
+. Sending messages to computers over the Internet.
+. Sending messages across forest boundaries.
+. Sending messages to any queue while operating in domain, workgroup, or offline mode.
+. Reading messages while operating in domain, workgroup, or offline mode.
+
+Direct format names should be used to send messages whenever routing, authentication, and encryption by Message Queuing are not needed.
+
+When Message Queuing detects a direct format name for a remote public queue or for a local or remote private queue, it does not contact the directory service. Message Queuing uses the information provided by the format name to send messages directly to their destination.
+
+The format required to specify the address this way at the *queueName* connector's setting follows this pattern:
+`FormatName:Direct=[address_specification]\{private$\}[queue_name]`
+
+The address specification of the computer can be specified in three forms:
+
+. As the network protocol followed by the network address of the target computer. Message Queuing supports TCP and, only on Windows NT® 4.0 and Windows 2000, SPX.
+. As any string that is supported natively by the underlying operating system to identify the target computer (OS is used as the protocol to indicate that the computer's native protocol should be used to interpret computer names).
+. As the Internet transport protocol (HTTP or HTTPS) followed by the IP address or full DNS name of the host computer (or the computer name within an enterprise) and then by the virtual directory name separated by slashes (introduced in MSMQ 3.0). The default virtual directory name is msmq, but Message Queuing can be configured by IIS to use a different virtual directory.
+
+[%autowidth.spread]
+|===
+|*Protocol*|*Description*|*Network Address*
+|TCP|Connection-oriented TCP over IP.|Internet address notation (IP address).
+|SPX|Connection-oriented SPX over IPX.|Network number and host number (separated by the ":" character).
+|OS|Connection using the native computer-naming convention.|Any computer name supported by the underlying operating system. For Microsoft® Windows NT® version 4.0, it is either the UNC or DNS name (see the examples for public and private queues).
+|HTTP|HTTP transport.|IP address or full DNS name (computer name within an enterprise) followed by the virtual directory name separated by a slash.
+|HTTPS|Secure HTTP transport through a Secure Sockets Layer (SSL) connection.|IP address or full DNS name (computer name within an enterprise) followed by the virtual directory name separated by a slash.
+|===
+
+Some examples on how you should specify this at the connector's target queue are:
+
+* FormatName:DIRECT=IPX: 00000012:00a0234f7500\PRIVATE$\MyQueue
+* FormatName:DIRECT=TCP:157.18.3.1\PRIVATE$\MyQueue
+* FormatName:DIRECT=OS:Mike01.msn.com\PRIVATE$\MyQueue
+* FormatName:DIRECT=OS:Mike02\PRIVATE$\MyQueue
+* FormatName:DIRECT=OS:.\PRIVATE$\MyQueue
+
+For detailed information on how to address MSMQ please refer to the following link:https://msdn.microsoft.com/en-us/library/ms700996(v=vs.85).aspx[documentation].
+
 == Supported Message Properties
 
 The connector allows passing or receiving properties to and from the MSMQ message. Those properties are set in the current Mule Message and passed to the Windows Gateway as custom HTTP headers. The following message illustrates how the connector creates a new MSMQ message with a value “CustomLabel” for the label property:
@@ -520,7 +563,7 @@ This sample receives incoming requests via HTTP connector, and sends the request
 [source, xml, linenums]
 ----
 <mule xmlns:msmq="http://www.mulesoft.org/schema/mule/msmq" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-    xmlns:spring="http://www.springframework.org/schema/beans" version="CE-3.6.1"
+    xmlns:spring="http://www.springframework.org/schema/beans" 
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
@@ -556,7 +599,7 @@ image:MSMQGlobalElProps.png[MSMQGlobalElProps]
 +
 image:MSMQCHsuccess.png[MSMQCHsuccess] 
 
-. Point your browser to `http://your_subdomain.cloudhub.io/this_is_a_test`. The browser remains blank.
+. Point your browser to `+http://your_subdomain.cloudhub.io/this_is_a_test+`. The browser remains blank.
 . Log into the link:https://anypoint.mulesoft.com[Anypoint Platform] to enter your application, and select Logs from the dashboard.
 . The resulting messages are logged:
 +

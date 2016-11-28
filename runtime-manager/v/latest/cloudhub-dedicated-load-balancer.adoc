@@ -1,4 +1,4 @@
-= CloudHub Load Balancer
+= Cloudhub Dedicated Load Balancer for VPCs
 :keywords: cloudhub, runtime manager, arm, load balancing, vanity url, ssl, two way tls,
 
 image:logo-cloud-active.png[link="/runtime-manager/deployment-strategies", title="CloudHub"]
@@ -8,50 +8,53 @@ image:logo-pcf-disabled.png[link="/runtime-manager/deployment-strategies", title
 
 == Overview
 
-CloudHub features a backend load-balancing service designed to automate the provisioning of infrastructure components.
+CloudHub features a backend load-balancing service designed to automate the provisioning of infrastructure components. You can use this service to deploy one or more custom load-balancers within a link:/runtime-manager/virtual-private-cloud[VPC].
 
-By using this service to proxy your CloudHub-deployed apps, you can:
+You can learn more about setting up an Anypoint Virtual Private Cloud in this link:/runtime-manager/vpc-tutorial[VPC Tutorial].
 
-. Enforce two way SSL authentication
-. Enforce SSL authentication with custom certificates
+You can deploy one or more dedicated load balancers into each Anypoint VPC you own. Each dedicated load balancers allows you to:
+
+. Enforce two-way SSL authentication with custom certificates
 . Easily configure proxy rules that map your CloudHub applications to custom domains, enabling you to for example host everything under a single vanity domain
 . Handle Load balancing amongst the different CloudHub workers that run your application
 
 [NOTE]
 --
-This is an optional addition to your cloud infrastructure that is not included by default in all CloudHub plans. To enable it, you must first own a link:/runtime-manager/virtual-private-cloud[Virtual Private Cloud].
-You can associate multiple environments to the same VPC, meaning that you can use the same load balancer for your different environments.
+This is an optional addition to your Anypoint infrastructure that is not included by default in all Anypoint Platform plans. To enable it, you must first own an Anypoint link:/runtime-manager/virtual-private-cloud[Virtual Private Cloud].
+You can associate multiple environments to the same VPC, meaning that you can use the same dedicated load balancer for your different environments.
 --
 
 == Load Balancer Architecture
 
-Each Load Balancer has an internal domain name.
-The structure is `internal-<lb-name>.lb.anypointdns.net` where `<lb-name>` is the name you gave the load balancer when you created it. This is the reason why the load balancer`s name must be unique.
+Your CloudHub dedicated Load Balancer has an internal domain name to be used by applications and clients within the VPC.
+The structure is `internal-<lb-name>.lb.anypointdns.net` where `<lb-name>` is the name you gave the load balancer when you created it. +
+Additionally, your dedicated load balancer exposes an external domain name that you can be reached from outside your VPC network: `<lb-name>.lb.anypointdns.net` where `<lb-name>` is the name you gave the load balancer when you created it.
 
-Additionally, each load balancer has an external domain name that you can ping from outside your network: `<lb-name>.lb.anypointdns.net` where `<lb-name>` is the name you gave the load balancer when you created it.
+Each Dedicated Load Balancer has a DNS A Record pairing its external domain name (`<lb-name>.lb.anypointdns.net`) to the IP addresses of your workers. +
+Through your DNS provider, you can add this DNS A record to the DNS CNAME records of your DNS servers and use your own hostnames.
 
-If you want your load balancer to handle all connections to your application and you don't want your default domain name for your application publicly exposed, then your application needs to be listening over http on port 8091 or 8092, or you can create a custom mapping policy to redirect outside requests from your load balancer to your specific application.
+If you want your load balancer to handle all connections to your application and you don't want your default domain name for your application publicly exposed, then each application needs to be listening over HTTP on port 8091 or 8092, or you can create a custom mapping policy to redirect outside requests from your load balancer to your specific application.
 
 [NOTE]
 --
-Your load balancer listens for outside requests over https, but it communicates internally with your worker over http. If your Mule application is listening over https, it won't be able to communicate with your load balancer.
+Your load balancer listens for outside requests over HTTPS and, by default, communicates internally with your worker over HTTP. If you configured your Mule application within the VPC to listen on HTTPS, make sure you set `upstreamProtocol` to `HTTPS` when creating the mapping list using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-add[load-balancer mappings add] command.
 --
 
-== Using the Load Balancer
+== Creating and Configuring a Dedicated Load Balancer
 
 Although this feature will eventually be built into the Runtime Manager UI, currently it’s only available as a service that can be used via the link:/runtime-manager/anypoint-platform-cli[Anypoint Command Line Interface] or using the link:/runtime-manager/runtime-manager-api[Cloudhub API] through the endpoints `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/loadbalancers` and `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/vpcs`.
 
 [NOTE]
 --
 For a full list of Anypoint-CLI commands and their respective usage, check our link:/anypoint-platform-for-apis/anypoint-platform-cli#list-of-commands[reference page]. +
-A full description of `loadbalancers` and `vpcs` endpoints is available accesing your link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals[API Portal].
+A full description of `loadbalancers` and `vpcs` endpoints is available accessing your link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals[API Portal].
 
 In the link above, search among other Mule APIs for the "CloudHub" API and enter its latest version.
 --
 
 In order to be able to create and configure a load balancer, your profile needs to be an link:/access-management/creating-an-account#the-organization-administrator[administrator] of the organization to which the load balancer is associated.
 
-=== Mapping
+=== Mapping Rules
 
 The load balancer configuration is defined by a list of <<Mapping Rules, mapping rules>> which describe how input URL should be translated into calls to different CloudHub apps.
 
@@ -60,12 +63,12 @@ Instead of using literal matchings you can also use a *Pattern* to match a varia
 
 By using proxy rules, you can map a domain or subdomain to one of your Mule applications that run in CloudHub
 
-==== Pattern
+==== Using Patterns in Mapping Rules
 
 A pattern is a string that defines a template for matching an input text. Whatever is placed into curly brackets (`{   }`) is treated like a variable.
 These variables can contain only letters (a-z) and cannot contain any other characters, such as digits, slashes, etc. The variable values can contain the following characters ‘a-z0-1.&?-_’ but no slashes.
 
-For example, you can literally bind two host names for redirect:
+For example, you can literally bind two hostnames for redirect:
 
 [source,Example,linenums]
 ----
@@ -80,11 +83,11 @@ Or you can define a pattern to hold the input value:
 ----
 
 The example above causes that both ’example.com/bookings’ and ‘example.com/sales’ match to `app/bookings` and `app/sales` respectively, as the variable `mypattern` holds these values. +
-For input=”bookings.example.com”, the pattern can be resolved by assigning `_mypattern_=”bookings” and for input=`sales.example.com`, the pattern is resolved asignining `_mypattern_=”sales”
+For input=”bookings.example.com”, the pattern can be resolved by assigning `_mypattern_=”bookings” and for input=`sales.example.com`, the pattern is resolved to assign `_mypattern_=”sales”
 
 Depending on your design, you can choose to leverage your internal redirects to your endpoints using patterns or simply literal mappings.
 
-== Mapping Rules
+== Creating Mapping Rules
 
 A mapping rule is a set of fields that define an *Input URL*, and a set of fields that describe the *Output URL*.
 
@@ -110,20 +113,19 @@ If your SSL endpoint sets a link:https://en.wikipedia.org/wiki/Wildcard_certific
 The rule which is defined first has high priority against other ones defined after it. This means that the first matched rule will be applied. +
 You can create, view and delete existing rules using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-add[mappings add], link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-describe[mappings describe] and link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-remove[mappings remove] commands respectively.
 
-=== Rule Examples
+=== Mapping Rule Examples
 
-The table below contains some rule examples:
+The table below contains some mapping rule examples:
 
 [NOTE]
 Given that the external load balancer domain name depends on the unique name you assign to it, assume that the load balancer in these examples is `lb-demo`.
 
 [CAUTION]
 --
-By default your load balancer listens external requests on https and communicates with your workers internally through http. +
-You need to configure your application to listen through `http` on port 8091 for your load balancer to reach it.
+By default, your load balancer listens to external requests on HTTPS and communicates internally with your worker over HTTP. If you configured your Mule application within the VPC to listen on HTTPS, make sure you set `upstreamProtocol` to `HTTPS` when creating the mapping list using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-add[load-balancer mappings add] command.
 --
 
-==== URL mapping
+==== URL Mapping
 
 You can pass the app name as an input URI and map it directly to the app name in CloudHub:
 
@@ -137,7 +139,7 @@ You can pass the app name as an input URI and map it directly to the app name in
 This rule maps `lb-demo.lb.anypointdns.net/{app}` to `{app}.cloudhub.io`. +
 {app} being a pattern for application name you choose to pass.
 
-==== Host mapping
+==== Host Mapping
 
 If you have a wildcard certificate (like `*.example.com`), you can use the ´inputSubdomain´ variable to map any subdomain:
 
@@ -152,7 +154,7 @@ This rule automatically maps any request passed to a subdomain of example.com to
 * Passing `api.example.com` would redirect to `api.cloudhub.io` +
 * Passing `application.example.com` is mapped to `application.cloudhub.io`.
 
-==== 1:1 mapping
+==== 1:1 Mapping
 
 If you have only one application, you can map the literal app name.
 
@@ -164,18 +166,18 @@ If you have only one application, you can map the literal app name.
 |===
 This maps your default load balancer `lb-demo.lb.anypointdns.net` directly to your app in Cloudhub `myApp.cloudhub.io`.
 
-=== Rule Order
+=== Indexing the Priority of Rules
 
 When creating a _mapping rule_, you need to assign an index to it to define the rule's priority order. +
 A rule defined first, at index `0` has higher priority against other rules defined after it. The higher the index assigned, the less priority the mapping rule has.
 
-Rules order is essential and it’s highly recommended to pay attention to the rules’ order when creating them.
+Every rule must have a priority defined.  It is highly recommended to pay attention to each rules’ order when creating them, and multiple rules might override each other.
 
-==== Setting a Rule Priority Order
+==== Ordering and Prioritizing Rules
 
 You can set the order of your mapping rules when creating them using the link:https://docs.mulesoft.com/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-add[cloudhub load-balancer mappings add] command in the Anypoint-CLI by specifying an index value.
 
-When using the API, you can't specify a priority order, but you can send a `PATCH` request to the endpoint `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/loadbalancers/{loadbalancerId}` and update your rules expressions to match your needs based on the order logic explained above.
+When using the API to create a rule, you can not specify a priority order, but you can send a `PATCH` request later to the load balancer endpoint `anypoint.mulesoft.com/cloudhub/api/organizations/{orgid}/loadbalancers/{loadbalancerId}` and update your rules expressions with an order index, to match your needs based on the order logic explained above.
 
 [NOTE]
 --
@@ -185,7 +187,7 @@ You can also perform a `GET` request to your endpoint /organizations/{orgid}}/lo
 
 == Whitelists
 
-It is possible to whitelist a list of IP addresses from your load balancers by simply passing it a CIDR block of IPs to whitelist.
+In order to whitelist IP addresses to your load balancers, you need to pass those IP addresses in CIDR notation using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-whitelist-add[load-balancer whitelist add] command.
 
 The whitelist works for inbound connections at the load balancer level, not at the CN certificate level. Make sure you only pass IP addresses.
 
@@ -202,12 +204,12 @@ To associate an SSL endpoint you need to provide:
 . A second file containing the private key of your `.pem` certificate.
 +
 [CAUTION]
-The private key file needs to be passphraseless
+The private key file needs to be _passphraseless_
 
 === Uploading Certificates
 
 The certificate that you upload to your Load Balancer must be contained in one _pem_ encoded and unencrypted file.
-This file must contain the entire certificate chain ordered one after the other, similar to the example section below:
+This file could contain the entire certificate chain ordered one after the other, similar to the example section below:
 
 [%header,cols="30a,70a"]
 |===
@@ -220,7 +222,6 @@ This file must contain the entire certificate chain ordered one after the other,
 -----END CERTIFICATE-----
 |===
 
-
 [NOTE]
 --
 It is not necessary to include the root certificate in the certificate chain. However, make sure to include the beginning and end tags on each certificate.
@@ -230,7 +231,7 @@ You can upload an SSL-Endpoint to your load balancer when creating one using the
 
 ==== Certificate Validation
 
-The load balancer passes the certificate data to the API using the http headers below:
+The load balancer passes the certificate data to the API using the HTTP headers below:
 
 ===== X-SSL-Client-Verify
 
@@ -256,7 +257,7 @@ CloudHub Load balancer does not support OCSP, so you need to manage your revocat
 
 You can add a revocation list when creating the load balancer using the ´-crl´ option in your link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-create[load-balancer create] command.
 
-Additionally if your load balancer is already created, you can use the link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/8617/versions/85955[REST API] to update it. +
+Additionally, if your load balancer is already created, you can use the link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/8617/versions/85955[REST API] to update it. +
 You can send a `PATCH` request to the `/organizations/{orgid}/vpcs/{vpcId}/loadbalancers/{lbId}` endpoint adding a `revocationList` element:
 
 [source,json,linenums]
@@ -308,7 +309,7 @@ AES128-SHA
 DES-CBC3-SHA
 ----
 
-ClourHub's dedicated load balancer supports TLSv1.1 and TLSv1.2. Additionally you can configure TLS v1.0, but bear in mind that such protocol is no longer accepted by PCi compliance due to its significant vulnerabilities.
+ClourHub's dedicated load balancer supports TLSv1.1 and TLSv1.2. Additionally, you can configure TLS v1.0, but bear in mind that such protocol is no longer accepted by PCi compliance due to its significant vulnerabilities.
 
 == See Also
 
