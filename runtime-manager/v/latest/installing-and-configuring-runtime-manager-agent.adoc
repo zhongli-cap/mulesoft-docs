@@ -149,7 +149,12 @@ Most of the Runtime Manager Agent configuration options add or replace configura
 === Selecting and Configuring Monitoring Console Options
 Normally, you will configure a Runtime Manager Agent to communicate and exchange monitoring information with an Anypoint Platform Runtime Manager cloud console. This type of installation is performed using the `-H` option, using the security token provided by the Anypoint Platform Runtime Manager cloud console. Communication with either type of Anypoint Runtime Manager console is via websockets, and will be configured as a WebSockets transport in the `$MULE_HOME/conf/mule-agent.yml` file. 
 
-You can also configure a Runtime Manager Agent to communicate with other management consoles via one or more REST transports. These configuration options can be used in addition to the `-H` option. Each set of configuration options adds configuration sections to the `$MULE_HOME/conf/mule-agent.yml` file. In addition to using the `amc_setup` command, you can also backup various configuration options and manually edit the `$MULE_HOME/conf/mule-agent.yml`. Also, there are other configuration options that are not possible using the `amc_setup` command, such as extending JMX monitoring to other external services.
+===Combining Monitoring Console Options
+You can also configure a Runtime Manager Agent to communicate with other management consoles via one or more REST transports. These options are supported by the `-I`, `-S` options. 
+
+If you run `amc_setup` with one of these options, your previous `$MULE_HOME/conf/mule-agent.yml` file will be completely replaced. 
+
+In addition to using the `amc_setup` command, you can also backup various configuration options and manually edit the `$MULE_HOME/conf/mule-agent.yml`. Also, there are other configuration options that are not possible using the `amc_setup` command, such as extending JMX monitoring to other external services, so these options must be manually added to the `$MULE_HOME/conf/mule-agent.yml` file.
 
 ===Configuring JMX Monitoring Publication Services
 MuleSoft provides several OpenSource JMX monitoring publishing modules for Cloudwatch, Graphite, Nagios, and Zabbix. The Nagios module is already included in Mule runtime. 
@@ -163,15 +168,19 @@ Zabbix: module to send metrics to Zabbix instances.
 
 For further information please check the JMX section in Mule Agent documentation.
   
+==amc_setup Parameters
+The amc_setup command has various parameters to fullful various use cases:
+* Register a Mule runtime with a Runtime Mansgher console
+* Manage a Mule runtime via the local Runtime Manager Agent REST API interface, either via HTTP or HTTPS
+* Update the Runtime Manager Agent software
+* Get Help
 
-=== Installing a Mule runtime into an Anypoint Platform Runtime Manager cloud console
-The simplest way to install a new Runtime Manager Agent is to use the `-H` option. 
-
-In the Runtime Manager console, you can see a full example of the code you need to run by clicking the link:/runtime-manager/managing-servers#add-a-server[Add a Server] button. This example command already includes your specific organization's ID, so it's ready to use in case you don't need to configure anything beyond the default settings.
-
-
-These tables show you the different arguments you can add to the `amc_setup` command. The required arguments differ depending on if you're registering your server to be managed via the cloud console of Runtime Manager, or to be managed by the Anypoint Platform On-Premises Edition.
  
+The required arguments differ depending on if you're registering your server to be managed via the cloud console of Runtime Manager, or to be managed by the Anypoint Platform On-Premises Edition.
+
+The following tables provide details about the parameteers you use for these different use cases.
+
+
 === General amc_setup Parameters
 These arguments work in both version of Anypoint Platform.  
 
@@ -203,46 +212,21 @@ These arguments work in both version of Anypoint Platform.
 |Skip Anypoint API Gateway client_id and client_secret configuration.
 |===
 
-=== REST Connection amc_setup Parameters
-These arguments work in both version of Anypoint Platform, to allow direct REST connections between the Mule runtime and any external client. This allows external clients to access and manage a Mule runtime directly via the link:/runtime-manager/runtime-manager-agent-api[Runtime Manager Agent's REST API]. 
 
-You can configure the Runtime Manager Agent to allow either insecure or secure connections. 
+=== Hybrid Runtime Manager Management
+The simplest way to manage a Mule runtime is to register the Mule runtime with a Runtime Manager console. 
+This option, configurable on the installation command through the '-H' argument, configures the Runtime Manager Agent to connect to the Runtime Manager. This option requires a token (provided by the Runtime Manager console) and an instance name. For details, see link:/runtime-manager/managing-servers#add-a-server[Managing Servers].
 
-With a secure REST configuration, you need to configure the Runtime Manager Agent with a valid digital certificate. The insecure REST configuration option allows you to skip this step. 
-
-
-////
-[tabs]
-------
-[tab,title="REST Connection amc_setup parameters"]
-....
-////
-
-[%header,cols="20a,80a"]
-|===
-|Parameter|Description
-
-|`-I,--insecure`
-|Configures the Runtime Manager Agent to use an unencrypted connection. It is valid for the REST transport only. You can interact with the API using a browser or other tool for making HTTP requests. The default TCP port is 9999, so you can connect to the Runtime Manager Agent at the base URL `https://localhost:9999/mule/agent/`. 
-
-|`-S,--secure`
-|Configures the Runtime Manager Agent to establish a TLS connection with an on-premises administration console. You need to provide the truststore and keystore in JKS format. This option enables a TLS channel for REST communications only. See <<Secure Connection Channel>>. Note that this is for manually managing the Agent (i.e. not using ARM cloud-console to manage the Agent)
-
-|`-P,--proxy <PROXY_HOST> <PROXY_PORT> <PROXY_USER> <PROXY_PASSWORD>`
-|Proxy configuration to use when registering with the connection. This option defines proxy details. See <<Installation Via Proxy>>.
-
-|===
-
+In the Runtime Manager console, you can see a full example of the code you need to run by clicking the link:/runtime-manager/managing-servers#add-a-server[Add a Server] button. This example command already includes your specific organization's ID, so it's ready to use in case you don't need to configure anything beyond the default settings.
 
  
-=== Register with a Runtime Manager with amc-setup
 The `-H` parameter is required to register a Mule runtime with Runtime Manager. You provide an access_token to this parameter. The access_token is copied from the Runtime Manager console, for a specific environment within a specific business group. The Mule runtime will then be managed within this particular Anypoint Platform business group's environment.  The `-H` is used for both regular (cloud-based) Anypoint Platform and and Anypoint Platform On-Premises Editions.  
 
 
 ////
 [tabs]
 ------
-[tab,title="Cloud Console"]
+[tab,title="Hybrid Runtime Manager Console"]
 ....
 ////
 
@@ -270,12 +254,13 @@ For details, see link:/runtime-manager/managing-servers#add-a-server[Managing Se
 |===
 
 
-Some additional optinal parameters are available to configure a connection between a Mule runtime and an Anypoint Platform On-Premises Edition RUntime Manager. These additional options only apply when using the `-H` option. 
+
+Some additional *optinal* parameters are available to configure a connection between a Mule runtime and an Anypoint Platform On-Premises Edition RUntime Manager. These additional parameters are only appropriate when using the `-H` parameter. 
 
 ////
 [tabs]
 ------
-[tab,title="Anypoint Platform On-Premises Edition - Optional Parameters"]
+[tab,title="Anypoint Platform On-Premises Edition Parameters"]
 ....
 ////
 
@@ -314,22 +299,63 @@ Full sample command:
 ----
 
 
-=== Hybrid Management
 
-This option, configurable on the installation command through the '-H' argument, configures the Runtime Manager Agent to connect to the Runtime Manager. This option requires a token (provided by the Runtime Manager console) and an instance name. For details, see link:/runtime-manager/managing-servers#add-a-server[Managing Servers].
+=== REST Connection amc_setup Parameters
+These arguments work in both version of Anypoint Platform, to allow direct REST connections between the Mule runtime and any external client. This allows external clients to access and manage a Mule runtime directly via the link:/runtime-manager/runtime-manager-agent-api[Runtime Manager Agent's REST API]. 
+
+You can configure the Runtime Manager Agent to allow either insecure or secure connections. 
+
+With a secure REST configuration, you need to configure the Runtime Manager Agent with a valid digital certificate. The insecure REST configuration option allows you to skip this step. 
+
+
+////
+[tabs]
+------
+[tab,title="REST Connection amc_setup parameters"]
+....
+////
+
+[%header,cols="20a,80a"]
+|===
+|Parameter|Description
+
+|`-I,--insecure`
+|Configures the Runtime Manager Agent to use an unencrypted connection. It is valid for the REST transport only. You can interact with the API using a browser or other tool for making HTTP requests. The default TCP port is 9999, so you can connect to the Runtime Manager Agent at the base URL `https://localhost:9999/mule/agent/`. 
+
+|`-S,--secure`
+|Configures the Runtime Manager Agent to establish a TLS connection with an on-premises administration console. You need to provide the truststore and keystore in JKS format. This option enables a TLS channel for REST communications only. See <<Secure Connection Channel>>. Note that this is for manually managing the Agent (i.e. not using ARM cloud-console to manage the Agent)
+
+|`-P,--proxy <PROXY_HOST> <PROXY_PORT> <PROXY_USER> <PROXY_PASSWORD>`
+|Proxy configuration to use when registering with the connection. This option defines proxy details. See <<Installation Via Proxy>>.
+
+|===
 
 === Insecure Connection Channel
 
-This option, configurable on the installation command through the '-I' argument, configures the Runtime Manager Agent to use an unencrypted connection. It is valid for the REST transport only. You can interact with the API using a browser or other tool for making HTTP requests.
+This option, configurable on the installation command through the '-I' parameter, configures the Runtime Manager Agent to use an unencrypted connection. It is valid for the REST transport only. You can interact with the API using a browser or other tool for making HTTP requests.
+
+Here is an example `mule-agent.yml` file generated by the `-I` parameter:
+
+[source,yaml, linenums]
+----
+transports:
+  websocket.transport:
+    enabled: false
+
+  rest.agent.transport:
+    port: 9999
+
+services:
+  mule.agent.jmx.publisher.service:
+    enabled: true
+    frequency: 15
+    frequencyTimeUnit: MINUTES
+----
+
 
 === Secure Connection Channel
 
 This option, configurable on the installation command through the '-S' argument, configures the Runtime Manager Agent to establish a TLS connection with an on-premises administration console.
-
-[source, code]
-----
-Anypoint Runtime Manager Agent Installer ----------- Mode [Secure connection Channel(S) / Insecure Connection Channel(I) / Quit(Q)] (?):
-----
 
 You need to provide the truststore and keystore in JKS format. This option enables a TLS channel for REST communications only. Once you select the Secure connection Channel mode, you see the following menu:
 
@@ -367,7 +393,28 @@ _Keystore Alias Password_
 
 The alias password in the keystore.
 
+Here is an example `mule-agent.yml` file generated by the `-S` parameter:
 
+[source,yaml, linenums]
+----
+transports:
+  websocket.transport:
+    enabled: false
+
+  rest.agent.transport:
+    restSecurity:
+      keyStoreFile: server.jks
+      keystorePassword: P@ssword
+      keyStoreAlias: serverkey
+      keyStoreAliasPassword: P@ssword
+    port: 9999
+
+services:
+  mule.agent.jmx.publisher.service:
+    enabled: true
+    frequency: 15
+    frequencyTimeUnit: MINUTES
+----
 
 === Installation Via Proxy
 
