@@ -6,11 +6,7 @@
 Below are a series of examples that demonstrate various data transformation approaches expressed in link:/mule-user-guide/v/3.8/dataweave-language-introduction[DataWeave]. DataWeave code is typically written inside the *Transform Message* component, which is accessible in Anypoint Studio.
 
 [NOTE]
-====
 To step through basic DataWeave use cases and exercises in actual Mule applications, see the link:/mule-user-guide/v/3.8/dataweave-quickstart[DataWeave Quickstart Guide].
-
-In the link:/mule-user-guide/v/3.8/dataweave-operators[DataWeave Operators] page, you can also find simple examples for each specific operator, the same goes for the link:/mule-user-guide/v/3.8/dataweave-selectors[DataWeave Selectors] page.
-====
 
 [TIP]
 The DataWeave code shown in the examples is understood in the context of *input/output metadata*. The tabs below can be toggled to see the metadata structures that DataWeave leverages to get the transformations done.
@@ -1445,64 +1441,72 @@ removeAttribute(payload, "password")
 ....
 ------
 
+== Output self-closing XML tags
 
-== Conditional Date Parsing
+When outputting link:/mule-user-guide/v/3.8/dataweave-formats#xml[XML], DataWeave by default outputs every value as enclosed between an opening and a closing tag:
 
-Suppose that you want to include a date field that admits different formats, and want DataWeave to be able to parse each accordingly. For this example, imagine that you want to accept these three formats:
-
-* Sun, 06 Nov 1994 08:49:37 GMT = `E, d LLL u H:m:s O`
-* Sun Nov 6 08:49:37 1994 = `cccc, d-LLL-u H:m:s O`
-* Sunday, 06-Nov-94 08:49:37 GMT = `E LLL d H:m:s u`
-
-Start out by writing a regular expression to match each of them:
-
-* Sun, 06 Nov 1994 08:49:37 GMT = `/^[A-z][A-z][A-z],/`
-* Sun Nov 6 08:49:37 1994 = `/^[A-z][A-z][A-z]\s/`
-* Sunday, 06-Nov-94 08:49:37 GMT = This will be the default
-
-
-You can use these regular expressions in a DW link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[function] that first evaluates a string to see which regular expression it matches, and then converts it through the the corresponding operation. This function should do the following:
-
-. Take the input string as argument
-. Match it with regular expressions in order to determine which format it's in
-. Run the link:/mule-user-guide/v/3.8/dataweave-operators#coerce-to-date[coerce to date] operator with the corresponding properties
-. Return a date time object
-
-This is what the function looks like:
-
-.DataWeave
-[source,Dataweave,linenums]
+[source,xml,linenums]
 ----
-%var parseDate = (dateStr) -> dateStr as :localdatetime {format: "E, d LLL u H:m:s O"} when (dateStr contains /^[A-z][A-z][A-z],/) otherwise (dateStr as :localdatetime {format: "E LLL d H:m:s u"} when (dateStr contains /^[A-z][A-z][A-z]\s/) otherwise dateStr as :localdatetime {format: "cccc, d-LLL-u H:m:s O"})
+  <parentElement>
+    <emptyElement1></emptyElement1>
+    <emptyElement2></emptyElement2>
+    <emptyElement3></emptyElement3>
+  </parentElement>
 ----
 
-You can declare this function on the header of a DW script and then simply call it from anywhere in the DW body like so:
+In case you have empty fields that don't hold any values within, you might find that you instead want to output a single tag that self-closes. You can set the DW output directive so that your transform generates an output that follows this style for each case. You configure this by setting the `inlineCloseOn` property to "empty".
+
+=== Example Transformation
 
 .DataWeave
 [source,Dataweave,linenums]
 ----
 %dw 1.0
-%output application/json
-%var parseDate = (dateStr) -> dateStr as :localdatetime {format: "E, d LLL u H:m:s O"} when (dateStr contains /^[A-z][A-z][A-z],/) otherwise (dateStr as :localdatetime {format: "E LLL d H:m:s u"} when (dateStr contains /^[A-z][A-z][A-z]\s/) otherwise dateStr as :localdatetime {format: "cccc, d-LLL-u H:m:s O"})
+%output application/xml inlineCloseOn="empty"
 ---
-date: parseDate(payload.dateString)
+{
+  payload: payload
+}
+---
+
+removeAttribute(payload, "password")
+----
+
+[tabs]
+------
+[tab,title="Input: JSON"]
+....
+{
+  "parentElement":{
+
+    "emptyElement1":{},
+    "emptyElement2":{},
+    "emptyElement13":{}
+  }
+}
 ----
 
 
+....
+[tab,title="Output: JSON"]
+....
+.Output
+[source,xml,linenums]
+----
+<?xml version='1.0' encoding='US-ASCII'?>
+<payload>
+  <parentElement>
+    <emptyElement1/>
+    <emptyElement2/>
+    <emptyElement13/>
+  </parentElement>
+</payload>
+----
+....
+------
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+[TIP]
+See more XML reader and writer properties on link:/mule-user-guide/v/3.8/dataweave-formats#xml[DataWeave formats].
 
 
 == Configure CSV Reader
@@ -1565,6 +1569,97 @@ Steven Wilson; 13/16 Raven st., Somewhere but not Here; 1234567
 
 ....
 ------
+
+
+== Parse Dates with Different Separators
+
+Suppose that you want to include a date field that admits using different characters as separators between the elements of the date, and want DataWeave to be able to parse them as if they all were the same. For this example, imagine that you want to accept these three formats:
+
+* `26-JUL-2016`
+* `26/JUL/2016`
+* `26.JUL.2016`
+
+To do this, you can normalize the input with the link:/mule-user-guide/v/3.8/dataweave-operators#replace[replace] operator so that they all match a single pattern, and then turn the resulting string to a date with link:/mule-user-guide/v/3.8/dataweave-operators#coerce-to-date[coerce to date].
+
+For clarity in your code, you can easily abstract the normalizing of your string into custom a link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[function], declaring it only once on your DW header, and then using it as many times as necessary by referencing it.
+
+=== Example Transformation
+
+This is the structure that your function should follow:
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%function normalise(date) date replace "/" with "-" replace "." with "-"
+----
+
+You can declare this function on the header of a DW script and then simply call it from anywhere in the DW body like so:
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%dw 1.0
+%output text/xml
+%function normalise(date) date replace "/" with "-" replace "." with "-"
+---
+{
+dates : {
+date1: normalise("26-JUL-16") as :date {format: "d-MMM-yy"} as :string {format: "yyyy-MM-dd"},
+date2: normalise("26/JUL/16") as :date {format: "d-MMM-yy"} as :string {format: "yyyy-MM-dd"},
+date3: normalise("26.JUL.16") as :date {format: "d-MMM-yy"} as :string {format: "yyyy-MM-dd"}
+  }
+}
+----
+
+This example only deals with dates that use different separator characters, for a more advanced use case that deals with different date patterns, see <<Conditional Date Parsing>>
+
+== Conditional Date Parsing
+
+Suppose that you want to include a date field that admits different formats, and want DataWeave to be able to parse each accordingly. For this example, imagine that you want to accept these three formats:
+
+* Sun, 06 Nov 1994 08:49:37 GMT = `E, d LLL u H:m:s O`
+* Sun Nov 6 08:49:37 1994 = `cccc, d-LLL-u H:m:s O`
+* Sunday, 06-Nov-94 08:49:37 GMT = `E LLL d H:m:s u`
+
+Start out by writing a regular expression to match each of them:
+
+* Sun, 06 Nov 1994 08:49:37 GMT = `/^[A-z][A-z][A-z],/`
+* Sun Nov 6 08:49:37 1994 = `/^[A-z][A-z][A-z]\s/`
+* Sunday, 06-Nov-94 08:49:37 GMT = This will be the default
+
+
+You can use these regular expressions in a DW link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[function] that first evaluates a string to see which regular expression it matches, and then converts it through the the corresponding operation. This function should do the following:
+
+. Take the input string as argument
+. Match it with regular expressions in order to determine which format it's in
+. Run the link:/mule-user-guide/v/3.8/dataweave-operators#coerce-to-date[coerce to date] operator with the corresponding properties
+. Return a date time object
+
+=== Example Transformation
+
+This is what the function looks like:
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%var parseDate = (dateStr) -> dateStr as :localdatetime {format: "E, d LLL u H:m:s O"} when (dateStr contains /^[A-z][A-z][A-z],/) otherwise (dateStr as :localdatetime {format: "E LLL d H:m:s u"} when (dateStr contains /^[A-z][A-z][A-z]\s/) otherwise dateStr as :localdatetime {format: "cccc, d-LLL-u H:m:s O"})
+----
+
+You can declare this function on the header of a DW script and then simply call it from anywhere in the DW body like so:
+
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%dw 1.0
+%output application/json
+%var parseDate = (dateStr) -> dateStr as :localdatetime {format: "E, d LLL u H:m:s O"} when (dateStr contains /^[A-z][A-z][A-z],/) otherwise (dateStr as :localdatetime {format: "E LLL d H:m:s u"} when (dateStr contains /^[A-z][A-z][A-z]\s/) otherwise dateStr as :localdatetime {format: "cccc, d-LLL-u H:m:s O"})
+---
+date: parseDate(payload.dateString)
+----
+
+
+
 
 
 == Create Mule Config
@@ -2172,11 +2267,10 @@ See link:/mule-user-guide/v/3.8/dataweave-selectors#attribute-selector-expressio
 ------
 
 
-
 == Pass Functions as Arguments
 
 
-The following example makes all "keys" lower case. The link:/mule-user-guide/v/3.8/dataweave-language-introduction#the-dataweave-header[DataWeave header] defines a link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[function] that receives another function as an argument and then calls that function in the body, applying itself to the keys and not the values it processes. The function that is sent as an argument is a simple one that uses the link:/mule-user-guide/v/3.8/dataweave-operations#lower[`lower`] operator to set the specified text to lower case.
+The following example makes all "keys" lower case. The link:/mule-user-guide/v/3.8/dataweave-language-introduction#the-dataweave-header[DataWeave header] defines a link:/mule-user-guide/v/3.8/dataweave-functions[function] that receives another function as an argument and then calls that function in the body, applying itself to the keys and not the values it processes. The function that is sent as an argument is a simple one that uses the link:/mule-user-guide/v/3.8/dataweave-operations#lower[`lower`] operator to set the specified text to lower case.
 
 The example goes through the whole set of elements in the input using a link:/mule-user-guide/v/3.8/dataweave-operators#map-object[`mapObject`] operator. It also uses the link:/mule-user-guide/v/3.8/dataweave-operators#dataweave-language-introduction#when-otherwise[`when` and `otherwise`] operators to pick out only instances _when_ an XML attribute exists, and do nothing _otherwise_.
 It also uses the link:/mule-user-guide/v/3.8/dataweave-operators#match[`match` ] operator.
