@@ -1378,6 +1378,290 @@ books: {
 ....
 ------
 
+
+== Remove XML Attributes
+
+As a more advanced use case, you may want to remove specific attributes from within an XML tag that are known to contain sensitive data.
+
+The example defines a link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[function] in the link:/mule-user-guide/v/3.8/dataweave-language-introduction#dataweave-header[dataweave header] and then calls it on the body. It goes through the whole set of elements in the input using  a link:/mule-user-guide/v/3.8/dataweave-operators#map-object[`mapObject`] operator. Note that it differs from the map operation in that map object processes both key and value of its input, rather than just the keys. It also uses the link:/mule-user-guide/v/3.8/dataweave-language-introduction#when-otherwise[`when` and `otherwise`] operators to pick out only instances where an XML attribute exists, and to do nothing otherwise.
+It also uses the link:/mule-user-guide/v/3.8/dataweave-operators#match[`match` ] operator.
+
+See link:/mule-user-guide/v/3.8/dataweave-selectors#attribute-selector-expressions[Attribute selector expressions] for how to access XML attributes in DataWeave.
+
+=== Example Transformation
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%dw 1.0
+%output application/dw
+%var removeAttribute = (element,attrName) ->
+element mapObject {
+  ($$) @((($$.@ - attrName) when $$.@? otherwise {} ) ) : $ match {
+    :object -> removeAttribute($, attrName),
+    default -> $
+  }
+}
+---
+
+removeAttribute(payload, "password")
+----
+
+[tabs]
+------
+[tab,title="Input: XML"]
+....
+.Input
+[source,xml,linenums]
+----
+<users>
+  <user username="Julian" password="1234"/>
+  <user username="Mariano" password="4321"/>
+</users>
+----
+
+
+....
+[tab,title="Output: JSON"]
+....
+.Output
+[source,json,linenums]
+----
+{
+  users @(): {
+    user @(
+      username: "Julian"
+    ): "",
+    user @(
+      username: "Mariano"
+    ): ""
+  }
+}
+----
+....
+------
+
+== Output self-closing XML tags
+
+When producing an output in link:/mule-user-guide/v/3.8/dataweave-formats#xml[XML], DataWeave by default outputs every value as enclosed between an opening and a closing tag:
+
+[source,xml,linenums]
+----
+  <parentElement>
+    <emptyElement1>15</emptyElement1>
+    <emptyElement2>1</emptyElement2>
+    <emptyElement3>8</emptyElement3>
+  </parentElement>
+----
+
+In case you have empty fields that don't hold any values within, you might find that you instead want to output a single tag that self-closes. You can set the DW output directive so that your transform generates an output that follows this style for each case. You configure this by setting the `inlineCloseOn` property to "empty".
+
+=== Example Transformation
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%dw 1.0
+%output application/xml inlineCloseOn="empty"
+---
+{
+  payload: payload
+}
+---
+
+removeAttribute(payload, "password")
+----
+
+[tabs]
+------
+[tab,title="Input: JSON"]
+....
+{
+  "parentElement":{
+
+    "emptyElement1":{},
+    "emptyElement2":{},
+    "emptyElement13":{}
+  }
+}
+----
+
+
+....
+[tab,title="Output: JSON"]
+....
+.Output
+[source,xml,linenums]
+----
+<?xml version='1.0' encoding='US-ASCII'?>
+<payload>
+  <parentElement>
+    <emptyElement1/>
+    <emptyElement2/>
+    <emptyElement13/>
+  </parentElement>
+</payload>
+----
+....
+------
+
+[TIP]
+See more XML reader and writer properties on link:/mule-user-guide/v/3.8/dataweave-formats#xml[DataWeave formats].
+
+
+== Configure CSV Reader
+
+DataWeave supports CSV inputs and outputs, by configuring the reader and writer properties, you can adapt it to different conventions regarding separations, line breaks, etc. Other formats also allow for this kind of configuration. See link:/anypoint-studio/v/6/using-dataweave-in-studio#reader-configuration[Using DataWeave in Studio] to learn how you can do this easily through the UI, or look at the link:/mule-user-guide/v/3.8/dataweave-xml-reference#reader-configuration[DataWeave XML Reference] for the required XML syntax. You can also see a full reference of the reader properties available with CSV format on link:/mule-user-guide/v/3.8/dataweave-formats#csv[DataWeave formats].
+
+Reader properties are set as part of the XML `dw:transform-message` component, whilst writer properties are specified in the DataWeave code itself, as part of the output directive. You can see a full reference to the writer properties available with CSV format on link:/mule-user-guide/v/3.8/dataweave-formats#writer-properties[DataWeave formats].
+
+This example takes a CSV file that is formatted in a certain way (with `;` as a separator) and outputs another CSV file that is formatted differently (with `,` as a separator, and all values quoted).
+
+=== Example Transformation
+
+.XML
+[source,xml, linenums]
+----
+<dw:transform-message metadata:id="ab7c919b-c57c-47da-a1e7-207a7e571341" doc:name="Transform Message">
+     <dw:input-payload mimeType="application/csv" doc:sample="sample_data/list_csv.csv">
+         <dw:reader-property name="header" value="false"/>
+         <dw:reader-property name="separator" value=";"/>
+     </dw:input-payload>
+     <dw:set-payload>
+       <![CDATA[
+%dw 1.0
+%output application/csv separator = "," , header = false, quoteValues = true
+---
+payload
+      ]]>
+    </dw:set-payload>
+</dw:transform-message>
+----
+
+Note that the code above includes not just the DW transformation, but the XML of the Transform Message component that contains it, to display the reader properties configured in it.
+
+[tabs]
+------
+[tab,title="Input: JSON"]
+....
+
+.Input
+[source, csv, linenums]
+----
+name;address;phone
+George Harrisson; 1234 Abbey Road, London; 12341123
+David Gilmour; 3434 Diamond st., Dark side of the moon; 12341234
+Steven Wilson; 13/16 Raven st., Somewhere but not Here; 1234567
+----
+
+....
+[tab,title="Output: XML"]
+....
+
+.Output
+[source, xml, linenums]
+----
+"name","address","phone"
+"George Harrisson"," 1234 Abbey Road, London"," 12341123"
+"David Gilmour"," 3434 Diamond st., Dark side of the moon"," 12341234"
+"Steven Wilson"," 13/16 Raven st., Somewhere but not Here"," 1234567"
+----
+
+....
+------
+
+
+== Parse Dates with Different Separators
+
+Suppose that you want to include a date field that admits using different characters as separators between the elements of the date, and want DataWeave to be able to parse them as if they all were the same. For this example, imagine that you want to accept these three formats:
+
+* `26-JUL-2016`
+* `26/JUL/2016`
+* `26.JUL.2016`
+
+To do this, you can normalize the input with the link:/mule-user-guide/v/3.8/dataweave-operators#replace[replace] operator so that they all match a single pattern, and then turn the resulting string to a date with link:/mule-user-guide/v/3.8/dataweave-operators#coerce-to-date[coerce to date].
+
+To improve the clarity in your code, you can easily abstract the normalizing of your string into custom a link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[function], declaring it only once on your DW header, and then using it as many times as necessary by simply referencing this function.
+
+=== Example Transformation
+
+This is what the function for this example would look like:
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%function normalize(date) date replace "/" with "-" replace "." with "-"
+----
+
+You can declare this function on the header of a DW script and then simply call it from anywhere in the DW body. The example below shows the full DataWeave transform for doing this:
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%dw 1.0
+%output text/xml
+%function normalize(date) date replace "/" with "-" replace "." with "-"
+---
+{
+dates : {
+date1: normalize("26-JUL-16") as :date {format: "d-MMM-yy"} as :string {format: "yyyy-MM-dd"},
+date2: normalize("26/JUL/16") as :date {format: "d-MMM-yy"} as :string {format: "yyyy-MM-dd"},
+date3: normalize("26.JUL.16") as :date {format: "d-MMM-yy"} as :string {format: "yyyy-MM-dd"}
+  }
+}
+----
+
+This example only deals with dates that use different separator characters, for a more advanced use case that deals with different date patterns, see <<Conditional Date Parsing>>
+
+== Conditional Date Parsing
+
+Suppose that you want to include a date field that admits different formats, and want DataWeave to be able to parse each accordingly. For this example, imagine that you want to accept these three formats:
+
+* Sun, 06 Nov 1994 08:49:37 GMT = `E, d LLL u H:m:s O`
+* Sun Nov 6 08:49:37 1994 = `cccc, d-LLL-u H:m:s O`
+* Sunday, 06-Nov-94 08:49:37 GMT = `E LLL d H:m:s u`
+
+Start out by writing a regular expression to match each of them:
+
+* Sun, 06 Nov 1994 08:49:37 GMT = `/^[A-z][A-z][A-z],/`
+* Sun Nov 6 08:49:37 1994 = `/^[A-z][A-z][A-z]\s/`
+* Sunday, 06-Nov-94 08:49:37 GMT = This will be the default
+
+
+You can use these regular expressions in a DW link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[function] that first evaluates a string to see which regular expression it matches, and then converts it through the the corresponding operation. This function should do the following:
+
+. Take the input string as argument
+. Match it with regular expressions in order to determine which format it's in
+. Run the link:/mule-user-guide/v/3.8/dataweave-operators#coerce-to-date[coerce to date] operator with the corresponding properties
+. Return a date time object
+
+=== Example Transformation
+
+This is what the function looks like:
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%var parseDate = (dateStr) -> dateStr as :localdatetime {format: "E, d LLL u H:m:s O"} when (dateStr contains /^[A-z][A-z][A-z],/) otherwise (dateStr as :localdatetime {format: "E LLL d H:m:s u"} when (dateStr contains /^[A-z][A-z][A-z]\s/) otherwise dateStr as :localdatetime {format: "cccc, d-LLL-u H:m:s O"})
+----
+
+You can declare this function on the header of a DW script and then simply call it from anywhere in the DW body like so:
+
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%dw 1.0
+%output application/json
+%var parseDate = (dateStr) -> dateStr as :localdatetime {format: "E, d LLL u H:m:s O"} when (dateStr contains /^[A-z][A-z][A-z],/) otherwise (dateStr as :localdatetime {format: "E LLL d H:m:s u"} when (dateStr contains /^[A-z][A-z][A-z]\s/) otherwise dateStr as :localdatetime {format: "cccc, d-LLL-u H:m:s O"})
+---
+date: parseDate(payload.dateString)
+----
+
+
+
+
+
 == Create Mule Config
 
 This example use of DataWeave does not take any input--rather, it simply creates an XML structure out of hard-coded instructions, which reference several external sources using certain namespace directives. What you end up with is a set of XML tags mirroring the structure of a Mule application XML file, including attributes that go inside these tags through the use of `@`. 
@@ -1511,67 +1795,6 @@ mule: {
     </flow>
 </mule>
 ----
-....
-------
-
-== Configure CSV Reader
-
-DataWeave supports CSV inputs and outputs, by configuring the reader and writer properties, you can adapt it to different conventions regarding separations, line breaks, etc. Other formats also allow for this kind of configuration. See link:/anypoint-studio/v/6/using-dataweave-in-studio#reader-configuration[Using DataWeave in Studio] to learn how you can do this easily through the UI, or look at the link:/mule-user-guide/v/3.8/dataweave-xml-reference#reader-configuration[DataWeave XML Reference] for the required XML syntax. You can also see a full reference of the reader properties available with CSV format on link:/mule-user-guide/v/3.8/dataweave-formats#csv[DataWeave formats].
-
-Reader properties are set as part of the XML `dw:transform-message` component, whilst writer properties are specified in the DataWeave code itself, as part of the output directive. You can see a full reference to the writer properties available with CSV format on link:/mule-user-guide/v/3.8/dataweave-formats#writer-properties[DataWeave formats].
-
-This example takes a CSV file that is formatted in a certain way (with `;` as a separator) and outputs another CSV file that is formatted differently (with `,` as a separator, and all values quoted).
-
-=== Example Transformation
-
-.XML
-[source,xml, linenums]
-----
-<dw:transform-message metadata:id="ab7c919b-c57c-47da-a1e7-207a7e571341" doc:name="Transform Message">
-     <dw:input-payload mimeType="application/csv" doc:sample="sample_data/list_csv.csv">
-         <dw:reader-property name="header" value="false"/>
-         <dw:reader-property name="separator" value=";"/>
-     </dw:input-payload>
-     <dw:set-payload>
-       <![CDATA[
-%dw 1.0
-%output application/csv separator = "," , header = false, quoteValues = true
----
-payload
-      ]]>
-    </dw:set-payload>
-</dw:transform-message>
-----
-
-Note that the code above includes not just the DW transformation, but the XML of the Transform Message component that contains it, to display the reader properties configured in it.
-
-[tabs]
-------
-[tab,title="Input: JSON"]
-....
-
-.Input
-[source, csv, linenums]
-----
-name;address;phone
-George Harrisson; 1234 Abbey Road, London; 12341123
-David Gilmour; 3434 Diamond st., Dark side of the moon; 12341234
-Steven Wilson; 13/16 Raven st., Somewhere but not Here; 1234567
-----
-
-....
-[tab,title="Output: XML"]
-....
-
-.Output
-[source, xml, linenums]
-----
-"name","address","phone"
-"George Harrisson"," 1234 Abbey Road, London"," 12341123"
-"David Gilmour"," 3434 Diamond st., Dark side of the moon"," 12341234"
-"Steven Wilson"," 13/16 Raven st., Somewhere but not Here"," 1234567"
-----
-
 ....
 ------
 
@@ -2043,67 +2266,6 @@ See link:/mule-user-guide/v/3.8/dataweave-selectors#attribute-selector-expressio
 ....
 ------
 
-== Remove XML Attributes
-
-As a more advanced use case, you may want to remove specific attributes from within an XML tag that are known to contain sensitive data.
-
-The example defines a link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[function] in the link:/mule-user-guide/v/3.8/dataweave-language-introduction#dataweave-header[dataweave header] and then calls it on the body. It goes through the whole set of elements in the input using  a link:/mule-user-guide/v/3.8/dataweave-operators#map-object[`mapObject`] operator. Note that it differs from the map operation in that map object processes both key and value of its input, rather than just the keys. It also uses the link:/mule-user-guide/v/3.8/dataweave-language-introduction#when-otherwise[`when` and `otherwise`] operators to pick out only instances where an XML attribute exists, and to do nothing otherwise.
-It also uses the link:/mule-user-guide/v/3.8/dataweave-operators#match[`match` ] operator.
-
-See link:/mule-user-guide/v/3.8/dataweave-selectors#attribute-selector-expressions[Attribute selector expressions] for how to access XML attributes in DataWeave.
-
-=== Example Transformation
-
-.DataWeave
-[source,Dataweave,linenums]
-----
-%dw 1.0
-%output application/dw
-%var removeAttribute = (element,attrName) ->
-element mapObject {
-  ($$) @((($$.@ - attrName) when $$.@? otherwise {} ) ) : $ match {
-    :object -> removeAttribute($, attrName),
-    default -> $
-  }
-}
----
-
-removeAttribute(payload, "password")
-----
-
-[tabs]
-------
-[tab,title="Input: XML"]
-....
-.Input
-[source,xml,linenums]
-----
-<users>
-  <user username="Julian" password="1234"/>
-  <user username="Mariano" password="4321"/>
-</users>
-----
-
-
-....
-[tab,title="Output: JSON"]
-....
-.Output
-[source,json,linenums]
-----
-{
-  users @(): {
-    user @(
-      username: "Julian"
-    ): "",
-    user @(
-      username: "Mariano"
-    ): ""
-  }
-}
-----
-....
-------
 
 == Pass Functions as Arguments
 
