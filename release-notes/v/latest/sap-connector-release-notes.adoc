@@ -1,134 +1,134 @@
 = SAP Connector Release Notes
 :keywords: java connector, jco, release notes, sap
 
-Mule runtime supports SAP integration through our Anypoint Connector for SAP, which is an SAP-certified Java connector that leverages the SAP Java Connector (JCo) libraries.
+The Mule Runtime supports SAP integration through our Anypoint Connector for SAP, which is an SAP-certified Java connector that leverages the SAP Java Connector (JCo) libraries.
 
-*Guide:* link:/mule-user-guide/v/3.8/sap-connector[SAP Connector]
-////
-== Contents
+link:/mule-user-guide/v/3.8/sap-connector[SAP Connector User Guide]
 
-.xref:sap-connector-228[SAP Connector 2.2.8 - January 28, 2016]
-* xref:sap-connector-228-compatibility[Version 2.2.8 Compatibility]
-* xref:sap-connector-228-features[Version 2.2.8 Features]
-* xref:sap-connector-228-fixes[Version 2.2.8 Fixes]
-* xref:sap-connector-228-known-issues[Version 2.2.8 Known Issues]
+== Version 3.0.1 - November 23, 2016
 
-.xref:sap-connector-227[SAP Connector 2.2.7 - July 1, 2015]
-* xref:sap-connector-227-compatibility[Version 2.2.7 Compatibility]
-* xref:sap-connector-227-features[Version 2.2.7 Features]
-* xref:sap-connector-227-fixes[Version 2.2.7 Fixes]
-* xref:sap-connector-227-known-issues[Version 2.2.7 Known Issues]
+=== Compatibility
 
-.xref:sap-connector-226[SAP Connector 2.2.6 - June 17, 2015]
-* xref:sap-connector-226-compatibility[Version 2.2.6 Compatibility]
-* xref:sap-connector-226-features[Version 2.2.6 Features]
-* xref:sap-connector-226-fixes[Version 2.2.6 Fixes]
-* xref:sap-connector-226-known-issues[Version 2.2.6 Known Issues]
+[width="100%", cols=",", options="header"]
+|===
+|Software |Version
+|Mule Runtime|3.5.x or higher
+|Anypoint Studio|5.x and higher
+|Java|7, 8
+|SAP Solution| ECC 6.0 or higher
+|Supported modules|SAP CRM, SAP ERP, SAP SRM, SAP SCM, and any other modules compatible with the NetWeaver platform.
+|===
 
-.xref:sap-connector-225[SAP Connector 2.2.5 - November 28, 2014]
-* xref:sap-connector-225-compatibility[Version 2.2.5 Compatibility]
-* xref:sap-connector-225-features[Version 2.2.5 Features]
-* xref:sap-connector-225-fixes[Version 2.2.5 Fixes]
-* xref:sap-connector-225-known-issues[Version 2.2.5 Known Issues]
-////
+=== Features
 
-[[sap-connector-300]]
-== SAP Connector 3.0.0 - May 17, 2016
+* Enhanced DataSense for IDocs -  For every IDoc field, additional information is displayed as part of the UI label: the data type, its length and a description.
+
+=== Fixed in this Release
+
+* *XML External Entities (XXE) vulnerability* - By default, XML parsers are weakly configured and are therefore vulnerable to XML External Entity attacks (e.g. disclosure of confidential data, denial of service, server side request forgery) when the application parses XML input. To prevent XXE,  DTDs (External Entities) have been completely disabled in all the XML parsers used by the connector.
+* *Metadata retrieval results in timeout* - This is a result of additional information being displayed to enhance DataSense in version 3.0.0. The implementation has been improved and timeout is no longer being triggered. However, metadata generation takes a bit longer than in previous versions.
++
+NOTE: Due to the metadata retrieval timeout fix, both Input and Output tabs in DataSense UI display the same information (import, export, tables, etc). When using DataWeave, make sure you select the correct Input / Ouptut parameters.
++
+* *IDoc attributes "BEGIN" and "SEGMENT" not displayed in DataSense* - Regression issue introduced in version 3.0.0. Now both DataSense UI and DataWeave correctly display these attributes, which are required to properly build the XML of a given IDoc.
++
+NOTE: DataSense will display unwanted fields, such as: @begin and @segment. This is DS default behaviour when working with XML data. Skip these when binding data with DataWeave.
+* `Redundant XSD attribute names` - To improve readability, the `sap` prefix has been removed from the XSD/XML template. Attributes `sapOptional`, `sapType`, `sapLength` and `sapDescription` have been renamed to `optional`. `dataType`, `length` and `description` respectively.
+* *Parameters of type XSTRING are passed as String* - XSTRING represents a byte array in ABAP. This data type was not being handled by the connector. The value was passed without any conversion. In this version, XSTRING parameters are received as a Base64 string (the user is in charge of encoding it) and converted to a byte array.
+* *Connector hangs when application is redeployed* - This occurs when deploying an application that uses an *Inbound endpoint* inside a *Mule EE Standalone* distribution. When un-deploying the app and performing a second re-deploy attempt, the Mule Runtime gets stuck and does not finish deploying it completely (the log will end at _New app 'my-sap-app'_ instead of _Started app 'my-sap-app'_). As a *workaround*, the default value of `operationTimeout` has been changed from *0 (zero)* -Mule would block forever until the JCo server operations to execute- to *30 (thirty) seconds*. For *previous versions* of the connector, where the default value is 0, the workaround is to *explicitly declare* `operationTimeout` with a value greater than 0, similarly to the example below:
+```xml
+<sap:inbound-endpoint connector-ref="SAP" operationTimeout="5" type="idoc" ... />
+```
+
+=== Known Issues
+
+* Though the Connector hangs when application is redeployed a *workaround* has been provided in the previous section. The underlying issue persists and will be addressed in a future release.
+* Destination Provider reference gets lost after hot redeploy of an application (i.e. modifying the `mule-config.xml`)
+
+== Version 3.0.0 - May 17, 2016
 
 SAP connector version 3.0.0 was released and packaged with Anypoint Studio 6.0.0.
 
+=== Compatibility
 
-=== SAP Connector 3.0.0 - Compatibility
-
+[width="100%", cols=",", options="header"]
 |===
-|Application/Service|Version
-
+|Software |Version
 |Mule Runtime|3.5.x or higher
+|Anypoint Studio|5.x and higher
+|Java|7, 8
 |SAP Solution| ECC 6.0 or higher
-|JDK|1.7.0_x, 1.8.x
-|Supported modules|*SAP CRM*, *SAP ERP*, *SAP SRM*, *SAP SCM*, and any other modules compatible with the *NetWeaver* platform.
-Anypoint Studio|5.x and higher
+|Supported modules|SAP CRM, SAP ERP, SAP SRM, SAP SCM, and any other modules compatible with the NetWeaver platform.
 |===
 
+=== Features
 
-=== SAP Connector 3.0.0 Features
-
-* Supports definition of SAP JCo Client Extended Properties using MEL
-* Metadata generated at inbound endpoint by SAP is now organized by input and output
+* Supports definition of SAP JCo Client Extended Properties using MEL.
+* Metadata generated at inbound endpoint by SAP is now organized by input and output.
 * Enhanced DataSense, displaying additional information:
 ** For Functions and BAPIs, it is now possible to identify tables and structures, optional and required fields, the 'real' data type associated with them (such as Char, Number), their length and a description. For IDocs, segments are also clearly labeled.
 
-=== SAP Connector 3.0.0 Fixes
+=== Fixed in this Release
 
-* Support for *XML Version 1* was *removed* for Functions/BAPIs. This means that attribute `xmlVersion` is deprecated and templates for V1 no longer can be exported. The SAP Connector can be updated within  Studio.
+* Support for *XML Version 1* was *removed* for Functions/BAPIs. This means that attribute `xmlVersion` is deprecated and templates for V1 no longer can be exported. A *migration guide* is available link:/sap-connector#upgrading[here].
 * Connection Pool for outbound requests didn't work when configured from the connector global configuration because it was missing the property `jcoExpirationTime`, needed along with `jcoPeakLimit` and `jcoPoolCapacity` to establish the connection pooling.
 ** When set to a value above "0", the connector should support connection pooling.
 
-
-=== SAP Connector 3.0.0 Known Issues
+=== Known Issues
 
 * Destination Provider reference gets lost after hot redeploy of an application (i.e. modifying the mule-config.xml)
 
-[[sap-connector-228]]
-== SAP Connector 2.2.8 - January 28, 2016
+== Version 2.2.8 - January 28, 2016
 
-[[sap-connector-228-compatibility]]
-=== Version 2.2.8 Compatibility
+=== Compatibility
 
 The MuleSoft Enterprise Java Connector for SAP connector is compatible with:
 
+[width="100%", cols=",", options="header"]
 |===
-|Application/Service|Version
-
+|Software |Version
 |Mule Runtime|3.5.x or higher
+|Anypoint Studio|5.x
+|Java|7
 |SAP R/3|Release 3.1 or higher
 |SAP ERP|6.0 EhP 7 (SAP_APPL 607) or higher
-|Java|1.7.0_x
-|Anypoint Studio|5.x
 |===
 
-[[sap-connector-228-features]]
-=== Version 2.2.8 Features
+=== Features
 
 * Transaction ID (TID) has been added as a property of the Mule Message. Thus, when sending or receiving IDocs, the user will be able to call RFC-enabled Function Modules on SAP (`INBOUND_IDOCS_FOR_TID` and `OUTBOUND_IDOCS_FOR_TID`) to retrieve the IDoc number.
 
-[[sap-connector-228-fixes]]
-=== Version 2.2.8 Fixes
+=== Fixed in this Release
 
 * Java's UTF-8 encoding had not been recognizing initial character BOM (Byte Order Marker).
 
 * Metadata retrieval in DataSense for BAPI names containing slashes ("/"), e.g. "/DSD/ME_GETLIST_TR", is fixed.
 
-[[sap-connector-228-known-issues]]
-=== Version 2.2.8 Known Issues
+=== Known Issues
 
 * Destination Provider reference gets lost after hot redeploy of an application (i.e. modifying the mule-config.xml)
 
-[[sap-connector-227]]
-== SAP Connector 2.2.7 - July 1, 2015
+== Version 2.2.7 - July 1, 2015
 
-[[sap-connector-227-compatibility]]
-=== Version 2.2.7 Compatibility
+=== Compatibility
 
 The MuleSoft Enterprise Java Connector for SAP connector is compatible with:
 
+[width="100%", cols=",", options="header"]
 |===
-|Application/Service|Version
-
+|Software |Version
 |Mule Runtime|3.5.x or higher
+|Anypoint Studio|5.x
+|Java|7
 |SAP R/3|Release 3.1 or higher
 |SAP ERP|6.0 EhP 7 (SAP_APPL 607) or higher
-|JDK|1.7.0_x
-|Anypoint Studio|5.x
 |===
 
-[[sap-connector-227-features]]
-=== Version 2.2.7 Features
+=== Features
 
 * None
 
-[[sap-connector-227-fixes]]
-=== Version 2.2.7 Fixes
+=== Fixed in this Release
 
 * Compatibility issue with Anypoint Studio 5.2: when making a BAPI call or sending an IDoc, the SAP outbound endpoint could not parse an XML input built with a DataWeave Message Transformer.
 
@@ -136,40 +136,35 @@ The MuleSoft Enterprise Java Connector for SAP connector is compatible with:
 
 * The "MINIMAL" metadata mode now generates sample rows for tables.
 
-[[sap-connector-227-known-issues]]
-=== Version 2.2.7 Known Issues
+=== Known Issues
 
 * Destination Provider reference gets lost after hot-redeploy of an application (i.e. modifiying the mule-config.xml)
 
-[[sap-connector-226]]
-== SAP Connector 2.2.6 - June 17, 2015
+== Version 2.2.6 - June 17, 2015
 
-[[sap-connector-226-compatibility]]
-=== Version 2.2.6 Compatibility
+=== Compatibility
 
 The MuleSoft Enterprise Java Connector for SAP connector is compatible with:
 
+[width="100%", cols=",", options="header"]
 |===
-|Application/Service|Version
-
+|Software |Version
 |Mule Runtime|3.5.x or higher
+|Anypoint Studio|5.x
+|Java|7
 |SAP R/3|Release 3.1 or higher
 |SAP ERP|6.0 EhP 7 (SAP_APPL 607) or higher
-|Java|1.7.0_x
-|Anypoint Studio|5.x
 |===
 
-[[sap-connector-226-features]]
-=== Version 2.2.6 Features
+=== Features
 
-* Added demo examples to public site, available for download at http://mulesoft.github.io/sap-transport/
+* Added demo examples to public site, available for download at link:http://mulesoft.github.io/sap-transport/[SAP Connector Demos]
 
 * Extended multi-tenancy support to all the connection parameters (jcoAsHost, jcoUser, jcoLang, jcoClient, jcoPasswd & jcoSysnr) so that the connections can be defined dynamically in runtime. This way, the connector can now be used in real multi-tenant scenarios within Data Gateway.
 
 * Set the correct mimeType for payload to each message created by the SAP Transport in order to be fully compatible with the new Data Framework.
 
-[[sap-connector-226-fixes]]
-=== Version 2.2.6 Fixes
+=== Fixed in this Release
 
 * Operation timeout cannot be configured for SAP Inbound Endpoint.
 
@@ -179,30 +174,26 @@ The MuleSoft Enterprise Java Connector for SAP connector is compatible with:
 
 * Defective IDoc to XML conversion after upgrading to SAPJCo 3.0.13 and SAPidoc 3.0.12.
 
-[[sap-connector-226-known-issues]]
-=== Version 2.2.6 Known Issues
+=== Known Issues
 
 * Destination Provider reference gets lost after hot-redeploy of an application (i.e. modifiying the mule-config.xml)
 
-[[sap-connector-225]]
-== SAP Connector 2.2.5 - November 28, 2014
+== Version 2.2.5 - November 28, 2014
 
-[[sap-connector-225-compatibility]]
-=== Version 2.2.5 Compatibility
+=== Compatibility
 The MuleSoft Enterprise Java Connector for SAP connector is compatible with:
 
+[width="100%", cols=",", options="header"]
 |===
-|Application/Service|Version
-
+|Software |Version
 |Mule Runtime|3.5.x or higher
+|Anypoint Studio|5.x
+|Java|7
 |SAP R/3|Release 3.1 or higher
 |SAP ERP|6.0 EhP 7 (SAP_APPL 607) or higher
-|Java|1.7.0_x
-|Anypoint Studio|5.x
 |===
 
-[[sap-connector-225-features]]
-=== Version 2.2.5 Features
+=== Features
 
 * Full-featured SAP Editor - SAP Editor includes more options to browse SAP objects (IDocs & Functions), display complete details of the selected SAP Object metadata (XML Template and/or XSD) and export the data to the desired directory. DataSense has also been improved in order to reload metadata whenever any of the following changes: SAP Object, Type (IDoc / Function), Output XMl, XML Version.
 
@@ -212,8 +203,7 @@ The MuleSoft Enterprise Java Connector for SAP connector is compatible with:
 
 * Improved DataSense metadata discovery - for SAP Objects, Type (IDoc/Function), Output XML and XML Version. It also provides better coverage of failure messages.
 
-[[sap-connector-225-fixes]]
-=== Version 2.2.5 Fixes
+=== Fixed in this Release
 
 * Inbound endpoint support for qRFC doesn't work with IDocs.
 
@@ -233,8 +223,7 @@ The MuleSoft Enterprise Java Connector for SAP connector is compatible with:
 
 * JCo library generates classloader leaks (only when JCo dependencies and the SAP connector lib are in the application lib directory and the latter is redeployed).
 
-[[sap-connector-225-known-issues]]
-=== Version 2.2.5 Known Issues
+=== Known Issues
 
 * Operation timeout cannot be configured for SAP Inbound Endpoint.
 
