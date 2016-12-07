@@ -1,6 +1,16 @@
 = AS2 and EDI X12 Purchase Order WalkThrough
 :keywords: b2b, as2, edi, x12, datamapper
 
+
+
+This page shows how to use Anypoint Partner Manager to manage and track B2B processes. The goal is to develop a
+Mule application, representing a customer, that transforms an XML purchase order read from the filesystem to an X12 850
+and sends it to a supplier over AS2. The supplier returns an X12 997 to an AS2 endpoint on which the application is listening
+in order to inform the customer whether the 850 was accepted or rejected. Anypoint Partner Manager manages and records
+all B2B exchanges while the actual files exchanged are stored on an Amazon S3 bucket.
+
+image:B2B_AS2EDI_01.png[B2B_AS2EDI_01]
+
 === Audience
 
 This document is intended for a technical audience with basic knowledge of link:/anypoint-studio/v/5/datamapper-user-guide-and-reference[DataMapper], link:http://modusintegration.github.io/mule-connector-as2/[AS2 Connector], link:/anypoint-b2b/x12-module[X12 Module], and Anypoint Platform.
@@ -18,6 +28,8 @@ This document is intended for a technical audience with basic knowledge of link:
 * link:_attachments/as2-x12-po.xml[as2-x12-po.xml]
 * link:_attachments/as2-x12-po.xsd[as2-x12-po.xsd]
 
+////
+
 == Run the Example
 
 To run this example follow the steps below:
@@ -32,15 +44,7 @@ To run this example follow the steps below:
 . The file should disappear from the directory since the File message source deletes the file once it reads it.
 . Access the B2B Transmissions view in Anypoint Partner Manager to confirm that the AS2 and X12 transmissions have taken place.
 
-== Introduction
-
-This example shows how to use Anypoint Partner Manager to manage and track B2B processes. The goal is to develop a
-Mule application, representing a customer, that transforms an XML purchase order read from the filesystem to an X12 850
-and sends it to a supplier over AS2. The supplier returns an X12 997 to an AS2 endpoint on which the application is listening
-in order to inform the customer whether the 850 was accepted or rejected. Anypoint Partner Manager manages and records
-all B2B exchanges while the actual files exchanged are stored on an Amazon S3 bucket.
-
-image:B2B_AS2EDI_01.png[B2B_AS2EDI_01]
+////
 
 == Partnership Set Up
 
@@ -70,14 +74,17 @@ A partnership:
 . In the upper right corner, click *New Partner* .
 . Enter _My Supplier_ as *Company Name* and press *Save*.
 
-==== Set Partner Identities
+=== Set Partner Identities and Endpoints
 
-. Configure the partner's AS2 and X12 identities
-. Set the runtime parameters with which the AS2 Connector and X12 Module operate when sending to the supplier or receiving from that supplier.
+Goals:: Configure the partner's AS2 and X12 identities
++
+Set the runtime parameters with which the AS2 Connector and X12 Module operate when sending to the supplier or receiving from that supplier.
+
+==== Create AS2 Identity
 . On the left menu, click *Identifiers*.
 . Enter _My Supplier_ as *AS2 Identity* and press *Save*.
 
-=== Set up AS2
+==== Configure AS2 Endpoint
 
 . On the left menu, click *Endpoints* under *CONFIGURATION*.
 . In the top right, Click New.
@@ -127,7 +134,7 @@ A partnership:
 +
 . Press *Save*, then press *Endpoints* with the back arrow on the left menu.
 
-=== Set Up X12
+==== Configure X12 Endpoint
 
 . On the left menu, click *X12* under *FORMAT DEFAULTS*.
 . Enter _My Supplier_ as *Interchange ID (ISA)*, Select *ZZ (Mutually Defined)* from the *Interchange ID qualifier (ISA)*.
@@ -165,44 +172,61 @@ A partnership:
 
 The next stage of the solution is to develop a Mule application that transforms an XML purchase order read from the filesystem to an X12 850 and sends it to the supplier over AS2. The supplier returns an X12 997 to an AS2 endpoint the application is listening on in order to inform the customer whether the 850 was accepted or rejected. The application consists of two parts:
 
-* A customer part that sends an 850 and receives a 997.
+* A customer part that sends an 850 and receives a 997
 
-* A mock supplier that permits testing of the application without any external dependencies.
+* A mock supplier that permits testing of the application without any external dependencies
 
 Each part has its own Mule configuration file.
 
-. Launch Anypoint Studio and create a new Mule project.
-. Rename the initial Mule configuration file created by Studio to _customer.xml_ .
-. Create a new Mule configuration file and name it _mock-supplier_.
-+
+=== Create the Project
+
+. Start Anypoint Studio.
+. Create a new Mule project (*File*/*New*/*Mule Project*).
+. Rename the initial Mule configuration file created by Studio to *customer.xml* .
+. Create a new Mule configuration file (*File*/*New*/*Mule Configuration File*)and name it *mock-supplier*.
+
+At this point, your project should as shown in this image:
+
 image:B2B_AS2EDI_10.png[B2B_AS2EDI_10]
 
 == Customer Connector Configs
 
 In this section, create the customer’s connector configs in the customer Mule config file before building the customer flows.
 
-=== Create Partner Manager Connector Config
+=== Creating the Partner Manager Connector Config
 
-The Partner Manager Connector acts as a bridge between Mule and Anypoint Partner Manager. It enables the management of AS2
-Connector and the X12 module in addition to the recording of B2B exchanges.
+The Partner Manager Connector acts as a bridge between Mule and Anypoint Partner Manager. It enables the management of the AS2 Connector and the X12 module in addition to the recording of B2B exchanges.
 
-. Click the *Global Elements* view. Go to *Create* > *Connector Configuration* > *B2B: Basic Configuration* . If you
-have an Amazon S3 bucket available, you should go instead to *Create*  > *Connector Configuration* >
-*B2B: Amazon S3 File Storage*. The latter configuration type allows the Partner Manager Connector to persist X12 documents
-and AS2 message content to Amazon S3.
-. Enter your Environment Id and secret API key. To obtain a key, go to your home organization’s *Company* settings page in Anypoint Partner Manager:
+==== Create Partner Manager Connector Config
+
+. In Anypoint Studio, in the bottom left of the top-middle pane, click *Global Elements*.
 +
-image:B2B_AS2EDI_13.png[B2B_AS2EDI_13]
+The *Global Mule Configuration Elements* pane appears.
+. At the right top of the *Global Mule Configuration Elements* pane, click *Create*.
 +
-The home organization settings are accessed by clicking on the home Trading Partners in the left menu, then clicking on the organization Partner:
+The Choose Global Type dialog box appears.
+.
+Click  *Connector Configuration*.
 +
-image:B2B_AS2EDI_11.png[B2B_AS2EDI_11]
+A selection list appears.
+. From the selection list, if you have access to an Amazon S3 bucket,
+select *Partner Manager: Amazon S3 File Storage*. This configuration type allows the Partner Manager Connector to persist X12 documents and AS2 message content to Amazon S3.
 +
-On the left menu, click *Administration* under *PARTNERS*. Here is the list of Environment, make sure to select the one you have created the Partner in. Click *Create a new API key* to generate a new API Key.
+Otherwise, select *Partner Manager: Basic Configuration*.
 +
-image:B2B_AS2EDI_12.png[B2B_AS2EDI_12]
-+
-. Press *OK*.
+The Global Element Properties page appears.
+
+==== Completing the Global Element Properties Page
+
+The Global Element Properties Page requires you to enter an API Key and an Environment ID.
+
+To obtain a key, see link:/anypoint-b2b/administration#Create-a-new-API -Key[Create a New API Key].
+You can determine your environment ID on the same page that you create a new API key.
+
+==== Complete the Global Elements Properties Page
+. In the *API Key* box, enter your API key.
+. In the *Environment ID* box, enter you Environment ID.
+. Click *OK*.
 
 === Create HTTP Global Endpoints
 
