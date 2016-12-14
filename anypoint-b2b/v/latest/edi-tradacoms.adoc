@@ -1,0 +1,526 @@
+= TRADACOMS EDI
+:keywords: b2b, tradacoms, schema, EDI, edi
+
+TRADACOMS EDI lets you convert TRADACOMS files to and from DataWeave-compatible representations using lists and maps.
+
+TRADACOMS EDI includes:
+
+* TRADACOMS file reading, file validation, and file writing
+* Integration with DataSense and DataWeave
+* TRADACOMS message pack for all standard files: *ACKMNT, AVLDET, CORDER, CRAINF, CREDIT, CUSINF, DELIVR, DLCDET, DRAINF, EXCINF, GENRAL, INVOIC, LPRDET, ORDERS, PAYINF, PICKER, PPRDET, PRIINF, PROINF, SADDET, SNPSTS, SRMINF, UCNDET, UPLIFT,* and *UTLBIL*
+* The ability to define your own schemas or customize the base TRADACOMS schemas
+
+To get started using the connector, follow these steps:
+
+. <<Install the TRADACOMS Connector>>
+. <<Customize Schemas>> if your implementation differs from the standard.
+. <<Configure TRADACOMS EDI Connector>> for your trading partner according to your implementation convention.
+. <<Use TRADACOMS EDI Inside Mule Flows>>
+
+This page helps provides guidance for each of these steps.
+
+== Install the TRADACOMS Connector
+
+The following sections explain how to install the TRADACOMS connector.
+
+=== Installing TRADACOMS EDI in Anypoint Studio
+
+Follow the steps below to install an TRADACOMS EDI connector in Anypoint Studio.
+
+NOTE: To use the TRADACOMS EDI connector in a production environment, you must have purchased a license for Anypoint B2B.
+
+. In the Anypoint Studio *Help* menu, click *Install New Software*. The *Available Software* page appears.
++
+image:tradacoms-install-from-eclipse.png[tradacoms-install-from-eclipse]
++
+.. In the *Work with* box, select the *Anypoint Connectors Update Site*.
+.. Click to expand the *Premium* folder, then select `TRADACOMS EDI Connector`. 
+.. Click *Next*. The *Install Details* page appears.
+. Review the details of the item you selected, then click *Next*.
+. Click to accept terms and conditions of the product, then click *Finish*.
+. Click *Restart Now* to complete the installation. After you install the connector and restart Studio you can see the new message processor available in the palette, under the Connectors category.
+
+=== Using the TRADACOMS EDI via Maven
+
+If you want to use the TRADACOMS EDI in conjunction with Maven, follow the instructions in the *As a Maven Dependency* section of the *Install* tab on the link:http://mulesoft.github.io/edi-module/tradacoms/guide/install.html[Mule EDI Anypoint TRADACOMS Connector page].
+
+== Customize Schemas
+
+Customize schemas to describe your messages according to your implementation.
+
+=== EDI Schema Language
+
+The TRADACOMS EDI uses a YAML format called ESL (for EDI Schema Language) to represent EDI schemas.  Basic ESLs define the structure of TRADACOMS files in terms of _structures_ (messages, in TRADACOMS terminology), _groups_, _segments_, _composites_, and _elements_. ESLs for the most recent TRADACOMS versions are included:
+
+[%header,cols="20s,20a,20a,20s,20a"]
+|===
+|ESL |Version ||ESL |Version
+|ACKMNT |4 ||ORDERS |9
+|AVLDET |4 ||PAYINF |3
+|CORDER |6 ||PICKER |4
+|CRAINF |3 ||PPRDET |2
+|CREDIT |9 ||PRIINF |8
+|CUSINF |8 ||PROINF |8
+|DELIVR |9 ||SADDET |3
+|DLCDET |5 ||SNPSTS |3
+|DRAINF |3 ||SRMINF |9
+|EXCINF |3 ||UCNDET |3
+|GENRAL |3 ||UPLIFT |4
+|INVOIC |9 ||UTLBIL |3
+|LPRDET |2 |||
+|===
+
+
+If your implementation convention differs from the standard, you can define an _overlay schema_ so that TRADACOMS is configured to work with your files. An overlay schema is a special form of ESL that allows you to modify a base schema, such as an TRADACOMS INVOIC schema, with your specific conventions. (You don't need an overlay schema if you're using the structure defined by the standard, but you can use an overlay to tailor the structure to your usage.)
+
+You can also define your own schemas from scratch.
+See link:/anypoint-b2b/edi-schema-language-reference[EDI Schema Language Reference] for more details.
+
+TRADACOMS EDI schemas have a few differences from the generic EDI format. TRADACOMS files are composed of multiple messages, which occur in a fixed order and only one type is allowed to repeat within a file. To represent these constraints in ESL TRADACOMS adopts some conventions:
+
+* Each TRADACOMS file is defined in a separate ESL schema document
+* The schema version is the file name with the version number appended (so for CORDER at version 6 this would be `'CORDER6'`)
+* Each message used in the file is a structure definition in the schema, with the structure name consisting of the six-character message name, followed by a colon character, followed by the message version number (which may differ from the file schema version). So the CORHDR message used by CORDER would have the name `'CORHDR:6'`.
+* Each structure definition uses a class value which is the order of the corresponding message within the file. So for the CORHDR message within CORDER this would be `'1'`, meaning it's the first message within the file. By definition, the only message allowed to repeat within a file is the second message, with class `'2'`.
+
+[NOTE]
+====
+YAML uses a combination of lists and sets of key-value pairs. Order of values is not important, as long as required items are present. Quotes (either single or double quotes) are used around values which may consist of digits but are meant to be interpreted as strings (since otherwise the YAML parser treats the values as numbers). Indentation is used to show the nesting of lists.
+
+For readability, the ESL structures shown here define all simple key-value pairs before any lists that are part of the same definition.
+====
+
+=== Defining your Implementation Convention with an Overlay Schema
+
+To specify a schema according to your implementation convention, you can follow the following process:
+
+. Create an "overlay" schema which imports the base schema you want to customize - for example, TRADACOMS INVOIC.
+. Add new messages as part of the file.
+. Customize the structure of individual messages - segment usage, positions, groups and counts.
+. Customize segments - including usage and counts.
+
+Overlay schemas are very similar in structure to a link:/anypoint-b2b/edi-schema-language-reference[complete schema definition], but instead of providing all the details of the schema structure they only list changes. Overlay schemas specify how to use implementation conventions with a particular trading partner to extend and customize the standard.
+
+For example, here's a sample overlay schema modifying the basic TRADACOMS INVOIC file definition:
+
+[source,yaml, linenums]
+----
+form: TRADACOMS
+version: 'INVOIC9'
+imports: [ '/tradacoms/INVOIC.esl' ]
+structures:
+- id: 'REBILL'
+  name: 'REBILL:6'
+  class: '5'
+  data:
+  - { idRef: 'MHD', usage: M }
+  - { idRef: 'RBL', usage: M }
+  - { idRef: 'MTR', usage: M }
+segments:
+- id: 'RBL'
+  name: 'REBILLING DETAILS'
+  values:
+  - { id: 'RBLA', name: 'Rebill From Field', usage: M, type: char, minLength: 1, maxLength: 14 }
+  - { id: 'RBLB', name: 'Rebill To Field', usage: M, type: char, minLength: 1, maxLength: 14 }
+----
+
+This sample adds a REBILL message at version 6 to the file, following all existing messages in the file (class value `5`, since there are four message components normally present in an INVOIC file).
+
+=== Structure Overlay
+
+A structure overlay details modifications to the base schema definition of an TRADACOMS message. Most often these modifications take the form of marking segments or groups in the base definition as unused, but any usage or repetition count change is allowed. Here's the form taken by a structure overlay:
+
+[source,yaml, linenums]
+----
+form: TRADACOMS
+version: 'INVOIC9'
+imports: [ '/tradacoms/INVOIC.esl' ]
+structures:
+- idRef: 'INVFIL'
+  data:
+  - { idRef: 'FDT', position: '07', usage: M }
+  - { idRef: 'ACD', position: '08', usage: M }
+----
+
+The modifications in this example specify that the FDT (at position 7) and ACD (at position 8) segments are required in each INVFIL message (usage: M for mandatory). With this overlay, errors are reported if either the FDT or ACD segment is not present in a message.
+
+The key-value pairs at the structure level are:
+
+[%header,cols="20s,80a"]
+|===
+|Key |Description
+|idRef |The ID for the message structure being modified.
+|class |The position of the message within a file (optional).
+|name |The message structure name and version (optional).
+|data |List of segment and group modifications within the structure (optional, each is only used when there are modifications to that section).
+|===
+
+Each item in the list of structure data components is either a segment reference or a group definition. Both are shown here using a compact YAML syntax where the values for each reference are given as comma-separated key-value pairs enclosed in curly braces. The values are:
+
+[%header,cols="20s,80a"]
+|===
+|Key |Description
+|idRef |The referenced segment ID (optional, verified if provided but otherwise ignored – the position value is used to uniquely identify segments within the section).
+|position |The segment position within the message structure.
+|usage |Usage code (optional, base definition value used if not specified).
+
+Values may be:
+
+* C for Conditional
+* M for Mandatory
+* U for Unused
+|count |Maximum repetition count value, which may be a number or the special value `>1` meaning any number of repeats (optional, base definition value used if not specified).
+|===
+
+The values in a group definition are:
+
+[%header, cols="20s,80a"]
+|===
+|Key |Description
+|groupIdRef |The referenced group ID (optional, verified if provided but otherwise ignored – the position value is used to uniquely identify a group within a section).
+|position |The segment position within the message structure (position of the first segment included in the group).
+|usage |Usage code, which may be:
+
+* C for Conditional
+* M for Mandatory
+* U for Unused
+|count |Maximum repetition count value, which may be a number or the special value `>1` meaning any number of repeats (optional, base definition value used if not specified).
+|items |List of segments (and potentially nested loops) making up the loop (only available with expanded YAML format).
+|===
+
+=== Segment Overlays
+
+A segment overlay details modifications to the base schema definition. Most often these modifications take the form of changing the usage of elements or composites in the base definition. Here is a full overlay modifying a segment of a message:
+
+[source,yaml, linenums]
+----
+form: TRADACOMS
+version: 'INVOIC9'
+imports: [ '/tradacoms/INVOIC.esl' ]
+structures:
+- idRef: 'INVFIL'
+  data:
+  - { idRef: 'FDT', position: '07' }
+segments:
+- idRef: 'FDT'
+  values:
+  - { position: 1, usage: M }
+  - { position: 2, usage: M }
+----
+
+This example modifies the base definition for the FDT segment, making both values defined in the segment required fields (they are optional in the base definition).
+
+Segment modifications only effect structures included in the overlay with explicit references to the modified segments. That's why the FDT segment reference needs to be included in the INVFIL message structure part of the schema, even though nothing (such as usage or repetition count) is being changed for how this segment is used within the message.
+
+The above example uses the compact form for segment modifications that only involve a truncate, while modifications that make changes to individual values are expressed in expanded form. As with all the other YAML examples, the two forms are actually equivalent and can be used interchangeably.
+
+The key-value pairs in a segment overlay are:
+
+[%header,cols="20s,80a"]
+|===
+|Key |Description
+|idRef |Segment identifier.
+|trim |Trim position in segment, meaning all values from this point on are marked as unused (optional).
+|values |List of individual value modifications.
+|===
+
+The values list references values in the segment by position. The values for these references are:
+
+[%header, cols="20s,80a"]
+|===
+|Key |Description
+|position |The value position within the segment.
+|name |The name of the value in the segment (optional, base definition value used if not specified)
+|usage |Usage code (optional, base definition value used if not specified).
+
+The usage value may be:
+
+* C for Conditional
+* M for Mandatory
+* U for Unused
+
+|===
+
+=== Determining the TRADACOMS Schema Location
+
+To use the connector, you need to know the locations of the schemas in your project. If you're using the out of the box TRADACOMS schemas and not customizing anything, the schema location follows the  `/tradacoms/{file}.esl` pattern. For example, if you're using the INVOIC file, your schema location is `/tradacoms/INVOIC.esl`.
+
+If you're creating a custom implementation convention (whether full schemas, or overlay schemas), you should put your schemas under a directory in `src/main/app` and refer to the location using `${app.home}`. For example, if you've put your ADT_A01 schema under `src/main/app/mypartner/INVOIC.esl`, your schema location is `${app.home}/mypartner/INVOIC.esl`.
+
+The Mule Runtime automatically checks `src/main/app`
+for any locations that contain the `${app.home}` value.
+
+[[configconnector]]
+== Configure TRADACOMS EDI Connector
+
+After you install the connector and configure your schema customizations (if any), you can start using the connector. Create separate configurations for each implementation convention.
+
+[tabs]
+------
+[tab,title="Studio Visual Editor"]
+....
+
+Follow these steps to create a global TRADACOMS EDI configuration in a Mule application:
+
+. Click the *Global Elements* tab at the base of the canvas, then click *Create*.
+. In the *Choose Global Type* wizard, use the filter to locate and select, *TRADACOMS EDI: Configuration*, then click *OK*.
+. Configure the parameters according to the sections that follow.
++
+image:tradacoms-edi-config.png[tradacoms-edi-config]
++
+. Click *OK* to save the global connector configurations.
+. Return to the *Message Flow* tab in Studio.
+
+=== Setting your TRADACOMS Identification
+
+You can configure your STX identification information in the connector so
+that it  automatically  checks when a file is being received or
+set when a file is being sent.
+
+The STX identification information is set in these fields:
+
+*Partner identification*
+
+* Partner Sender/Recipient Code (STX FROM or UNTO Code):
+* Partner Sender/Recipient Name (STX FROM or UNTO Name):
+
+*Self identification*
+
+* Self Sender/Recipient Code (STX FROM or UNTO Code):
+* Self Sender/Recipient Name (STX FROM or UNTO Name):
+
+
+The "Self identification" parameters identify your side of the trading partner
+relationship, while the "Partner identification" parameters identify your
+trading partner. The values you set are used when writing TRADACOMS files to
+set the sender and recipient code and name, and are verified in receive
+files. If you don't want to restrict incoming files, you can leave these blank,
+and set the values for outgoing files in the actual outgoing file data.
+Values set in the file data override the connector configuration.
+
+In Studio, these values are set in these Global Element Properties:
+
+[source,code,linenums]
+----
+Self identification:
+TO BE DEFINED
+
+Partner identification:
+TO BE DEFINED
+----
+
+=== Setting Sender Defaults
+
+You can also configure the connector with defaults for other STX values.
+These defaults are used when writing TRADACOMS files to set the Sender's
+and Recipient's Transmission References, the Application
+Reference, and the Transmission Priority Code if not already set in the outgoing data.
+
+Defaults are specified in these fields:
+
+* Sender Reference:
+* Recipient Reference:
+* Application Reference:
+* Priority Code:
+
+=== Setting Parser Options
+
+You can set the following options if needed:
+
+* Fail when value length outside allowed range
+* Fail when invalid character in value
+* Fail when too many repeats of value
+* Fail when unknown segment in message
+* Fail when segment out of order in message set
+* Enforce chars - Determines whether to enforce the TRADACOMS character set.
+
+....
+[tab,title="XML Editor or Standalone"]
+....
+
+Ensure that you have included the EDI namespaces in your configuration file.
+
+[source, xml, linenums]
+----
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:tradacoms-edi="http://www.mulesoft.org/schema/mule/tradacoms-edi" xmlns:tradacoms-transformer="http://www.mulesoft.org/schema/mule/tradacoms-transformer" xmlns:tradacoms="http://www.mulesoft.org/schema/mule/tradacoms" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/tradacoms-edi http://www.mulesoft.org/schema/mule/tradacoms-edi/current/mule-tradacoms-edi.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+----
+
+Follow these steps to configure TRADACOMS EDI in your application:
+
+. Create a global configuration outside and above your flows, using the following global configuration code:
++
+[source, xml, linenums]
+----
+<tradacoms-edi:config name="MyTradingPartner" doc:name="TRADACOMS EDI: Configuration">
+  <tradacoms-edi:schemas>
+    <tradacoms-edi:schema>/tradacoms/INVOIC.esl</tradacoms-edi:schema>
+    <tradacoms-edi:schema>/tradacoms/ORDERS.esl</tradacoms-edi:schema>
+  </tradacoms-edi:schemas>
+</tradacoms-edi:config>
+----
+
+=== Setting Your TRADACOMS Identification
+
+You can configure the STX identification for you and your trading partner on the TRADACOMS EDI connector configuration.
+
+The "Self identification" parameters identify your side of the trading partner relationship, while the "Partner identification" parameters identify your trading partner. The values you set are used when writing TRADACOMS files to supply the Sender/Recipient Code and Name, and are verified in receive files. If you don't want to restrict incoming files you can leave these blank, and set the values for outgoing files in the data. Values set directly in the data override the connector configuration.
+
+Self identification parameters:
+
+[source,xml,linenums]
+----
+selfCode="<value>"
+selfName="<value>"
+----
+
+Partner identification parameters:
+
+[source,xml,linenums]
+----
+partnerCode="<value>"
+partnerName="<value>"
+----
+
+=== Setting Sender Defaults
+
+You can set the sender STX defaults if used:
+
+[source,xml,linenums]
+----
+sendSenderReference="<value>"
+sendRecipientReference="<value>"
+sendApplicationReference="<value>"
+sendPriorityCode="<value>"
+----
+
+
+=== Setting Parser Options
+
+You can set the following options if needed:
+
+[%header,cols="50a,50a"]
+|===
+|XML Value (When set to `true`) |Visual Studio Option
+|lengthFail="true" |Fail when value length outside allowed range
+|charFail="true" |Fail when invalid character in value
+|countFail="true" |Fail when too many repeats of value
+|unknownFail="true" |Fail when unknown segment in message
+|orderFail="true" |Fail when segment out of order in message set
+|unusedFail="true" |Fail when unused segment included in message set
+|===
+
+=== Setting Your Schema Locations
+
+NOTE: Currently, you can only configure schema locations in the Anypoint Studio XML view.
+
+In Anypoint Studio, switch to the XML view by clicking *Configuration XML* and modify your TRADACOMS EDI configuration to include a list of all the schemas you wish to include by adding an `+<http://edischema[edi:schema]>+` element for each document type:
+
+[source, xml, linenums]
+----
+<tradacoms-edi:config name="MyTradingPartner" doc:name="TRADACOMS EDI: Configuration">
+  <tradacoms-edi:schemas>
+    <tradacoms-edi:schema>/tradacoms/INVOIC.esl</tradacoms-edi:schema>
+    <tradacoms-edi:schema>/tradacoms/ORDERS.esl</tradacoms-edi:schema>
+  </tradacoms-edi:schemas>
+</tradacoms-edi:config>
+----
+
+....
+------
+
+After you create a global element for your TRADACOMS EDI, configure the message structure, operations, and acknowledgments.
+
+See also: link:http://mulesoft.github.io/edi-module/[X12 EDI, EDIFACT EDI, and TRADACOMS EDI connector references].
+
+== Use TRADACOMS EDI Inside Mule Flows
+
+You can use TRADACOMS EDI connector in your flows for reading and writing messages, and sending
+acknowledgments.
+
+Topics:
+
+* <<Understanding TRADACOMS Message Structure>>
+* <<Reading and Validating TRADACOMS ER7 Messages>>
+* <<Writing TRADACOMS EDI Messages>>
+* <<Sending Acknowledgments>>
+
+=== Understanding TRADACOMS Message Structure
+
+The TRADACOMS connector enables reading or writing of TRADACOMS documents into or from the canonical ER7 message structure. This structure is represented as a hierarchy of Java Maps and Lists, which can be manipulated using DataWeave or code. Each transaction has its own structure, defined in the schemas as previously outlined.
+
+The message itself contains the following keys (some of which only apply to either the read operation or the write operation, as indicated):
+
+[%header,cols="3s,7a"]
+|===
+|Key name |Description
+|{File} |Wrapper for message data, with keys matching the names of the component messages linking to data for those messages. For the repeating detail message of the file (always class '2') the value is a list of maps; for the singleton messages of the file the values are maps.
+|Errors (read only) |A list of errors which are associated with the input message. (See the TradacomsError structure description in the Reading and Validating TRADACOMS Messages section below.)
+|Id |File (the name of the TRADACOMS file read).
+|STX |Map of STX segment data from start of file.
+|===
+
+Individual messages have their own maps under the file name map, with keys matching the segments of the message. For instance, an INVOIC file would
+have the key 'INVOIC' in the root map, and under that keys for 'INVFIL', 'INVOIC' (the list of data for repeating INVOIC messages),
+'VATTLR' and 'INVTLR'. Within the INVTLR map there would be keys '01_MHD', '02_TOT', and '03_MTR' for the segments of the
+INVTLR message.
+
+////
+<IMAGE>
+Show an image here of data sense for an expanded INVOIC file
+////
+
+=== Reading and Validating TRADACOMS File
+
+To read an TRADACOMS file, search the palette for "TRADACOMS EDI" and drag the TRADACOMS EDI building block into a flow. Then, go to the properties view, select the connector configuration you xref:configconnector[previously created] and select the *Read* operation:
+
+image:tradacoms-read-operation.png[tradacoms-read-operation]
+
+This operation reads any byte stream into the structure described by your TRADACOMS schemas.
+
+TRADACOMS EDI validates the message structure when it reads it in. Message validation includes checking the syntax and content of the STX and all messages of the file, including component segments of the messages. Normally errors are logged and accumulated, and the message data is only supplied as output if no fatal errors occur in parsing the input. Errors reading the input data cause exceptions to be thrown.
+
+Error data entered in the receive data map uses the TradacomsError class, a read-only JavaBean with the following properties:
+
+[%header,cols="3s,7a"]
+|===
+|Property |Description
+|segment |The zero-based index within the input of the segment causing the error.
+|fatal |Flag for a fatal error, meaning the input file was rejected as a result of the error.
+|errorText |Text description of the error.
+|===
+
+Error data is returned by the read operation as an optional list with the "Errors" key.
+
+=== Writing TRADACOMS EDI Messages
+
+To write an outgoing message, construct an outgoing TRADACOMS EDI message according to the previously defined structure.
+
+For example, this sample creates an outgoing TRADACOMS message that is written to a file.
+
+[source, xml, linenums]
+----
+  ...
+TO BE DEFINED
+----
+
+== TRADACOMS and MLLP DataWeave Example
+
+The following example shows the use of TRADACOMS and DataWeave to read and write messages.
+
+TO BE DEFINED
+
+
+== See Also
+
+* link:http://training.mulesoft.com[MuleSoft Training]
+* link:https://www.mulesoft.com/webinars[MuleSoft Webinars]
+* link:http://blogs.mulesoft.com[MuleSoft Blogs]
+* link:http://forums.mulesoft.com[MuleSoft Forums]
