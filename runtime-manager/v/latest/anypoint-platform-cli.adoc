@@ -1,8 +1,10 @@
 = Command Line Interface for Anypoint Platform
 :keywords: administration, api, organization, users, gateway, theme, cli
 
-image:logo-cloud-active.png[link="/runtime-manager/deployment-strategies"]
-image:logo-hybrid-active.png[link="/runtime-manager/deployment-strategies"]
+image:logo-cloud-active.png[link="/runtime-manager/deployment-strategies", title="CloudHub"]
+image:logo-hybrid-active.png[link="/runtime-manager/deployment-strategies", title="Hybrid Deployment"]
+image:logo-server-disabled.png[link="/runtime-manager/deployment-strategies", title="Anypoint Platform On-Premises"]
+image:logo-pcf-disabled.png[link="/runtime-manager/deployment-strategies", title="Pivotal Cloud Foundry"]
 
 Anypoint Platform provides you a command line tool to interact with your Cloudhub applications, link:/runtime-manager/virtual-private-cloud[VPCs] and link:/runtime-manager/cloudhub-dedicated-load-balancer[Cloudhub load balancers] through both interactive shell and standard CLI modes.
 
@@ -71,7 +73,7 @@ As instructed above, the username and password parameters are required. However,
 Password: ****
 ----
 
-If you choose to pass the credentials when running Anypoint-CLI, we strongly recommend to pass both parameters as environment variables: +
+If you choose to pass the credentials when running Anypoint-CLI, we strongly recommend passing both parameters as environment variables: +
 `$ANYPOINT_USERNAME` and `$ANYPOINT_PASSWORD`.
 
 [source,Example,linenums]
@@ -125,7 +127,12 @@ A few considerations to keep in mind while using Anypoint-CLI:
 . Anypoint-CLI works with autocomplete. You can start typing the name of the command or parameter and hit `tab` for an autocomplete, or double tap `tab` for a list of all possible options.
 --
 
-Once you have your parameters in order, you can pass commands. +
+Once you have your parameters in order, you can pass commands.
+
+== List of Commands
+
+[TIP]
+Use the `--help` option with a command to see what options are available.
 A list of available commands is below:
 
 [%header,cols="35a,65a"]
@@ -204,11 +211,6 @@ $ anypoint-cli [params] [command]
 
 If you choose not to pass a command, Anypoint-CLI will run in *interactive mode*.
 If you choose to pass a specific command and there is an error, the application will exit and return you a description of the issue.
-
-== List of commands
-
-[TIP]
-Use the `--help` option with a command to see what options are available.
 
 === account user describe
 
@@ -418,7 +420,7 @@ Character `:` is not supported for the property's name.
 Note that from Anypoint-CLI you won't be able to allocate static IPs. You can simply enable and disable them.
 
 After typing any option, you can double tap the `tab` key for a full list of all possible options.
-For exmaple:
+For example:
 [source,Example]
 ----
 > deploy <app name> --runtime [tab][tab]
@@ -525,7 +527,8 @@ This command creates a load balancer using the specified values in the variables
 [CAUTION]
 --
 The name for the load balancer that you pass in <name> must be unique. +
-By default your load balancer listens external requests on https and communicates with your workers internally through http. You need to configure your application to listen through http on port 8091 for your load balancer to work.
+By default your load balancer listens external requests on https and communicates with your workers internally through http. +
+If you configured your Mule application within the VPC to listen on https, make sure you set `upstreamProtocol` to https when creating the mapping list using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-add[load-balancer mappings add] command.
 --
 
 Besides the default `--help` option, this command takes the following options:
@@ -695,9 +698,9 @@ This command does not take any options, except for the default --help.
 
 [source,Example]
 ----
-> cloudhub load-balancer mappings add <name> <index> <inputUri> <appName> <appUri> [certificateName]
+> cloudhub load-balancer mappings add <name> <index> <inputUri> <appName> <appUri> [certificateName] [upstreamProtocol]
 ----
-This command adds a proxy mapping rule to the load balancer specified in <name> at the priority index specified in <index> in the CN passed under the `certificateName` option, using the values set in the variables +
+This command adds a proxy mapping rule to the load balancer specified in <name> at the priority index specified in <index> in the CN passed under the `certificateName` option, using the protocol set in `upstreamProtocol` and the values set in the variables +
 
 [%header,cols="12a,68a,20a"]
 |===
@@ -711,8 +714,11 @@ This command adds a proxy mapping rule to the load balancer specified in <name> 
 
 For the values in the example above, for an input call to `my-superapp.api.example.com/status?limit=10`, the endpoint `my-superapp-example: /status?limit=10` will be called for the application.
 
-This command does not take any options, except for the default --help. +
-If no `certificateName` is passed, Anypoint CLI adds the mappings for the default SSL endpoint.
+If no `certificateName` is passed, Anypoint CLI adds the mappings to the default SSL endpoint.
+
+The `--upstreamProtocol` option sets the protocol used by your application to communicate internally with your load balancer. +
+The allowed values are `http` or `https`. If no upstreamProtocol is set, HTTP is used as default.
+
 
 === cloudhub load-balancer mappings remove
 
@@ -843,11 +849,11 @@ This command does not take any options, except for the default `--help`.
 ----
 > cloudhub vpc dns-servers set [options] <vpc>
 ----
-This command sets a list of local host names (internal domain names) to be resolved using your  DNS servers for which you need to provide their public IP addresses. +
+This command sets a list of local host names (internal domain names) to be resolved using your DNS servers for which you need to provide their IP addresses (whether private or public addresses). +
 Whenever those private domains are provided, your worker resolves them using your private DNS, so you can still use the internal host names of your private network.
 
 [NOTE]
-This feature is supported by workers running Mule versions 3.5.x, 3.6.x, 3.7.4-HF1, 3.8.0-HF1 and 3.8.1
+This feature is supported by workers running Mule versions 3.5.x, 3.6.x, 3.7.4, 3.8.0-HF1, 3.8.1 and 3.8.2.
 
 
 Besides the default `--help` option, this command takes the following options:
@@ -920,7 +926,7 @@ This command does not take any options, except for the default `--help`.
 ----
 > cloudhub vpc firewall-rules remove <vpc> <index>
 ----
-This command removes the firewall rule from the VPC specified in <vpc> at the index passed in the <index>. +
+This command removes the firewall rule from the workers inside the VPC specified in <vpc> at the index passed in the <index>. +
 This command does not take any options, except for the default `--help`.
 
 === use environment

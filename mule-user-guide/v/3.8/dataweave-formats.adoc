@@ -198,6 +198,128 @@ image::dataweave-formats-4a556.png[]
 See link:/anypoint-studio/v/6/using-dataweave-in-studio#defining-metadata-via-the-ui[Using DataWeave in Studio] for more detailed instructions on how to set this up.
 
 
+
+== Excel
+
+[NOTE]
+Excel support is a beta feature for Mule Runtime 3.8.2. It isn't supported on earlier versions of the runtime. Only .xlsx files are supported (excel 2007), .xls files aren't supported on any Mule runtime version.
+
+
+=== Canonical Model
+
+
+An excel workbook is a sequence of sheets, in DataWeave this is mapped to an object where each sheet is a key. Only one table is allowed per excel sheet. A table is expressed as an array of rows. A row is an object where its keys are the columns and the values the cell content.
+
+For example:
+
+.Input
+
+image:dataweave-formats-exceltable.png[]
+
+.DataWeave representation
+[source,dataweave,linenums]
+----
+%output application/xlsx header=true
+---
+{
+  Sheet1: [
+    {
+      Id: 123,
+      Name: George
+    },
+    {
+      Id: 456,
+      Name: Lucas
+    }
+  ]
+}
+----
+
+
+=== Reader Properties
+
+
+
+When defining an input of type excel, there are a few optional parameters you can add in the XML definition of your Mule project to customize how the data is parsed.
+
+[%header]
+|=======================
+|Parameter |Type |Default|Description
+|header | bool | true |	defines if the excel tables contain headers. When set to false, column names are used. (A, B, C, ...)
+|ignoreEmptyLine	| bool | true | defines if empty lines are ignored
+|tableOffset | string | A1 |	The position of the first cell of the tables
+|=======================
+
+
+
+These properties can be either set via the XML of your Mule project:
+
+[source,xml,linenums]
+----
+	 <dw:transform-message metadata:id="33a08359-5085-47d3-aa5f-c7dd98bb9c61"
+	 			doc:name="Transform Message">
+ 			<dw:input-payload
+ 			    <!-- Boolean that defines if the first line in the data contains headers -->
+ 				<dw:reader-property name="header" value="true" />
+ 				<!-- Boolean that defines if empty lines are ignored -->
+ 				<dw:reader-property name="ignoreEmptyLine" value="false" />
+ 				<!-- Defines that defines what cell to start reading from. In this case Column A is ignored, and all rows above 9 -->
+ 				<dw:reader-property name="tableOffset" value="B9" />
+ 			</dw:input-payload>
+ 			<dw:set-payload>
+                <![CDATA[
+                    %dw 1.0
+                    %output application/java
+                    ---
+                    // Your transformation script goes here
+                ]]>
+            </dw:set-payload>
+     </dw:transform-message>
+----
+
+Or via the UI of the Transform Message component:
++
+image:dataweave-formats-excell-reader.png[]
+
+
+See link:/anypoint-studio/v/6/using-dataweave-in-studio#reader-configuration[Using DataWeave in Studio] for more detailed instructions on how to set these properties.
+
+
+
+=== Writer Properties
+
+When defining an output of type excel, there are a few optional parameters you can add to the output directive to customize how the data is parsed:
+
+[%header]
+|=======================
+|Parameter |Type |Default|Description
+|header | bool | true |	defines if the excel tables contain headers. When there are no headers, column names are used. (A, B, C, ...)
+|ignoreEmptyLine	| bool | true | defines if empty lines are ignored
+|tableOffset | string | A1 |	The position of the first cell of the tables
+|=======================
+
+All of these parameters are optional. An excel output directive might for example look like this:
+
+[source,DataWeave]
+---------------------------------------------------------------------
+%output application/xlsx header=true
+---------------------------------------------------------------------
+
+=== Defining a Metadata Type
+
+In the Transform Message component, you can define a excel type through the following methods:
+
+* Via a graphical editor that allows you to set up each field manually
+
++
+image:dataweave-formats-excel-metadata.png[]
+
+
+
+[TIP]
+See link:/anypoint-studio/v/6/using-dataweave-in-studio#defining-metadata-via-the-ui[Using DataWeave in Studio] for more detailed instructions on how to set this up.
+
+
 == XML
 
 === Canonical Model
@@ -279,6 +401,7 @@ When defining an output of type XML, there are a few optional parameters you can
 |=======================
 |Parameter |Type |Default|Description
 |`indent`| boolean | true | defines if the XML code will be indented for better readability, or if it will be compressed into a single line
+| `inlineCloseOn` | string | `never` | defines wether an empty XML child element appears as single self-closing tag or with an opening and closing tag. The value `empty` sets it to output self-closing tags.
 |`encoding`|string | UTF-8 |The character set to be used for the output
 |`bufferSize`| number | 153600 | The size of the buffer writer
 |`inlineCloseOn` | string | | When the writer should use inline close tag. Possible values = `empty`/`none`
@@ -289,6 +412,34 @@ When defining an output of type XML, there are a few optional parameters you can
 ---------------------------------------------------------------------
 %output application/xml indent=false, skipNullOn="attributes"
 ---------------------------------------------------------------------
+
+The `inlineCloseOn` parameter defines if the output is structured like this (by default):
+
+[source,xml,linenums]
+----
+<someXml>
+  <parentElement>
+    <emptyElement1></emptyElement1>
+    <emptyElement2></emptyElement2>
+    <emptyElement3></emptyElement3>
+  </parentElement>
+</someXml>
+----
+
+or like this (set with a value of "empty"):
+
+[source,xml,linenums]
+----
+<payload>
+  <someXml>
+    <parentElement>
+      <emptyElement1/>
+      <emptyElement2/>
+      <emptyElement3/>
+    </parentElement>
+  </someXml>
+</payload>
+----
 
 ==== Skip Null On
 

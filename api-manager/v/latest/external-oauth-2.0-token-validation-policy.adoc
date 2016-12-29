@@ -1,62 +1,43 @@
 = OAuth 2.0 Access Token Enforcement Using External Provider Policy
 :keywords: oauth, raml, token, validation, policy
 
-The OAuth 2.0 Access Token Enforcement Using External Provider policy enforces the following interaction between the OAuth 2.0 provider, API, and client application:
+You can use the OAuth 2.0 Access Token Enforcement Using External Provider policy to secure an API from client apps that try to access the API. To access resources on an OAuth2 authentication server, such as the Github authenication server outside Anypoint Platform, from a Mule client app configure authentication in link:/mule-user-guide/v/3.8/authentication-in-http-requests[the HTTP Requester connector] of your app.
 
-image::oauth+policy1.png[oauth+policy1,height=300,width=377]
+The documentation about the OAuth 2.0 Access Token Enforcement Using External Provider policy covers the following topics:
 
-. The client application requests a token. The request based on an OAuth grant must occur before any request can be sent to the API.
-. The OAuth Provider returns a token, which can specify a scope of access using the link:https://tools.ietf.org/html/rfc6749#page-23[`scope` request parameter]. 
-. The client application sends a request to the API, which includes the received token either as an authentication header or a query parameter.
-. The OAuth 2.0 Access Token Enforcement Using External Provider Policy intercepts this request and validates the token against the validation URL of the OAuth provider. If scopes are provided in the policy, the policy also assures that the token is valid for those specific scopes.
-. If the token is properly validated, it is whitelisted and kept on record until expiration. Any further requests that contain this token aren't validated against the OAuth provider. If the token isn't properly validated, a `403` error message is returned to the client application.
+* link:/api-manager/external-oauth-2.0-token-validation-policy#applying-the-oauth-2-0-token-validation-policy[How to apply] the OAuth 2.0 Access Token Enforcemen Using External Provider policy.
+* link:/api-manager/building-an-external-oauth-2.0-provider-application[How to build, deploy, and test] an OAuth2 provider, which must be a Mule provider.
+* link:/api-manager/oauth2-provider-configuration[How to configure] provider options.
+
+Like other API Manager-enforced policies, the API needs to be registered in API Manager to apply this policy. 
+
+You can restrict access to your API service on Anypoint Platform by applying the OAuth 2.0 Access Token Enforcement Using External Provider policy. This policy enforces the OAuth interaction, called the OAuth dance, between the OAuth 2.0 provider, API, and client application as described in link:https://tools.ietf.org/html/rfc6749#section-4.1[RFC 6749]. You can get a hands-on perspective of the OAuth dance by following the link:/api-manager/building-an-external-oauth-2.0-provider-application[step-by-step procedure] to build, run, and test the custom Mule OAuth provider in Anypoint Platform.
+
+image::oauth+policy1.png[oauth+policy1,height=366,width=640]
+
+. The client application requests a token from the provider.
+. The provider returns a token.
+. The client application includes the token either as an authentication header or a query parameter in a request to the API.
+. The OAuth 2.0 Access Token Enforcement Using External Provider Policy intercepts this request and communicates with the provider to validate the token.
+. The validated token is whitelisted and kept on record until expiration. Any further requests that contain this token are not validated against the OAuth provider.
 . If the token is valid, the request is forwarded to the API.
 . The API responds to the client application.
 
-The OAuth 2.0 Token Validation Using External Provider policy supports HTTPS communication for configuring a single OAuth provider for multiple APIs. One of the following runtime versions are required:
-
-* Mule 3.8.0 runtime
-* API Gateway 2.0 runtime or later
-
-On earlier versions of API Gateway runtime, you can apply the link:/api-manager/oauth-2.0-provider-and-oauth-2.0-token-enforcement-policies[OAuth 2.0 Provider and OAuth Token Enforcement Policies].
+The OAuth is secure because the client application gets authorization from an OAuth provider instead of directly gaining access to the user's credentials. The user owns the credentials and authorizes the provider to interact with the API. The application has knowledge of the user's authentication in the form of an access token.
 
 == Prerequisites
 
-To configure an API to use the OAuth 2.0 Access Token Enforcement Using External Provider Policy, familiarity with link:/mule-user-guide/v/3.8/mule-secure-token-service[OAuth 2.0] is recommended. You need to be an Organization Administrator or API Version Owner for the API version that you want to manage using policies.
+Prerequisites for using the OAuth 2.0 Access Token Enforcement Using External Provider policy are:
 
-=== Applying OAuth 2.0 Access Token Enforcement Using External Provider Validation
+* Applying the policy to the API.
+* Having access to an link:/api-manager/building-an-external-oauth-2.0-provider-application[external (Mule) OAuth 2.0 provider].
+* The Mule OAuth2 provider needs to run in the same organization as your API.
 
-To apply the OAuth 2.0 Access Token Enforcement Using External Provider policy, you need to deploy an link:/api-manager/building-an-external-oauth-2.0-provider-application[external OAuth 2.0 provider app] separately. The provider application can be deployed anywhere, on premises or in the cloud. Its OAuth component must be configured with the Client ID and Client Secret of the Anypoint Platform organization in which the managed API is registered.
+=== Requirements for RAML APIs
 
-This external OAuth 2.0 provider application must be built with Mule Runtime version 3.8 or later or with API Gateway 2.0 or later runtime.
+If the API protected by the OAuth 2.0 Access Token Enforcement Using External Provider policy is defined using RAML (recommended), define link:https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md#oauth-20[RAML securitySchemes] for OAuth 2.0. The example of link:/api-manager/building-an-external-oauth-2.0-provider-application#using-and-testing-oauth2[testing the custom provider] from MuleSoft Consulting provides this RAML code. Within the RAML securitySchemes definition, you include URIs for the authorization and access token as shown in the example.
 
-=== Prerequisites for RAML APIs
-
-If your API is defined using RAML (recommended), define link:https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md#oauth-20[RAML securitySchemes] for OAuth 2.0. See the RAML 1.0 link:https://docs.mulesoft.com/release-notes/raml-1-early-access-support[early access document]. Before configuring OAuth policies in the link:/api-manager/tutorial-set-up-and-deploy-an-api-proxy#navigate-to-the-api-version-details-page[API version details page], determine any prerequisites and requirements determined by your securitySchemes definition in your RAML file.
-
-==== OAuth Dance URIs
-
-Within the RAML securitySchemes definition, include URIs for the authorization and access token. 
-
-* `authorizationUri` 
-+
-Example: https://oauth2provider.cloudhub.io/authorize
-+
-* `accessTokenUri`
-+
-Example: https://oauth2provider.cloudhub.io/access_token
-
-Set mule-app.properties. For example:
-
-* host = 0.0.0.0
-* port = `${http.port}`
-* HTTP endpoint: `http.port=8083`
-* HTTPS endpoint: `https.port=8082`
-
-
-==== Grant Types
-
-You specify grant types in RAML securitySchemes. The RAML syntax for the authorizationGrants setting is:
+You specify grant types in RAML securitySchemes. The following example RAML syntax shows the authorizationGrants setting:
 
 ----
 settings:
@@ -76,11 +57,9 @@ The following table shows the mapping of the RAML grant types to the grant type 
 |`[authorization_code]` |Authorization Code |Yes
 |===
 
-== Configuring the OAuth 2.0 Token Validation Policy
+== Applying the OAuth 2.0 Token Validation Policy
 
-Before applying this policy, modify the API RAML code to support OAuth authentication and deploy an OAuth provider application, as previously described.
-
-Configure the following optional scopes and required token validation endpoint URL for the OAuth 2.0 Token Validation policy:
+To apply the OAuth 2.0 Access Token Enforcement Using External Provider policy to an API, use the link:/api-manager/using-policies#applying-and-removing-policies[procedure for applying policies] described earlier. Configure the optional scopes and required token validation endpoint URL as follows:
 
 * *Scopes*
 +
@@ -88,37 +67,13 @@ In the optional Scopes field, you can enter a space-separated list of supported 
 +
 * *Access Token Validation Endpoint URL*
 +
-The URL of the external OAuth 2.0 Provider used for granting the access token, for example `https://oauth2provider.cloudhub.io/validate`
+In the required *Access Token validation endpoint url* field, you must enter the URL of the external OAuth 2.0 Provider used for granting the access token, for example `https://oauth2provider.cloudhub.io/validate`.
 +
 image::external-oauth-2.0-token-validation-policy-ba3c0.png[external-oauth-2.0-token-validation-policy-ba3c0,height=375,width=404]
 
-== Using an API Protected by OAuth 2.0 Access Token Enforcement Using External Provider
+== Obtaining API User Information
 
-Depending on the OAuth grant type you want to use, the OAuth Provider application might expose two or three endpoints:
-
-* `/authorize`: provides an access code for later obtaining a token
-* `/access_token`: returns a new token
-* `/validate`: verifies a token's validity
-
-Depending on the grant type being used, you might have to use only `/access_token` , both `/authorize` and `/access_token`, or to none of them. Obtain the token before attempting to send requests to the API that's protected by the policy. Include the token in all requests sent to the API using a query parameter or an authorization header:
-
-[%header,cols="3*a"]
-|===
-|Places to include Token |Example |Notes
-|Query parameter |`?access_token=123` |Included as part of the URI
-|Authorization header |`Authorization:Bearer 123` |The header consists of a key:value pair, where Authorization is the key and the value is composed as follows:
- `"Bearer" + <space> + <token, for example, 123>`
-|===
-
-When a request is received, the OAuth 2.0 Token Validation Policy sends a request to the `/validate` URL of the OAuth provider to ensure the token's validity.
-
-== Testing OAuth 2.0 Access Token Enforcement Using External Provider
-
-You can test an API that has the policy applied using the API Notebook and API Console after registering an API within a portal in the platform.
-
-== Obtaining User Credentials
-
-In some cases, you might want to access information about which externally authenticated users are using an API. To do so, place the following script between the inbound and outbound endpoints of the proxy. The script executes after the OAuth 2.0 Token Validation Policy enforcement:
+In some cases, you might want to get information about externally authenticated users who use your API. Place the following script between the inbound and outbound endpoints of the proxy application to which you applied the policy. The script executes after the enforcement of the policy:
 
 [source,xml,linenums]
 ----
@@ -127,11 +82,11 @@ In some cases, you might want to access information about which externally authe
 </expression-component>
 ----
 
-This script stores the username in the mule message as an outbound-property named `X-Authenticated-userid`. The HTTP Connector, used to generate the proxy's output, transforms any outbound properties that reach it into HTTP message headers. In this way the message that reaches the API after passing through your proxy includes an HTTP header named `X-Authenticated-userid`, containing the username.
+This script stores the user name in the mule message as an outbound-property named `X-Authenticated-userid`. The HTTP Connector, used to generate the proxy's output, transforms any outbound properties that reach it into HTTP message headers. In this way the message that reaches the API after passing through your proxy includes an HTTP header named `X-Authenticated-userid`, containing the user name.
 
 You can modify this code to change the name of the header being created.
 
 == See Also
 
-* link:/api-manager/building-an-external-oauth-2.0-provider-application[Building an External OAuth 2.0 Provider Application]
-* link:/api-manager/aes-oauth-faq[OAuth Providers, Current and Deprecated]
+* link:/api-manager/building-an-external-oauth-2.0-provider-application[Example of building an external OAuth 2.0 provider]
+* link:/api-manager/aes-oauth-faq[Supported OAuth providers]

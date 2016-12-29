@@ -3,7 +3,7 @@
 
 *Select*
 
-*Latest version: 1.1.0*
+*Latest version: 1.2.0*
 
 The ServiceBus connector enables message integration with Windows Service Bus on-premises and Azure Service Bus on the cloud. The connector supports communication with queues, topics, and event hubs through AMQP 1.0. In addition, dynamic discovery and provisioning of Service Bus objects is possible using the built-in management API.
 
@@ -26,11 +26,13 @@ The connector supports the following Service Bus versions:
 
 == Prerequisites
 
-This document assumes that you are familiar with Mule, link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors], and the link:/anypoint-studio/v/6/[Anypoint Studio]. To increase your familiarity with Studio, consider completing one or more link:/anypoint-studio/v/6/basic-studio-tutorial[Anypoint Studio Tutorials]. Further, this page assumes that you have a basic understanding of link:/mule-fundamentals/v/3.8/mule-concepts[Mule flows] and link:/mule-fundamentals/v/3.8/global-elements[Mule Global Elements].
+
+This document assumes that you are familiar with Mule, link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors], and the link:/anypoint-studio/v/6/[Anypoint Studio]. To increase your familiarity with Studio, consider completing one or more link:/anypoint-studio/v/6/basic-studio-tutorial[Anypoint Studio Tutorials]. Further, this page assumes that you have a basic understanding of link:/mule-user-guide/v/3.8/mule-concepts[Mule flows] and link:/mule-user-guide/v/3.8/global-elements[Mule Global Elements].
+
 
 == Installing the Service Bus Connector
 
-To install a connector, see link:/mule-fundamentals/v/3.8/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Installing a Connector from Anypoint Exchange].
+To install a connector, see link:/getting-started/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Installing a Connector from Anypoint Exchange].
 
 == Using the Connector in Mule Flows
 
@@ -84,13 +86,14 @@ image:ServiceBusAzure.png[Azure Service Bus configuration]
 |Field |Description
 |*Name* |Enter a name for the global element.
 |*Service Namespace* |Enter the name of the service namespace to address Service Bus resources within your application.
-|*Shared Access Key Name* |Enter the name of access key configured on the namespace. Any access key created at a lower level will not work with this option. i.e. Topic level Shared Key
+|*Shared Access Key Name* |Enter the name of access key configured on the namespace. Any access key created at a lower level (i.e. Topic level Shared Key) will not work with this option, unless you disable connectivity test at startup. See below *Skip Connectivity Test* option.
 |*Shared Access Key* |Enter the 256-bit primary key.
+|*Skip Connectivity Test* |In case you have limited access to Azure Service Bus resources and you want to skip the connectivity test performed at startup (as this works at the root level of your namespace) you need to set this setting to true. For example, you might need to receive or send on a specific queue or topic and your *Shared Access Key* has a security policy that allows to perform limited set of operations only on the specific target resource.
 |*Enable DataSense* |If you intend to employ the Microsoft Service Bus connector in conjunction with an link:/anypoint-studio/v/6/datamapper-user-guide-and-reference[Anypoint DataMapper] to map and transform data, you can make use of Anypoint Studio's
 link:/anypoint-studio/v/6/datasense[DataSense] functionality. You can enable DataSense as part of configuring the global element.
 |===
 +
-. Windows Service bus:
+. Windows Service Bus:
 +
 image:ServiceBusWindowsGen.png[Windows Service Bus configuration]
 +
@@ -104,6 +107,7 @@ image:ServiceBusWindowsGen.png[Windows Service Bus configuration]
 |*Fully* *Qualified Domain Name* |Enter the fully qualified domain name of your Windows Service Bus server
 |*Port* |Enter the server port number.
 |*Disable SSL Certificate Validation* |If you are using a self-signed SSL certificate, select this check box.
+|*Skip connectivity test* |In case you have limited access to Windows Service Bus resources and you want to skip the connectivity test performed at startup you need to set this setting to true.
 |*Enable DataSense* |If you intend to employ the Microsoft Service Bus connector in conjunction with an link:/anypoint-studio/v/6/datamapper-user-guide-and-reference[Anypoint DataMapper] to map and transform data, you can make use of Anypoint Studio's
 link:/anypoint-studio/v/6/datasense[DataSense] functionality. You can enable DataSense as part of configuring the global element.
 |===
@@ -176,7 +180,7 @@ Within the advanced section you can find:
 
 *SAS Tokens List*: (Optional) The list of security tokens the connector will need to access different URIs when the security profiles for each one of them are different. In this case when any of the tokens has expired the connector cannot reconnect to the URI linked to that token and you will need to stop running the flow in order to update this configuration setting with a new set of tokens.
 
-*SAS Tokens Provider*: (Optional) An Spring bean reference implementing the `org.mule.modules.microsoftservicebus.connection.providers.SharedAccessSignatureProvider` interface. If you set an instance of a token provider here, it is your responsibility to provide a fresh token for each URI the connector requires access to (according to your security profiles). In this case each time a token has expired the connector will request for a new one, which will be provided by your implementation, and reconnection to the target URI will be done seamlessly. In order to provide a reference to your own implementation as a Spring bean, refer to the following link:/https://docs.mulesoft.com/mule-user-guide/v/3.8/using-spring-beans-as-flow-components[documentation].
+*SAS Tokens Provider*: (Optional) An Spring bean reference implementing the `org.mule.modules.microsoftservicebus.connection.providers.SharedAccessSignatureProvider` interface. If you set an instance of a token provider here, it is your responsibility to provide a fresh token for each URI the connector requires access to (according to your security profiles). In this case each time a token has expired the connector will request for a new one, which will be provided by your implementation, and reconnection to the target URI will be done seamlessly. In order to provide a reference to your own implementation as a Spring bean, refer to the following link:/mule-user-guide/v/3.8/using-spring-beans-as-flow-components[documentation].
 
 NOTE: At least one of the optional settings shown above must be provided.
 
@@ -197,9 +201,13 @@ SharedAccessSignature sr=amqps%3a%2f%2fmynamespace.servicebus.windows.net%2fMyQu
 
 ==== Performance Considerations
 
-The Claims Based Security mechanism required to authenticate to Azure Service Bus using a SAS token involves exchanging messages with a special node. The latest impacts on connector's sending performance as tokens are retrieved and exchanged per request in order to achieve connection security setup using targeted tokens (regarding the resource being accessed). If your scenario requires sending several messages with high throughput it is recommended to use another connection strategy setting then a username and password, which it is the simpler way to authenticate to Azure Service Bus achieving better throughput.
+The Claims Based Security mechanism required to authenticate to Azure Service Bus using a SAS token involves exchanging messages with a special node. The latest impacts on connector's performance as tokens are exchanged per request in order to achieve connection security setup using targeted tokens (related to the resource being accessed). This has been optimized, starting from version 1.2, to impact performance as low as possible. Anyway, if your scenario requires sending several messages with high throughput it is recommended the connection strategy that requires setting the username and password. This is the simpler way to authenticate to Azure Service Bus with the connector while achieving better throughput, though it requires to write the password for the `shared access key name` you are using.
 
-For the connector's receiving operation, this mechanism has no impact on performance as the AMQP container created keeps the connection alive and token exchange messages occur only in case of token expiration.
+NOTE: As said before, if you are experiencing performance issues when using the SAS strategy we recommend you updating to version 1.2 or higher. The optimized mechanism has lower performance impact on receiving & sending operations as the AMQP container and cache (respectively) keep the connection alive and token exchange messages occur only when setting up the connection and/or in case of token expiration.
+
+==== Using restricted access policies
+
+In cases where you have restrict access to your resources, having a security policy with permissions just at resource level, the connector cannot perform the `connectivity test` when it is starting up as this targets the root level of your namespace which might be forbidden due to the customized policy applied to the `shared access key`. For these scenarios, you need to skip the connectivity test with the configuration option available to this purpose, otherwise connetor's startup will fail.
 
 == Connector Operations
 
@@ -571,7 +579,7 @@ It represents a rule for processing messages. Service Bus matches messages with 
 
 * Learn more about the Microsoft Service Bus connector in the link:/mule-user-guide/v/3.8/microsoft-service-bus-connector-faq[Microsoft Service Bus Connector FAQ].
 * For code samples that illustrate more advanced scenarios, refer to link:_attachments/service-bus-connector-samples.zip[service-bus-connector-samples.zip].
-* Learn how to link:/mule-fundamentals/v/3.8/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Install a Connector from Anypoint Exchange].
+* Learn how to link:/getting-started/anypoint-exchange#installing-a-connector-from-anypoint-exchange[Install a Connector from Anypoint Exchange].
 * Access link:http://forums.mulesoft.com[MuleSoft's Forums] to pose questions and get help from Mule’s broad community of users.
 * To access MuleSoft’s expert support team, link:https://www.mulesoft.com/support-and-services/mule-esb-support-license-subscription[subscribe] to Mule Enterprise and log in to MuleSoft’s link:http://www.mulesoft.com/support-login[Customer Portal].
 * link:http://training.mulesoft.com[MuleSoft Training]

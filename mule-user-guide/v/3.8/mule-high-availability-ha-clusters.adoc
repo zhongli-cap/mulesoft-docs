@@ -5,6 +5,9 @@ A *cluster* is a set of Mule runtimes that acts as a unit. In other words, a clu
 
 image:cluster.png[cluster]
 
+[TIP]
+For instructions on how to create and manage a cluster, see link:/runtime-manager/managing-servers#create-a-cluster[Managing Servers].
+
 == The Benefits of Clustering
 
 By default, clustering Mule runtimes ensures high system availability. (If you wish to use clusters for high performance instead, see <<Clustering for High Performance>> below.) If a Mule runtime node becomes unavailable due to failure or planned downtime, another node in the cluster can assume the workload and continue to process existing events and messages. The following figure illustrates the processing of incoming messages by a cluster of two nodes. Notice that the processing load is balanced across nodes – Node 1 processes message 1 while Node 2 simultaneously processes message 2.
@@ -31,6 +34,24 @@ Beyond benefits such as high availability through automatic failover, improved p
 
 [NOTE]
 All Mule runtimes in a cluster actively process messages. Note that each Mule runtime is also internally scalable – a single Mule runtime can scale easily by taking advantage of multiple cores. Even when a Mule runtime takes advantage of multiple cores, it still operates as a single node (Mule runtime) in a cluster.
+
+=== Concurrency Issues Solved by Clusters
+
+The following problems may exist when you have a server group composed of multiple servers that *aren't binded as a cluster*. You don't have to worry about any of them if you group your servers as a cluster:
+
+* *File based transports*: All Mule instances access the same mule file folders concurrently, which can lead to duplicate file processing and even possible failures if a file is deleted or modified by the Mule application
+
+* *Multicast transport*: All mule instances get the same TCP requests and then process duplicate messages
+
+* *JMS Topics*: All mule instances connect to the same JMS topic, which may lead to repeated processing of messages when scaling the non clustered Mule instance horizontally
+
+* *JMS request-reply/request-response*: All Mule instances are listening for messages in the same response queue, this implies that a Mule instance might obtain a response that isn't correlated to the request it sent. This can result in incorrect responses or make a flow fail with timeout.
+
+* *Idempotent-redelivery-policy*: Idempotency doesn’t work if the same request is received by different Mule instances. Duplicated messages aren’t possible
+
+* *Salesforce streaming API*: if multiple instances of the same application are deployed, they will fail since the API only supports a single consumer. No failover support in case the instance connected is stopped or crashes
+
+
 
 == About Clustering
 
@@ -122,7 +143,7 @@ There are also many hardware load balancers that can route both TCP and HTTP(S) 
 == Clustering for High Performance
 
 [NOTE]
-Note that high performance is implemented differently on link:/runtime-manager[CloudHub], so this section applies only for link:/runtime-manager/deploying-to-your-own-servers[on-premises deployments].
+Note that high performance is implemented differently on link:/runtime-manager[CloudHub] and link:/runtime-manager/deploy-to-pcf[Pivotal Cloud Foundry], so this section applies only for link:/runtime-manager/deploying-to-your-own-servers[on-premises deployments].
 
 If high performance is your primary goal (rather than reliability), you can configure a Mule cluster or an individual application for maximum performance using a *performance profile*. By implementing the performance profile for specific applications within a cluster, you can maximize the scalability of your deployments while deploying applications with different performance and reliability requirements in the same cluster. By implementing the performance profile at the container level, you apply it to all applications within that container. Application-level configuration overrides container-level configuration.
 
@@ -171,9 +192,9 @@ In cases of high load with endpoints that do not support load balancing, applyin
 You can also choose to define a minimum number of machines required in a cluster for it to remain in an operational state. This grants you a consistency improvement. Find more information in our link:/mule-user-guide/v/3.8/creating-and-managing-a-cluster-manually#quorum-management[quorum management section].
 
 
-== HA Demo
+== HA Cluster Demo
 
-To evaluate Mule's HA clustering capabilities first-hand, download the link:/mule-user-guide/v/3.8/evaluating-mule-high-availability-clusters-demo[*Mule HA Demo Bundle*]. Designed to help new users evaluate the capabilities of Mule High Availability Clusters, the Mule HA Demo Bundle teaches you how to use the Mule Management Console to create a cluster of Mule runtimes, then deploy an application to run on the cluster. Further, this demo simulates two processing scenarios that illustrate the cluster’s ability to automatically balance normal processing load, and its ability to reliably remain active in a failover situation.
+To evaluate Mule's HA clustering capabilities first-hand, continue on to the link:/mule-user-guide/v/3.8/evaluating-mule-high-availability-clusters-demo[Mule HA Demo]. Designed to help new users evaluate the capabilities of Mule High Availability Clusters, the Mule HA Demo Bundle teaches you how to use the Mule Management Console to create a cluster of Mule runtimes, then deploy an application to run on the cluster. Further, this demo simulates two processing scenarios that illustrate the cluster’s ability to automatically balance normal processing load, and its ability to reliably remain active in a failover situation.
 
 == Best Practices
 

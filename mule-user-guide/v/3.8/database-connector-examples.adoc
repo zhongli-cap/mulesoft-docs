@@ -408,7 +408,7 @@ image:database-connector-examples-af80b.png[db-ex-1]
 ....
 ------
 
-In this example, the database connector references the `MySQL_Configuration` link:/mule-fundamentals/v/3.8/global-elements[global element] to obtain connection parameters. `MySQL_Configuration` is configured with the parameters listed below.
+In this example, the database connector references the `MySQL_Configuration` link:/mule-user-guide/v/3.8/global-elements[global element] to obtain connection parameters. `MySQL_Configuration` is configured with the parameters listed below.
 
 [tabs]
 ------
@@ -773,9 +773,9 @@ WARN  2014-02-28 14:11:28,702 [[test2].Batch Dispatcher thread] org.mule.api.pr
 INFO  2014-02-28 14:11:28,703 [[test2].Batch Dispatcher thread] com.mulesoft.module.batch.engine.DefaultBatchEngine: Finished execution of onComplete phase for instance 40d3cb27-a0c5-11e3-a3c7-f1f67a172e10 of job db-appBatch1
 ----
 
-== Example: Pass Payload to Stored Procedure Call
+== Example: Pass Input Parameter to Stored Procedure Call
 
-Run this example to update a "bonus" field in a table where salary and bonus amounts are stored. This is not intended at all as a best practice, but may prove useful for generating ideas on how to call a stored procedure in your database from your Mule application.
+Run this example to update a "bonus" field in a table where salary and bonus amounts are stored. This example may prove useful for generating ideas on how to configure the database connector to call a stored procedure from your Mule application.
 
 image:database-connector-examples-8b1f9.png[flow pic stored proc]
 
@@ -794,6 +794,7 @@ PRIMARY KEY (emp_no)
 +
 . Perform the INSERT statements to populate the table.
 +
+[source]
 ----
 INSERT INTO salary (emp_no,salary_amount,bonus) VALUES (1011,75000,1000);
 INSERT INTO salary (emp_no,salary_amount,bonus) VALUES (1012,50000,1000);
@@ -897,7 +898,7 @@ INSERT INTO salary (emp_no,salary_amount,bonus) VALUES (1109,50000,1000);
 INSERT INTO salary (emp_no,salary_amount,bonus) VALUES (1110,70000,1000);
 ----
 +
-. Create a simple stored procedure like this one, which add a given amount to the bonus stored in the table "salary".
+. Create a simple stored procedure like this one, which adds a given amount to the bonus stored in the table "salary".
 +
 ----
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_bonus_by_emp_no`(IN EMP_NO integer,
@@ -909,50 +910,31 @@ WHERE salary.emp_no=EMP_NO;
 END
 ----
 +
-. Call this procedure to add an amount (for this example, $500) to an employee's base bonus based on the employee's ID, `emp_no` as the first argument, with the second argument being the amount to add to the current bonus.
+. One would call this example procedure to increase the employee's bonus using the employee number. The first argument is passed as an input parameter, `<db:in-param name="empno" value="#[payload]"/>`. The second argument is the amount to add to the bonus.
 +
 ----
-call add_bonus_by_emp_no(#[payload],500);
+CALL add_bonus_by_emp_no(:empno,500);
 ----
 +
 . This call is represented in the example by:
-`<db:parameterized-query><![CDATA[call add_bonus_by_emp_no(#[payload],500);]]></db:parameterized-query>`. By the design of the example, the employee is passed as an HTTP parameter. `http://localhost:8081/getemps?emp=1065`
-. Here is the full code for a simple app that calls a stored procedure using an HTTP parameter we set in the HTTP request. Modify the credentials in the database connector global element for your MySQL instance.
+`<db:parameterized-query><![CDATA[CALL add_bonus_by_emp_no(empno,500);]]></db:parameterized-query>`. Here is how you set up the stored procedure in Studio.
 +
-[source,xml,linenums]
+image:database-connector-examples-fe6e9.png[]
++
+[NOTE]
+The employee ID is passed as an input parameter. It is first ingested by the application from the HTTP query parameter, when the HTTP endpoint is hit: `http://localhost:8081/getemps?emp=1065`
++
+. Here is the full code for a simple app that calls a stored procedure using the payload as an input/"in" parameter. Make sure to modify the credentials and endpoint in the database connector global element for your MySQL instance.
++
+[source, xml, linenums]
 ----
-<?xml version="1.0" encoding="UTF-8"?>
-
-<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
-http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
-    <http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" doc:name="HTTP Listener Configuration" />
-    <db:mysql-config name="MySQL_Configuration" host="localhost" port="3306" user="username" password="xyz" database="company" doc:name="MySQL Configuration"/>
-    <http:request-config name="HTTP_Request_Configuration" host="localhost" port="8081" doc:name="HTTP Request Configuration"/>
-    <flow name="stored-proc-exFlow">
-        <http:listener config-ref="HTTP_Listener_Configuration" path="/getemps" doc:name="HTTP">
-            <http:response-builder>
-                <http:header headerName="" value=""/>
-            </http:response-builder>
-        </http:listener>
-        <set-payload value="#[message.inboundProperties.'http.query.params'.emp]" doc:name="Set Payload"/>
-        <db:stored-procedure config-ref="MySQL_Configuration" doc:name="Database">
-            <db:parameterized-query><![CDATA[call add_bonus_by_emp_no(#[payload],500);]]></db:parameterized-query>
-        </db:stored-procedure>
-        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
-    </flow>
-</mule>
+include::_sources/mysql-empno-in-param.xml[in param example]
 ----
 
 
 == See Also
 
+* link:/mule-user-guide/v/3.8/database-connector-reference[Database Connector Reference]
+* link:/mule-user-guide/v/3.8/database-connector[Database Connector Main Page]
 * Learn more about link:/anypoint-studio/v/6/datasense[DataSense] and how you can use it to retrieve metadata on remote applications.
-
 * Delve deeper into link:/mule-user-guide/v/3.8/batch-processing[batch processing] to gain a deeper understanding of how Mule handles messages in batch jobs.

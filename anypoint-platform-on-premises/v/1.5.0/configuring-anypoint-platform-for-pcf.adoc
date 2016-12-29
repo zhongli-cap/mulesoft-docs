@@ -1,0 +1,205 @@
+= Configuring Anypoint Platform for PCF
+:keywords:anypoint platform, on premises
+
+
+== Overview
+
+For the Anypoint Platform for PCF solution to work, you must install and configure the following things:
+
+* The <<Anypoint Platform Service Brokers for PCF Tile>>
+* The <<Mule Runtime BuildPack>>
+* <<Set the PCF Flag Manually>>
+* The <<Space Configuration Tool>>. This installs a bundle of elements that includes:
+** The Cloud Manager, which mediates the communication between Anypoint Platform and PCF
+** The *Runtime Manager Service* - Meant for Mule runtime applications
+** The *API Gateway Service* - Meant for proxying non-Mule applications that are deployed on PCF
+
+
+[NOTE]
+====
+To complete this process, you must contact you MuleSoft customer success representative.
+
+Keep in mind that if you have multiple PCF installations, then each must be linked its own separate link:/anypoint-platform-on-premises/v/1.5.0/installing-anypoint-on-premises[Anypoint Platform On-premises installation]. 
+
+If you have a PCF installation with multiple spaces in it, then these can be handled via a single Anypoint Platform installation, but each of these spaces must be paired with a separate installation of the *Space Configuration Tool*. If your Anypoint Platform organization uses multiple different link:/access-management/environments[environments], then it's recommended that you have one PCF space for each.
+====
+
+== Anypoint Platform Service Brokers for PCF Tile
+
+See instructions for installing this component on Pivotal's documentation:
+link:http://docs.pivotal.io/mulesoft/[Anypoint Platform Service Brokers for PCF] Tile
+
+== Mule Runtime BuildPack
+
+Download and install the Mule runtime BuildPack. This BuildPack contains an image that includes Mule Runtime 3.8.1.
+
+If the default settings on the Mule Runtime BuildPack don’t match what you require, you can link:link:/anypoint-platform-on-premises/v/1.5.0/customize-mule-runtime-buildpack[Customize Mule Runtime BuildPack]
+
+You can have multiple BuildPacks installed, when link:https://docs.mulesoft.com/runtime-manager/deploying-to-pcf[Deploying] on the Anypoint Platform you can select which to use.
+
+
+== Set the PCF Flag Manually
+
+In order to make PCF visible as an option on the Runtime Manager UI, you must manually enable a flag in the platform. Future releases will avoid needing this additional step.
+
+[NOTE]
+Contact your MuleSoft customer success representative to help you implement this change.
+
+== Space Configuration Tool
+
+
+The Space Configuration Tool creates the following components:
+* two services, the `runtime-manager-service` and the `api-Gateway-Service`
+* A cloud installer app named: `cloudmanager-<uuid>` (where the “uuid” is a unique value for a combination of space and Anypoint Platform organization)
+
+[NOTE]
+Each instance of the Space Configuration Tool is linked to one PCF space. Therefore, if you wish to manage multiple PCF spaces you must also perform multiple installations of the Space Configuration Tool to match these.
+
+To install the Space Configuration Tool, follow the steps below:
+
+. Download the Space Configuration Tool here [zip file]
+. Open the `cloud_settings.yml` file and edit the properties in it to match your account, following the reference in <<Cloud Settings File, the section below>>.
+. Run the script in your Cloud Foundry environment through the following command:
++
+----
+python cloud_installer.py -i cloud_settings.yml
+----
++
+[NOTE]
+CF CLI should be available before you run this command
+
+=== Cloud Settings File
+
+In the `cloud_settings.yml` file, you must complete the following fields:
+
+.PCF services
+
+You must provide a reference to each of the services that you want to use: the `runtime-manager-Service` and the `api-Gateway-Service`. The service name and the plan that you assign to these must match the names you manually provided in the link:http://docs.pivotal.io/mulesoft/[Anypoint Platform Service Brokers for PCF Tile], on the corresponding tab for each service broker.
+
+[TIP]
+====
+You can access this info through the following CF command, which lists all of the available service plans:
+
+----
+cf marketplace
+----
+====
+
+The example below shows how you can register both services in this file. Note that the names of your services and plans may differ from those in the example, or you may be only interested in registering one of these two.
+
+[source, yaml, linenums]
+----
+pcf-services:
+   - servicename: 'runtime-manager-service-v1'
+     serviceplan: 'api-platform-planv1'
+     serviceinstancename: 'runtime-manager-service'
+   - servicename: 'api-gateway-service-v1'
+     serviceplan: 'api-platform-gatewayv1'
+     serviceinstancename: 'api_gateway_service'
+----
+
+
+[TIP]
+====
+Remember that the Runtime Manager Service is required when deploying Mule runtime applications to PCF (see link:/runtime-manager/deploying-to-pcf[Deploying to PCF] for details on how to use it).
+The API Gateway Service is required when deploying a simple proxy packaged as a Mule application to a newly created Mule server. The service also registers a new API on API Manager in the Anypoint Platform (see link:/runtime-manager/deploying-to-pcf[Deploying to PCF] for details on how to use it)
+====
+
+.pcf-cloud-commands
+
+This set of parameters sets up the Space Configuration Tool, which is the component that actually deploys/manages apps through Runtime Manager and notifies their status to Runtime Manager.
+
+[source, yaml, linenums]
+----
+pcf-cloud-params:
+  anypoint-org: orgId for the Anypoint Platform organization you want to set up with the Space Configuration Tool
+  anypoint-env: ID for the Anypoint Platform environment that matches the PCF space you want set up with this Space Configuration Tool instance
+  anypoint-url: URI through which the Anypoint Platform is available on your local network
+  manifest:
+    applications:
+      memory: memory that’s assigned to the cloud installer
+      Instances: How many containers to serve the cloud installer service. These will be grouped behind a load balancer.
+      env:
+         COM_MULESOFT_CLOUD_MANAGER_PCF_APIURL: PCF API URL (PCF Apps manager)
+         COM_MULESOFT_CLOUD_MANAGER_PCF_DOMAIN: PCF domain
+         COM_MULESOFT_CLOUD_MANAGER_PCF_USERNAME: PCF username and password. The user must have a minimum role of `SpaceDeveloper`.
+         COM_MULESOFT_CLOUD_MANAGER_PCF_PASSWORD:
+         COM_MULESOFT_CLOUD_MANAGER_PCF_SPACE:
+         COM_MULESOFT_CLOUD_MANAGER_PCF_ORG:
+         COM_MULESOFT_CLOUD_MANAGER_PCF_SKIPSSLVALIDATION: true # set this to false only if PCF deployment doesn't have valid HTTPS certifications.
+         COM_MULESOFT_ARMSERVICES_CLIENT_CLIENTID:  masterorg `clientId` to access Anypoint platform.
+         COM_MULESOFT_ARMSERVICES_CLIENT_CLIENTSECRET: masterorg `clientSecret` to access Anypoint platform.
+         COM_MULESOFT_ARMSERVICES_CLIENT_BASEURL:
+         COM_MULESOFT_ARMSERVICES_CLIENT_INSECURE: true # set this to false only of ARM platform doesn't have valid HTTPS certifications.
+         AUTHENTICATION_URL:
+         AUTHENTICATION_INSECURE: true # set this to infalse only if Anypoint platform doesn't have valid HTTPS certifications.
+----
+
+[TIP]
+You can obtain your `clientId` and `clientSecret` on the Anypoint Platform UI by going to *Access Management > Organization* and opening the settings for your main organization. See link:https://docs.mulesoft.com/access-management/organization[organizations].
+
+
+=== Verifying the Space Configuration Tool installation
+
+After running the Space Configuration Tool, you should verify that the different components were created.
+You can see the list of available services through the following Cloud Foundry command:
+
+----
+cf services
+----
+
+[TIP]
+If the script worked well, you should see two services, “Runtime Manager Service” and the “API Gateway Service”
+
+
+You can see the list of installed apps through PCF APPS manager UI or with the following Cloud Foundry command:
+
+----
+cf apps
+----
+
+[TIP]
+====
+
+If the script worked well, you should see an app named following this structure:
+
+----
+cloudmanager-<uuid>
+----
+
+
+The “uuid” is a unique value for a combination of space and Anypoint Platform organization. You must never delete `cloud-manager` as it is used by the Anypoint Platform to deploy apps to PCF spaces.
+====
+
+
+== Set up a Hazelcast Server
+
+[NOTE]
+This step is only necessary if you intend to deploy your Mule applications into clusters in PCF. For an explanation about the benefits of having your applications deployed as a cluster, see link:/mule-user-guide/v/3.8/mule-high-availability-ha-clusters#the-benefits-of-clustering[Mule High Availability Clusters].
+
+If you don’t have a Hazelcast cluster configured, you must configure one using the Mule Hazelcast server provided by MuleSoft. See link:/anypoint-platform-on-premises/v/1.5.0/mule-hazelcast-server[Mule Hazelcast server] for instructions on how to do this.
+
+Once the cluster is installed, take note of the cluster node IPs and ports and the cluster group name and password. You will need this information to bind Mule runtime instances to the cluster.
+
+=== Hazelcast as a PCF user-provided service
+
+In order to allow your Mule applications to adopt the cluster configuration, you must create a user-provided service in PCF for each of the nodes in the Hazelcast cluster that you will be connecting your Mule applications to. You can do that through the following command:
+
+[source]
+----
+cf cups HAZELCAST_NODE_NAME -p ‘{“host”:”HAZELCAST_NODE_IP”,"port":"HAZELCAST_NODE_PORT","clusterId":"HAZELCAST_CLUSTER_GROUP_NAME","clusterPassword":"HAZELCAST_CLUSTER_GROUP_PASSWORD"}'
+----
+
+In the above command, replace the following placeholders:
+* `HAZELCAST_NODE_NAME`: Logical name of the Hazelcast node from the cluster that you are defining. It must start with hazelcast.
+* `HAZELCAST_NODE_IP`: IP to connect to the Hazelcast node
+* `HAZELCAST_NODE_PORT`: Port to connect to the Hazelcast node
+* `HAZELCAST_CLUSTER_GROUP_NAME`: Group name set in the Hazelcast cluster configuration
+* `HAZELCAST_CLUSTER_GROUP_PASSWORD`: Group password set in the Hazelcast cluster configuration
+
+For example:
+
+[source]
+----
+cf cups hazelcast_dev_node1 -p '{"host":"172.16.12.61","port":"5701","clusterId":"dev","clusterPassword":"dev-pass"}'
+----

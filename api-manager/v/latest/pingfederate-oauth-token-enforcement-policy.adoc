@@ -1,14 +1,19 @@
 = PingFederate OAuth Token Enforcement Policy
 :keywords: pingfederate, oauth, api, credentials
 
-The PingFederate OAuth Token Enforcement policy connects to your existing PingFederate authorization server and enforces access according to your configuration. Anypoint platform supports the link:https://www.pingidentity.com/en/products/pingfederate.html[Ping Federate] identity provider (IdP) link:/access-management/external-identity#instructions-for-saml-configuration[configured for SAML 2.0]-compliant identiy management.
+The PingFederate OAuth Token Enforcement policy connects to a PingFederate authorization server and enforces access according to its configuration. Anypoint platform supports the link:https://www.pingidentity.com/en/products/pingfederate.html[Ping Federate] identity provider (IdP) link:/access-management/external-identity#instructions-for-saml-configuration[configured for SAML 2.0]-compliant identity management.
+
+Consider doing the optional configuration tasks before using the PingFederate OAuth Token Enforcement policy:
+
+* link:/api-manager/pingfederate-oauth-token-enforcement-policy#configuring-the-proxy-connection-to-pingfederate[Enable or disable the proxy network connection to PingFederate]
+* link:/api-manager/pingfederate-oauth-token-enforcement-policy#configuring-scope-of-access[Configure the scope of access to the API]
 
 == Prerequisites
 
 This policy is available only if the following prerequisites are met:
 
-* Your organization is PingFederate
-* Your user is the organization's administrator, or has permissions to create or manage APIs
+* Your organization is PingFederate.
+* Your user is the organization's administrator, or has permissions to create or manage APIs.
 
 If the OAuth token is not valid, PingFederate returns a `403 FORBIDDEN` error.
 
@@ -20,12 +25,34 @@ image::pingfederate-oauth-token-enforcement-policy-f1330.png[pingfederate-oauth-
 
 The user authorizes the application to access the API by authenticating with user credentials. Upon receiving a valid user authorization, PingFederate supplies the application with a valid token. The application sends the valid token in the API call. The PingFederate OAuth Token Enforcement policy checks that the token in the header or query parameter is valid and matches the correct scopes. The policy invokes your organization's PingFederate authorization server to validate the token and check scopes, and finally the API receives the call from the application.
 
-== Configuration
+== Configuring the Proxy Connection to PingFederate
 
-There is minimal configuration necessary for the PingFederate OAuth Token Enforcement policy. The connection to your PingFederate authorization server is handled behind the scenes, so the only field you need to configure to apply the policy to your API version is `scopes`. Enter a space-separated list of strings that indicate the scopes to which applications must have access per their credentials defined for that application in PingFederate.
+You enable or disable the proxy network connection between the API and PingFederate by setting the `anypoint.platform.ping_federate_enable_proxy_setting` parameter. This parameter is located in the following wrapper configuration file, depending on the Mule Runtime or API Gateway Runtime version:
 
-You need to know the names of the scopes as defined in PingFederate. Scope names are case-sensitive.
+* Mule Runtime 3.8.x with unified API Gateway: `$MULE_HOME/conf/wrapper.conf`
+* API Gateway Runtime 2.1.x and 2.2.x: `/conf/wrapper.conf` file from the API Gateway software distribution 
+
+Set the parameter to true or false. For example:
+
+`wrapper.java.additional.<n>=-Danypoint.platform.ping_federate_enable_proxy_settings=true`
+
+By default, the ping_federate_enable_proxy_settings parameter is false, so the proxy connection between the API and PingFederate is disabled because the following proxy settings are ignored:
+
+----
+wrapper.java.additional.<n>=-Danypoint.platform.proxy_host=localhost
+wrapper.java.additional.<n>=-Danypoint.platform.proxy_port=8080
+----
+
+== Configuring Scope of Access
+
+When you apply the PingFederate OAuth Token Enforcement Policy, you can configure  `scopes` that the PingFederate server grants to applications that access your APIs under this policy. You need obtain the names of the scopes as defined in PingFederate. Scope names are case-sensitive.
+
+Assuming you have deployed the API, to configure `scopes`:
+
+. In API Manager, navigate to the link:/api-manager/tutorial-set-up-and-deploy-an-api-proxy#navigate-to-the-api-version-details-page[API version details page]page of your API.
+. Click *Apply*.  
+. In the Configure PingFederate OAuth Token Enforcement Policy dialog, enter a space-separated list of strings that indicate the scope of application access to your API. This access needs to correspond to credentials defined for applications in PingFederate.
 
 == Incorporating Authorization into an API
 
-Incorporate authorization into an API using the PingFederate OAuth Token Enforcement policy as link:/api-manager/openam-oauth-token-enforcement-policy#incorporating-authorization-into-an-api[previously described].
+Incorporate authorization to protect an API using the PingFederate OAuth Token Enforcement policy as link:/api-manager/openam-oauth-token-enforcement-policy#incorporating-authorization-into-an-api[previously described].

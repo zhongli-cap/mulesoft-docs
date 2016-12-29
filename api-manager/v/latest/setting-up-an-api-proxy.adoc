@@ -1,21 +1,39 @@
 = Setting Up and Deploying a Proxy
 :keywords: proxy, api, rest, raml, soap, cloudhub
 
-An API proxy is an application that controls access to a web service, restricting access and usage through an API gateway that filters traffic in some way.
+API Gateway, incorporated in Mule Runtime 3.8 and later, is the server that hosts a Mule proxy application. When you deploy an API in API Manager, API Gateway automatically creates an a proxy application that serves to stop attacks aimed at the actual server. This proxy application is called an **auto-generated proxy**.
 
-This page describes how to set up and deploy a proxy for an Anypoint Platform API. Subsequently, Mule 3.8.0 Runtime, or link:/api-manager/api-gateway-runtime-archive[API Gateway Runtime in earlier versions], serves as the API gateway and registers the proxy with API Manager. You can then govern the API link:/api-manager/using-policies[using policies].
+You can use link:/api-manager/designing-your-api#accessing-api-designer[API Designer], AnyPoint Studio, or Mule runtime to design, run, and debug code prior to deployment of the proxy in API Manager. After deploying an API, you can govern the API link:/api-manager/using-policies[using policies]. You can link:/api-manager/using-api-alerts[set API alerts] to send a notification about conditions, such as an API returning a certain HTTP error code.
 
-The controls for setting up a proxy might not be visible or accessible to you, depending on link:/release-notes/api-manager-release-notes#april-2016-release[entitlements you purchased].
+== Deployment Prerequisites
 
-== Prerequisites
+You need to meet the following prerequisites, depending on the type of deployment:
 
-The prerequisites for setting up a proxy in API Manager are:
+** *General Prerequisites*
 
-* link:/api-manager/creating-your-api-in-the-anypoint-platform[An API version exists] in API Manager.
-* You have link:/access-management/users[API Version Owner permissions] for the API, or membership in the Organization Administrator role. 
-* You know URL of the server where the API is running
+* link:/api-manager/creating-your-api-in-the-anypoint-platform[Presence of an API version] in API Manager
+* link:/access-management/users[API Versions Owner permissions] for the API, or membership in the Organization Administrators role 
+* The URL of the server where the API is running
+
+** *On-premises deployment*
++
+Access to an on-premises Mule 3.8.0 Runtime instance or an API Gateway instance that has been configured to link:/api-manager/api-auto-discovery#configuration[pair with your organization]. link:/api-manager/configuring-an-api-gateway[Configure the on-premises API Gateway] if using versions of Mule earlier than 3.8.0.
++
+** *Automatic On-premises deployment*
++
+Valid permissions for both the Runtime Manager and the API Manager of your organization. Also, the on-premises link:/runtime-manager/managing-servers#add-a-server[server must be registered].
++
+** *Automatic CloudHub deployment*
++
+Valid permissions for the Runtime Manager and API Manager of your organization.
+
+** *Manual CloudHub deployment*
++
+An Anypoint Platform account and a valid Anypoint Platform client ID and client secret to pair the deployment with an organization.
 
 == Setting Up a Proxy
+
+To set up an API proxy to control access to a web service:
 
 . Sign in to link:https://anypoint.mulesoft.com/#/signin[Anypoint Platform].
 +
@@ -37,7 +55,7 @@ image::proxying-your-api-10f00.png[proxying-your-api-10f00]
 +
 The *Configure endpoint* dialog appears.
 +
-image::proxying-your-api-771bd.png[proxying-your-api-771bd,height=441,width=377]
+image::walkthrough-proxy-c117a.png[walkthrough-proxy-c117a,width=429,height=533]
 +
 By default, *Endpoint with a proxy* is selected. Select the type of endpoint as described in the link:/api-manager/setting-up-an-api-proxy#about-the-type-and-implementation-uri-options[Type and Implementation URI Options] section.
 +
@@ -57,9 +75,17 @@ By default, *Endpoint with a proxy* is selected. Select the type of endpoint as 
 .. Check the *Configure proxy for CloudHub* checkbox to deploy the proxy to CloudHub. This option fixes the port number to a specific value required by CloudHub. 
 .. For *Scheme*, accept the default *HTTP*, or select *HTTPS* as described in <<Using HTTPS>>.
 +
-When deploying to the CloudHub, you can perform an automatic deployment only if you use an HTTP listener that doesn't enable HTTPS. If you use HTTPS, add your HTTPS credentials and then perform a link:/api-manager/deploying-your-api-or-proxy#deploying-to-api-gateway[manual deployment] to CloudHub or deploy on premises.
+When deploying to the CloudHub, you can perform an automatic deployment only if you use an HTTP listener that doesn't enable HTTPS. If you use HTTPS, add your HTTPS credentials and then perform a link:/api-manager/deploy-to-api-gateway-runtime#manual-deployment-to-cloudhub[manual deployment] to CloudHub or deploy on premises.
 
 .. Specify a *Port* value and a *Path*, or accept the defaults.
++
+.. Customize the response timeout of the auto-generated proxy you are creating for deployment.
++
+* Expand *Advanced Options*.
++
+* In *Response Timeout*, type a value in milliseconds.
++
+image::proxying-your-api-771bd.png[proxying-your-api-771bd,height=596,width=429]
 +
 . Click *Save & deploy* or *Save*.
 
@@ -85,123 +111,6 @@ Choose this option if you built the API using RAML.
 Choose this option to manage an existing SOAP API. For the *Implemention URI* option, enter this address: `http://tshirt-service.cloudhub.io/?wsdl`
 +
 image:api-gw-config-ep-wsdl.png[api-gw-config-ep-wsdl, width="300"]
-
-== Deploying a Proxy
-
-You need valid permissions for the Runtime Manager and API Manager of your organization to deploy a proxy.
-
-=== To CloudHub
-
-In the API Status section of the API version page, click *Deploy proxy* to deploy the proxy. If you configured the proxy for deployment on CloudHub in the *Configure endpoint* dialog, then the proxy is deployed in CloudHub.
-
-=== To a Server On Premises
-
-. In the API Status section of the API version page, click *Deploy proxy* to deploy the proxy.
-+
-If you did not configure the proxy for deployment in CloudHub in the *Configure endpoint* dialog, the *Deploy proxy* dialog appears.
-+
-image::proxying-your-api-65680.png[proxying-your-api-65680]
-+
-. Click `Click here`.
-+
-Runtime Manager deploys the proxy using the registered Gateway Runtime instance. If there are no registered servers, you are prompted to add one.
-+
-image::proxying-your-api-b3c5e.png[proxying-your-api-b3c5e]
-+
-. link:/runtime-manager/deploying-to-your-own-servers[Register your server in Runtime Manager].
-
-////
-=== To Pivotal Cloud Foundry
-
-[NOTE]
-====
-This modality is in *Beta* and only available with the link:/anypoint-platform-on-premises[Anypoint Platform On-premises Edition]. For it to be available, you must first install and configure the link:ADD-LINK!!![PCF Tile].
-
-Also, the API's backend application needs to be deployed on the PCF platform before you can run the command that executes this.
-====
-
-
-Currently, this modality is only availale via the command line. To instruct PCF to create and deploy a proxy, you must run the command `cf bind-route-service`. This command must include the following arguments:
-
-[%header%autowidth.spread]
-|===
-|Property |Description
-|*Domain* name| Domain where you want to host your proxy application
-|*service instance* name | Refers to the link:ADD-LINK!!![proxy service], which is different from the service used when link:/runtime-manager/deploying-to-pcf[deploying Mule applications to PCF]. You might have multiple instances of this proxy service, as you'd have one per every link:/access-management/organization[organization] and link:/access-management/environments[environment] you own.
-|`-f`| *(optional)* Force command in order to avoid any message prompts.
-|`--hostname` | The specific path (within the domain you defined) where you want to host your proxy application
-|`-c parameters.json`| Reference to a .JSON file that contains more information. Its required structure is explained below.
-|===
-
-Your command should look like this:
-
-[code]
-----
-$ cf bind-route-service apps.pcf.mulesoft.com api_gateway_service --hostname myapp -c input.json
-----
-
-See link:/runtime-manager/deploying-to-pcf[Deploying to PCF] for more details.
-
-==== Parameters File
-
-One of your properties should be a link to a .JSON parameters file. This file should include the following information:
-
-[%header%autowidth.spread]
-|===
-|Parameter |Description
-|`orgId` | The Anypoint Platform link:/access-management/organization[organization] in which to deploy the proxy application
-|`envId` | The Runtime Manager link:/access-management/environments[environment] in which to deploy the proxy application
-|`appName` | The name with which you want your proxy application to be registered on Runtime Manager. It will also register an API on API Manager under this same name. You will also see the proxy listed under this name if you execute the command `cf apps`.
-|`hostName` | The host name where you want to host your application. It should match the hostname that you provided as properties on the command.
-|'domain` | The domain name where you want to host your application. It should match the domain that you provided as properties on the command.
-| `muleRuntimeVersion` | Mule Runtime version with which to run the deployment of the proxy
-| `anypointServiceName`| The name of the PCF service that you registered in the Space configuration tool 
-|`repFactor`| (optional) In case you want your proxy to be deployed on multiple PCF instances.
-|===
-
-Your file should hence resemble the following example:
-
-[source, json, linenums]
-----
-{
-    "orgId": "e2ccc210-95a3-4740-b9cf-1f2d9e693168",
-    "envId": "26ad04b9-422c-45f2-8ee0-caeb73e6c9a9",
-    "appName": "proxyApp",
-    "hostName": "myapp",
-    "muleRuntimeVersion": "3.8.1",
-   "anypointServiceName": "runtime-manager-service",
-    "domain":"apps.pcf.mulesoft.com"
-}
-----
-
-
-
-////
-
-=== To API Gateway 2.x
-
-To deploy a proxy to API Gateway 2.x, follow instructions in the link:/api-manager/deploy-to-api-gateway-runtime[archive documentation].
-
-=== API Status
-
-The status of the API deployment is indicated by the marker in the API Status section of the API version page. While the app is starting, a spinner appears. After the API starts successfully, the light turns green and *Re-deploy proxy* appears. If you make changes to the configuration, re-deploy the proxy application to the same CloudHub application.
-
-image:ReDeployProxy.png[ReDeployProxy]
-
-== Downloading a Proxy
-
-You can download the latest or a legacy API Gateway Runtime in ZIP file format. The file is a deployable proxy application.
-
-. Click *API Status* > *Download proxy*.
-+
-A .zip file is downloaded.
-+
-image::setting-up-an-api-proxy-7543b.png[setting-up-an-api-proxy-7543b,height=441,width=377]
-
-. If needed, modify the downloaded zip file to adjust for port conflicts, use shared connector resources, or include custom code for logic that you want to add to the proxy.
-. link:/api-manager/deploying-your-api-or-proxy[Deploy the proxy application].
-+
-After deployment, the yellow circle in the status indicator turns green.
 
 == Using HTTPS
 
@@ -264,7 +173,6 @@ Replace the placeholders with the actual path and passwords of the keystore. 
 config-ref="https-lc-0.0.0.0-8082"
 ----
 
-
 === HTTPS with the API
 
 . In the Configure Endpoint menu, provide an implementation URI to an HTTPS address. Specifying an HTTPS address modifies the proxy to support HTTPS. By default, the proxy signs requests using the default HTTPS credentials of the JVM.
@@ -273,6 +181,121 @@ config-ref="https-lc-0.0.0.0-8082"
 If you plan to import your proxy application into Studio 6.x or later, you can choose in API Manager whether to link:/api-manager/api-gateway-domain[link the application to a domain] or not. When importing your proxy application into Studio 5.x, your project is linked to a *domain* project named `api-gateway`, which is automatically created in studio if not already present. This domain project is identical to the domain that exists in CloudHub and in your default API Gateway On-Premises. It's necessary for being able to deploy your app to the Anypoint Studio server under the same conditions as those present when you deploy the app to production. If you modify your domain on the On-Premises installation to include HTTPS credentials, replicate those changes on the domain that exists in Studio to match deployment conditions.
 +
 . link:/mule-user-guide/v/3.8/http-request-connector[Modify the http:request-config] element in the `proxy.xml` file of the proxy to include TLS configuration elements that point to the required truststore/keystore.
+
+== Deploying a Proxy
+
+You need valid permissions for the Runtime Manager and API Manager of your organization to deploy a proxy. 
+
+=== To CloudHub
+
+In the API Status section of the API version page, click *Deploy proxy* to deploy the proxy. If you configured the proxy for deployment on CloudHub in the *Configure endpoint* dialog, then the proxy is deployed in CloudHub.
+
+=== To a Server On Premises
+
+. In the API Status section of the API version page, click *Deploy proxy* to deploy the proxy.
++
+If you did not configure the proxy for deployment in CloudHub in the *Configure endpoint* dialog, the *Deploy proxy* dialog appears.
++
+image::proxying-your-api-65680.png[proxying-your-api-65680]
++
+. Click `Click here`.
++
+Runtime Manager deploys the proxy using the registered Gateway Runtime instance. If there are no registered servers, you are prompted to add one.
++
+image::proxying-your-api-b3c5e.png[proxying-your-api-b3c5e]
++
+. link:/runtime-manager/deploying-to-your-own-servers[Register your server in Runtime Manager].
+
+
+=== To Pivotal Cloud Foundry
+
+[NOTE]
+====
+This modality is in *Beta* and only available with the link:/anypoint-platform-on-premises[Anypoint Platform On-premises Edition]. For it to be available, you must first install and configure the link:http://docs.pivotal.io/mulesoft/index.html[PCF Tile].
+
+Also, the API's backend application needs to be deployed on the PCF platform before you can run the command that executes this.
+====
+
+
+Currently, this modality is only availale via the command line. To instruct PCF to create and deploy a proxy, you must run the command `cf bind-route-service`. This command must include the following arguments:
+
+[%header%autowidth.spread]
+|===
+|Property |Description
+|*Domain* name| Domain where you want to host your proxy application
+|*service instance* name | Refers to the link:http://docs.pivotal.io/mulesoft/installing.html[proxy service], which is different from the service used when link:/runtime-manager/deploying-to-pcf[deploying Mule applications to PCF]. You might have multiple instances of this proxy service, as you'd have one per every link:/access-management/organization[organization] and link:/access-management/environments[environment] you own.
+|`-f`| *(optional)* Force command in order to avoid any message prompts.
+|`--hostname` | The host name under which your proxy app is deployed. If `nodejs-app.apps.pcf.com` is the URL to reach your proxy, then `nodejs-app` is the hostname and `apps.pcf.com` is the domain.
+|`-c parameters.json`| Reference to a .JSON file that contains more information. Its required structure is explained below.
+|===
+
+Your command should look like this:
+
+[code]
+----
+$ cf bind-route-service apps.pcf.mulesoft.com api_gateway_service --hostname myapp -c input.json
+----
+
+See link:/runtime-manager/deploying-to-pcf[Deploying to PCF] for more details.
+
+==== Parameters File
+
+One of your properties should be a link to a .JSON parameters file. This file should include the following information:
+
+[%header%autowidth.spread]
+|===
+|Parameter |Description
+|`orgId` | The Anypoint Platform link:/access-management/organization[organization] in which to deploy the proxy application
+|`envId` | The Runtime Manager link:/access-management/environments[environment] in which to deploy the proxy application
+|`appName` | The name with which you want your proxy application to be registered on Runtime Manager. It will also register an API on API Manager under this same name. You will also see the proxy listed under this name if you execute the command `cf apps`.
+|`--hostname` | The host name under which your proxy app is deployed. If `nodejs-app.apps.pcf.com` is the URL to reach your proxy, then `nodejs-app` is the hostname and `apps.pcf.com` is the domain.
+|'domain` | The domain name where you want to host your application. It should match the domain that you provided as properties on the command.
+| `muleRuntimeVersion` | Mule Runtime version with which to run the deployment of the proxy
+| `anypointServiceName`| The name of the PCF service that you registered in the Space configuration tool 
+|`repFactor`| (optional) In case you want your proxy to be deployed on multiple PCF instances.
+|===
+
+Your file should hence resemble the following example:
+
+[source, json, linenums]
+----
+{
+    "orgId": "e2ccc210-95a3-4740-b9cf-1f2d9e693168",
+    "envId": "26ad04b9-422c-45f2-8ee0-caeb73e6c9a9",
+    "appName": "proxyApp",
+    "hostname": "myapp",
+    "muleRuntimeVersion": "3.8.1",
+   "anypointServiceName": "runtime-manager-service",
+    "domain":"apps.pcf.mulesoft.com"
+}
+----
+
+
+
+=== To API Gateway 2.x
+
+To deploy a proxy to API Gateway 2.x, follow instructions in the link:/api-manager/deploy-to-api-gateway-runtime[archive documentation].
+
+=== API Status
+
+The status of the API deployment is indicated by the marker in the API Status section of the API version page. While the app is starting, a spinner appears. After the API starts successfully, the light turns green and *Re-deploy proxy* appears. If you make changes to the configuration, re-deploy the proxy application to the same CloudHub application.
+
+image:ReDeployProxy.png[ReDeployProxy]
+
+== Downloading a Proxy
+
+You can download the latest or a legacy API Gateway Runtime in ZIP file format. The file is a deployable proxy application.
+
+. Click *API Status* > *Download proxy*.
++
+A .zip file is downloaded.
++
+image::setting-up-an-api-proxy-7543b.png[setting-up-an-api-proxy-7543b,height=441,width=377]
+
+. If needed, modify the downloaded zip file to adjust for port conflicts, use shared connector resources, or include custom code for logic that you want to add to the proxy.
+. Deploy the proxy application.
++
+After deployment, the yellow circle in the status indicator turns green.
 
 == Modifying a Proxy
 
@@ -384,3 +407,7 @@ http.port=8081
 ----
 
 If an API requires HTTPS communication (as shown in link:/api-manager/https-api-proxy-example[the HTTPS example]) or link:/api-manager/managing-internal-links-in-api-proxies[returns internal API URLs] as part of the response, additional configuration might be required.
+
+== See Also
+
+* link:http://blogs.mulesoft.com/dev/api-dev/proxying-with-api-manager/[Proxying with API Manager]

@@ -5,7 +5,7 @@ Setting up _external identity_ means that you configure an identity provider (Id
 
 This means that you can set up:
 
-* External identities for *user management* using SAML 2.0
+* External identities for *user management* using SAML 2.0 or LDAP (On-Premises Edition users only)
 * External identities for *client management* using OAuth 2.0
 * External identities for both *user and client management*
 
@@ -16,9 +16,7 @@ Check the overview below for a detailed example of these use cases.
 In order to set external identities, you need to own the proper entitlements. If you don't have the _External Identity_ option in your _Access Management_ menu please contact your sales representative or customer success manager.
 ====
 
-== Overview
-
-=== User Management
+== User Management
 
 End users within your organization might need to access certain services hosted in the Anypoint Platform. As end users, they might expect to log in only once to your system (usually an authorization server of your federated identity provider), and access the resources in the Anypoint Platform without having to remember a new pair of username and password.
 
@@ -28,7 +26,13 @@ The process flow below describes how this works:
 
 image:external-identity-decbd.png[external-identity-decbd]
 
-=== Client Management
+[NOTE]
+--
+The Anypoint Platform only supports SSO that's been initiated by the Identity Provider. +
+Service initiated SSO is not supported.
+--
+
+== Client Management
 
 APIs are essential to grant self-service access to your resources to your different API consumers. +
 From your application point of view, said consumers are _clients_.
@@ -44,11 +48,12 @@ image:external-identity-b0a95.png[]
 A client application must first be registered in the platform, so it has its own pair of client Id and secret to obtain the OAuth tokens. +
 An OAuth client application would then interact with your authorization server and obtain access tokens to send authenticated requests to your resource server.
 
-The Anypoint Platform allows you to store the client id and secret in an external IdP server. +
+Anypoint Platform allows you to store the client id and secret in an external IdP server. +
 The platform generates both client id and secret and stores them in the external IdP.
 
 [NOTE]
-The only OAuth 2.0 supported IdPs that work with Anypoint Platform are <<openam-client,openAM>> and <<pingfederate-client,Ping Federate>>
+The only OAuth 2.0 supported IdPs that work with Anypoint Platform are link:/access-management/managing-api-clients#openam[openAM] and link:/access-management/managing-api-clients#ping-federate[Ping Federate].
+
 
 === User and Client Management
 
@@ -60,247 +65,7 @@ It is possible for you to verify your user's identity and authorize a client app
 
 image:external-identity-09ab8.png[]
 
-== Managing Users
+Currently OpenAM and PingFederate are the only supported IdPs to manage users and client management simultaneously. +
+Follow the  link:/access-management/managing-api-clients#openam[openAM for client management]  or the link:/access-management/managing-api-clients#ping-federate[PingFederate for client management] instructions respectively to configure this.
 
-In order to configure it, use the <<Instructions for SAML Configuration,SAML configuration instructions>> in the section below and consult your IdPs specific documentation for instructions on how to apply this configuration for your intended provider.
-
-[NOTE]
---
-For Anypoint Platform link:https://docs.mulesoft.com/access-management/organization[Organizations] with child link:https://docs.mulesoft.com/access-management/organization#business-groups[Business Groups], only the master Organization can configure external identity. Once configured it applies to all child Business Groups.
---
-
-=== Identity Providers
-
-The Anypoint Platform supports SAML 2.0 compliant identity management providers for user management and SSO. +
-Although any SAML 2.0 compliant provider can be configured for this use, the following IdPs have been successfully tested as working with Anypoint Platform:
-
-* link:https://www.pingidentity.com/en/products/pingfederate.html[Ping Federate]
-* link:https://forgerock.org/openam/[OpenAM]
-* link:https://www.okta.com/[Okta]
-* link:https://shibboleth.net/[Shibboleth]
-* link:https://msdn.microsoft.com/en-us/library/bb897402.aspx?f=255&MSPPError=-2147217396[ADFS]
-* link:https://www.onelogin.com/[onelogin]
-* link:http://www.ca.com/us/products/ca-single-sign-on.html[CA SiteMinder]
-
-For these providers, the 'Assertion Consumer Service' or 'SAML Assertion URL' is `https://anypoint.mulesoft.com/accounts/login/receive-id` and the 'entityID' or 'Audience URL' is any string value that identifies your organization. +
-By convention it is `<organizationDomain>.anypoint.mulesoft.com`, but any value is acceptable.
-
-[NOTE]
---
-If you wish to configure the same IdP for both *user* and *client* management (to facilitate OAuth security for APIs), then you need to use either OpenAM or PingFederate, as these are the only IdPs that Anypoint Platform supports for <<Client Management, client management>>.
-
-If you choose to configure either OpenAM or Ping Federate and you wish to implement both types of management, then based on the IdP you want to configure, follow the  <<openam-client,openAM for client management instructions>>  or the <<pingfederate-client,PingFederate for client management instructions>> respectively.
---
-
-=== Instructions for SAML Configuration
-
-The instructions in this document allow you to configure your Anypoint Platform organization with any of the supported SAML 2.0 providers for SSO.
-
-To configure federated identity:
-
-. Configure your SAML provider to set up your Anypoint Platform organization as your audience.
-. Set the *Assertion Consumer Service* to send an HTTP POST request to the following address: `https://anypoint.mulesoft.com/accounts/login/receive-id`
-. Log in with an administrator account into your Anypoint organization, click on the gear icon in the Nav bar which will take you to the Access Manager user interface , and select *External Identity*. If you haven't set anything yet, you should see a screen like this:
-+
-image:new-saml.png[new saml]
-
-. Click the link for "If you would like to configure single sign on with a SAML 2.0 provider you can get started *here*" and then provide the necessary data in the SAML 2.0 form to set up your Anypoint organization for SSO:
-+
-image:federated-form.png[federated identity form]
-+
-You must provide the following information in the form:
-
-[%header,cols="20a,80a"]
-|===
-|Field |Description
-|Issuer |ID of the identity provider instance that sends SAML assertions.
-|Public Key |Public key provided by the identity provider, used to sign the SAML assertion.
-|Audience |ID of the Service Provider (In this case, the Anypoint Platform). This is a string value that identifies your organization. By convention it is <organizationDomain>.anypoint.mulesoft.com, but any value is acceptable.
-|Username Attribute |Field name in the SAML repository that maps to username. By default, the 'NameID' attribute in the SAML assertion is used.
-|First Name Attribute |Field name in the SAML repository that maps to First Name.
-|Last Name Attribute |Field name in the SAML repository that maps to Last Name.
-|Email Attribute |Field name in the SAML repository that maps to Email.
-|Group Attribute |Field name in the SAML repository that maps to Group.
-|Sign On URL |URL where users must sign in.
-|Sign Out URL |URL to redirect sign out requests, so users both sign out of the Anypoint Platform and have their SAML user's status set to signed out.
-|===
-
-==== Verify SAML Information
-
-The SAML assertion is an XML file that is issued by the external identity provider. This assertion must be *signed* in order for our end to verify its integrity, but *unencrypted*, since the assertion itself is POSTed through HTTPS.
-
-Log into Anypoint Platform and click the *External Identity* tab to verify your organization's Identity management information.
-
-image::external-identity-a496a.png[external-identity-a496a]
-
-Verify that the *group_attribute* value is set to the correct attribute name. +
-In the example above, the attribute is named *memberOf*. You can see a sample SAML assertion with that attribute below:
-
-[source,xml,linenums]
-----
-<saml:Attribute NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:basic" Name="memberOf">
-  <saml:AttributeValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">cn=jira-users,ou=groups,dc=muleforge,dc=org</saml:AttributeValue>
-  <saml:AttributeValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">cn=confluence-users,ou=groups,dc=muleforge,dc=org</saml:AttributeValue>
-  <saml:AttributeValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">cn=mule-community,ou=groups,dc=muleforge,dc=org</saml:AttributeValue>
-  <saml:AttributeValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">cn=SR-User,ou=Groups,dc=muleforge,dc=org</saml:AttributeValue>
-</saml:Attribute>
-----
-
-All other information on the tab is provided when registering an organization to use Anypoint Platform. If any information needs to be changed, log into the  link:https://www.mulesoft.com/support-login[MuleSoft Support Portal] and submit a request. +
-All attribute names must match on both the IdP and Anypoint Platform's side.
-
-[NOTE]
-Exporting assertion metadata to later import it in your selected IdP is currently not supported.
-
-=== Federated Organizations - Map Users to Anypoint Platform Roles
-
-As of November 2014, Anypoint Platform provides a feature to help you map users in a federated organization's LDAP group to an Anypoint link:/access-management/roles.adoc[Role].
-
-This requires that your Anypoint Platform organization utilizes an external identity provider such as link:https://www.pingidentity.com/en/products/pingfederate.html[PingFederate].
-
-This feature enables users in an organization to sign in to Anypoint Platform using the same organizational credentials and access permissions that an organization maintains using LDAP. +
-This ensures credential security and maintains organizational roles for accessing privileged information.
-
-To support this feature you first need to configure an external identity following any of the methods described above, and then follow the two steps described below:
-
-===== Configure Roles
-
-To configure a role:
-
-. In Anypoint Platform, click *Roles*. Click *Add role* to create a role for each group of users in your organization.
-+
-image::external-identity-34af9.png[]
-
-. Specify a role name and description. Click *Add role* to add the role:
-+
-image::external-identity-c731b.png[]
-+
-
-. In the *Roles* menu, click the name of the new role:
-+
-image::external-identity-35f9a.png[]
-+
-
-.  Click *Set external group mapping*:
-+
-image::external-identity-251b8.png[]
-+
-
-. Copy the string from your SAML assertion's AttributeValue to the *External group name* field, for example:
-+
-SAML AttributeValue:
-+
-[source,xml,linenums]
-----
-<saml:AttributeValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:type="xs:string">cn=jira-users,ou=groups,dc=muleforge,dc=org</saml:AttributeValue>
-----
-
-+
-Mapping:
-+
-image::external-identity-cfb1e.png[]
-
-. Click *Set names*.
-.. If you want to map more than one attribute name to the selected role, you can click on the *Add more* option and add another attribute.
-. Repeat this process for each role that you would like mapped to an external group.
-
-
-=== Considerations for User Management
-
-Enabling SSO for your users has a few implications on your Anypoint Platform Account.
-
-* If you configure and IdP to handle user information assertion, the login URL for accessing Anypoint Platform will then be `https://anypoint.mulesoft.com/accounts/login/{yourorgDomain}`.
-* Your IdP needs to be configured to send both Username and Email in your assertion, and your Anypoint Platform needs to be configured to map them to the expected attribute name. Otherwise the login fails with a 403 unauthorized error message.
-* Users that are created prior to configuring your federated organization remain. However, they can login only through the _Anypoint Plaform Sign In_ page and not through the IdP’s redirected custom login page. +
-With External Identity enabled, the invite button is disabled and no new non-federated users can be added. +
-Existing non-federated users continue to work as normal, with some exceptions:
-+
-** If their session times out, they will be redirected to the Federated Identity login page, instead of the generic one.
-** Links and bookmarks that identify the organization will redirect the user to the Federated login, which will fail for non-federated users.
-* Federated users cannot use platform APIs
-* The `email` `firstname` and `lastname` fields get updated automatically every time a user signs in with your IdP, with the primary key being the `username` field.
-
-== Managing API Clients
-
-Client Management allows any client connecting to your application to identify itself using OAuth 2.0.
-
-[NOTE]
---
-Client management is only available for Enterprise Edition users
---
-
-[CAUTION]
-Having a single audience (an Anypoint Platform organization) served by multiple issuers (multiple SAML provider instances) is currently not supported.
-
-[[openam-client]]
-=== openAM
-
-If you want to use openAM for client management and if you're *not using* Anypoint Platform on premises, you need to request that your account be configured in that way, as you can't set this up manually. +
-Work with your MuleSoft account representative to ensure that we are aware of your needs for configuring your organization with openAM.
-
-Complete the link:https://docs.google.com/forms/d/1ZvNUWU3u0lzLk6H5R3lKcEN2Dcyg1zekc1HYtYIcZP0/viewform[OpenAM form] and MuleSoft will get back to you within 48 hours with either the completion of the configuration or follow-up questions to complete the configuration.
-
-[NOTE]
-====
-If you are using Anypoint Platform on premises, you do not need to provide this information to MuleSoft.
-====
-
-
-[[pingfederate-client]]
-=== Ping Federate
-
-If you want to use Ping Federate for client management and if you're *not using* Anypoint Platform on premises, you need to request that your account be configured in that way, as you can't set this up manually. +
-Work with your MuleSoft account representative to ensure that we are aware of your needs for configuring your organization with PingFederate.
-
-Complete the link:https://docs.google.com/a/mulesoft.com/forms/d/16ZQjXcLmuXO8140svkjUxywzkZjv01GTgbf_3kfEebQ/viewform[Ping Federate Form]. After you complete this form, MuleSoft gets back to you within 48 hours with either the completion of the configuration or follow-up questions to complete the configuration.
-
-[NOTE]
-====
-If you are using Anypoint Platform on premises, you do not need to provide this information to MuleSoft.
-====
-
-
-== Single Log Out
-
-Single log out is important so that a user or user agent can log out of an authenticated environment and ensure that both service providers and identity servers process the log out correctly.
-
-To configure single log out:
-
-. In PingFederate, click the *SP Configuration* for the Anypoint Platform.
-. Go to *Browser SSO* and click *Configure Browser SSO*.
-. Under *SAML Profiles*, ensure that these are set:
-** *IdP-Initiated SSO*
-** *IdP-Initiated SLO*
-** *SP-Initiated SLO*
-. Go to *Protocol Settings* and click *Configure Protocol Settings*.
-. Configure a *SLO Service Url* with the following:
-** *Binding*: POST
-** *Endpoint URL*: Set PARTNER_SP_ID to the correct value: `https://anypoint.mulesoft.com/accounts/logout/receive-id`
-+
-It's also possible to control where the user is redirected after signing out. Most customers like to redirect the user to a different page so we allow you to configure that in your PingFederate's service provider configuration. You can add a `redirect_uri` query parameter to the SLO Service URL and the Anypoint Platform routes the user there rather than to the Anypoint Platform sign-in page.
-+
-For example, if you want to route the users back to your signin page, make the URL:
-+
-[source]
-----
-https://anypoint.mulesoft.com/accounts/logout/receive-id?redirect_uri=https%3A%2F%2Fanypoint.mulesoft.com%2Faccounts%2Flogin%2Fyour-domain
-----
-+
-If you want to route the users back to your portal page, make the URL:
-+
-[source]
-----
-https://anypoint.mulesoft.com/accounts/logout/receive-id?redirect_uri=https%3A%2F%2Fanypoint.mulesoft.com%2Fapiplatform%2Fyour-domain%2F%23%2Fportals
-----
-+
-. Under *Allowable SAML Bindings*, click *Redirect*.
-. Under *Encryption Policy*, make certain that nothing is encrypted.
-. Save and click *Done* out of *Protocol Settings* and *Browser SSO*.
-. When viewing the *SP Configuration* for Anypoint Platform, go to *Credentials*, and click *Configure Credentials*.
-. Under *Signature Verification Settings*, click *Manage Signature Verification Settings*. Set the *Trust Model* to *Unanchored*, and import the link:_attachments/anypoint-platform-slo.pem[attached certificate]. Make it the active certificate.
-
-
-== See Also
-
-* Learn more about link:/access-management/managing-permissions[managing permissions].
+Optionally, you can configure an link:/access-management/managing-api-clients#external-oauth-2-0-provider[External Oauth 2.0 service provider] to delegate authorization for third-party applications.

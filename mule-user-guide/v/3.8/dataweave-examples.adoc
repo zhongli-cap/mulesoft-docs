@@ -12,9 +12,94 @@ To step through basic DataWeave use cases and exercises in actual Mule applicati
 The DataWeave code shown in the examples is understood in the context of *input/output metadata*. The tabs below can be toggled to see the metadata structures that DataWeave leverages to get the transformations done.
 
 
+== Basic Transformation
+
+This basic transformation shows you how you can easily map fields from input to output without requiring any special operations other than transforming XML to JSON. It also changes the order and names of some of the fields.
+
+Note that this transform only deals with a single instance of the "order" data structure at a time. If you want to deal with a collection of several orders coming in a single Mule message, you'd have to resort to the *map* operator to sort through them, shown in the next example.
+
+[TIP]
+The link:/mule-user-guide/v/3.8/dataweave-quickstart[DataWeave Quickstart Guide] walks you this same transformation, showing you how you can create it automatically via the drag-and-drop UI. It then goes into tweaking the code to make it more interesting.
+
+=== Example Transformation
+
+.DataWeave
+[source,DataWeave, linenums]
+----
+%dw 1.0
+%output application/json
+---
+{
+        address1: payload.order.buyer.address,
+        city: payload.order.buyer.city,
+        country: payload.order.buyer.nationality,
+        email: payload.order.buyer.email,
+        name: payload.order.buyer.name,
+        postalCode: payload.order.buyer.postCode,
+        stateOrProvince: payload.order.buyer.state
+}
+----
+
+[tabs]
+------
+[tab,title="Input: JSON"]
+....
+
+.Input
+[source, xml, linenums]
+----
+<?xml version='1.0' encoding='UTF-8'?>
+<order>
+  <product>
+    <price>5</price>
+    <model>Mulesoft Connect 2016</model>
+  </product>
+  <item_amount>3</item_amount>
+  <payment>
+    <payment-type>credit-card</payment-type>
+    <currency>USD</currency>
+    <installments>1</installments>
+  </payment>
+  <buyer>
+    <email>mike@hotmail.com</email>
+    <name>Michael</name>
+    <address>Koala Boulevard 314</address>
+    <city>San Diego</city>
+    <state>CA</state>
+    <postCode>1345</postCode>
+    <nationality>USA</nationality>
+  </buyer>
+  <shop>main branch</shop>
+  <salesperson>Mathew Chow</salesperson>
+</order>
+----
+
+....
+[tab,title="Output: XML"]
+....
+
+.Output
+[source, json, linenums]
+----
+{
+  "address1": "Koala Boulevard 314",
+  "city": "San Diego",
+  "country": "USA",
+  "email": "mike@hotmail.com",
+  "name": "Michael",
+  "postalCode": "1345",
+  "stateOrProvince": "CA"
+}
+----
+
+....
+------
+
+
+
 == Using the `map` Operator
 
-Follow along to see how to use the link:/mule-user-guide/v/3.8/dataweave-operators#map[`map`] operator. Not be outdone the `as` operator is also featured in this example. Take an XML list of books and use DataWeave to output a JSON version of the book list. It goes through each `<book>` element from the XML input, simply using the `map` operator.
+Follow along to see how to use the link:/mule-user-guide/v/3.8/dataweave-operators#map[`map`] operator. The `as` operator is also featured in this example. Take an XML list of books and use DataWeave to output a JSON version of the book list. It goes through each `<book>` element from the XML input, simply using the `map` operator.
 
 You can ensure the transformation generates the correct type for each element by using the `as` operator (used for type coercion - see an https://docs.mulesoft.com/mule-user-guide/v/3.8/dataweave-operators#coerce-to-number[`as` operator example]).
 
@@ -29,16 +114,14 @@ Since JSON cannot accept duplicate keys, elements that are duplicated in the inp
 %dw 1.0
 %output application/json
 ---
-payload.bookstore map {
-    item: {
+items: payload.books map {
       type: "book",
-    price: $.price[0] as :number,
-    properties: {
-        title: $.title[0],
+      price: $.price as :number,
+      properties: {
+        title: $.title,
         author: $.author,
-        year: $.year[0] as :number
-    }
-  }
+        year: $.year as :number
+      }
 }
 ----
 
@@ -48,78 +131,102 @@ payload.bookstore map {
 [tab,title="Input: XML"]
 ....
 .Input
-[source, xml, linenums]
+[source, json, linenums]
 ----
-<bookstore>
-    <book category="cooking">
-        <title lang="en">Everyday Italian</title>
-        <author>Giada De Laurentiis</author>
-        <year>2005</year>
-        <price>30.00</price>
-    </book>
-    <book category="children">
-        <title lang="en">Harry Potter</title>
-        <author>J K. Rowling</author>
-        <year>2005</year>
-        <price>29.99</price>
-    </book>
-    <book category="web">
-        <title lang="en">XQuery Kick Start</title>
-        <author>James McGovern</author>
-        <author>Per Bothner</author>
-        <author>Kurt Cagle</author>
-        <author>James Linn</author>
-        <author>Vaidyanathan Nagarajan</author>
-        <year>2003</year>
-        <price>49.99</price>
-    </book>
-    <book category="web" cover="paperback">
-        <title lang="en">Learning XML</title>
-        <author>Erik T. Ray</author>
-        <year>2003</year>
-        <price>39.95</price>
-    </book>
-</bookstore>
+{
+    "books": [
+      {
+        "-category": "cooking",
+        "title": {
+          "-lang": "en",
+          "#text": "Everyday Italian"
+        },
+        "author": "Giada De Laurentiis",
+        "year": "2005",
+        "price": "30.00"
+      },
+      {
+        "-category": "children",
+        "title": {
+          "-lang": "en",
+          "#text": "Harry Potter"
+        },
+        "author": "J K. Rowling",
+        "year": "2005",
+        "price": "29.99"
+      },
+      {
+        "-category": "web",
+        "title": {
+          "-lang": "en",
+          "#text": "XQuery Kick Start"
+        },
+        "author": [
+          "James McGovern",
+          "Per Bothner",
+          "Kurt Cagle",
+          "James Linn",
+          "Vaidyanathan Nagarajan"
+        ],
+        "year": "2003",
+        "price": "49.99"
+      },
+      {
+        "-category": "web",
+        "-cover": "paperback",
+        "title": {
+          "-lang": "en",
+          "#text": "Learning XML"
+        },
+        "author": "Erik T. Ray",
+        "year": "2003",
+        "price": "39.95"
+      }
+    ]
+}
 ----
+
 ....
 [tab,title="Output: JSON"]
 ....
+
 .Output
 [source, json, linenums]
 ----
-[
-  {
-    "item": {
+{
+  "items": [
+    {
       "type": "book",
-      "price": 30,
+      "price": 30.00,
       "properties": {
-        "title": "Everyday Italian",
-        "author": [
-          "Giada De Laurentiis"
-        ],
+        "title": {
+          "-lang": "en",
+          "#text": "Everyday Italian"
+        },
+        "author": "Giada De Laurentiis",
         "year": 2005
       }
-    }
-  },
-  {
-    "item": {
+    },
+    {
       "type": "book",
       "price": 29.99,
       "properties": {
-        "title": "Harry Potter",
-        "author": [
-          "J K. Rowling"
-        ],
+        "title": {
+          "-lang": "en",
+          "#text": "Harry Potter"
+        },
+        "author": "J K. Rowling",
         "year": 2005
       }
-    }
-  },
-  {
-    "item": {
+    },
+    {
       "type": "book",
       "price": 49.99,
       "properties": {
-        "title": "XQuery Kick Start",
+        "title": {
+          "-lang": "en",
+          "#text": "XQuery Kick Start"
+        },
         "author": [
           "James McGovern",
           "Per Bothner",
@@ -129,22 +236,21 @@ payload.bookstore map {
         ],
         "year": 2003
       }
-    }
-  },
-  {
-    "item": {
+    },
+    {
       "type": "book",
       "price": 39.95,
       "properties": {
-        "title": "Learning XML",
-        "author": [
-          "Erik T. Ray"
-        ],
+        "title": {
+          "-lang": "en",
+          "#text": "Learning XML"
+        },
+        "author": "Erik T. Ray",
         "year": 2003
       }
     }
-  }
-]
+  ]
+}
 ----
 ....
 ------
@@ -163,12 +269,14 @@ The example goes through the whole set of elements in the input using the link:/
 %dw 1.0
 %output application/xml
 ---
-users: { (payload.users map {
-     user: {
+users: {
+      (payload.users map {
+        user: {
         personal_information: $.personal_information - "ssn",
         login_information: $.login_information - "password"
-      }
- }) }
+        }
+      })
+}
 ----
 
 [tabs]
@@ -301,9 +409,11 @@ users: { (payload.users map {
     </user>
 </users>
 ----
+
 ....
 [tab,title="Output: XML"]
 ....
+
 .Output
 [source, xml, linenums]
 ----
@@ -494,14 +604,12 @@ The example goes through the whole set of elements in the input using a link:/mu
 %output application/xml
 ---
 users: {
-  (
-    payload map {
+  (payload map {
         user: {
           name: $.name,
           (insurance: $.insurance) when $.insurance?
         }
-    }
-  )
+    })
 }
 ----
 
@@ -568,8 +676,7 @@ payload map {
     (emptySeats: $) when $$ as :string == 'availableSeats',
     (airline: $) when $$ as :string == 'airlineName',
     (($$):$) when ($$ as :string !='availableSeats') and ($$ as :string != 'airlineName')
-  }
-)
+  })
 }
 ----
 
@@ -1271,6 +1378,290 @@ books: {
 ....
 ------
 
+
+== Remove XML Attributes
+
+As a more advanced use case, you may want to remove specific attributes from within an XML tag that are known to contain sensitive data.
+
+The example defines a link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[function] in the link:/mule-user-guide/v/3.8/dataweave-language-introduction#dataweave-header[dataweave header] and then calls it on the body. It goes through the whole set of elements in the input using  a link:/mule-user-guide/v/3.8/dataweave-operators#map-object[`mapObject`] operator. Note that it differs from the map operation in that map object processes both key and value of its input, rather than just the keys. It also uses the link:/mule-user-guide/v/3.8/dataweave-language-introduction#when-otherwise[`when` and `otherwise`] operators to pick out only instances where an XML attribute exists, and to do nothing otherwise.
+It also uses the link:/mule-user-guide/v/3.8/dataweave-operators#match[`match` ] operator.
+
+See link:/mule-user-guide/v/3.8/dataweave-selectors#attribute-selector-expressions[Attribute selector expressions] for how to access XML attributes in DataWeave.
+
+=== Example Transformation
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%dw 1.0
+%output application/dw
+%var removeAttribute = (element,attrName) ->
+element mapObject {
+  ($$) @((($$.@ - attrName) when $$.@? otherwise {} ) ) : $ match {
+    :object -> removeAttribute($, attrName),
+    default -> $
+  }
+}
+---
+
+removeAttribute(payload, "password")
+----
+
+[tabs]
+------
+[tab,title="Input: XML"]
+....
+.Input
+[source,xml,linenums]
+----
+<users>
+  <user username="Julian" password="1234"/>
+  <user username="Mariano" password="4321"/>
+</users>
+----
+
+
+....
+[tab,title="Output: JSON"]
+....
+.Output
+[source,json,linenums]
+----
+{
+  users @(): {
+    user @(
+      username: "Julian"
+    ): "",
+    user @(
+      username: "Mariano"
+    ): ""
+  }
+}
+----
+....
+------
+
+== Output self-closing XML tags
+
+When producing an output in link:/mule-user-guide/v/3.8/dataweave-formats#xml[XML], DataWeave by default outputs every value as enclosed between an opening and a closing tag:
+
+[source,xml,linenums]
+----
+  <parentElement>
+    <emptyElement1>15</emptyElement1>
+    <emptyElement2>1</emptyElement2>
+    <emptyElement3>8</emptyElement3>
+  </parentElement>
+----
+
+In case you have empty fields that don't hold any values within, you might find that you instead want to output a single tag that self-closes. You can set the DW output directive so that your transform generates an output that follows this style for each case. You configure this by setting the `inlineCloseOn` property to "empty".
+
+=== Example Transformation
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%dw 1.0
+%output application/xml inlineCloseOn="empty"
+---
+{
+  payload: payload
+}
+---
+
+removeAttribute(payload, "password")
+----
+
+[tabs]
+------
+[tab,title="Input: JSON"]
+....
+{
+  "parentElement":{
+
+    "emptyElement1":{},
+    "emptyElement2":{},
+    "emptyElement13":{}
+  }
+}
+----
+
+
+....
+[tab,title="Output: JSON"]
+....
+.Output
+[source,xml,linenums]
+----
+<?xml version='1.0' encoding='US-ASCII'?>
+<payload>
+  <parentElement>
+    <emptyElement1/>
+    <emptyElement2/>
+    <emptyElement13/>
+  </parentElement>
+</payload>
+----
+....
+------
+
+[TIP]
+See more XML reader and writer properties on link:/mule-user-guide/v/3.8/dataweave-formats#xml[DataWeave formats].
+
+
+== Configure CSV Reader
+
+DataWeave supports CSV inputs and outputs, by configuring the reader and writer properties, you can adapt it to different conventions regarding separations, line breaks, etc. Other formats also allow for this kind of configuration. See link:/anypoint-studio/v/6/using-dataweave-in-studio#reader-configuration[Using DataWeave in Studio] to learn how you can do this easily through the UI, or look at the link:/mule-user-guide/v/3.8/dataweave-xml-reference#reader-configuration[DataWeave XML Reference] for the required XML syntax. You can also see a full reference of the reader properties available with CSV format on link:/mule-user-guide/v/3.8/dataweave-formats#csv[DataWeave formats].
+
+Reader properties are set as part of the XML `dw:transform-message` component, whilst writer properties are specified in the DataWeave code itself, as part of the output directive. You can see a full reference to the writer properties available with CSV format on link:/mule-user-guide/v/3.8/dataweave-formats#writer-properties[DataWeave formats].
+
+This example takes a CSV file that is formatted in a certain way (with `;` as a separator) and outputs another CSV file that is formatted differently (with `,` as a separator, and all values quoted).
+
+=== Example Transformation
+
+.XML
+[source,xml, linenums]
+----
+<dw:transform-message metadata:id="ab7c919b-c57c-47da-a1e7-207a7e571341" doc:name="Transform Message">
+     <dw:input-payload mimeType="application/csv" doc:sample="sample_data/list_csv.csv">
+         <dw:reader-property name="header" value="false"/>
+         <dw:reader-property name="separator" value=";"/>
+     </dw:input-payload>
+     <dw:set-payload>
+       <![CDATA[
+%dw 1.0
+%output application/csv separator = "," , header = false, quoteValues = true
+---
+payload
+      ]]>
+    </dw:set-payload>
+</dw:transform-message>
+----
+
+Note that the code above includes not just the DW transformation, but the XML of the Transform Message component that contains it, to display the reader properties configured in it.
+
+[tabs]
+------
+[tab,title="Input: JSON"]
+....
+
+.Input
+[source, csv, linenums]
+----
+name;address;phone
+George Harrisson; 1234 Abbey Road, London; 12341123
+David Gilmour; 3434 Diamond st., Dark side of the moon; 12341234
+Steven Wilson; 13/16 Raven st., Somewhere but not Here; 1234567
+----
+
+....
+[tab,title="Output: XML"]
+....
+
+.Output
+[source, xml, linenums]
+----
+"name","address","phone"
+"George Harrisson"," 1234 Abbey Road, London"," 12341123"
+"David Gilmour"," 3434 Diamond st., Dark side of the moon"," 12341234"
+"Steven Wilson"," 13/16 Raven st., Somewhere but not Here"," 1234567"
+----
+
+....
+------
+
+
+== Parse Dates with Different Separators
+
+Suppose that you want to include a date field that admits using different characters as separators between the elements of the date, and want DataWeave to be able to parse them as if they all were the same. For this example, imagine that you want to accept these three formats:
+
+* `26-JUL-2016`
+* `26/JUL/2016`
+* `26.JUL.2016`
+
+To do this, you can normalize the input with the link:/mule-user-guide/v/3.8/dataweave-operators#replace[replace] operator so that they all match a single pattern, and then turn the resulting string to a date with link:/mule-user-guide/v/3.8/dataweave-operators#coerce-to-date[coerce to date].
+
+To improve the clarity in your code, you can easily abstract the normalizing of your string into custom a link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[function], declaring it only once on your DW header, and then using it as many times as necessary by simply referencing this function.
+
+=== Example Transformation
+
+This is what the function for this example would look like:
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%function normalize(date) date replace "/" with "-" replace "." with "-"
+----
+
+You can declare this function on the header of a DW script and then simply call it from anywhere in the DW body. The example below shows the full DataWeave transform for doing this:
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%dw 1.0
+%output text/xml
+%function normalize(date) date replace "/" with "-" replace "." with "-"
+---
+{
+dates : {
+date1: normalize("26-JUL-16") as :date {format: "d-MMM-yy"} as :string {format: "yyyy-MM-dd"},
+date2: normalize("26/JUL/16") as :date {format: "d-MMM-yy"} as :string {format: "yyyy-MM-dd"},
+date3: normalize("26.JUL.16") as :date {format: "d-MMM-yy"} as :string {format: "yyyy-MM-dd"}
+  }
+}
+----
+
+This example only deals with dates that use different separator characters, for a more advanced use case that deals with different date patterns, see <<Conditional Date Parsing>>
+
+== Conditional Date Parsing
+
+Suppose that you want to include a date field that admits different formats, and want DataWeave to be able to parse each accordingly. For this example, imagine that you want to accept these three formats:
+
+* Sun, 06 Nov 1994 08:49:37 GMT = `E, d LLL u H:m:s O`
+* Sun Nov 6 08:49:37 1994 = `cccc, d-LLL-u H:m:s O`
+* Sunday, 06-Nov-94 08:49:37 GMT = `E LLL d H:m:s u`
+
+Start out by writing a regular expression to match each of them:
+
+* Sun, 06 Nov 1994 08:49:37 GMT = `/^[A-z][A-z][A-z],/`
+* Sun Nov 6 08:49:37 1994 = `/^[A-z][A-z][A-z]\s/`
+* Sunday, 06-Nov-94 08:49:37 GMT = This will be the default
+
+
+You can use these regular expressions in a DW link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[function] that first evaluates a string to see which regular expression it matches, and then converts it through the the corresponding operation. This function should do the following:
+
+. Take the input string as argument
+. Match it with regular expressions in order to determine which format it's in
+. Run the link:/mule-user-guide/v/3.8/dataweave-operators#coerce-to-date[coerce to date] operator with the corresponding properties
+. Return a date time object
+
+=== Example Transformation
+
+This is what the function looks like:
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%var parseDate = (dateStr) -> dateStr as :localdatetime {format: "E, d LLL u H:m:s O"} when (dateStr contains /^[A-z][A-z][A-z],/) otherwise (dateStr as :localdatetime {format: "E LLL d H:m:s u"} when (dateStr contains /^[A-z][A-z][A-z]\s/) otherwise dateStr as :localdatetime {format: "cccc, d-LLL-u H:m:s O"})
+----
+
+You can declare this function on the header of a DW script and then simply call it from anywhere in the DW body like so:
+
+
+.DataWeave
+[source,Dataweave,linenums]
+----
+%dw 1.0
+%output application/json
+%var parseDate = (dateStr) -> dateStr as :localdatetime {format: "E, d LLL u H:m:s O"} when (dateStr contains /^[A-z][A-z][A-z],/) otherwise (dateStr as :localdatetime {format: "E LLL d H:m:s u"} when (dateStr contains /^[A-z][A-z][A-z]\s/) otherwise dateStr as :localdatetime {format: "cccc, d-LLL-u H:m:s O"})
+---
+date: parseDate(payload.dateString)
+----
+
+
+
+
+
 == Create Mule Config
 
 This example use of DataWeave does not take any input--rather, it simply creates an XML structure out of hard-coded instructions, which reference several external sources using certain namespace directives. What you end up with is a set of XML tags mirroring the structure of a Mule application XML file, including attributes that go inside these tags through the use of `@`. 
@@ -1407,6 +1798,7 @@ mule: {
 ....
 ------
 
+
 == Create Mule POM
 
 This example does not take any input in, it simply creates an XML output out of hard-coded instruction. It references several external sources through namespace directives and defines a version as a constant in the header, that is then referenced in the body. It creates a set of XML tags that replicate the structure of a Mule POM file, including attributes inside these tags that are added through the use of @ and references to a variable.
@@ -1414,12 +1806,12 @@ This example does not take any input in, it simply creates an XML output out of 
 [TIP]
 See link:/mule-user-guide/v/3.8/dataweave-selectors#attribute-selector-expressions[Attribute selector expressions] for how to access XML attributes in DataWeave.
 
+=== Example Transformation
+
 [tabs]
 ------
 [tab,title="DataWeave"]
 ....
-
-=== Example Transformation
 
 .DataWeave
 [source,DataWeave, linenums]
@@ -1874,76 +2266,11 @@ See link:/mule-user-guide/v/3.8/dataweave-selectors#attribute-selector-expressio
 ....
 ------
 
-== Using Advanced DataWeave Functions
 
-Take more decisive steps to craft your data transformations using a more intensive DataWeave-driven approach.
-
-=== Example: Removing Unwanted Attributes on XML
-
-You may want to remove specific attributes from within an XML tag that are known to contain sensitive data.
-
-The example defines a link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[function] in the link:/mule-user-guide/v/3.8/dataweave-language-introduction#dataweave-header[dataweave header] and then calls it on the body. It goes through the whole set of elements in the input using  a link:/mule-user-guide/v/3.8/dataweave-operators#map-object[`mapObject`] operator. Note that it differs from the map operation in that map object processes both key and value of its input, rather than just the keys. It also uses the link:/mule-user-guide/v/3.8/dataweave-language-introduction#when-otherwise[`when` and `otherwise`] operators to pick out only instances where an XML attribute exists, and to do nothing otherwise.
-It also uses the link:/mule-user-guide/v/3.8/dataweave-operators#match[`match` ] operator.
-
-See link:/mule-user-guide/v/3.8/dataweave-selectors#attribute-selector-expressions[Attribute selector expressions] for how to access XML attributes in DataWeave.
-
-=== Example Transformation
-
-.DataWeave
-[source,Dataweave,linenums]
-----
-%dw 1.0
-%output application/dw
-%var removeAttribute = (element,attrName) ->
-element mapObject {
-  ($$) @((($$.@ - attrName) when $$.@? otherwise {} ) ) : $ match {
-    :object -> removeAttribute($, attrName),
-    default -> $
-  }
-}
----
-
-removeAttribute(payload, "password")
-----
-
-[tabs]
-------
-[tab,title="Input: XML"]
-....
-.Input
-[source,xml,linenums]
-----
-<users>
-  <user username="Julian" password="1234"/>
-  <user username="Mariano" password="4321"/>
-</users>
-----
+== Pass Functions as Arguments
 
 
-....
-[tab,title="Output: JSON"]
-....
-.Output
-[source,json,linenums]
-----
-{
-  users @(): {
-    user @(
-      username: "Julian"
-    ): "",
-    user @(
-      username: "Mariano"
-    ): ""
-  }
-}
-----
-....
-------
-
-=== Passing Functions as Arguments
-
-
-The following example makes all "keys" lower case. The link:/mule-user-guide/v/3.8/dataweave-language-introduction#the-dataweave-header[DataWeave header] defines a link:/mule-user-guide/v/3.8/dataweave-functions[function] that receives another function as an argument and then calls that function in the body, applying itself to the keys and not the values it processes. The function that is sent as an argument is a simple one that uses the link:/mule-user-guide/v/3.8/dataweave-operations#lower[`lower`] operator to set the specified text to lower case.
+The following example makes all "keys" lower case. The link:/mule-user-guide/v/3.8/dataweave-language-introduction#the-dataweave-header[DataWeave header] defines a link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[function] that receives another function as an argument and then calls that function in the body, applying itself to the keys and not the values it processes. The function that is sent as an argument is a simple one that uses the link:/mule-user-guide/v/3.8/dataweave-operations#lower[`lower`] operator to set the specified text to lower case.
 
 The example goes through the whole set of elements in the input using a link:/mule-user-guide/v/3.8/dataweave-operators#map-object[`mapObject`] operator. It also uses the link:/mule-user-guide/v/3.8/dataweave-operators#dataweave-language-introduction#when-otherwise[`when` and `otherwise`] operators to pick out only instances _when_ an XML attribute exists, and do nothing _otherwise_.
 It also uses the link:/mule-user-guide/v/3.8/dataweave-operators#match[`match` ] operator.
@@ -2030,7 +2357,7 @@ mapKeys(payload, ((key) ->(lower key)))
 ------
 
 
-=== Dynamic Mapping Based on a Definition
+== Dynamic Mapping Based on a Definition
 
 Based on a mapping definition, stored for instance in a DB table, you can dynamically execute a transformation. Here you have two inputs, one coming in via the payload, the other from a `flowVariable` called `mapping`.
 
@@ -2062,8 +2389,8 @@ payload.sfdc_users.*sfdc_user map ((user) -> applyMapping(user, mapping))
 ------
 [tab,title="Inputs"]
 ....
-=== Input - Payload
 
+.Input - Payload
 [source,xml, linenums]
 ----
 <sfdc_users>
@@ -2084,8 +2411,7 @@ payload.sfdc_users.*sfdc_user map ((user) -> applyMapping(user, mapping))
 </sfdc_users>
 ----
 
-=== Input - flowVariable Mapping
-
+.Input - flowVariable Mapping
 [source,json, linenums]
 ----
 [
