@@ -13,7 +13,7 @@ The HTTP request connector supports connecting a Mule client app to a service 
 
 If the target HTTP service of your request requires that you authenticate, provide the necessary credentials in the global HTTP Request Configuration element. Mule uses the credentials you configure in the authorization header of the request.
 
-The configuration of OAuth authentication can also provide TLS settings to encrypt the OAuth credentials.
+You can also configure Transport Layer Security (TLS) to encrypt the OAuth credentials.
 
 == Basic Authentication
 
@@ -482,16 +482,32 @@ This example includes two `Oauth2:custom-parameter` child elements that define p
 ....
 ------
 
-=== Overriding Redirect URI (externalRedirectUri)
+=== Overriding the Redirect URI (external redirect_uri)
 
-The oauth authentication server will use this url to provide the authentication code to the Mule server so it can retrieve the access token. If this attribute is provided mule will automatically create an endpoint at this url to be able to store the authentication code unless there’s already an endpoint registered to manually extract the authorization code.
+The link:https://tools.ietf.org/html/rfc6749[OAuth 2.0 specification] describes checking the redirect URI from the destination site of the redirect. The OAuth authentication server uses the URL to provide the authentication code to the Mule server for retrieving the access token. If you provide this URL, Mule creates an endpoint at the URL for storing the authentication code unless there’s already an endpoint registered to manually extract the authorization code.
 
-It's possible to configure the external Redirect URI by setting the system property `mule.oauth2.externalRedirectUrl`.
+You configure the external redirect URI by setting the system property `mule.oauth2.externalRedirectUrl`.
 
-For example, this is particulary useful when using in Cloudhub. You need to specify as redirectionUrl=http://0.0.0.0:_8081/redirectUrl to create the endpoint for Cloudhub, but when the authorization URL is build it should use _http://0.0.0.0:8081/redirectUrl_ but _http://<app>.cloudhub.io/redirectUrl_
-This is possible by setting the next property in the application, 
+Using `mule.oauth2.externalRedirectUrl is particularly useful for deploying applications to CloudHub, for example. In the configuration of authentication, you need to specify the redirectionURL as shown in the link:/mule-user-guide/v/3.8/authentication-in-http-requests#creating-the-mule-client-app[previous example]:
+
+[source, xml, linenums]
 ----
-mule.oauth2.externalRedirectUrl=http://<app>.cloudhub.io/callback 
+...
+<http:request-config name="HTTP_Request_Configuration" protocol="HTTPS" host="api.github.com" port="443" doc:name="HTTP Request Configuration">
+        <oauth2:authorization-code-grant-type clientId="27...df" clientSecret="ae...6" redirectionUrl="http://localhost:8082/callback">
+...
+----
+
+To create the endpoint for CloudHub, the following format is required:
+
+`+http://<app>.cloudhub.io/<redirect Uri>+`
+
+To create the endpoint for CloudHub in the correct format, you include the system property in your Mule properties file. For example:
+
+----
+mule.env=dev
+mule.oauth2.externalRedirectUrl=http://<app>.cloudhub.io/callback
+...
 ----
 
 === Extracting Parameters from the Token URL Response
