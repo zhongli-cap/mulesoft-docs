@@ -1,0 +1,217 @@
+= B2B Transaction-Processing Framework
+
+A B2B transaction processing solution serves as a translation layer between internal systems and the various formats (X12, EDIFACT, XML, CSV, and others) and transport protocols (AS2, FTP/S, and others) commonly used in electronic transactions between companies.  Because a company typically cannot dictate that all its trading partners adhere to a single configuration, it is often necessary to develop custom solutions for each trading partner. When custom software development is required for each trading partner, the effort and time of onboarding new trading partners increases dramatically, thereby limiting the business relationships a company can pursue.
+
+B2B Transaction Processing Framework enables developers to build a single set of link:/mule-user-guide[Mule Runtime] flows that can process a wide range of messages from many different partners by dynamically applying rules and configuration data stored in APM. This allows non-programmers such as data analysts to onboard new trading partner relationships and support new transaction types using APM website without the need to develop, test, and deploy new Mule Runtime  flows. This section identifies the high-level framework components and delineates their roles in end-to-end B2B transaction processing.
+
+== Functional Architecture
+
+B2B transaction processing typically proceeds through some combination of the following stages. (The exact processing stages used and the order can vary between companies.)
+
+image:1-functional-architecture.png[1-functional-architecture.png]
+
+=== Receive
+
+Each incoming transaction from a partner or internal system is delivered through a _transport protocol endpoint_ configured to receive the message.
+
+=== Resolve
+Using data that may be inside the message or in incoming metadata (such as HTTP headers or filenames), this stage identifies the partner and the transaction type, then uses these to retrieve corresponding processing details from APM. These details include:
+
+* Schema to use for validation
+* Map to transform the message into the required target format
+* Endpoint to which the transformed message is to be delivered
+
+=== Transform
+
+Each incoming message is translated into the canonical message format for the target service being invoked. This translation is performed dynamically using a _map_ retrieved from the Trading Partner Management (TPM) API.
+
+=== Validate
+Makes sure the required data is present in the required format. This validation is performed dynamically using a schema retrieved from the Trading Partner Management (TPM) API.
+
+=== Deliver
+Using endpoint configuration data retrieved from the Trading Partner Management (TPM) API the flow dynamically delivers the message to the Business Service endpoint address.
+
+== Technical Architecture
+The following diagram shows the primary components of the framework and how these components interact to process B2B transactions.
+
+image:2-b2b-message-processing-framework.png[2-b2b-message-processing-framework.png]
+
+=== MuleSoft-Provided Components
+
+==== Anypoint Partner Manager
+Anypoint Partner Manager (APM) is the user interface for configuring how B2B transactions are processed and for monitoring and managing processed transactions.
+
+===== Trading Partner Management API
+The Trading Partner Management (TPM) API manages storage and retrieval of configuration data for partners, including the details for processing their transactions.
+
+===== Tracking API
+The Tracking API manages storage and retrieval of metadata about processed transactions: for example, Sender, Receiver, time stamps, message type, and acknowledgement status. This includes but is not limited to correlation logic for matching acknowledgements to original messages and identifying duplicate messages.
+
+==== Partner Manager Connector
+The Partner Manager Connector (PMC) is a component that runs inside of Mule Runtime  and coordinates all interaction with the APM APIs (TPM and Tracking).
+
+==== Object Store
+The Object Store is a distributed cache in Mule Runtime  that replicates data across nodes in a cluster. TPM configuration data, once retrieved, is cached in the Object Store to minimize calls to the TPM Service to improve performance and reliability. The PMC manages this caching.
+
+=== Customer-Built Flows
+NOTE: At this time the various flows listed below must be developed by the customer. MuleSoft may provide these components as part of the product in the future. However, the option will remain for customers to provide their own implementations to provide full extensibility and customization.
+
+==== Receive Flows
+Each receive endpoint corresponds to a Mule flow that consists of the appropriate protocol connector and the appropriate endpoint configuration. After receiving a message over a particular protocol, each receive flow:
+
+* Tracks the message using the Partner Manager Connector (PMC) in order to persist a copy of the message as it was received from the partner.
+* Places a queue message with headers populated with any important metadata from the inbound protocol such as transport headers and filenames on the Resolve queue.
+
+Activation of the receive flows is done dynamically by a Receive Endpoint listener flow which polls the TPM system for the list of Endpoints that should be active. This flow creates a specific endpoint for each flow based on a template for the required transport protocol. It then dynamically instantiates that flow into the Mule Runtime  runtime and starts it, so that the required connector endpoint is active and listening for messages.
+
+==== Resolve Flow
+The Resolve flow does the following:
+
+* Pulls together from the message and any transport headers the needed metadata fields for identifying the specific Document Type.
+* Passes the metadata fields to the TPM service to look up the Document Type and associated configuration settings (map, schema, target endpoint) and adds this information to the context headers that travel with the message to be used by later stages.
+* Passes the message to the next processing stage.
+
+==== Transform Flow
+The Transform flow:
+
+* Dynamically applies the configured mapping script from the context header to translate the message into the canonical format for the target Business Service.
+* Does any necessary data translation, such as resolving partner values to your values using lookup tables, functions, and flows.
+* Uses the PMC to track the mapped, canonical version of the message.
+* Passes the updated message body to the next processing stage.
+
+==== Validate Flow
+The Validate flow:
+
+* Dynamically applies the configured schema script to validate that the message is in the required format.
+* Uses the PMC to track the validation result for the message.
+* Passes the message to the next processing stage.
+
+==== Deliver Flow
+The Deliver Flow:
+
+* Invokes the target service by passing the transformed message to the configured transport endpoint.
+* Uses the PMC to track the result from the target service.
+
+==== Message Payload Persistence Flow
+The Message Payload Persistence Flow is an optional flow that can be implemented to store message payloads at various stages. It receives a MuleSoft message from the PMC, persists that message payload to the desired data store, and returns a URL that can be used to retrieve the message later using the Message Payload Retrieval Flow. The URL is stored in the related tracking data stored in the Tracking API in APM and displayed to the user in the context of the transaction. Clicking this link will invoke the Message Payload Retrieval Flow and display the message payload in a pop-up window.
+
+==== Message Payload Retrieval API Flow
+The Message Payload Retrieval API Flow is used to retrieve the message payload with a URL (which contains the specific transactionId of the message to be retrieved).
+
+==== Business Service Flows
+For each target internal service, there is typically a Mule Runtime  flow that exposes a REST-based API and communicates with the backend system using the appropriate connector or connectors. These Business Service flows are not technically part of the B2B system, but are often part of the overall solution.
+
+==== Replay Flow
+The replay flow coordinates replaying transactions. It polls the Tracking service for transactions that have been marked for replay. When it finds transactions that need to be replayed it:
+
+. Pulls the original Message body and headers from the Tracking API and the Message Payload Retrieval API.
+. Constructs a new Mule message with the original payload and headers and passes it to the Resolve flow to reprocess the transaction.
+. Tracks the fact that the transaction has been replayed.
+. Updates the TPM service to indicate that the replay is complete
+
+== Information Architecture: APM-Configurable Entities and Terms
+APM stores the following configuration data in order to support the dynamic processing of different transaction types for different trading partners.
+
+image:3-b2b-transaction.png[3-b2b-transaction.png]
+
+=== Partner
+Represents an external company with which your company does business. Your company itself is also considered a Partner.
+
+=== Partnership
+Represents the relationship with an external company with which your company does business. Your company itself is also considered a Partner, and there is a special partnership called the “Home Org” in APM.
+
+=== Partner Identifier
+A predefined identifier of a specific Partner. There are several types of Partner Identifiers used in B2B transactions and configurable in APM. For example, for EDI X12 documents there are ISA identifiers, which are used in EDI interchanges to identify the sender and receiver. AS2 is another type of identifier used in AS2 transmissions.
+
+=== Document, Message, File
+These different terms are used interchangeably and somewhat loosely in various B2B domains, to reflect an instance of a structured payload being passed through the system to convey information about a transaction. For consistency, the APM documentation uses the term Document to represent this concept.
+
+=== Document Type
+A specific message type that is configured in the system. A Document Type is identified by the following pieces of information:
+
+* Standard - X12, EDIFACT, XML, CSV, JSON, etc.
+* Version:
+** X12 - 4010, 5010, etc.
+** RosettaNet - PIP3B3v11.12.00
+** for Standards that don’t have versions (XML, CSV, etc.) Version is empty
+* Message Type
+** X12 - 850, 855, 856, etc.
+** RosettaNet - 3B3
+** XML - root node name, namespace
+** CSV, JSON - Name given to the transaction, not necessarily contained in the message
+
+=== Document Properties
+Document Properties are data fields that are extracted from received documents for the purpose of searching, correlation, TPM resolution, or duplicate checking. Document Properties are configured for Document Types. The user provides the Name of the property and the Path (XPath for XML, JSONPath for others) for retrieving the property from the document. These properties are extracted from the document by the Tracking API and stored to be used later for the purposes mentioned above.
+
+=== Schema
+The schema is stored with the Document Type. It is one of the following depending on the message type:
+
+[%header,cols="3s,7a"]
+|===
+|Message Type
+|Schema type
+
+|XML
+|XSD file
+|CSV
+|NA
+|EDI
+|EDI Schema Language (ESL) file
+|JSON
+|Json Schema
+|===
+
+=== Map
+
+Map script (XSLT or DataWeave) for transforming from one Document Type to another Document Type.
+
+=== Source Channel
+Details for how a particular Document is received. Received is used here relative to the B2B Transaction Processing flows. An inbound transaction would have a Source Channel that receives a Document from an external partner. An outbound transaction would have a Source Channel that receives a Document from an internal system.
+
+=== Target Channel
+Details for how a particular Document is delivered or sent out. Sent is used here relative to the B2B Transaction Processing flows. An inbound transaction would have a Target Channel that sends a Document to an internal system. An outbound transaction would have a Target Channel that sends a Document to an external partner.
+
+=== Route
+Connects a Source Channel to a Target Channel.
+
+=== Transaction
+Denotes the end-to-end processing of a single instance of a document from the receipt at an endpoint all the way to the desired destination. A TransactionId can be used to find metadata and persisted payloads for the transaction at each stage.
+
+=== Inbound and Outbound Transactions
+Inbound transaction::  A transaction between an external partner and the home organization, initiated by the external partner.
+
+Outbound transaction:: A transaction between the home organization and an external partner, initiated by the home organization.
+
+////
+Inbound versus Outbound is always used to denote direction of documents being exchanged between partners. A document from an external partner to the home organization is considered Inbound. A document sent from the home organization to an external partner is considered Outbound.
+////
+The following diagram depicts the relationship between these configuration entities relative to the processing of inbound or outbound transactions:
+
+image:4-inbound-outbound.png[4-inbound-outbound.png]
+
+Note that in order to be flexible enough to support the range of possible usage scenarios, this information architecture supports configuration options that are not all needed in every scenario.
+
+For example, a common pattern for inbound transactions is to map an incoming Document into a standard internal format, often called the “canonical” format. If the target system accepts this canonical format, there is no need to apply two maps. A map can be configured for the Source Channel to transform into the canonical format, and there is no map needed for the Target Channel. However, if there are multiple Target Channels for a given Source Channel, there may be a need to apply an additional map in one of the Target Channels, so in that case two different maps would be applied.
+
+For an Outbound transaction, the document might originate in the canonical format and so there may not be a map required in the Source Channel, but there would be one in the Target Channel to map to the desired format of the external partner.
+
+== User Interface
+
+The APM user interface enables configuration of:
+
+* B2B Transactions
+* Partners
+* Channels
+* Documents
+* Document Properties
+* Endpoints
+* Maps
+* Routes
+
+=== Transaction Monitoring
+
+* Search and view results of processed transactions.
+* View end-to-end processing that occurred for a transaction.
+* Manually cause the replay of failed transactions.
+
+
