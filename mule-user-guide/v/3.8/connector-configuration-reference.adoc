@@ -1,31 +1,10 @@
 = Connector Configuration Reference
 :keywords: anypoint, studio, connectors, transports
 
-There are two basic connector structures in Mule: 
+This document describes the general configuration for <<Configuring an Operation-Based Connector, Operation-Based>>, and 
+<<Configuring an Endpoint-Based Connector, Endpoint-Based>> connectors. For instructions on usage of a specific connector, consult the connector's documentation from the link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors] page.
 
-* *<<Configuring an Operation-Based Connector, Operation-Based>>*, and 
-* *<<Configuring an Endpoint-Based Connector, Endpoint-Based>>* structures.
 
-This document describes the general configuration for both of these types. For instructions on usage of a specific connector, consult your desired connector's documentation.
-////
-todo:
-EDIT: no such sections
-For quick access to reference information on all connectors bundled with Anypoint Studio, perform these steps:
-
-. Go to the link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors] page.
-
-. Go to the *Accessing Connectors* section.
-
-. Check the *Reference* column in the provided table.
-////
-[NOTE]
-====
-*#HTTP connector in Mule 3.6 and newer#*
-
-As of Mule 3.6 and newer, the HTTP and HTTPS endpoint-based connectors and transports have been replaced by a *single HTTP operation-based connector* which supports HTTPS. The legacy endpoint-based HTTP connectors will be removed in a future version.
-
-For more information on the HTTP operation-based connector, see link:/mule-user-guide/v/3.8/http-connector[HTTP Connector].
-====
 
 == Prerequisites
 
@@ -41,7 +20,14 @@ Further, it is best you attain a basic understanding of link:/mule-user-guide/v
 
 == Basics
 
-Operation-based connectors vary too widely to make generic configuration instructions possible. However, *at minimum* all operation-based connectors require a *Connector Configuration* and an *Operation* to run in a flow successfully. Connector configuration information should be defined in link:/mule-user-guide/v/3.8/global-elements[Global Elements] for use and reuse in your application's Mule flow(s). Operations are user-defined within each connector.
+At minimum, all operation-based connectors require a *Connector Configuration* and an *Operation* to run in a flow successfully.
+
+When you fill out information in the connector configuration window it is defined by default as a link:/mule-user-guide/v/3.8/global-elements[Global Element] for use and reuse in your application's Mule flow(s).
+
+Operations are defined at the connector scope, rather than through the global connector configuration scope.
+
+[NOTE]
+It is typical to perform different operations from several connectors though the connectors share the same connector configuration.
 
 
 == Configuring an Operation-Based Connector
@@ -51,25 +37,30 @@ Whether you are working in the Anypoint Studio Visual Editor or are crafting the
 [%header%autowidth.spread]
 |===
 |Field a|Description
-|*Connector Configuration* |Define global connection parameters in a link:/mule-user-guide/v/3.8/global-elements[Global Element] that defines the connector configuration.
+|*Connector Configuration* |Define connection parameters. This configuration gets saved in a link:/mule-user-guide/v/3.8/global-elements[Global Element] that defines the connector configuration you set up.
 
-Most operation-based connectors require the connection credentials be configured this way, at the *global scope*, accessible to any connector in the flow.
-
-|*Operation* |Select an operation from the dropdown to specify the function that the connector should perform against the API or protocol. For example, in the case of the GitHub connector, you have many operations to choose from, for example, *"Get collaborator"* or *"Get commits"*
+|*Operation* |Select an operation from the dropdown to specify the function that the connector should perform. For example, in the case of the GitHub connector, you have many operations to choose from, for example, *"Get collaborator"* or *"Get commits"*
 |===
 [tabs]
 ------
 [tab, title="Anypoint Studio Visual Editor"]
 ....
+
 . *Drag and drop a connector* from the palette onto your canvas.
+. Access the connector's properties using the Studio UI. Click the plus sign next to the *Connector Configuration* dropdown.
+image:generic-connector-config-fields.png[generic-connector-config-fields]
+.. You can add the credentials directly or store and reference them such as from the `mule-app.properties` file. For this example, in the .properties file we input `github.user=myuser`. Use the Ant syntax '${}' as shown in the configuration window.
+image:connector-configuration-reference-cb82d.png[]
+.. Click *OK* to close the configuration window.
+. *Choose* an operation for the connector to perform.
+
+Alternatively, you can create the connector configuration by adding a Global Element first then reference it from the *Connector Configuration* dropdown:
+
 . Click the *Global Element* tab below the canvas in Anypoint Studio to *create a global element* where you define connector settings or properties.
 .. Click *Create*, to define a new global element with the properties you require.
 image:github-global-element-create.png[github-global-element-create]
-+
-.. Access the connector's properties using the Studio UI. A blank connector looks like this in the UI:
-image:generic-connector-config-fields.png[generic-connector-config-fields]
-... *Select* the global connector configuration element you created from the *Connector Configuration* dropdown.
-... *Choose* an operation for the connector to perform.
+.. Add or reference the credentials through the UI and click *OK*.
+.. The configuration you just created will show as available from the *Connector Configuration* dropdown.
 
 ....
 [tab, title="XML Editor Approach"]
@@ -211,7 +202,7 @@ image:outbound-endpoint-example-flow.png[outbound endpoint example flow]
 ....
 ------
 
-=== Configuration Reference
+=== Common Configuration Fields
 
 While unique properties exist for various endpoint-based connectors, most of these building blocks share common properties.
 
@@ -265,32 +256,23 @@ The *Transformers* tab often includes these fields.
 |*Global Transformers (Response)* |Enter a list of synchronous transformers to apply to the response before it is returned from the transport.
 |===
 
-== Configuring Global Elements for Connectors
+== Summary and Considerations
 
-When developers create a Mule application utilizing connectors, they manage details and connection policy inside a "global element" that is accessible for as many connections as the developer cares to support. That means the connection information for API/service instances is saved inside a global element, accessible easily through the Studio UI or manually using the connector technical reference, available on each connector page or via Exchange - whether you like to drag and drop or code the Mule application XML code manually, the goal of the user guide is to make configuration easy, because swift and flexible development, testing and deployment is essential for.
+A connector configuration typically references credentials like a username, password, and security tokens. If using a `.properties` file to store the credentials, reference these in the connector configuraiton using Ant syntax - `${my.ConnectionProperty}`. The values will be picked up from the `.properties `file where you stored them, example: `my.ConnectionProperty=myvalue`.
 
-Basically, a global element for a connector typically includes references to a username, password, and security tokens that are stored in a Properties File. There  references can be stored securely within the global element. The references are typically in Ant syntax - `${my.ConnectionProperty}` and are only a placeholder for the connection credentials and URIs.
+The `.properties` file usually lives within a resources folder within your application; rather than at the level of the connector instance in the flow.
 
-If you already understand how to set connection attributes then the other consideration would be to ensure you are securely encapsulating your connection attributes as you require, inside the `.properties` or similar file, rather than within a global element itself. The `.properties` file usually lives within a resources folder `.res` within your application; rather than at the level of the connector instance in the flow.
-
-//todo: maintain state at config level?
-This global connector configuration maintains the configuration and state, and many connectors of the same type in one application can reference the connector configuration at the global level. For example, a Mule application with four different HTTP connectors may all reference the same globally configured HTTP connector which defines specifics such as security, protocol, and proxy settings. Because they all reference the same global connector configuration, all four HTTP endpoints behave *consistently* within the application.
+A Mule application with four different HTTP connectors may all reference the same global HTTP connector configuration which defines specifics such as security, protocol, and proxy settings. Because they all reference the same global connector configuration, all four HTTP endpoints behave *consistently* within the application.
 
 Selected global connector configurations can also be defined as *Shared Resources* for a domain and referenced by all applications for that same domain. For more information, see link:/mule-user-guide/v/3.8/shared-resources[Shared Resources].
 
-Note that the global element that you configure in Anypoint Studio is called a *Connector Configuration* and is nearly always _referenced_ at the connector level. The connector consistently utilizes the connector configuration you carefully prepare, provided your connection credentials and settings are valid. Studio alerts you to problems in design time if you choose to use the UI's *Test Connection* button or similar in the Global Element Properties Window. That is your hub for connector global element configuration within Studio.
+=== Considerations
 
-Access the screen from the dropdown in the bottom window after selecting/clicking the connector in your flow. Note: make sure you configure the connector to authenticate and connect to the exact service instance you are permitted to access. When you design an application, make sure you initially use an account for your integration development purposes, rather than any account for production. The corresponding connector XML tags follow a standard format most of the time:
+When you design an application, make sure you initially use an account for your test or development purposes, rather than any account for production. The corresponding connector XML tags follow a standard format most of the time:
 
 `<connectorName>:config` for operation-based connectors,
 
 and for endpoint-based connectors: `<connectorName>:connector`
-
-In Studio, if using the UI, you can quickly and simply set up an application that:
-
-* uses connectors to hook into APIs or web services, listens to information administered by servers, maintains persistent connections to interact with databases and navigate external service architectures, send messages, pass them to other applications via Mule flow etc.
-
-You can do all this using the fundamental integration development practices you have read above. Having understand Mule application development and managing connections to and from Mule means you can start to develop and hone an integration pattern you need to achieve. Even if you don't understand how Mule works, you can take advantage of Mule by reading Mule application code, following development procedures that others have set up for you in Anypoint Exchange, or by reading step-by-step MuleSoft documentation, especially on pages from Mule 3.x and Studio 5.x versions and earlier. Use the version dropdown at the top to navigate to earlier material.
 
 
 == See Also
