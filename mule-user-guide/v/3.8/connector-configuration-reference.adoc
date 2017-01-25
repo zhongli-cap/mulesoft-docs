@@ -1,5 +1,6 @@
 = Connector Configuration Reference
 :keywords: anypoint, studio, connectors, transports
+:toc:
 
 == Overview
 
@@ -93,7 +94,7 @@ Refer to a particular connector's Technical Reference document for guidance on a
 
 == Configuring an Endpoint-Based Connector
 
-Endpoints pass messages into and out of a Mule flow, usually to external resources such as databases, Web clients, or email servers, but they can exchange messages with other Mule flows as well. As with the operation based connector, you normally fill out fields in a global connector configuration, and those specific to the connector instance in the flow.
+Endpoints pass messages into and out of a Mule flow, usually to external resources such as databases, Web clients, or email servers, but they can exchange messages with other Mule flows as well. As with the operation-based connector, you normally fill out fields in a global connector configuration. However, in this case the configuration is used to set up a global endpoint.
 
 ==== Inbound Endpoints
 
@@ -111,12 +112,17 @@ The POP3 component is acting as the inbound endpoint in the example flow:
 image:connector_conf_inf_3.png[connector_conf_inf_3]
 
 Clicking on the POP3 connector you see the fields specific to the connector instance.
-image::connector-configuration-reference-3ab8a.png[]
+image:connector-configuration-reference-3ab8a.png[]
 When you click the plus sign, you find the dialog to set up a configuration:
 image:connector-configuration-reference-24b6a.png[]
 ....
 [tab,title="XML Editor"]
 ....
+
+Note the `backupFolder` and `moveToFolder` were seen as fields in the Studio UI, and are seen in the connector configuration, which takes this form.
+
+`<pop3:connector name="POP3" backupFolder="" moveToFolder="" validateConnections="true" doc:name="POP3"/>`
+
 [source, xml, linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
@@ -132,14 +138,43 @@ http://www.mulesoft.org/schema/mule/pop3 http://www.mulesoft.org/schema/mule/pop
 http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
     <jetty:connector name="Jetty" configFile="a" resourceBase="a" doc:name="Jetty"/>
     <http:request-config name="HTTP_Request_Configuration" host="a" port="a" basePath="a" doc:name="HTTP Request Configuration"/>
-    <pop3:connector name="POP3" backupFolder="a" moveToFolder="a" validateConnections="true" doc:name="POP3"/>
+    <pop3:connector name="POP3" backupFolder="" moveToFolder="" validateConnections="true" doc:name="POP3"/>
     <flow name="exampleflowwithinboundendp">
-        <pop3:inbound-endpoint host="localhost" user="s" password="s" connector-ref="POP3" responseTimeout="10000" doc:name="POP3"/>
+        <pop3:inbound-endpoint host="localhost" user="" password="" connector-ref="POP3" responseTimeout="10000" doc:name="POP3"/>
         <set-payload doc:name="Set Payload"/>
         <http:request config-ref="HTTP_Request_Configuration" path="s" method="s" doc:name="HTTP"/>
         <logger level="INFO" doc:name="Logger"/>
     </flow>
 </mule>
+----
+....
+------
+
+==== Outbound Endpoints
+
+If an endpoint-based connector is not the first building block (i.e., the message source) in a flow, it is designated as an *outbound endpoint*, since it uses the specific transport channel it supports (such as SMTP, FTP, or JDBC) to dispatch messages to targets outside the flow, which can range from file systems to email servers to Web clients and can also include other Mule flows.
+
+In many cases, an outbound endpoint completes a flow by dispatching a fully processed message to its final, external destination. However, outbound endpoints don't always complete flow processing, because they can also exist in the middle of a flow, dispatching data to an external source, and also passing that (or some other data) to the next message processor in the flow.
+
+[tabs]
+------
+[tab,title="Anypoint Studio Visual Editor"]
+....
+
+Here we can see there is a POP3 connector being used as an inbound endpoint, but additionally, note there is a POP3 connector configured in the middle of the process side of the flow, as an _outbound_ endpoint.
+
+image:outbound-endpoint-example-flow.png[outbound endpoint example flow]
+....
+[tab,title="XML Editor"]
+....
+[source, xml, linenums]
+----
+<flow name="exampleflow2" >      
+   <pop3:inbound-endpoint host="localhost" user="${prod.user}" responseTimeout="10000" doc:name="POP3"/>     
+   <set-payload doc:name="Set Payload" value="foo"/>
+   <pop3:outbound-endpoint host="localhost" user="${prod.user}" responseTimeout="10000" doc:name="POP3"/>
+   <logger level="INFO" doc:name="Logger" message="bar"/>
+</flow>
 ----
 ....
 ------
@@ -178,36 +213,8 @@ Add a composite-source tag into your flow, then embed multiple connectors inside
 ....
 ------
 
-==== Outbound Endpoints
 
-If an endpoint-based connector is not the first building block (i.e., the message source) in a flow, it is designated as an *outbound endpoint*, since it uses the specific transport channel it supports (such as SMTP, FTP, or JDBC) to dispatch messages to targets outside the flow, which can range from file systems to email servers to Web clients and can also include other Mule flows.
-
-In many cases, an outbound endpoint completes a flow by dispatching a fully processed message to its final, external destination. However, outbound endpoints don't always complete flow processing, because they can also exist in the middle of a flow, dispatching data to an external source, and also passing that (or some other data) to the next message processor in the flow.
-
-[tabs]
-------
-[tab,title="Anypoint Studio Visual Editor"]
-....
-
-Here we can see there is a POP3 connector being used as an inbound endpoint, but additionally, note there is a POP3 connector configured in the middle of the process side of the flow, as an _outbound_ endpoint.
-
-image:outbound-endpoint-example-flow.png[outbound endpoint example flow]
-....
-[tab,title="XML Editor"]
-....
-[source, xml, linenums]
-----
-<flow name="exampleflow2" >      
-   <pop3:inbound-endpoint host="localhost" user="${prod.user}" responseTimeout="10000" doc:name="POP3"/>     
-   <set-payload doc:name="Set Payload" value="foo"/>
-   <pop3:outbound-endpoint host="localhost" user="${prod.user}" responseTimeout="10000" doc:name="POP3"/>
-   <logger level="INFO" doc:name="Logger" message="bar"/>
-</flow>
-----
-....
-------
-
-=== Common Configuration Fields
+=== Common Endpoint Configuration Fields
 
 While unique properties exist for various endpoint-based connectors, most of these building blocks share common properties.
 
@@ -263,15 +270,18 @@ The *Transformers* tab often includes these fields.
 
 == Summary and Considerations
 
-A connector configuration typically references credentials like a username, password, and security tokens. If using a `.properties` file to store the credentials, reference these in the connector configuraiton using Ant syntax - `${my.ConnectionProperty}`. The values will be picked up from the `.properties `file where you stored them, example: `my.ConnectionProperty=myvalue`.
+A connector configuration typically references credentials like a username, password, and security tokens. Try using the `.properties` file in `src/main/app` to store the credentials. The values will be picked up from the `.properties` file, for example:
 
-The `.properties` file usually lives within a resources folder within your application; rather than at the level of the connector instance in the flow.
+.mule-app.properties
+`my.ConnectionProperty=myvalue`.
 
-A Mule application with four different HTTP connectors may all reference the same global HTTP connector configuration which defines specifics such as security, protocol, and proxy settings. Because they all reference the same global connector configuration, all four HTTP endpoints behave *consistently* within the application.
+Reference this value in the connector configuration using Ant syntax - `${my.ConnectionProperty}`. The value `myvalue` is what the configuration(s) would use.
+
+For instance, a Mule application with four different HTTP connectors may all reference the same global HTTP connector configuration which defines specifics such as security, protocol, and proxy settings. Because they all reference the same global connector configuration, all four HTTP endpoints behave *consistently* within the application.
 
 Selected global connector configurations can also be defined as *Shared Resources* for a domain and referenced by all applications for that same domain. For more information, see link:/mule-user-guide/v/3.8/shared-resources[Shared Resources].
 
-=== Considerations
+=== Tips
 
 When you design an application, make sure you initially use an account for your test or development purposes, rather than any account for production. The corresponding connector XML tags follow a standard format most of the time:
 
