@@ -1,55 +1,45 @@
-= Concepts
-:keywords: Anypoint b2b Anypoint Partner Manager concepts
-:toc: macro
-:toclevels: 2
+= B2B Transaction-Processing Framework
 
-toc::[]
+A B2B transaction processing solution serves as a translation layer between internal systems and the various formats (X12, EDIFACT, XML, CSV, and others) and transport protocols (AS2, FTP/S, and others) commonly used in electronic transactions between companies.  Because a company typically cannot dictate that all its trading partners adhere to a single configuration, it is often necessary to develop custom solutions for each trading partner. When custom software development is required for each trading partner, the effort and time of onboarding new trading partners increases dramatically, thereby limiting the business relationships a company can pursue.
 
-This page explains Anypoint Partner Manager (APM) concepts. For more information, see link:/anypoint-b2b/anypoint-partner-manager[Anypoint Partner Manager].
+B2B Transaction Processing Framework enables developers to build a single set of link:/mule-user-guide[Mule Runtime] flows that can process a wide range of messages from many different partners by dynamically applying rules and configuration data stored in APM. This allows non-programmers such as data analysts to onboard new trading partner relationships and support new transaction types using APM website without the need to develop, test, and deploy new Mule Runtime  flows. This section identifies the high-level framework components and delineates their roles in end-to-end B2B transaction processing.
 
-
-== B2B Transaction-Processing Framework
-
-A B2B Transaction Processing solution serves as a translation layer between internal systems and the various formats (X12, EDIFACT, XML, CSV, and others) and transport protocols (AS2, FTP/S, and others) commonly used in electronic transactions between companies.  Because a company typically cannot dictate that all its trading partners comply with a single configuration, it often becomes necessary to develop individualized solutions for each trading partner. If custom software development is required for each trading partner, this greatly increases the effort and time of onboarding new trading partners, limiting the business relationships a company can pursue.
-
-B2B Transaction Processing Framework enables developers to build a single set of Mule Runtime  flows that can process a wide range of messages from many different partners by dynamically applying rules and configuration data stored in Partner Manager. This allows non-programmers such as data analysts to onboard new trading partner relationships and support new transaction types using the Partner Manager website without the need to develop, test, and deploy new Mule Runtime  flows. This section identifies the high-level framework components and delineates their roles in end-to-end B2B transaction processing.
-
-=== Functional Architecture
+== Functional Architecture
 
 B2B transaction processing typically proceeds through some combination of the following stages. (The exact processing stages used and the order can vary between companies.)
 
 image:1-functional-architecture.png[1-functional-architecture.png]
 
-==== Receive
+=== Receive
 
-Each incoming transaction from a partner or internal system is delivered through a transport protocol endpoint configured to receive the message.
+Each incoming transaction from a partner or internal system is delivered through a _transport protocol endpoint_ configured to receive the message.
 
-==== Resolve
-Using data that may be inside the message or in incoming metadata (such as HTTP headers or filenames), this stage identifies the partner and the transaction type, then uses these to look up associated processing details from Partner Manager. These details include:
+=== Resolve
+Using data that may be inside the message or in incoming metadata (such as HTTP headers or filenames), this stage identifies the partner and the transaction type, then uses these to retrieve corresponding processing details from APM. These details include:
 
 * Schema to use for validation
 * Map to transform the message into the required target format
 * Endpoint to which the transformed message is to be delivered
 
-==== Transform
+=== Transform
 
-Each incoming message is translated into the canonical message format for the target service being invoked. This translation is performed dynamically using a map retrieved from the Trading Partner Management (TPM) API.
+Each incoming message is translated into the canonical message format for the target service being invoked. This translation is performed dynamically using a _map_ retrieved from the Trading Partner Management (TPM) API.
 
-==== Validate
+=== Validate
 Makes sure the required data is present in the required format. This validation is performed dynamically using a schema retrieved from the Trading Partner Management (TPM) API.
 
-==== Deliver
+=== Deliver
 Using endpoint configuration data retrieved from the Trading Partner Management (TPM) API the flow dynamically delivers the message to the Business Service endpoint address.
 
-=== Technical Architecture
+== Technical Architecture
 The following diagram shows the primary components of the framework and how these components interact to process B2B transactions.
 
 image:2-b2b-message-processing-framework.png[2-b2b-message-processing-framework.png]
 
-==== MuleSoft-Provided Components
+=== MuleSoft-Provided Components
 
-===== Anypoint Partner Manager
-Anypoint Partner Manager is the user interface for configuring how B2B transactions are processed and for monitoring and managing processed transactions.
+==== Anypoint Partner Manager
+Anypoint Partner Manager (APM) is the user interface for configuring how B2B transactions are processed and for monitoring and managing processed transactions.
 
 ===== Trading Partner Management API
 The Trading Partner Management (TPM) API manages storage and retrieval of configuration data for partners, including the details for processing their transactions.
@@ -57,16 +47,16 @@ The Trading Partner Management (TPM) API manages storage and retrieval of config
 ===== Tracking API
 The Tracking API manages storage and retrieval of metadata about processed transactions: for example, Sender, Receiver, time stamps, message type, and acknowledgement status. This includes but is not limited to correlation logic for matching acknowledgements to original messages and identifying duplicate messages.
 
-===== Partner Manager Connector
-The Partner Manager Connector (PMC) is a component that runs inside of Mule Runtime  and coordinates all interaction with the Partner Manager APIs (TPM and Tracking).
+==== Partner Manager Connector
+The Partner Manager Connector (PMC) is a component that runs inside of Mule Runtime  and coordinates all interaction with the APM APIs (TPM and Tracking).
 
-===== Object Store
+==== Object Store
 The Object Store is a distributed cache in Mule Runtime  that replicates data across nodes in a cluster. TPM configuration data, once retrieved, is cached in the Object Store to minimize calls to the TPM Service to improve performance and reliability. The PMC manages this caching.
 
-==== Customer-Built Flows
+=== Customer-Built Flows
 NOTE: At this time the various flows listed below must be developed by the customer. MuleSoft may provide these components as part of the product in the future. However, the option will remain for customers to provide their own implementations to provide full extensibility and customization.
 
-===== Receive Flows
+==== Receive Flows
 Each receive endpoint corresponds to a Mule flow that consists of the appropriate protocol connector and the appropriate endpoint configuration. After receiving a message over a particular protocol, each receive flow:
 
 * Tracks the message using the Partner Manager Connector (PMC) in order to persist a copy of the message as it was received from the partner.
@@ -74,14 +64,14 @@ Each receive endpoint corresponds to a Mule flow that consists of the appropriat
 
 Activation of the receive flows is done dynamically by a Receive Endpoint listener flow which polls the TPM system for the list of Endpoints that should be active. This flow creates a specific endpoint for each flow based on a template for the required transport protocol. It then dynamically instantiates that flow into the Mule Runtime  runtime and starts it, so that the required connector endpoint is active and listening for messages.
 
-===== Resolve Flow
+==== Resolve Flow
 The Resolve flow does the following:
 
 * Pulls together from the message and any transport headers the needed metadata fields for identifying the specific Document Type.
 * Passes the metadata fields to the TPM service to look up the Document Type and associated configuration settings (map, schema, target endpoint) and adds this information to the context headers that travel with the message to be used by later stages.
 * Passes the message to the next processing stage.
 
-===== Transform Flow
+==== Transform Flow
 The Transform flow:
 
 * Dynamically applies the configured mapping script from the context header to translate the message into the canonical format for the target Business Service.
@@ -89,29 +79,29 @@ The Transform flow:
 * Uses the PMC to track the mapped, canonical version of the message.
 * Passes the updated message body to the next processing stage.
 
-===== Validate Flow
+==== Validate Flow
 The Validate flow:
 
 * Dynamically applies the configured schema script to validate that the message is in the required format.
 * Uses the PMC to track the validation result for the message.
 * Passes the message to the next processing stage.
 
-===== Deliver Flow
+==== Deliver Flow
 The Deliver Flow:
 
 * Invokes the target service by passing the transformed message to the configured transport endpoint.
 * Uses the PMC to track the result from the target service.
 
-===== Message Payload Persistence Flow
-The Message Payload Persistence Flow is an optional flow that can be implemented to store message payloads at various stages. It receives a MuleSoft message from the PMC, persists that message payload to the desired data store, and returns a URL that can be used to retrieve the message later using the Message Payload Retrieval Flow. The URL is stored in the related tracking data stored in the Tracking API in Anypoint Partner Manager and displayed to the user in the context of the transaction. Clicking this link will invoke the Message Payload Retrieval Flow and display the message payload in a pop-up window.
+==== Message Payload Persistence Flow
+The Message Payload Persistence Flow is an optional flow that can be implemented to store message payloads at various stages. It receives a MuleSoft message from the PMC, persists that message payload to the desired data store, and returns a URL that can be used to retrieve the message later using the Message Payload Retrieval Flow. The URL is stored in the related tracking data stored in the Tracking API in APM and displayed to the user in the context of the transaction. Clicking this link will invoke the Message Payload Retrieval Flow and display the message payload in a pop-up window.
 
-===== Message Payload Retrieval API Flow
+==== Message Payload Retrieval API Flow
 The Message Payload Retrieval API Flow is used to retrieve the message payload with a URL (which contains the specific transactionId of the message to be retrieved).
 
-===== Business Service Flows
+==== Business Service Flows
 For each target internal service, there is typically a Mule Runtime  flow that exposes a REST-based API and communicates with the backend system using the appropriate connector or connectors. These Business Service flows are not technically part of the B2B system, but are often part of the overall solution.
 
-===== Replay Flow
+==== Replay Flow
 The replay flow coordinates replaying transactions. It polls the Tracking service for transactions that have been marked for replay. When it finds transactions that need to be replayed it:
 
 . Pulls the original Message body and headers from the Tracking API and the Message Payload Retrieval API.
@@ -119,24 +109,24 @@ The replay flow coordinates replaying transactions. It polls the Tracking servic
 . Tracks the fact that the transaction has been replayed.
 . Updates the TPM service to indicate that the replay is complete
 
-=== Information Architecture: Partner Manager-Configurable Entities and Terms
-Anypoint Partner Manager stores the following configuration data in order to support the dynamic processing of different transaction types for different trading partners.
+== Information Architecture: APM-Configurable Entities and Terms
+APM stores the following configuration data in order to support the dynamic processing of different transaction types for different trading partners.
 
 image:3-b2b-transaction.png[3-b2b-transaction.png]
 
-==== Partner
+=== Partner
 Represents an external company with which your company does business. Your company itself is also considered a Partner.
 
-==== Partnership
-Represents the relationship with an external company with which your company does business. Your company itself is also considered a Partner, and there is a special partnership called the “Home Org” in the Anypoint Partner Manager product.
+=== Partnership
+Represents the relationship with an external company with which your company does business. Your company itself is also considered a Partner, and there is a special partnership called the “Home Org” in APM.
 
-==== Partner Identifier
+=== Partner Identifier
 A predefined identifier of a specific Partner. There are several types of Partner Identifiers used in B2B transactions and configurable in APM. For example, for EDI X12 documents there are ISA identifiers, which are used in EDI interchanges to identify the sender and receiver. AS2 is another type of identifier used in AS2 transmissions.
 
-==== Document, Message, File
+=== Document, Message, File
 These different terms are used interchangeably and somewhat loosely in various B2B domains, to reflect an instance of a structured payload being passed through the system to convey information about a transaction. For consistency, the APM documentation uses the term Document to represent this concept.
 
-==== Document Type
+=== Document Type
 A specific message type that is configured in the system. A Document Type is identified by the following pieces of information:
 
 * Standard - X12, EDIFACT, XML, CSV, JSON, etc.
@@ -150,10 +140,10 @@ A specific message type that is configured in the system. A Document Type is ide
 ** XML - root node name, namespace
 ** CSV, JSON - Name given to the transaction, not necessarily contained in the message
 
-==== Document Properties
+=== Document Properties
 Document Properties are data fields that are extracted from received documents for the purpose of searching, correlation, TPM resolution, or duplicate checking. Document Properties are configured for Document Types. The user provides the Name of the property and the Path (XPath for XML, JSONPath for others) for retrieving the property from the document. These properties are extracted from the document by the Tracking API and stored to be used later for the purposes mentioned above.
 
-==== Schema
+=== Schema
 The schema is stored with the Document Type. It is one of the following depending on the message type:
 
 [%header,cols="3s,7a"]
@@ -171,23 +161,23 @@ The schema is stored with the Document Type. It is one of the following dependin
 |Json Schema
 |===
 
-==== Map
+=== Map
 
 Map script (XSLT or DataWeave) for transforming from one Document Type to another Document Type.
 
-==== Source Channel
+=== Source Channel
 Details for how a particular Document is received. Received is used here relative to the B2B Transaction Processing flows. An inbound transaction would have a Source Channel that receives a Document from an external partner. An outbound transaction would have a Source Channel that receives a Document from an internal system.
 
-==== Target Channel
+=== Target Channel
 Details for how a particular Document is delivered or sent out. Sent is used here relative to the B2B Transaction Processing flows. An inbound transaction would have a Target Channel that sends a Document to an internal system. An outbound transaction would have a Target Channel that sends a Document to an external partner.
 
-==== Route
+=== Route
 Connects a Source Channel to a Target Channel.
 
-==== Transaction
+=== Transaction
 Denotes the end-to-end processing of a single instance of a document from the receipt at an endpoint all the way to the desired destination. A TransactionId can be used to find metadata and persisted payloads for the transaction at each stage.
 
-==== Inbound and Outbound Transactions
+=== Inbound and Outbound Transactions
 Inbound transaction::  A transaction between an external partner and the home organization, initiated by the external partner.
 
 Outbound transaction:: A transaction between the home organization and an external partner, initiated by the home organization.
@@ -205,9 +195,9 @@ For example, a common pattern for inbound transactions is to map an incoming Doc
 
 For an Outbound transaction, the document might originate in the canonical format and so there may not be a map required in the Source Channel, but there would be one in the Target Channel to map to the desired format of the external partner.
 
-=== User Interface
+== User Interface
 
-The Anypoint Partner Manager user interface enables configuration of:
+The APM user interface enables configuration of:
 
 * B2B Transactions
 * Partners
@@ -218,125 +208,10 @@ The Anypoint Partner Manager user interface enables configuration of:
 * Maps
 * Routes
 
-==== Transaction Monitoring
+=== Transaction Monitoring
 
 * Search and view results of processed transactions.
 * View end-to-end processing that occurred for a transaction.
 * Manually cause the replay of failed transactions.
 
 
-== Resolution Processes
-
-APM offers a flexible approach to setting up different kinds of configurations
-for document definitions, endpoints, and routes. For example, you can configure
-a catch-all document definition for a given standard. You can then apply this
-definition to your trading partner in case
-a document does not match any of the defined document definitions. Going
-even further, you can configure a global catch-all for this standard such that it
-is applied to all your partners. In order to support this level of flexibility,
-configurations are defined at the partner or the home organization level.
-APM attempts to resolve a configuration at the home organization level should
-it fail to resolve it at the partner level. The next sub-sections  describe in
-more detail the resolution process for each type of configuration.
-
-=== Document Definition Resolution
-
-As briefly mentioned above, you can configure a document definition to cover
-different message types and versions. Leaving a document definitions's message
-type and version undefined implicitly means that the document definition can be
-applied to any document for the given standard. Alternatively, you can explicitly
-set message type and version to the reserved keyword _ANY_ to attain the same
-behavior. APM always tries first to match a document to the most specific
-document definition before trying to match the document to a more general
-document definition. What follows is a flowchart showing the
-sequence of decisions APM goes through to arrive at the document
-definition to use during route resolution or tracking.
-
-image:resolve-document-definition.png[Document definition resolution flowchart]
-
-APM comes with pre-configured read-only document definitions for X12 and EDIFACT
-that are defined on the home organization. An X12 or EDIFACT document that is not
-covered by any user-defined document definition *always* matches to one of
-these pre-defined document definitions.
-
-=== Endpoint Resolution
-
-Endpoint resolution kicks in when an APM managed connector pulls down its
-configuration from APM. The resolution outputs the endpoint that the connector
-reads to configure itself. The following factors drive the resolution process:
-
-* Partner
-* Endpoint type, that is, send or receive
-* Transport type such as AS2
-* Document's standard such as X12
-* Document's version
-* Document's message type
-
-The resolution process for endpoints is shown in the next flowchart:
-
-image:resolve-endpoint.png[Endpoint resolution flowchart]
-
-=== Routes Resolution
-
-Calling Partner Manager Connector's _resolve-route_ operation triggers routes
-resolution in APM which, similar to endpoint resolution, is driven by the subsequent
-factors:
-
-* Partner
-* Transport type such as AS2
-* Document's standard such as X12
-* Document's version
-* Document's message type
-
-After taking a closer look, notice that the endpoint type is not included in
-the list of factors determining the output of routes. The is because the process
-assumes the endpoint to be always of type receive. The following flowchart
-describes APM's logic for resolving routes:
-
-image:resolve-routes.png[Routes resolution flowchart]
-
-== Tracking
-
-For a given message, APM facilitates storage of:
-
-Payload:: The content of the message
-
-Metadata:: Data about the message
-
-The <<Partner Manager Connector>> posts:
-
-* Metadata from <<Customer-Built Flows>> to the <<Tracking API>>
-* Payload data within <<Customer-Built Flows>> to <<Tracking Data Storage>>.
-
-The customer then uses <<Anypoint Partner Manager>> to request and view metadata and payload data, a process which includes the <<Trading Partner Management API>> and <<Tracking Data Storage>>. This process is shown below.
-
-image:tracking-storage-and-retrieval.png[Tracking: Storage and Retrieval]
-
-=== Payload Tracking
-
-APM payload tracking is designed to allow extensive customer control. You decide the following:
-
-* Where payloads are stored
-* For how long payloads are stored
-* Who has access to payloads
-
-=== Metadata Tracking
-
-Metadata tracking is used for searching and viewing. Customers define properties to track, such as:
-
-* Date and time
-* Sender
-* Recipient
-* Payload URL - This URL points to the message payload and is part of metadata tracking; the message payload itself is part of <<Payload Tracking>>.
-
-=== Tracking Data Storage
-
-You can store tracking data in either of two ways.
-
-==== Amazon S3
-
-Amazon Simple Storage Service (Amazon S3), provides developers and IT teams with secure, durable, highly-scalable cloud storage. Using this method, you need only create an account and configure account credentials in APM.
-
-==== Customer-Selected Storage
-
-This method enables a customer to store its message data at a location of its choice. For example, data can be stored in an on-premises database.
