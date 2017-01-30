@@ -7,6 +7,8 @@ image:logo-pcf-disabled.png[link="/runtime-manager/deployment-strategies", title
 
 This section shows you how to create the same VPC set up in the link:/runtime-manager/vpc-tutorial[VPC tutorial], using the Anypoint Platform CLI.
 
+== Create a VPC
+
 link:/runtime-manager/anypoint-platform-cli#logging-in[Log in to your organization] and use the link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-create[vpc create] command to create the VPC:
 
 [source,Example]
@@ -39,7 +41,7 @@ The CIDR Blocks chosen for the VPC should ideally come from a private IP space, 
 In this example, we are *not passing*:
 
 * Environment information: +
-Not setting a specific environment makes that every application deployed to US-EAST is associated to this VPC disregarding to which environment it is being deployed.
+Not setting a specific environment makes that every application deployed to US-EAST is associated to this VPC disregarding the environment to which it is being deployed.
 
 * Business group information: +
 By doing so, we are associating this VPC to the main organization.
@@ -74,32 +76,56 @@ When the operation succeeds, the CLI displays the details of the newly created V
 └──────────────────────────────┴───────────────────┘
 ----
 
-When the VPC is created, all inbound traffic is blocked by default. You need to create firewall rules to allow traffic to the VPC. +
-In order to do so, use the link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-firewall-rules-add[vpc firewall-rules add] command:
+== Create Firewall Rules
+
+When the VPC is created, four firewall rules are set by default. You can review them using the link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-firewall-rules-describe[vpc firewall-rules describe] command:
+
+[source,Example]
+----
+cloudhub vpc firewall-rules describe vpc-tutorial
+----
+
+This command returns:
+
+[source,Example,linenums]
+----
+┌───────┬────────────────────┬──────────┬────────────┬──────────┐
+│ Index │ CIDR Block         │ Protocol │ From port  │ To port  │
+├───────┼────────────────────┼──────────┼────────────┼──────────┤
+│ 0     │ 10.111.0.0/24      │ TCP      │ 8092       │          │
+├───────┼────────────────────┼──────────┼────────────┼──────────┤
+│ 1     │ 0.0.0.0/0          │ TCP      │ 8082       │          │
+├───────┼────────────────────┼──────────┼────────────┼──────────┤
+│ 2     │ 10.111.0.0/24      │ TCP      │ 8091       │          │
+├───────┼────────────────────┼──────────┼────────────┼──────────┤
+│ 3     │ 0.0.0.0/0          │ TCP      │ 8081       │          │
+└───────┴────────────────────┴──────────┴────────────┴──────────┘
+----
+
+[TIP]
+--
+Rules `0` and `2` allow inbound connections from your local VPC from ports 8091 and 8092, while rules `1` and `3` allow traffic from any host to reach your workers through ports 8081 and 8082.
+--
+
+You can use the link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-delete[vpc firewall-rules delete] command to remove any of the default rules or you  can add new ones using the link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-firewall-rules-add[vpc firewall-rules add] command.
+
+Assume you want to enable TCP traffic through port 8090 inside your VPC. You need to run the following:
 
 [source,Example]
 ----
 cloudhub vpc firewall-rules add
 // <1>
 vpc-tutorial // <2>
-0.0.0.0/0 // <3>
+10.111.0.0/24 // <3>
 tcp // <4>
-8091
+8090
 ----
 
 . Set `vpc-tutorial` as the target VPC for this new firewall rule.
-. Set the IP range to allow all possible IP addresses by setting `0.0.0.0/0`. +
-In CIDR notation, this allows the range 0.0.0.0 to 255.255.255.255.
+. Set the IP range to allow all only hosts from insde your VPC by setting `10.111.0.0/24`. +
+In CIDR notation, this allows the range 10.111.0.0 to 10.111.0.255.
 . Set the whitelisted protocol to `tcp`
-. Allow the port number `8091`
-
-[NOTE]
---
-This example creates this firewall rule, because a link:/runtime-manager/cloudhub-dedicated-load-balancer[CloudHub dedicated load balancer] proxies, by default, all external communications to your workers through port 8091 (the default `http.private` port). +
-Setting this firewall rule allows a link:/runtime-manager/cloudhub-dedicated-load-balancer[CloudHub dedicated load balancer] to communicate to your workers using its default configurations.
-
-Additionally, in order to properly receive requests from the load balancer, all applications that we deploy to the VPC must be listening on port 8091.
---
+. Allow the port number `8090`
 
 When you create a new firewall rule, the Anypoint Platform CLI shows you a success message:
 
@@ -108,8 +134,6 @@ When you create a new firewall rule, the Anypoint Platform CLI shows you a succe
 VPC firewall modified successfully
 ----
 
-You just created a private and isolated network in the US-EAST region and allowed inbound traffic to it through port 8091. +
-Learn how to associate a load balancer following the link:/runtime-manager/dedicated-load-balancer-tutorial[load balancer tutorial].
 
 == Update an Existing VPC
 
@@ -144,3 +168,7 @@ Your `{vpcId}` value is listed by running a link:/runtime-manager/anypoint-platf
 `<EnvironmentId>` needs to be replaced by the Id of the environment to which you want to associate this VPC. +
 You can get the Ids for your environments running a link:/runtime-manager/anypoint-platform-cli#account-environment-list[account environment list] command.
 --
+
+== See Also
+
+* Learn how to associate a load balancer to this VPC following the link:/runtime-manager/dedicated-load-balancer-tutorial[load balancer tutorial].
