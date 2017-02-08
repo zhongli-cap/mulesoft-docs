@@ -6,14 +6,13 @@
 Using batch processing, you can refine the work that a batch step performs upon the records it processes.
 
 * You can set *filters* upon batch steps so as to only accept some records for processing.
-
 * You can *commit* records in groups, sending them as bulk upserts to external sources or services.
 
 This document outlines how and when to use batch filters and the batch commit wrapper. 
 
 == Assumptions
 
-This document assumes that you are familiar with link:/anypoint-studio/v/6/index[Anypoint Studio] and have reviewed the overview and basic anatomy of link:/mule-user-guide/v/3.6/batch-processing[Batch Processing], and that you understand how batch jobs handle link:/mule-user-guide/v/3.6/batch-processing[records which fail processing]. 
+This document assumes that you are familiar with link:/anypoint-studio/v/6/index[Anypoint Studio] and have reviewed the overview and basic anatomy of link:/mule-user-guide/v/3.6/batch-processing[Batch Processing], and that you understand how batch jobs handle link:/mule-user-guide/v/3.5/batch-processing[records which fail processing]. You should also consider link:/mule-user-guide/v/3.5/batch-streaming-and-job-execution#streaming-batch-commits[Streaming Batch Commits].
 
 == Filters
 
@@ -27,7 +26,7 @@ The example below filters out all records where the age is less than 21; the bat
 
 [tabs]
 ------
-[tab,title="Studio Visaul Editor"]
+[tab,title="Studio Visual Editor"]
 ....
 image:accept_expression.png[accept_expression]
 ....
@@ -91,6 +90,8 @@ Note that details in code snippet are abbreviated so as to highlight batch step 
 You can use a *Batch Commit* scope in a batch step to accumulate a subset of records within a batch for bulk upsert to an external source or service. For example, rather than upserting each individual contact (i.e. record) in a batch to Google Contacts, you can configure a Batch Commit to accumulate, say, 100 records then upsert all of them to Google Contacts in one chunk.  
 
 Within a batch step – the only place you can apply it – you use a Batch Commit to wrap an outbound message source. See the example below.
+
+*Note:* See also link:/mule-user-guide/v/3.5/batch-streaming-and-job-execution#streaming-batch-commits[Streaming Batch Commits].
 
 [tabs]
 ------
@@ -163,15 +164,10 @@ If you copy + paste the code into your instance of Studio, be sure to enter your
 How do I get a Salesforce security token?
 
 . Log in to your Salesforce account. From your account menu (your account is labeled with your name), select *Setup*.
-
-. In the left navigation bar, under the *My Settings* heading, click to expand the **Personal **folder. 
-
+. In the left navigation bar, under the *My Settings* heading, click to expand the **Personal** folder. 
 . Click *Reset My Security Token*. Salesforce resets the token and emails you the new one.
-
 . Access the email that Salesforce sent and copy the new token onto your local clipboard.
-
-. In the application in your instance of Anypoint Studio, click the *Global Elements* tab. 
-
+. In the application in your instance of Anypoint Studio, click the *Global Elements* tab.
 . Double-click the Salesforce global element to open its *Global Element Properties* panel. In the *Security Token* field, paste the new Salesforce token you copied from the email. Alternatively, configure the global element in the XML Editor.
 ====
 
@@ -179,28 +175,20 @@ How do I get a Salesforce security token?
 ----
 <?xml version="1.0" encoding="UTF-8"?>
  
-<mule xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.5.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
- 
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
- 
-http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
- 
-http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
- 
-http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd
- 
+<mule xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd 
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd 
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd 
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd 
+http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd 
 http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd">
  
-    <sfdc:config name="Salesforce" username="username" password="password" securityToken="SpBdsf98af9tTR3m3YVcm4Y5q0y0R" doc:name="Salesforce">
+    <sfdc:config name="Salesforce" username="username" password="password" securityToken="<token>" doc:name="Salesforce">
         <sfdc:connection-pooling-profile initialisationPolicy="INITIALISE_ONE" exhaustedAction="WHEN_EXHAUSTED_GROW"/>
     </sfdc:config>
  
-    <data-mapper:config name="new_mapping_grf" transformationGraphPath="new_mapping.grf" doc:name="DataMapper"/>
- 
-    <data-mapper:config name="new_mapping_1_grf" transformationGraphPath="new_mapping_1.grf" doc:name="DataMapper"/>
- 
-    <data-mapper:config name="leads_grf" transformationGraphPath="leads.grf" doc:name="DataMapper"/>
- 
+    <data-mapper:config name="new_mapping_grf" transformationGraphPath="new_mapping.grf" doc:name="DataMapper"/> 
+    <data-mapper:config name="new_mapping_1_grf" transformationGraphPath="new_mapping_1.grf" doc:name="DataMapper"/> 
+    <data-mapper:config name="leads_grf" transformationGraphPath="leads.grf" doc:name="DataMapper"/> 
     <data-mapper:config name="csv_to_lead_grf" transformationGraphPath="csv-to-lead.grf" doc:name="DataMapper"/>
  
     <batch:job max-failed-records="1000" name="Create Leads" doc:name="Create Leads">
@@ -241,9 +229,6 @@ http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfd
 == See Also
 
 * Access link:/mule-user-guide/v/3.6/batch-processing-reference[reference details] about batch processing.
-
 * Read about the link:/mule-user-guide/v/3.6/batch-processing[basic anatomy] of batch processing in Mule.
-
 * Examine the link:/mule-user-guide/v/3.6/batch-processing-reference[attributes] you can configure for batch jobs, steps and message processors.
-
 * Learn more about setting and removing link:/mule-user-guide/v/3.6/record-variable[record-level variables.]
