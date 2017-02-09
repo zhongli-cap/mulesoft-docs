@@ -133,6 +133,71 @@ image:Studio_Async_ChooseGlobalType.png[Studio_Async_ChooseGlobalType] +
 . Define your processing strategy as a global element, with any necessary configuration or optional fine-tuning. (For more information, see link:/mule-user-guide/v/3.6/flow-processing-strategies[Flow Processing Strategies].) Refer to code sample below.
 . Add a `processingStrategy` attribute to your `async` element to specify the processing strategy by name, as in the code sample.
 
+== Replacing versus Modifying Object References
+
+If you replace, that is, change the reference completely inside the async scope, then both the payload and the flow variable in the original thread continue to have their original values.
+
+If you modify, that is, make a change in the object referenced, but leave the same reference, the payload is modified for the original thread, but is preserved for the flow variable, since the former is not copied but the latter is.
+
+Example:
+
+The following example lets you test a replace versus a modify on an async scope.
+
+You can see test the example with these calls:
+
+* link:http://localhost:9000/replacepayload[Replace payload]
+* link:http://localhost:9000/modifypayload[Modify payload]
+
+[source,xml,linenums]
+----
+<flow name="replace"> 
+  <http:inbound-endpoint address="http://localhost:9000/replacepayload" exchange-pattern="request-response" /> 
+  <set-payload value="original payload" /> 
+  <set-variable value="original flowvar" variableName="testflowvar"/> 
+  <logger level="WARN" message="original payload: #[payload]" /> 
+  <logger level="WARN" message="original flowvar: #[flowVars['testflowvar']]" /> 
+  <async> 
+    <set-payload value="new payload" /> 
+    <set-variable value="new flowvar" variableName="testflowvar"/> 
+    <logger level="WARN" message="Payload in async: #[payload]" /> 
+    <logger level="WARN" message="Flowvar in async: #[flowVars['testflowvar']]" /> 
+  </async> 
+  <scripting:component> 
+    <scripting:script engine="groovy"> 
+      <scripting:text> 
+Thread.sleep(3000) 
+return payload 
+      </scripting:text> 
+    </scripting:script> 
+  </scripting:component> 
+  <logger level="WARN" message="Payload after async: #[payload]" /> 
+  <logger level="WARN" message="Flowvar after async: #[flowVars['testflowvar']]" /> 
+</flow> 
+
+<flow name="modify"> 
+  <http:inbound-endpoint address="http://localhost:9000/modifypayload" exchange-pattern="request-response" /> 
+  <set-payload value="#[['key':'originalvalue']]" /> 
+  <set-variable value="#[['key':'originalvalue']]" variableName="testflowvar"/> 
+  <logger level="WARN" message="original payload: #[payload]" /> 
+  <logger level="WARN" message="original flowvar: #[flowVars['testflowvar']]" /> 
+  <async> 
+    <set-payload value="#[payload.key = 'new payload'; return payload]" /> 
+    <set-variable value="#[['key':'new value']]" variableName="testflowvar"/> 
+    <logger level="WARN" message="Payload in async: #[payload]" /> 
+    <logger level="WARN" message="Flowvar in async: #[flowVars['testflowvar']]" /> 
+  </async> 
+  <scripting:component> 
+    <scripting:script engine="groovy"> 
+      <scripting:text> 
+Thread.sleep(3000) 
+return payload 
+      </scripting:text> 
+    </scripting:script> 
+  </scripting:component> 
+  <logger level="WARN" message="Payload after async: #[payload]" /> 
+  <logger level="WARN" message="Flowvar after async: #[flowVars['testflowvar']]" /> 
+</flow> 
+----
 
 == Complete Example Code
 
