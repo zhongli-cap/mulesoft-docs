@@ -5,7 +5,7 @@ MuleSoft welcomes contributions from the community! You can contribute or provid
 * Fork this repository, make edits, and then submit a pull request. We will respond to your request as quickly as possible.
 * File an issue. Please be as specific as possible about the changes you'd like to see.
 * While viewing a page on our [docs site](https://docs.mulesoft.com), you can rate a specific topic and include comments for fixes, suggestions, or general feedback.
-* Send mail to the docs team: documentation@mulesoft.com
+* Send mail to the docs team: docs_team@mulesoft.com
 
 ## Accepting the Contributor's Agreement
 
