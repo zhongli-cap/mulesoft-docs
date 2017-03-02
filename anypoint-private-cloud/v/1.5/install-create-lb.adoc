@@ -31,9 +31,82 @@ In every case, your load balancer must listen on the *Load Balancer Port* and re
 Additionally, your load balancer should poll the address `HTTPS:10250/healthz` to run a *health check* on your platform servers and confirm that they are accessible.
 
 [TIP]
-If you're not sure how to make a load balancer, see link:/anypoint-platform-private-cloud-edition/v/1.5/creating-load-balancer-onprem[creating a load balancer] for instructions on how to create a basic NGINX load balancer for Anypoint Platform Private Cloud Edition.
+If you're not sure how to make a load balancer, see link:/anypoint-private-cloud/v/1.5/creating-load-balancer-onprem[creating a load balancer] for instructions on how to create a basic NGINX load balancer for Anypoint Platform Private Cloud Edition.
 
 
 [NOTE]
 To configure SSL credentials, you don't need to set them up in your load balancer. You can configure them via the Anypoint Platform UI, see <<SSL Certificate>>.
+
+== Creating a Load Balancer for Private Cloud Edition
+:keywords:anypoint platform, on premises
+
+This document walks you through the steps of creating a NGINX load balancer for handling the traffic to the nodes where you've installed the link:/anypoint-private-cloud/v/1.5/[Anypoint Platform Private Cloud Edition]. You should manually create this load balancer as part of the link:/anypoint-private-cloud/v/1.5/install-installer[installation procedure]. Note that you're free to create this load balancer with any other tool instead of NGINX if you prefer.
+
+
+. Enable stream block in your `/etc/nginx/nginx.conf` file, by referencing all the config from `/etc/nginx/stream.d/*`. You can achieve that by adding the following:
+
+[souce, json, linenums]
+----
+stream {
+   include /etc/nginx/stream.d/*.conf;
+}
+----
+
+. Delete the `default.conf` file from `/etc/nginx/conf.d`
+. Create a folder named `/etc/nginx/stream.d` and in it create a file named `onprem.conf`
+. Paste the following content in `onprem.conf`
+
+[souce, json, linenums]
+----
+server {
+   listen 80;
+   proxy_pass 0.0.0.0:30080;
+}
+
+server {
+   listen 443;
+   proxy_pass 0.0.0.0:30443;
+}
+
+server {
+   listen 8889;
+   proxy_pass 0.0.0.0:30889;
+}
+
+server {
+   listen 9500;
+   proxy_pass 0.0.0.0:32009;
+}
+
+server {
+   listen 9501;
+   proxy_pass 0.0.0.0:30083;
+}
+----
+
++
+[NOTE]
+====
+If you're installing the platform on an AWS, you need to enable the default ports on SELinux before starting the NGINX. Run the following commands one by one:
+
+----
+`semanage port -a -t http_port_t  -p tcp 8889`
+`semanage port -a -t http_port_t  -p tcp 9500`
+`semanage port -a -t http_port_t  -p tcp 9501`
+----
+====
+
+. Start NGINX
+`service nginx restart`
+
++
+[NOTE]
+====
+If you're installing the platform on an AWS, you must also run the following command:
+
+----
+`/usr/sbin/setsebool httpd_can_network_connect true`
+----
+====
+
 
