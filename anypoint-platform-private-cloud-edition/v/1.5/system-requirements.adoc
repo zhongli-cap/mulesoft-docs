@@ -1,0 +1,161 @@
+= About Minimum System Requirements
+
+To ensure the performance and stability of Anypoint Platform Private Cloud Edition, your environment must meet the minimum system requirements described in this topic. Before installing, review the following sections and ensure that your environment meets these requirements:
+
+* link:#supported-top[Supported Topologies]
+* link:#hardware-req[Hardware Requirements]
+* link:#software-req[Software Requirements]
+* link:#network-req[Network Requirements]
+
+After ensuring that your environment meets all of the minimum requirements, see link:installing-anypoint-private-cloud-edition[Installing Anypoint Platform Private Cloud Edition] for information on running the installer.
+
+[NOTE]
+The installer tests to ensure that you have enough enough disk space, disk speed, network speed, and a supported OS version.
+
+
+[[supported-top]]
+== Supported Network Topologies
+
+To ensure platform peformance, stability, and high-availability, Anypoint Platform Private Cloud Edition supports two network topoligies.
+
+=== 3-node Configuration
+
+The minimum supported network topology is a 3-node configuration as shown in the following diagram:
+
+image:prereqs-priv-cloud-3-node.png["3-node Configuration"]
+
+- The minimum number of nodes supported
+- Ensures quorum 
+- Each node runs on a separate physical server
+- Hosting the database and object store enables persistence, but requires more resources for the node
+
+Each node in the 3-node configuration runs the platform services, database, and object store.
+
+Having three separate nodes 
+
+To ensure high availability and performance, each node must run on its own server.
+
+=== 6-node Configuration
+
+- Each node also runs on a physical server
+- In this topology, three nodes are dedicated to running platform services.
+- These three nodes have smaller minimum memory requirements.
+- The other three nodes host the database and object store.
+- These nodes have the same memory requirements as those of a 3 node topology
+
+[[hardware-req]]
+== Hardware Requirements
+
+For production usage, you must have at least 3 servers with the following minimum requirements each:
+
+[%header%autowidth.spread]
+|===
+| Component |Requirement
+|RAM |32GB
+|CPU |8 Cores
+|HDD 1 (OS) |50GB
+|HDD 2 (for System data) | 100GB
+|HDD 3 (for Application data)| 250GB
+|HDD 4 (for Docker) | 100GB
+|HDD 5 (for etcd) | 20GB
+|Networking (connectivity between hosts)  |1GbE
+|===
+
+When using virtual machines, make sure that they are using different physical servers, otherwise HA won’t work properly.
+
+[WARNING]
+Only VMWare and bare metal virtualization environments are supported. For information on using VMWare, see link:create-vm-vmware[Creating a Virtual Machine using VMWare].
+
+=== Disk performance
+
+All disks should be relatively performant, even if they are virtual block devices, or network attached storage. You can measure disk throughput with a tool such as `hdparm`. On CentOS `hdparm` can be installed by running `sudo yum install -y hdparm`.
+
+=== Disk Throughput
+
+All disks should have at least 300 MB/sec of throughput. Use the following command to verify the throuhput of your disk:
+
+
+=== IOPS
+
+We recommend the following performance quotas:
+
+[%header%autowidth.spread]
+|===
+| Disk |Recommended IOPS
+|HDD 1 (OS) |500
+|HDD 2 (for System data) | 1500
+|HDD 3 (for Application data)| 1500
+|HDD 4 (for Docker) | 3000
+|HDD 5 (for etcd) | 3000
+|===
+
+[[software-req]]
+== Software Requirements
+
+=== Supported Linux Distributions
+
+The following Linux distributions are supported:
+
+* Red Hat Enterprise Linux (RHEL), versions 7.2.x and 7.3.x
+* CentOS, versions 7.2.x and 7.3.x
+
+=== SELinux
+
+If your system uses Security-Enhanced Linux (SELinux), it must be disabled or set to permissive mode.
+
+[[network-req]]
+== Network Requirements
+
+=== Static IPs
+
+All servers in the cluster should have static private IPv4 assigned to them, these must persist between server restarts. If IPs don’t persist between reboots, the cluster will enter a failed state.
+
+=== VXLAN
+
+This version of Kubernetes sets up overlay VXLAN and uses UDP transport to encapsulate traffic.
+
+There’s direct communication between components of the cluster via TCP. The table below shows the ports used for inter-host communication:
+
+[%header%autowidth.spread]
+|===
+|Protocol |Port/Range |Purpose
+|TCP | 6060 | Health check
+|TCP |7469 |Cluster control plane
+|UDP |8472 |Overlay VXLAN network
+|TCP |6443 |Kubernetes API server
+|TCP |8080 |Kubernetes API server
+|TCP |10248-10255 |Kubernetes Kubelet
+|TCP |2379, 2380, 4001, 7001 |etcd distributed database
+|TCP | 5000 | Docker registry
+|TCP |3008-3010, 3023-3025, 3080, 7575|cluster control plane
+|TCP |30000-32767 |Internal services port range
+|TCP | 7000, 7011, 7199, 9042, 9160 | Cassandra
+|TCP | 18080, 18443 | Object store cluster
+|TCP | 5431-5435 | Database cluster
+|TCP |61008-61010 | Installer port ranges (only used during install)
+|TCP |61022-61024 | Installer port ranges (only used during install)
+|===
+
+=== NAT Traffic
+
+Kubernetes overlay network uses NAT in some cases. This requires that servers should be able to send and receive packages with a source and destination that is different from server’s internal IP.
+
+=== SSL Certificate
+
+In order to use the Anypoint Platform, you must provide SSL credentials. You can upload a certificate through the Anypoint Platform UI, see link:/access-management/private-cloud-edition-features#security[Private Cloud Edition features]. This certificate must be trusted by every machine that’s connected to the platform.
+
+[NOTE]
+Keep in mind that you must register the same SSL certificate on every server with Mule Runtimes that are managed by this platform.
+
+=== SMTP Server
+
+Your network must include an SMTP server to manage e-mail alerts that are triggered by the platform. See link:/access-management/private-cloud-edition-features#smtp[on-prem features].
+
+== Device Requirements
+
+For the platform’s configuration you must assign two dedicated devices for use. One as a system state directory and the other as a target for Docker devicemapper configuration. These two directories must exist on every node of your cluster.
+
+=== Anypoint system data device
+
+The main purpose of the system state directory is storing system configuration and metadata - for example, database and packages among other things. As package sizes can be arbitrary large, it is important to estimate the minimum size requirements and allocate enough space as a dedicated device ahead of time.
+
