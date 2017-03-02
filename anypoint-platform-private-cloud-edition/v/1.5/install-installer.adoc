@@ -1,4 +1,4 @@
-= Installing Anypoint Platform Private Cloud Edition
+= To Run the Anypoint Platform Private Cloud Edition Installer
 :keywords:anypoint platform, on premises
 
 
@@ -12,7 +12,7 @@ This document guides you through the installation process. After completing the 
 
 [NOTE]
 ====
-Before you begin, make sure that you fulfill the link:/anypoint-platform-private-cloud-edition/v/1.5/prerequisites-anypoint-platform-private-cloud[Prerequisites] for installing Anypoint Platform Private Cloud Edition.
+Before you begin, make sure that you fulfill the link:/anypoint-platform-private-cloud-edition/v/1.5/prereq-workflow[Prerequisites] for installing Anypoint Platform Private Cloud Edition.
 
 The installer itself runs a few validations automatically for disk space, disk speed, network speed and OS version. Nevertheless, there are a few more things you should check.
 
@@ -118,14 +118,14 @@ curl -s --tlsv1.2 --insecure "https://mulesoft.gravitational.io:443/t/{TOKEN}/no
 Copy this command from the UI and run it on each of your nodes.
 
 
-. After running this command on a node, the node becomes visible in the installer's UI. Each node has a set of fields to configure: an IP address and two devices to reference. For your devices, you can either leave the default references, or you can set up your own, see link:/anypoint-platform-private-cloud-edition/v/1.5/prerequisites-anypoint-platform-private-cloud#device-requirements[Device Requirements] for details.
+. After running this command on a node, the node becomes visible in the installer's UI. Each node has a set of fields to configure: an IP address and two devices to reference. For your devices, you can either leave the default references, or you can set up your own, see link:/anypoint-platform-private-cloud-edition/v/1.5/prereq-workflow#device-requirements[Device Requirements] for details.
 
 +
 image:Installer4-3Nodes.png[nodes]
 
 +
 [NOTE]
-Ensure that on each of your nodes, both devices are set up with enough space. See link:/anypoint-platform-private-cloud-edition/v/1.5/prerequisites-anypoint-platform-private-cloud#device-requirements[Device Requirements]
+Ensure that on each of your nodes, both devices are set up with enough space. See link:/anypoint-platform-private-cloud-edition/v/1.5/prereq-workflow#device-requirements[Device Requirements]
 
 
 . Once all of your nodes are visible and configured, click *Start Installation* to proceed to installing the software.
@@ -154,98 +154,6 @@ All of the users of your platform will log into accounts that belong to the orga
 
 . After installation is completed, the ops center password has to be reset. Please refer to link:/anypoint-platform-private-cloud-edition/v/1.5/managing-via-the-ops-center#reset-password[reset password] for more details.
 
-== Create a Load Balancer
-
-Anypoint Platform Private Cloud Edition should be run in production on more than one server, you must provide your own load balancer to enable this. A load balancer is necessary to distribute traffic between these, and to restrict open ports to just the necessary ones. You can use any standard tool for creating this load balancer, like NGINX.
-
-[NOTE]
-Even if you plan to deploy the platform to a single server, a load balancer is strongly recommended.
-
-////
-(diagrama de lucidchart) ???
-////
-
-You can configure this load balancer with any strategy you want, but a *round robin* strategy is most often the ideal.
-
-This load balancer should be reachable through an IP address that is accessible by all machines in your network.
-
-Your load balancer must route the following TCP ports:
-
-[%header%autowidth.spread]
-|===
-|Load Balancer Port |Instance Port | Internal Usage
-|`80` | `30080`  | HTTP redirects to HTTPs.
-|`443` | `30443` | HTTPS port
-|`8889` | `30889` | WebSocket Port for Runtimes to connect
-|`9500` | `32009` | Ops Center Access Port
-|`9501` | `30083` | Monitoring Tooling Access Port
-|===
-
-
-In every case, your load balancer must listen on the *Load Balancer Port* and redirect incoming requests to the *Instance Port*. Your installation of Anypoint Platform includes an internal NGINX server that listens on each of the *Instance Ports* and then performs the action listed in the *Internal Usage* column of the above table.
-
-Additionally, your load balancer should poll the address `HTTPS:10250/healthz` to run a *health check* on your platform servers and confirm that they are accessible.
-
-[TIP]
-If you're not sure how to make a load balancer, see link:/anypoint-platform-private-cloud-edition/v/1.5/creating-load-balancer-onprem[creating a load balancer] for instructions on how to create a basic NGINX load balancer for Anypoint Platform Private Cloud Edition.
-
-
-[NOTE]
-To configure SSL credentials, you don't need to set them up in your load balancer. You can configure them via the Anypoint Platform UI, see <<SSL Certificate>>.
-
-
-== Configure Log Forwarding
-
-[NOTE]
-This section refers to forwarding log data from Anypoint Platform itself. For instructions on how to forward log data from the Mule servers and applications that run on the platform, see link:/runtime-manager/sending-data-from-arm-to-external-monitoring-software[Sending data from Runtime Manager to External Monitoring Software].
-
-
-Anypoint Platform uses rsyslog to handle logging. To forward these logs to remote hosts you must configure this in the Ops Center.
-
-See link:/anypoint-platform-private-cloud-edition/v/1.5/managing-via-the-ops-center#configure-log-forwarding[Configure Log Forwarding] for detailed steps on how to do this on the Ops Center.
-
-
-[NOTE]
-It's assumed that you're forwarding your logs to a 3rd-party log solution, like Splunk. It's not supported to send data to a cloud-based log solution, like Splunk Cloud.
-
-
-
-== Set up SMTP
-
-In order to handle e-mail alerts for both Runtime Manager and API Manager, you must have an SMTP server configured on your network. You must direct your local installation of Anypoint Platform to this server, by configuring the link:/access-management/private-cloud-edition-features#smtp[Access Management panel].
-
-////
-[CAUTION]
---
-Currently, only unsecure connections are supported for SMTP, meaning that a server that uses SMTPS can't be used for this.
---
-////
-
-== Provide Platform IP or Domain
-
-You need to provide the DNS or IP with which your instance of the Anypoint Platform is exposed to the local network, this is necessary for Mule runtimes to be able to communicate with it. You can easily do this by accessing the *Acess Management* section, and following the steps detailed on link:/access-management/private-cloud-edition-features#dns-or-ip[Private Cloud Edition features].
-
-
-== SSL Certificate
-
-In order to use Anypoint Platform, you must provide SSL credentials. You can upload a certificate through the Anypoint Platform UI, see link:/access-management/private-cloud-edition-features#security[on premises features]. This certificate must be trusted by every machine that’s connected to the platform.
-
-
-== Handling Third Party Authentication
-
-You can have your users log in to Anypoint Platform via various third party authentication tools. See link:/access-management/external-identity[External Identity] for how to configure this on each of the available options. You can use link:/access-management/managing-users#configure-ldap[LDAP], link:https:/access-management/managing-api-clients#ping-federate[ping federate], link:/access-management/managing-users#instructions-for-saml-configuration[SAML] or link:/access-management/managing-api-clients#openam[Open AM]. On this version of the platform, all of your users must be registered in the platform via external identity (except the admin you register via the installation wizard).
-
-== Adding a Custom Disclaimer Message
-
-You can add a custom message to your login page, that all users in your organization will see every time you log in. To set this custom message, see link:/access-management/private-cloud-edition-features#disclaimer[Private Cloud Edition].
-
-== Next Steps
-
-Now that your installation is complete, your platform is ready for being used. Users registered in your external identity service should have access to your Anypoint platform link:/access-management/organization[organization]. As an admin you can now add link:/access-management/roles[roles] to these users. You can also start link:/runtime-manager/managing-servers[registering servers] so that you can then link:/runtime-manager/deploying-to-your-own-servers[deploy to them], etc.
-
-The developers of your organization that create Mule apps through the link:/anypoint-studio/v/6/index[Anypoint Studio] IDE should set up their editors so that these interface with your locally installed Anypoint Platform (instead of the default cloud Anypoint Platform). See link:/anypoint-studio/v/6/setting-up-your-development-environment#enable-on-premises-setup[Enable on-premises Setup].
-
-See link:/anypoint-platform-private-cloud-edition/v/1.5/managing-via-the-ops-center[Managing via the Ops Center] for instructions on how to add or remove servers from the platform cluster and other changes you may want to carry out after installation.
 
 == Uninstall and reinstall
 
