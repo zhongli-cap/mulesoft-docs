@@ -3,55 +3,48 @@
 [WARNING]
 This product was previously named Anypoint Platform On-Premises Edition. Beginning with the 1.5.1 release, it is named Anypoint Platform Private Cloud Edition.
 
-To ensure the performance and stability of Anypoint Platform Private Cloud Edition, your environment must meet the minimum system requirements described in this topic. Before installing, review the following sections and ensure that your environment meets these requirements:
+To ensure the performance and stability of Anypoint Platform Private Cloud Edition, your environment must meet the minimum system requirements described in this topic. Before installing, review each of following sections and ensure that your environment meets these requirements.
 
-* link:#supported-top[Supported Topologies]
-* link:#hardware-req[Hardware Requirements]
-* link:#software-req[Software Requirements]
-* link:#network-req[Network Requirements]
+[WARNING] 
+If your system does not meet all of the minimum system requirements, you cannot install Anypoint Platform Private Cloud Edition.
 
-After ensuring that your environment meets all of the minimum requirements, see link:install-installer[Installing Anypoint Platform Private Cloud Edition] for information on running the installer.
-
-[NOTE]
-The installer tests to ensure that you have enough enough disk space, disk speed, network speed, and a supported OS version.
+After ensuring that your environment meets all of the minimum requirements, see link:install-workflow[Workflow: Install Anypoint Platform Private Cloud Edition] for information on installing the platform. During installation, the installer tests to ensure that you have enough enough disk space, disk speed, network speed, and a supported OS version.
 
 
 [[supported-top]]
 == Supported Network Topologies
 
-To ensure platform peformance, stability, and high-availability, Anypoint Platform Private Cloud Edition supports two network topoligies.
+To ensure platform peformance, stability, and high-availability, Anypoint Platform Private Cloud Edition supports two network topoligies that are outlined in the sections below.
+
+In both configurations, to ensure high availability and performance, each node must run on its own server. If you are using a virtual machine to host these nodes, you must ensure that each VM node is running on a separate physical server.
+
+[WARNING]
+Only VMWare and bare metal virtualization environments are supported. For information on using VMWare, see link:prereq-create-vm-vmware[Creating a Virtual Machine using VMWare].
 
 === 3-node Configuration
 
-The minimum supported network topology is a 3-node configuration as shown in the following diagram:
+The minimum supported network topology for a production environment is a 3-node configuration as shown in the following diagram:
 
 image:prereqs-priv-cloud-3-node.png["3-node Configuration"]
 
-- The minimum number of nodes supported
-- Ensures quorum 
-- Each node runs on a separate physical server
-- Hosting the database and object store enables persistence, but requires more resources for the node
+Three nodes is the minimum number of nodes that can enable high-availability and failover. In this configuration, each node hosts the platform applications and services. You must configure a load balancer to use round-robin distribution of traffic among each of the three nodes.
 
-Each node in the 3-node configuration runs the platform services, database, and object store.
-
-Having three separate nodes 
-
-To ensure high availability and performance, each node must run on its own server.
+Each node also hosts an instance of the database and file store. Hosting the database and object store enables persistence, but requires larger minimum disk and memory requirements. Although each node contains a database, only one of the database is used as the master. Applications on each node write to this database only. The other two database instances are used for data persistence.
 
 === 6-node Configuration
 
+The maximum supported network topology is a 6-node configuration as shown in the following diagram:
+
 image:prereqs-priv-cloud-6-node.png["6-node Configuration"]
 
-- Each node also runs on a physical server
-- In this topology, three nodes are dedicated to running platform services.
-- These three nodes have smaller minimum memory requirements.
-- The other three nodes host the database and object store.
-- These nodes have the same memory requirements as those of a 3 node topology
+In this configuration, three nodes are dedicated to hosting the platform applications and services. You must configure a load balancer to use round-robin distribution of traffic among each of these three nodes.
+
+The other three nodes are used to host the database and file store instances. Only one of the database instances functions as the master database. Although each node contains a database, only one of the database nodes is used as the master. Applications on each node write to this database only. The other two nodes are used for data persistence.
 
 [[hardware-req]]
 == Hardware Requirements
 
-For production usage, you must have at least 3 servers with the following minimum requirements each:
+For production usage, each node in your configuration must meet the following minimum requirements:
 
 [%header%autowidth.spread]
 |===
@@ -66,23 +59,18 @@ For production usage, you must have at least 3 servers with the following minimu
 |Networking (connectivity between hosts)  |1GbE
 |===
 
-When using virtual machines, make sure that they are using different physical servers, otherwise HA won’t work properly.
-
-[WARNING]
-Only VMWare and bare metal virtualization environments are supported. For information on using VMWare, see link:prereq-create-vm-vmware[Creating a Virtual Machine using VMWare].
-
 === Disk performance
 
 All disks should be relatively performant, even if they are virtual block devices, or network attached storage. You can measure disk throughput with a tool such as `hdparm`. On CentOS `hdparm` can be installed by running `sudo yum install -y hdparm`.
 
 === Disk Throughput
 
-All disks should have at least 300 MB/sec of throughput. Use the following command to verify the throuhput of your disk:
+All disks should have at least 300 MB/sec of throughput.
 
 
 === IOPS
 
-We recommend the following performance quotas:
+Each of your disks should meet following performance quotas:
 
 [%header%autowidth.spread]
 |===
@@ -96,6 +84,8 @@ We recommend the following performance quotas:
 
 [[software-req]]
 == Software Requirements
+
+The following sections list the software required to install and run the Anypoint Platform Private Cloud Edition.
 
 === Supported Linux Distributions
 
@@ -111,15 +101,17 @@ If your system uses Security-Enhanced Linux (SELinux), it must be disabled or se
 [[network-req]]
 == Network Requirements
 
+The following sections describe the network requirements to run Anypoint Platform Private Cloud Edition.
+
 === Static IPs
 
-All servers in the cluster should have static private IPv4 assigned to them, these must persist between server restarts. If IPs don’t persist between reboots, the cluster will enter a failed state.
+All servers in the cluster should have static private IPv4 assigned to them, these must persist between server restarts. If IP addresses are not persistent between reboots, the cluster may enter a failed state.
 
 === VXLAN
 
-This version of Kubernetes sets up overlay VXLAN and uses UDP transport to encapsulate traffic.
+This version of Kubernetes used by Anypoint Platform Private Cloud Edition uses an overlay VXLAN and uses UDP transport to encapsulate traffic.
 
-There’s direct communication between components of the cluster via TCP. The table below shows the ports used for inter-host communication:
+There is direct communication between components of the cluster via TCP. The table below shows the ports used for inter-host communication:
 
 [%header%autowidth.spread]
 |===
@@ -143,14 +135,14 @@ There’s direct communication between components of the cluster via TCP. The ta
 
 === NAT Traffic
 
-Kubernetes overlay network uses NAT in some cases. This requires that servers should be able to send and receive packages with a source and destination that is different from server’s internal IP.
+In some situation, the Kubernetes overlay network uses NAT. NAT requires that servers should be able to send and receive packages with a source and destination that is different from server’s internal IP.
 
 === SSL Certificate
 
 In order to use the Anypoint Platform, you must provide SSL credentials. You can upload a certificate through the Anypoint Platform UI, see link:/access-management/private-cloud-edition-features#security[Private Cloud Edition features]. This certificate must be trusted by every machine that’s connected to the platform.
 
-[NOTE]
-Keep in mind that you must register the same SSL certificate on every server with Mule Runtimes that are managed by this platform.
+[WARNING]
+You must register the same SSL certificate on every server with Mule Runtimes that are managed by this platform.
 
 === SMTP Server
 
