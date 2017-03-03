@@ -87,7 +87,6 @@ image:mq-envid-from-url.png[mq-envid-from-url]
 +
 image:mq-get-orgid-from-url.png[mq-get-orgid-from-url]
 
-
 == API Workflow
 
 The following example with the Broker API illustrates the workflow for accessing an API:
@@ -210,8 +209,6 @@ Go back to Postman and publish a new message.
 Browse to this address: +0.0.0.0:8081+.
 The browser displays the message sent by Postman, which the Anypoint MQ connector received, and the HTTP connector sent to the browser.
 
-
-
 [[mqadminapi]]
 == Anypoint MQ Administration Portal
 
@@ -220,6 +217,29 @@ link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organ
 link:https://anypoint.mulesoft.com/apiplatform/repository/v2/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/public/apis/45045/versions/46698/files/export[Download the RAML specification].
 
 image:mq-rest-admin-portal.png[mq-rest-admin-portal]
+
+=== Create a FIFO Queue From the Administration Portal
+
+You can create a FIFO queue from the Admistration portal by including the new `"fifo": true` field.
+
+NOTE: The organization from which you use the Administration portal must have an Anypoint MQ FIFO entitlement, and the only supported region for FIFO has the `us-west-2` regionId value. If needed, see xref:getoeb[Get an Organization ID, Environment ID, and Bearer Token].
+
+For the following path using the `PUT` operation:
+
+[source]
+/organizations/{organizationId}/environments/{environmentId}/regions/{regionId}/destinations/queues/{queueId}
+
+Use this body:
+
+[source,json,linenums]
+----
+{
+  "defaultTtl" : 120000,
+  "defaultLockTtl" : 10000,
+  "encrypted" : false,
+  "fifo" : true
+}
+----
 
 [[mqbrokerapi]]
 == Anypoint MQ Broker Portal
@@ -239,6 +259,248 @@ link:https://anypoint.mulesoft.com/apiplatform/repository/v2/organizations/68ef9
 
 image:mq-rest-statistics-portal.png[mq-rest-statistics-portal]
 
+== Scripting Example to Create Queues and Exchanges
+
+To create queues and exchanges programatically, you can use
+a language such as groovy.
+
+The following example consists of the `cloudhub.properties` file where
+you list the queues and exchanges to create, and a script file that 
+references the properties file.
+
+=== Command to Invoke
+
+After modifying the xref:groovyprops[properties file] for access 
+to your Anypoint Platform account, use this command to start the 
+xref:groovyscript[script file]:
+
+`groovy AnypointMQAdminClient.groovy`
+
+[[groovyprops]]
+=== Properties File
+
+The following example properties file defines the access credentials, xref:getoeb[organization and environment IDs], region ID, 
+and the names of the queues and exchanges to create:
+
+[source,xml,linenums]
+----
+username="<anypoint_platform_username>"
+password="<anypoint_platform_password>"
+organizationID="<organization_ID>"
+environmentID {
+    development="<development_environment_ID>"
+    qa="<qa_environment_ID>"
+    staging="<staging_environment_ID>"
+    production="<production_environment_ID>"
+}
+regionID="us-east-1"
+
+queues=[
+    "Queue1",
+    "Queue2",
+    "QueueN",
+]
+
+exchanges=[
+    "Exchange1",
+    "Exchange2",
+    "ExchangeN"
+]
+----
+
+[[groovyscript]]
+=== Script File
+
+The following example script creates the queues and exchanges listed
+in the xref:groovyprops[properties file]. 
+
+[source,xml,linenums]
+----
+package guru.oso.mule
+
+@Grab(group = 'org.apache.httpcomponents', module = 'httpclient', version = '4.5.3')
+
+import groovy.json.JsonBuilder
+import groovy.json.JsonSlurper
+import org.apache.http.client.methods.HttpGet
+import org.apache.http.client.methods.HttpPost
+import org.apache.http.client.methods.HttpPut
+import org.apache.http.entity.StringEntity
+import org.apache.http.impl.client.HttpClientBuilder
+
+class AnypointMQAdminClient {
+
+  static String HOST = "https://anypoint.mulesoft.com"
+
+    static void main(String[] args) {
+
+        def props
+
+        if (args) {
+            props = new ConfigSlurper().parse(new File(args[0]).toURI().toURL())
+        } else {
+            props = new ConfigSlurper().parse(new File("cloudhub.properties").toURI().toURL())
+        }
+
+        def envID = props.environmentID.production
+
+        def token = authenticate(props.username, props.password)
+
+        retrieveDestinations(props, token, envID)
+
+//        def creator = new AnypointMQCreator()
+//        creator.createQueues(props, token, envID)
+//        creator.createExchanges(props, token, envID)
+
+    }
+
+    static authenticate(String username, String password) {
+
+      // build JSON
+        def map = [:]
+        map["username"] = username
+        map["password"] = password
+        def jsonBody = new JsonBuilder(map).toString()
+
+        // build HTTP POST
+        def url = HOST + '/accounts/login'
+        def post = new HttpPost(url)
+
+        post.addHeader("Content-Type", "application/json")
+        post.setEntity(new StringEntity(jsonBody))
+
+        // execute
+        def client = HttpClientBuilder.create().build()
+        def response = client.execute(post)
+
+        // read and print response
+        def bufferedReader = new BufferedReader(new InputStreamReader(response.getEntity().getContent()))
+        def jsonResponse = bufferedReader.getText()
+        println "response: \n" + jsonResponse
+
+        // parse and return token
+        def slurper = new JsonSlurper()
+        def resultMap = slurper.parseText(jsonResponse)
+
+        return resultMap["access_token"]
+
+    }
+
+    static retrieveDestinations(ConfigObject props, String token, String envID) {
+
+        def orgID = props.organizationID
+        def regionID = props.regionID
+
+        // build HTTP GET
+        def getDestinationsURL = HOST + '/mq/admin/api/v1/organizations/' + orgID + '/environments/' + envID + '/regions/' + regionID + '/destinations'
+        def getDestinations = new HttpGet(getDestinationsURL)
+
+        // set token
+        getDestinations.setHeader("Authorization", "Bearer " + token)
+
+        // execute
+        def client = HttpClientBuilder.create().build()
+        def response = client.execute(getDestinations)
+
+        // parse and print results
+        def bufferedReader = new BufferedReader(new InputStreamReader(response.getEntity().getContent()))
+        def jsonResponse = bufferedReader.getText()
+        println "response: \n" + jsonResponse
+
+    }
+
+    static retrieveQueue(ConfigObject props, String token, String envID, String queueID) {
+
+        def orgID = props.organizationID
+        def regionID = props.regionID
+
+        // build HTTP GET
+        def getQueueURL = HOST + '/mq/admin/api/v1/organizations/' + orgID + '/environments/' + envID + '/regions/' + regionID + '/destinations/queues/' + queueID
+        def getQueue = new HttpGet(getQueueURL)
+
+        // set token
+        getQueue.addHeader("Authorization", "Bearer " + token)
+
+        // execute
+        def client = HttpClientBuilder.create().build()
+        def response = client.execute(getQueue)
+
+        // parse and print results
+        def bufferedReader = new BufferedReader(new InputStreamReader(response.getEntity().getContent()))
+        def jsonResponse = bufferedReader.getText()
+        println "response: \n" + jsonResponse
+
+    }
+
+    static createQueues(ConfigObject props, String token, String envID) {
+
+        def orgID = props.organizationID
+        def regionID = props.regionID
+
+        def queues = props.queues
+
+        queues.each { queueID ->
+
+            def putQueueURL = HOST + '/mq/admin/api/v1/organizations/' + orgID + '/environments/' + envID + '/regions/' + regionID + '/destinations/queues/' + queueID
+            def putQueue = new HttpPut(putQueueURL)
+
+            putQueue.addHeader("Content-Type", "application/json")
+            putQueue.addHeader("Authorization", "Bearer " + token)
+
+            def queueMap = [:]
+            queueMap["defaultTtl"] = 604800000
+            queueMap["defaultLockTtl"] = 120000
+            queueMap["encrypted"] = false
+            queueMap["fifo"] = false
+
+            def putQueueJSONBody = new JsonBuilder(queueMap).toString()
+            putQueue.setEntity(new StringEntity(putQueueJSONBody))
+
+            def client = HttpClientBuilder.create().build()
+            def response = client.execute(putQueue)
+
+            def bufferedReader = new BufferedReader(new InputStreamReader(response.getEntity().getContent()))
+            def jsonResponse = bufferedReader.getText()
+            println "response: \n" + jsonResponse
+
+        }
+
+    }
+
+    static createExchanges(ConfigObject props, String token, String envID) {
+
+        def orgID = props.organizationID
+        def regionID = props.regionID
+
+        def exchanges = props.exchanges
+
+        exchanges.each { exchangeID ->
+
+            def putExchangeURL = HOST + '/mq/admin/api/v1/organizations/' + orgID + '/environments/' + envID + '/regions/' + regionID + '/destinations/exchanges/' + exchangeID
+            def putExchange = new HttpPut(putExchangeURL)
+
+            putExchange.addHeader("Content-Type", "application/json")
+            putExchange.addHeader("Authorization", "Bearer " + token)
+
+            def exchangeMap = [:]
+            exchangeMap["encrypted"] = false
+
+            def putExchangeJSONBody = new JsonBuilder(exchangeMap).toString()
+            putExchange.setEntity(new StringEntity(putExchangeJSONBody))
+
+            def client = HttpClientBuilder.create().build()
+            def response = client.execute(putExchange)
+
+            def bufferedReader = new BufferedReader(new InputStreamReader(response.getEntity().getContent()))
+            def jsonResponse = bufferedReader.getText()
+            println "response: \n" + jsonResponse
+
+        }
+
+    }
+
+}
+----
 
 
 == See Also
