@@ -1,5 +1,5 @@
 = HTTP Request Connector
-:keywords: anypoint studio, esb, connectors, http, https, http headers, query parameters, rest, raml
+:keywords: anypoint studio, connectors, http, https, http headers, query parameters, rest, raml
 
 The HTTP Request Connector provides the most practical way to consume an external HTTP service. When sending HTTP requests, you can choose what method to use (GET, POST, etc) and may include a body, headers, attachments, query parameters, form parameters and URI parameters. The response is then received by the connector and is passed on to the next element in your flow.
 
@@ -21,11 +21,7 @@ image:add_request_connector.png[add_request_connector]
 
 The following example shows the minimal configuration required for this connector:
 
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-==== Minimum Configuration for the Connector Instance
+==== Studio Visual Editor - Minimum Configuration for the Connector Instance
 
 In the connector instance, provide a *Path* and a *Method*:
 
@@ -47,9 +43,9 @@ At the very least, you need to provide a *host* and a *port*
 image:httpexchange.png[httpexchange]
 
 The above configuration performs a GET request to `+http://www.example.com/test+`.
-....
-[tab,title="XML Editor"]
-....
+
+==== XML Editor - Minimum Configuration for the Connector Instance
+
 For example:
 
 [source, xml, linenums]
@@ -64,22 +60,21 @@ For example:
 
 ==== Minimum Configuration for the Global Element
 
-Like with most connectors in Studio, a lot of the configuration is encapsulated in a separate reusable object that sits outside the flow and can then be referenced by as many instances of the connector as you like. This element defines a server connection to a particular network interface and port and handles outbound requests to it and their responses. At the very least, you need to provide a *host* and a *port* in your global element:
+Like with most connectors in Studio, a lot of the configuration is encapsulated in a separate reusable object that sits outside the flow and can then be referenced by as many instances of the connector as you like. This element defines a server connection to a particular network interface and port and handles outbound requests to it and their responses. At the very least, you need to provide a *host* and a *port* in your global element.
+
+[NOTE]
+====
+Having global elements becomes especially useful with multiple connectors that must use the same settings, in order to avoid repeating the same configuration in every request. In Studio you can also reference a RAML file in this element, which then provides metadata that makes the rest of the configuration easier.
+====
 
 ==== Minimum Configuration for the Connector Instance
 
 After you have defined the request-config, to actually send an HTTP request you need to configure a flow with an `<http:request>` element. In the connector instance, provide a *Path* and a *Method*, as well as a reference to a global element
 
 *The above configuration performs a GET request to +http://www.example.com/test+*
-....
-------
 
-=== HTTP Connector Basic Configuration
+=== Studio Visual Editor - HTTP Connector Basic Configuration
 
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
 You need to provide a *path* and *method* for your requests, as well as reference a *Connector Configuration* global element. Note that the path field doesn't define the full path, but rather the subpath, within the host and after the optional base path that can be specified in the Connector Configuration global element.
 
 You can also add as many parameters as you want, which can be headers, query parameters or uri parameters.
@@ -129,10 +124,8 @@ If the RAML file is modified, you can refresh the cache of it by clicking the bu
 
 The metadata exposed by the connector to your flow may not be updated right away. In such a case, click the *Refresh Metadata* button in the metadata explorer.
 ====
-....
-[tab,title="XML Editor"]
-....
-=== HTTP Connector Basic Configuration
+
+=== XML Editor - HTTP Connector Basic Configuration
 
 You need to provide a *path* and *method* for your requests, as well as reference a *Connector Configuration* global element. Note that the path field doesn't define the full path, but rather the subpath, within the host and after the optional base path that can be specified in the Connector Configuration global element.
 
@@ -198,8 +191,7 @@ Below are two connectors sharing the same connector configuration:
 ----
 
 The first connector in the example sends a GET request to `+http://www.example.com/api/v2/customer+`. The second connector sends a POST request to `+http://www.example.com/api/v2/item+.`
-....
-------
+
 
 == Mapping Between Mule Messages and HTTP Requests
 
@@ -222,29 +214,36 @@ Whenever the message contains outbound attachments, the connector automatically 
 
 === HTTP Headers
 
-If there are any *outbound properties* in the Mule Message that arrives to the HTTP Request Connector, these are automatically added as HTTP request headers. It’s also possible to add headers explicitly through the HTTP Request Connector's configuration. See documentation below
+If there are any *outbound properties* in the Mule message that arrive to the HTTP Request Connector, these are automatically added as HTTP request headers. It’s also possible to add headers explicitly through the HTTP Request Connector's configuration. 
+
+[NOTE]
+====
+By default, the Grizzly libraries used by the HTTP connector limit the HTTP request header section size (request line plus headers) to below 8192 bytes. While it is recommended that you keep your HTTP request header section below this limit, you can override this limit by setting `mule.http.headerSectionSize` to a larger value (in bytes). You can set this JVM parameter in the `wrapper.conf` file, or you can pass it in from the command line when you start the Mule runtime. 
+
+For example, to set the HTTP header section size to 16,000 bytes, you could start the Mule runtime with the command:
+
+`./mule -M-Dmule.http.headerSectionSize=16000`.  
+====
 
 == Adding Custom Parameters
 
 The HTTP Request connector allows you to include the following types of parameters:
 
-* query params
-* a map of multiple query params
-* uri params
-* a map of multiple uri params
-* headers
-* a map of multiple headers
+* Query parameters
+* Map of multiple query parameters
+* URI parameters
+* Map of multiple URI parameters
+* Headers
+* Map of multiple headers
 
 Additionally, you can also send form parameters with your request, included in the Mule message payload. You can also include attachments in your request by adding an Attachment building block to your flow.
 
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
+=== Studio Visual Editor - Custom Parameters
+
 [TIP]
 Remember that when using Studio, if the API you want to reach has a RAML file, referencing this RAML file in the global element exposse the API's metadata, and Studio proactively displays all the available properties for each operation in the API.
 
-=== Query parameters
+==== Query Parameters
 
 By clicking the *Add Parameter* button you can add parameters to your request. If you leave the default *query-param* as the type of parameter, you can add new query parameters and assign names and values to them.
 
@@ -267,7 +266,7 @@ It  generates the same request than the previous example, a GET request to `+htt
 
 The `query-param` and `query-params` elements can be combined inside a single connector. The parameters resolve for each request (evaluating all the MEL expressions in the context of the current message), and in the order they are specified inside the request builder. This allows to override parameters if necessary. If the same parameter is defined more than once, the latest value is used.
 
-=== URI parameters
+==== URI Parameters
 
 When parameters should be part of the path, placeholders can be added in the path attribute with a name for each of them, and then they must be referenced by a `uri-parameter`:
 
@@ -280,7 +279,7 @@ This performs a GET request to +http://www.example.com/customer/20+.
 [TIP]
 Both the name and value fields allow the use of MEL expressions.
 
-=== Dynamically Setting URI Parameters
+==== Dynamically Setting URI Parameters
 
 If URI parameters should be set dynamically they can be set through a MEL expression that returns a map of parameters to set:
 
@@ -290,13 +289,13 @@ image:uriparams2.png[uriparams2]
 If any additional `uri-param` parameters are added automatically while you type the value in the path field, delete these, as they are addressed by the dynamic `uri-parmans` field.
 
 For this example you need to link:/mule-user-guide/v/3.7/variable-transformer-reference[create a variable] named `customMap`. If you set that variable to the MEL expression `#[{'p1':'v1', 'p2':'v2'}]`, it  generates a GET request to ++http://www.example.com/test+/v1/v2+ +
- +
++
 Just as with query parameters, the uri-param and uri-params elements can be combined inside the connector. They are resolved for each request (evaluating all the MEL expressions in the context of the current message), and in the order they are specified inside the request builder. This allows to override parameters if necessary. If the same parameter is defined more than once, the latest value are used.
 
 [INFO]
 In every case, all the placeholders used in the path to reference URI parameters should match the names of the URI parameters inside the request builder (after all MEL expressions were evaluated).
 
-=== Headers
+==== Headers
 
 You can add HTTP headers to the request just as easily as query parameters:
 
@@ -319,7 +318,7 @@ image:w_properties_builders.jpeg[w_properties_builders]
 
 In both cases, the headers of the response map as inbound properties of the Mule message after the response is processed.
 
-=== Dynamically Setting Headers
+==== Dynamically Setting Headers
 
 If headers must be set dynamically (for example, you don't know at design time how many extra headers are needed in the request), they can be set through a MEL expression that returns a map of headers:
 
@@ -341,7 +340,7 @@ TestHeader: TestValue
 
 Just as with query parameters, the header and headers elements can be combined in the connector. They resolve for each request (evaluating all the MEL expressions in the context of the current message), and in the order they are specified inside the request builder. This allows to override parameters if necessary. If the same parameter is defined more than once, the latest value are used.
 
-=== Sending Form Parameters in a POST Request
+==== Sending Form Parameters in a POST Request
 
 In order to send parameters in a POST request, the payload of the Mule message should be a Map with the names and the values of the parameters to send. Hence, one way of sending form parameters in your request is adding a Set Payload element before the HTTP Request Connector to make the payload of your message equal to the form parameters you must send:
 
@@ -352,10 +351,10 @@ For example, if you use the set payload element to set your payload the followin
 `#[{'key1':'value1', 'key2':'value2'}]`
 
 A POST request is sent to link:+http://www.example.com/test+[ www.example.com/test], with `Content-Type: application/x-www-form-urlencoded`, and the body is "`key1=value1&key2=value2`"; just as if a browser would have sent a request after the user submitted a form with these two values.
-....
-[tab,title="XML Editor"]
-....
-=== Query Parameters
+
+=== XML Editor - Custom Parameters
+
+==== Query Parameters
 
 You can add query parameters by using the request-builder element inside the request:
 
@@ -418,9 +417,9 @@ The `query-param` and `query-params` elements can be combined inside the request
 </flow>
 ----
 
-In this example, the parameter k2 defined in the map overrides the k2 query-param defined earlier. The result wil be a GET request to +http://www.example.com/test+?k1=v1&k2=new&k3=v3.
+In this example, the parameter k2 defined in the map overrides the k2 query-param defined earlier. The result willbe a GET request to +http://www.example.com/test+?k1=v1&k2=new&k3=v3.
 
-=== URI Parameters
+==== URI Parameters
 
 When parameters should be part of the path, placeholders can be added in the path attribute with a name for each of them, and then they must be referenced from the request builder to provide the values, using the `uri-param` element:
 
@@ -443,7 +442,7 @@ This performs a GET request to +http://www.example.com/customer/20+.
 [TIP]
 Both the name and value fields allow the use of MEL expressions.
 
-=== Dynamically Setting URI Parameters
+==== Dynamically Setting URI Parameters
 
 If URI parameters should be set dynamically, they can be set through a MEL expression that returns a map of parameters to set:
 
@@ -488,7 +487,7 @@ In this example, the parameter p1 defined in the map overrides the p1 uri-param 
 [WARNING]
 In every case, all the placeholders used in the path to reference URI parameters should match the names of the URI parameters inside the request builder (after all MEL expressions were evaluated).
 
-=== Headers
+==== Headers
 
 HTTP headers can be added to the request by using the "header" element inside the request-builder:
 
@@ -529,7 +528,7 @@ Another way of sending headers is by setting outbound properties in the Mule mes
 
 In both cases, the headers of the response map as inbound properties of the Mule message after the response is processed.
 
-=== Dynamically Setting Headers
+==== Dynamically Setting Headers
 
 If headers must be set dynamically (for example, you don't know at design time how many extra headers are needed in the request), they can be set through a MEL expression that returns a map of headers:
 
@@ -575,12 +574,12 @@ Just as with query parameters, the header and headers elements can be combined i
 </flow>
 ----
 
-In this example, the header TestHeader2 defined in the map overrides the one defined earlier in the request builder. The result wil be a GET request to +http://www.example.com/test+ with the following headers: +
+In this example, the header TestHeader2 defined in the map overrides the one defined earlier in the request builder. The result willbe a GET request to +http://www.example.com/test+ with the following headers: +
 TestHeader1: TestValue1 +
 TestHeader2: TestValueNew +
 TestHeader3: TestValue3
 
-=== Sending Form Parameters in a POST Request
+==== Sending Form Parameters in a POST Request
 
 In order to send parameters in a POST request, the payload of the Mule message should be a Map with the names and the values of the parameters to send. Hence, one way of sending form parameters in your request is adding a Set Payload element before the HTTP Request Connector to make the payload of your message equal to the form parameters you must send:
 
@@ -596,8 +595,7 @@ In order to send parameters in a POST request, the payload of the Mule message s
 ----
 
 In this example, a POST request is sent to ++http://www.example.com/test++, with Content-Type: application/x-www-form-urlencoded, and the body is"key1=value1&key2=value2"; just as if a browser would have sent a request after the user submitted a form with these two values.
-....
-------
+
 
 == Mapping Between HTTP Responses and Mule Messages
 
@@ -928,6 +926,9 @@ For example:
 </flow>
 ----
 This sends a POST request to ++http://www.example.com/test++, encrypted with the default JVM certificates.
+
+NOTE: If the response is a multipart response, then the parts map as inbound attachments in the Mule message, and the payload is null.
+
 ....
 ------
 
