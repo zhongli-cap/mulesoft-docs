@@ -1,0 +1,288 @@
+= DataWeave for Extracting Values
+:keywords: studio, anypoint, transform, transformer, format, aggregate, rename, split, filter convert, xml, json, csv, pojo, java object, metadata, dataweave, data weave, datawave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping
+
+image:dw-logo.png[dw]
+
+== Overview
+
+Whilst you can use DataWeave to construct complex transformations, you can also use it to write brief expressions that simply extract values out of any part of the Mule message. These are often used in message processors to reference a given field.
+
+[NOTE]
+You must be familiar with the link:/mule-fundamentals/v/4.0/mule-message-structure[Mule Message Structure] to know how to navigate it.
+
+For example, you can use an expression in a logger component to log a specific value:
+
+image:
+
+Or you can use an expression on a Twitter connector to pick the userId to query:
+
+image:
+
+
+Once extracted, the value is handled as a literal value of one of the supported link:/mule-user-guide/v/4.0/dataweave-types[DataWeave Value Types].
+
+== Referencing Basic Components
+
+If you want to reference an element in the incoming Mule message or its variables, the syntax is very straight forward:
+
+=== To Reference the Payload
+
+The payload of the message is the easiest element to call, simply write:
+
+`#[payload]`
+
+=== To Reference Properties
+
+Properties are grouped in the `properties` bucket, and so called like this:
+
+`#[properties.<myPropertyName>]`
+
+
+=== To Reference Variables
+
+Variables are a part of the Mule event that is stored outside the Mule message. You can simply refer to a variable by its name like this:
+
+`#[<myVariableName>]`
+
+You can also call variables as shown below, by first referencing the `variable` bucket. This is useful to disambiguate in case a variable's name coincides with something else in the context.
+
+`#[variables.<myVariableName>]`
+
+
+
+== Accessing Values Inside a Structure
+
+If you're referencing an array or object, you can extract specific values from within the contents of this element. You can use any of the four types of selectors available in DataWeave to drill down the data structure:
+
+* *Single Value selector* .<key-name>
++
+`#[payload.users]`
+
+* *Multi Value selector* .*<key-name>
++
+`#[payload.users.*user]`
+
+* *Descendants Selector* ..<key-name>
++
+`#[payload.users..userName]`
+
+* *Indexed Selector* [<index>]
++
+`#[payload.users[2]]`
+
+[TIP]
+See link:/mule-user-guide/v/4.0/dataweave-selectors[DataWeave Selectors] for more details on these.
+
+
+
+
+////
+== Context Objects, Variables, and Fields
+
+The term *Context Object* forms the first part of the simplest form of an extracting expression; the second part is the *Field* (see image below, left). Use a *Variable* in an expression to access information contained within a Variable on your Mule message. Itself a top-level identifier, a variable does _not_ require that you define a context object in an expression (see second image below).
+
+image:contextob_field.png[contextob_field]
+
+The tables below list the Context Objects available for use in Mule, and the corresponding Fields you can use with them. 
+
+[%header,cols="30a,70a"]
+|===
+|Context Object |Provides access to the fields for
+|<<Server Context Object, Server>> |Hardware, operating system, user, and network interface.
+|<<Mule Context Object, Mule>> |Your Mule instance.
+|<<App Context Object, App>> |Your Mule application.
+|<<Message Context Object, Message>> |Mule message.
+|===
+
+
+You can combine a context object with a field to form an expression. The simplest expressions take the form `contextobject.field`.
+
+This example is a simple expression: +
+`#[payload.userId]`
+
+
+=== Server Context Object
+
+[%header,cols="15a,^15a,^15a,55a"]
+|===
+|Field |Read-only Access |Read-write Access |Field Description
+|`dateTime` ||x |Date or time
+|`env` |x ||Environment
+|`fileSeparator` |x |
+|Character that separates components of a file path ( "/" on UNIX and "\" on Windows)
+|`host` |x ||Fully-qualified domain name of a server
+|`ip` |x ||IP address of a server
+|`locale` |x |
+|Default locale (of type java.util.Locale) of the JRE (can access server.locale.language and server.locale.country)
+|`javaVersion` |x ||JRE version
+|`javaVendor` |x ||JRE vendor name
+|`nanoSeconds` |x ||Measure of nanoseconds
+|`osName` |x||Operating system name
+|`osArch` |x ||Operating system architecture
+|`osVersion` |x ||Operating system version
+|`systemProperties` |x ||Map of Java system properties
+|`timeZone` |x ||Default TimeZone (java.util.TimeZone) of the JRE
+|`tmpDir` |x ||Temporary directory for use by the JRE
+|`userName` |x ||User name
+|`userHome` |x ||User home directory
+|`userDir` |x ||User working directory
+|===
+
+=== Mule Context Object
+
+[%header,cols="15a,^15a,^15a,55a"]
+|===
+|Field |Read-only Access |Read-write Access |Field Description
+|`clusterId` |x ||Cluster ID
+|`home` |x ||File system path to the home directory of the Mule server installation
+|`nodeId` |x ||Cluster node ID
+|`version` |x ||Mule version
+|===
+
+=== App Context Object
+
+[%header,cols="15a,^15a,^15a,55a"]
+|===
+|Field |Read-only Access |Read-write Access |Field Description
+|`encoding` |x ||Application default encoding
+|`name` |x ||Application name
+|`registry` ||x |Map representing the Mule registry
+|`standalone` |x ||Evaluates to true if Mule is running standalone
+|`workdir` |x ||Application work directory
+|===
+
+[[messageobj]]
+==== Message Context Object
+
+[%header,cols="15a,^15a,^15a,55a"]
+|===
+|Field |Read-only Access |Read-write Access |Field Description
+|`id` |x ||Unique identifier of Mule message
+|`rootId` |x ||Root ID of Mule message
+|`correlationId` |x || Correlation ID
+|`correlationSequence` |x ||Correlation sequence
+|`correlationGroupSize` |x ||Correlation group size
+|`replyTo` ||x |Reply to
+|`dataType` |x ||Data type of payload
+|`payload` ||x |Mule message payload
+|`inboundProperties` |x ||Map representing the message's immutable inbound properties
+|`inboundAttachments` |x ||Map representing the message's inbound attachments
+|`outboundProperties` ||x |Map representing the message's mutable outbound properties
+|`outboundAttachments` ||x |Map representing the message's outbound attachments
+|===
+////
+
+////
+== Server, Mule, Application, and Message Variables
+
+
+
+Create a directory named `target` in the system's temporary directory and set the payload to the variable storing the file object:
+
+[source, xml, linenums]
+----
+<scripting-component>
+    targetDir = new java.io.File(server.tmpDir, 'target');
+    targetDir.mkdir();
+    payload = targetDir
+</scripting-component>
+----
+
+Set the username and password for an HTTP request at runtime based on inbound message properties:
+
+[source, xml, linenums]
+----
+<http:request-config name="HTTP_Request_Configuration" host="api.acme.com/v1" port="8081" doc:name="HTTP">
+  <http:basic-authentication username="#[inboundProperties.username]" password="#[inboundProperties.password]"/>
+  </http:request-config>
+
+  <flow>
+    ...
+    <http:request config-ref="request-config" path="users" doc:name="HTTP Connector"/>
+    ...
+  </flow>
+----
+////
+
+
+////
+
+== Payload and Attachments
+
+Copy the current payload in a variable named `originalPayload` then restore it:
+
+[source, xml, linenums]
+----
+<set-variable variableName="originalPayload" value="#[payload]" />
+<set-payload value="#[originalPayload]" />
+----
+
+To retrieve the message payload in a particular format, using Mule's auto-transformation capability, use `payloadAs`:
+
+[source, xml]
+----
+<logger message="#[payloadAs(java.lang.String)]" />
+----
+
+To extract all *.txt and *.xml attachments, use a filtered projection:
+
+[source, xml, linenums]
+----
+<expression-transformer expression="#[($.value in properties.entrySet() if $.key ~= '(.*\\.txt|.*\\.xml)')]" />
+----
+////
+
+////
+
+=== Accessing the Cache ????
+
+You can access the link:/mule-user-guide/v/3.8/cache-scope[Mule cache] through the object store that serves as the cache repository. Depending on the nature of the object store, you can count, list, remove, or perform other operations on entries.
+
+The code below shows the XML representation of a cache scope that uses a custom object store class.
+
+[source, xml, linenums]
+----
+<ee:object-store-caching-strategy name="CachingStrategy">
+  <custom-object-storeclass="org.mule.util.store.SimpleMemoryObjectStore" />
+</ee:object-store-caching-strategy>
+----
+
+The object store above is an implementation of a `ListableObjectStore`, which allows you to obtain lists of the entries it contains. You can access the contents of the cache by invoking the `getStore` method on the `CachingStrategy` property of `app.registry`.
+
+The expression below obtains the size of the cache by invoking `allKeys()`, which returns an iterable list.
+
+[source, code]
+----
+#[app.registry.CachingStrategy.getStore().allKeys().size()]"
+----
+
+If you need to manipulate the registry in a Java class, you can access it through `muleContext.getRegistry()`.
+
+////
+
+
+
+
+== DataWeave Reference Material
+
+* link:/mule-user-guide/v/4.0/dataweave-quickstart[DataWeave Quickstart Guide]
+* link:/mule-user-guide/v/4.0/dataweave-language-introduction[DataWeave Language Introduction]
+* link:/mule-user-guide/v/4.0/dataweave-xml-reference[DataWeave XML Reference]
+* link:/mule-user-guide/v/4.0/dataweave-examples[DataWeave Examples]
+* link:/mule-user-guide/v/4.0/dataweave-operators[DataWeave Operators]
+* link:/mule-user-guide/v/4.0/dataweave-types[DataWeave Types]
+* link:/mule-user-guide/v/4.0/dataweave-formats[DataWeave Formats]
+* link:/mule-user-guide/v/4.0/dataweave-selectors[DataWeave Selectors]
+* link:/mule-user-guide/v/4.0/dataweave-memory-management[DataWeave Memory Management]
+* link:/mule-user-guide/v/4.0/dataweave-migrator[DataWeave Migrator Tool]
+* link:/mule-user-guide/v/4.0/dataweave-flat-file-schemas[DataWeave Flat File Schemas]
+* link:/mule-user-guide/v/4.0/dataweave-troubleshooting[Troubleshooting Dataweave]
+
+== General MuleSoft Resources
+
+* link:http://training.mulesoft.com[MuleSoft Training]
+* link:https://www.mulesoft.com/webinars[MuleSoft Webinars]
+* link:http://blogs.mulesoft.com[MuleSoft Blogs]
+* link:http://forums.mulesoft.com[MuleSoft Forums]
+* link:https://www.mulesoft.com/support-and-services/mule-esb-support-license-subscription[Mule Support License]
+* mailto:support@mulesoft.com[MuleSoft Support]

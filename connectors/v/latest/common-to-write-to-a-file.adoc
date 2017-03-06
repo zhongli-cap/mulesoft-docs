@@ -1,0 +1,139 @@
+== To Write to a File with a Connector
+:keywords: file, ftp, connector, operation
+:toc:
+:toc-title:
+
+toc::[]
+
+For Anypoint Studio, Design Center: FTP connector
+
+Uses a connector's *Write* operation to create, overwrite, or append content to a file.
+
+Applicable connectors:
+link:about-file-connector[File], link:about-ftp-connector[FTP]
+//* Reference: _ANY REFERENCE FOR THIS?_
+
+. After adding the connector to your flow, select the *Write* operation.
+. Set up or select a configuration for the connector (see link:to-set-up-a-file-connector-config[To set up a File connector]).
+. Set the *Path* to the file that you want to write. If you do not provide a path, the operation will attempt to discover it from the local file attributes associated with the message. Unsuccessful attempts produce an error message.
+. Provide the *Content* you want to write to the file. Note that the operation will attempt to transform that content. If that attempt is unsuccessful, the operation will fail.
+. [Optional] Perform other tasks:
+  .. Map: see link:using-dataweave-in-studio[label]
+  .. Check *Create Parent Directories* if the directory for the file to which the operation is writing does not exist yet.
+  .. Set the *Write Mode*:
+    * Append
+    * Create New
+    * Overwrite (Default)
+  .. Data Types (_TODO: NEED EXAMPLE THAT USES THESE SETTINGS_)
+  .. Perform *Advanced* configuration.
+    * Encoding
+    * Lock
+
+[[see_also]]
+== See Also
+
+include::include_link_list.adoc[tags=ftp-set-up]
+
+include::include_link_list.adoc[tags=ftp-connector]
+
+include::include_link_list.adoc[tags=tech-ref-ftp]
+
+////
+
+== Examples
+<file:write path="#[path]"
+content="#[payload]"
+mode="OVERWRITE|APPEND|CREATE_NEW"
+lock="true|false"
+createParentDirectories="true|false" />
+
+The above declaration is pretty straight forward:
+
+===== test case =====
+<spring:beans>
+    <spring:import resource="file-read-config.xml"/>
+</spring:beans>
+
+<flow name="write">
+    <file:write path="#[path]" mode="#[mode]" createParentDirectories="#[createParent]" encoding="#[encoding]"/>
+</flow>
+
+<flow name="writeStaticContent">
+    <file:write path="#[path]" mode="#[mode]" createParentDirectories="#[createParent]">
+        <file:content>Hello World!</file:content>
+    </file:write>
+</flow>
+
+<flow name="readAndWrite">
+    <file:read path="#[path]" />
+    <set-payload value="Hello World!" />
+    <file:write path="#[path]" mode="OVERWRITE"/>
+</flow>
+
+* There are three types of write modes which are important:
+** `OVERWRITE`: If the file exists, then overwrite it completely
+** `APPEND`: If the file exists, then write at the end of it
+** `CREATE_NEW`: Means that the operation should result in a new file being created. If the file is already there, then an exception is thrown.
+* `path` is optional to make pass-through scenarios easier.
+** If `path` not set, the `MuleMessage#getAttributes()` value is tested to infer path. If this is an instance of `FileAttributes`, then the `FileAttributes#getPath()` is used. Otherwise, an `IllegalArgumentException` will be thrown.
+
+=====
+
+
+Parameter Name
+Required?
+Default Value
+Description
+path
+NO
+See below
+The path on which you want to write
+
+
+content
+NO
+#[payload]
+the data to be written
+
+
+lock
+NO
+false
+Whether a file system level lock should be placed on this file.
+mode
+NO
+OVERWRITE
+This attribute applies if the file already exists. See below for more details
+createParentDirectories
+NO
+true
+If the file does not exists and set to true it will create the file before writing. Notice that this applies not only to the target file but the whole path. That means that if you want to write to a/b/c/content.txt and only the ‘a’ folder exists, then the b/c directories will be created alongside the content.txt file.
+encoding
+NO
+null
+If the content is of type String, then save it with this encoding. If not specified, then the config’s defaultWriteEncoding is used
+
+Inferring the write path
+
+Having the path as an optional parameter seems odd since this is a write operation. This is so to facilitate pass-through use cases. If the path is not provided, then the MuleMessage#getAttributes() value will be tested. If it’s an instance of FileAttributes, then the FileAttributes#getPath() will be used. Otherwise, an IllegalArgumentException will be thrown.
+FileWriteMode
+
+There 3 types of file write modes which become important when trying to write to an existing file:
+
+OVERWRITE: If the file exists, then overwrite it completely
+APPEND: If the file exists, then write at the end of it
+CREATE_NEW: Means that the operation should result on a new file been created. If the file is already there, then an exception is thrown
+
+Payload types
+
+When writing to a file, this operation can seemingly take payloads of any of the following types:
+
+byte
+byte[]
+String
+OutputHandler
+InputStream
+
+
+If any other type is found, then auto transformation to InputStream is attempted. If that fails, then the operation fails.
+////

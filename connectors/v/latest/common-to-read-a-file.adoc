@@ -1,0 +1,98 @@
+= To Read a File with a Connector
+:keywords: file, ftp, connector, operation
+:toc:
+:toc-title: To Read a File
+
+toc::[]
+
+For Anypoint Studio, Design Center: FTP connector
+
+Uses the connector's *Read* operation. Retains the file in the original location.
+
+. After adding the connector to your flow, select the *Read* operation.
+. Set up or select a configuration for the connector.
+. Provide the *File Path* to the file that you want to read.
+. Provide any advanced settings you need, for example:
+  ** *Lock*: `true`
+  ** *Output Mime Type*: `application/xml`
+  ** *Output Encoding*: `UTF-8`
+
+. TODO, TODO. [Optional] Perform other tasks:
+  ** Set *Data Types* (_TODO: USE CASE?_)
+// DataType#getEncoding()
+      **** Encoding can be any accepted by your operating system. If you do not specify it, the output encoding will be the same as the input.
+// DataType#getMimeType()
+      **** Mime type can be any standard mime type. If you do not specify it, the operation will attempt to guess it based on the file extension,
+      and will use the input if the mime type cannot be determined from the extension.
+    *** To create a *Target Variable* that holds the outputs of the Read operation. (_TODO: IS THIS ONLY THE mime type and encoding output, or some other? Is it required if you use those advanced settings?_)
+    *** To apply a filesystem-level lock to prevent simultaneous access to the file by multiple processes. (_TODO: USE CASES? when might we have multiple processes operating on the file._)
+
+    _QUESTION: Output appears to include standard local file attributes, as well as any specified mime type and encoding. Is that correct?_
+
+[[troubleshooting]]
+== Troubleshooting
+TODO: SUSS OUT HOW TO TALK ABOUT THESE IN THE DOCS, maybe not here, TBD
+From spec:
+
+* In the case of using "target" to load the InputStream, it’s the user’s responsibility to make sure that the returned InputStream is fully consumed or eventually closed. (_QUESTION: HOW is the user to DO THIS FOR THE TARGET, or is this note to the Mule developer? only relevant when using a lock?_) This is important because the underlying file handle and file system lock (if locking was enabled) will only be released once that InputStream is closed.
+
+* If the connector is not capable of writing the file or to create the directories, whether because it doesn’t have write permissions, something’s wrong with the file system, etc, a `MuleRuntimeException` will be thrown.
+
+* If the path points to a directory instead of a file, an `IllegalArgumentException` will be thrown.
+
+[[see_also]]
+== See Also
+
+include::include_link_list.adoc[tags=ftp-set-up]
+
+include::include_link_list.adoc[tags=ftp-connector]
+
+include::include_link_list.adoc[tags=tech-ref-ftp]
+
+////
+== TODO: EXAMPLES FROM TEST CASES ==
+[[read]]
+=== Read Files
+
+
+<flow name="read">
+    <logger level="ERROR" message="#[streaming]" />
+    <choice>
+        <when expression="#[streaming]">
+            <file:read path="#[path]" />
+            <object-to-string-transformer />
+        </when>
+        <otherwise>
+            <file:read path="#[path]">
+                <in-memory-stream />
+            </file:read>
+        </otherwise>
+    </choice>
+</flow>
+
+<flow name="readWithLock">
+    <file:read path="#[path]" lock="true">
+        <in-memory-stream />
+    </file:read>
+</flow>
+
+<flow name="readWithForcedMimeType">
+    <file:read path="#[path]" outputMimeType="test/test"/>
+    <object-to-string-transformer />
+</flow>
+
+<file:read path="#[path]"
+lock="true|false"
+outputEncoding="UTF-8"
+outputMimeType="application/xml" />
+
+From functional spec:
+"The processor above reads the file in the path and returns a MuleMessage with an InputStream as payload and a FileAttributes instance as attributes. By default, if the file does not exist an IllegalArgumentException will be thrown."
+
+// It does not depend on polling an inbound endpoint.
+
+THIS HAS TO CHANGE for 4.0: https://docs.mulesoft.com/mule-user-guide/v/3.8/file-transport-reference
+
+* "Read files at a regular polling interval" - polling not necessary for read to take place
+* Are the inbound and outbound elements in 4.0? <file:connector>, <file:inbound-endpoint> and/or <file:outbound-endpoint> elements
+////

@@ -1,0 +1,150 @@
+= Key Concepts
+:keywords: studio, server, components, connectors, elements, big picture, architecture
+:toc: macro
+:toc-title:
+:toclevels: 2
+
+
+At the simplest level, Mule is the core engine that powers _applications_. +
+These *Mule applications* receive _events_, process them and route them to other _endpoints_.
+
+image::mule-concepts-75c78.png[mule-concepts-75c78]
+
+. A resource triggers an _event_ that reaches an *Event source* in your Mule application.
+. The *event source* produces a *Mule event* that is processed by the runtime following the logic set up through other *Components*.
+
+This document gives a quick glimpse of all the key concepts around the *Mule Runtime*:
+
+toc::[]
+
+== Mule Event
+
+A *Mule event* is an object containing the core information processed by the runtime. It travels through *Components* inside your Mule application following the configured application logic.
+A *Mule event* is generated in the *Event source* of your application, which receives an event triggered by a _resource_ that could be external to the Mule Runtime.
+
+[TIP]
+Examples of an _event_ could be a client request, or a request to change data in a database.
+
+The *Mule Event* represents the _context of information_ of the event that triggers the Mule application's logic. +
+The *Mule event* travels through the *Flow* containing:
+
+* A *Mule Message* composed of:
+** A *payload* with the main data that the mule application processes.
+** A collection of *Attributes* with metadata about the message's payload.
+* *Variables*, which are pieces of information about the *Mule Event* meant to be used by the application that is processing it.
+
+[NOTE]
+Alternatively, large or streaming messages can be processed as *records* in a *batch job*.
+
+=== Mule Message
+
+The *Mule Message* contains the core business specific information of a *Mule event*. It contains *attributes* and a *payload*.
+
+==== Payload
+
+The *payload* is the core information of a *Mule message* and it contains the _actual data_ to be processed.
+
+==== Attributes
+
+//TODO: are attributes accessible from the application?
+The *attributes* are _metadata_ around the *payload*.
+
+[TIP]
+Sending a _POST_ HTTP Request with an XML file to a Mule application generates a *Mule Message* whose *attributes* are the HTTP headers, and its *payload* is the XML file being POSTed.
+
+=== Variables
+
+// TODO: Require more context around variables.
+Generally speaking, variables are user-defined metadata about the *Mule event*.
+
+They can store metadata resulting from different *operations* or to add metadata to a processing *Mule event*.
+
+// TODO: Would it make sense to show Event Context (ExecutionContext) ?
+// === Event Context
+//The ExecutionContext that does not change within the scope of a single request and has the orginalPayload, MEP, credentials as well as reference to txContext and muleContext.
+
+== Components
+
+Mule uses *components* to _compose_  Mule applications and determine their logic to process the *Mule event*.
+
+Any of the following *components* can be found in a Mule application.
+
+=== Flows
+
+At the simplest level, flows are sequences of ordered _logical processes_ that handle the *Mule Event*.
+
+A *flow* is the construct within which you link together several individual elements to handle the receipt, processing, and eventual routing of a *Mule Event*. +
+Typically, a *Flow* starts with an *Event Source* that receives the triggering event, and passes the now *Mule event* through *Event Processors* that could _transform_, _enrich_ and _filter_ the Mule event.
+
+=== Event Source
+
+An *Event Source* receives a triggering event and forwards it to the next *Component* in the flow, along with some metadata around the received event conforming the *Mule Event* that the *flow* will process.
+
+Examples of *event sources* can be the _HTTP Listener_ or a _File Directory Watcher_.
+
+=== Event Processors
+
+*Event Processors* are the *Components* used to conduct backend processes for specific business logic around the *Mule event*. +
+They are grouped based on their specific actions around the *Mule event*.
+
+==== Operations
+
+*Operations* apply specific actions in the Mule application. They can be used to generate a request to an external source, or to point to local resources within an application's package structure.
+
+Examples of *operations* are the _HTTP Requester_ and the _Database Connector.
+
+==== Scopes
+
+*Scopes* can wrap *operations* to define them a fine-grained behavior within a *flow*. They can be used to set up a poll frequency in which certain *operation* must trigger in your application, or to specify that certain group of *operations* needs to process asynchronously.
+
+// TODO: is async a scope or a router?
+Some examples of *scopes* are _Poll_ and _Async_.
+
+//TODO: Can I use a scope to enrich a message payload?
+
+==== Routers
+
+*Routers* can control the application's logic to route, resequence, or split and aggregate *Mule Events* in a flow.
+
+Some examples of *routers* are _splitter_, _scatter-gather_ and _resequencer_.
+
+==== Transformers
+
+[CAUTION]
+Transformers are included in Mule 4 Beta for compatibility reasons. They will be deprecated for future releases. +
+Transformation should be carried by DataWeave expressions.
+
+*Transformers* are *components* that transform the *payload* of a *Mule message*.
+
+Some examples of *transformers* are _Object to XML_ and the _Object to String_.
+
+=== Modules
+
+*Modules* are a collection of *Event sources* and *operations* along with its specific *module configurations*.
+
+Each *Module* can extend the runtime capabilities allowing users to configure connections to different services almost automatically.
+
+// TODO: Modules to use to validate
+
+// TODO: Determine if this is technically accurate
+Importantly, *modules* don't have to have any Mule-specific code; they can simply be POJOs, Spring beans, Java beans, Groovy scripts, or web services containing the business logic for processing data. Components can even be developed in other languages such as Python, JavaScript, Ruby, and PHP. Mule’s catalog of *components* support the most commonly used Enterprise Integration Patterns.
+
+Some examples of *modules* are the _SalesForce Connector_ and the _SAP Connector_.
+
+=== Module configurations
+
+Set global configurations for a specific *module*.
+
+
+== DataWeave
+
+Dataweave is the primary language used for formulating expressions in Mule, allowing you to access, manipulate, and use information from the message and its environment. 
+
+At runtime, Mule evaluates expressions while executing a flow to:
+
+* Extract information from the Mule event.
+* Restructure or manipulate any part of the Mule event.
+// TODO: Define if DW can be used to filter muleEvents.
+* Define a filter, to allow certain *Mule events* to continue to be processed in a *flow* based on certain criteria. (?)
+* Set or manipulate a value in the message attribute, the payload, or a variable.
+* Perform an operation on information in the Mule event, application, Mule instance, or server.

@@ -1,0 +1,205 @@
+= To Consume from the Web Service 
+:keywords: web service consumer, consume
+:toc:
+:toc-title: Page Contents
+
+toc::[]
+
+You can consume data from the connector using the *Consume* operation that you set in the properties screen for the connector. After you have installed and configured the connector, click the connector in the Anypoint Studio Canvas and set the operation on the connector's properties screen.
+
+The *Consume* operation is the only web service consumer operation. For a specified connection, the Consume operation lets you consume header types, the body type, and the attachments if any, and provides output messages about the operation.
+
+For input information, see <<Operation Input>>.
+
+For output information, see <<Operation Output>>.
+
+== Operation Input
+
+The input consists of a *message* that represents a SOAP message. Input is composed of the body, a set of headers, and a set of attachments, all of which are optional parameters. For output information, see <<Operation Output>>.
+
+The *Consume* operation requires only two parameters:
+
+* Operation
+* Message that represents the SOAP Message that is going to be built
+
+The SOAP message consist of three parameters:
+
+* `headers`: A set of XML headers
+* `body`: The XML body or null if no body elements are required
+* `attachments`:  A set of attachments
+
+The output can be of two different types dependending on whether the response contains
+attachments or not. If the response does not have attachments, the resulting type
+is in plain XML with the information returned by the service. If the response
+returns at least one attachment, the output type is a Multipart payload that
+carries the plain XML response in the body plus additional parts for each retrieved
+attachment by the service.
+
+[source,xml,linenums]
+----
+<wsc:consume config-ref="attachmentsConfig" operation="uploadAttachment">
+   <wsc:message>
+       <wsc:headers>
+          <wsc:header value="#[flowVars.headerIn]" key="headerIn"/>
+          <wsc:header value="#[flowVars.headerInOut]" key="headerInOut"/>
+       </wsc:headers>
+       <wsc:body>#[payload]</wsc:body>
+       <wsc:attachments>
+           <wsc:attachment key="attachment" value="#[flowVars.inAttachment]"/>
+       </wsc:attachments>
+   </wsc:message>
+</wsc:consume>
+----
+
+
+=== Body
+
+The input body for an `operation` is XML that follows the element definition pointed to by the `message` part in the WSDL.
+
+For example the SOAP `operation` definition (extracted from a WSDL file) looks like:
+
+[source,xml,linenums]
+----
+<operation name="echoAccount">
+   <soap:operation soapAction="echoAccount"/>
+   <input>
+       <soap:body use="literal"/>
+   </input>
+   <output>
+       <soap:body use="literal"/>
+   </output>
+</operation>
+…
+<-- with this message definition !-->
+<message name="echoAccount">
+   <part name="parameters" element="tns:account"/>
+</message>
+<-- with this account type definition !-->
+<xs:complexType name="account">
+   <xs:sequence>
+     <xs:element name="id" type="xs:long" minOccurs="0"/>
+     <xs:element name="items" type="xs:string" nillable="true" minOccurs="0"/>
+     <xs:element name="startingDate" type="xs:dateTime" minOccurs="0"/>
+   </xs:sequence>
+----
+
+The body expects content such as the following to generate the correct SOAP envelope:
+
+[source,xml,linenums]
+----
+<con:echoAccount xmlns:con="http://consumer.ws.extension.mule.org/">
+   <account>
+       <id>12</id>
+       <items>chocolate</items>
+       <items>caramel</items>
+       <items>vanilla</items>
+       <startingDate>2017-03-02T00:00:00-03:00</startingDate>
+   </account>
+</con:echoAccount>
+----
+
+Metadata is provided to build the XML body using DataWeave.
+
+=== No Body Required
+
+When an operation doesn't have a required body, the Consume Operation accepts a null value as body and generates the required body part without parameters to fulfill the SOAP request.
+
+An example auto-generated body:
+
+[source,xml]
+----
+<con:operationName xmlns:con="http://consumer.ws.extension.mule.org/"/>
+----
+
+Only the operation's *Qname* is needed to generate the empty body request.
+
+=== Body Attachment Elements
+
+In a SOAP context, the attachments are part of the body, and the attachment can travel encoded as base64 right in the body, or have a reference to a part of a multipart HTTP message for example MTOM. For the Consume operation, this is not a concern and the body is agnostic of the attachments. The attachment elements are handled internally and the user does not need add attachment elements to the request body.
+
+=== Headers
+
+The headers are defined as a Map where each entry represents a header, the key of the entry defines the name of the header and the value is the header XML element.
+
+The following example defines a header as a payload:
+
+[source,xml,linenums]
+----
+<wsc:message>
+   <wsc:headers>
+      <wsc:header value="#[payload]" key="headerIn"/>
+   </wsc:headers>
+</wsc:message>
+----
+
+The payload carries this header:
+
+[source,xml]
+----
+<con:headerIn  xmlns:con="http://service.ns/">Header In Value</con:headerIn>
+----
+
+Metadata is provided to build the headers using link:/mule-user-guide/v/4.0/dataweave[DataWeave] and all keys should be auto-populated with their values so that a user need only set the content for each header.
+
+[source,xml,linenums]
+----
+{
+  headerIn: "<con:headerIn  xmlns:con="http://service.ns/">Header In Value</con:headerIn>",
+  headerNumberTwo: "<ns:someHeader/>"
+}
+----
+
+=== SOAP Protocol Attachments
+
+The SOAP protocol attachments are carried in the body. The Web Service Consumer connector supports SOAP with attachments that encode the body to base64, travel embedded in the body request, and support Message Transmission Optimization Mechanism (MTOM), which efficiently sends binary data to and from web services. MTOM introduces the concept of sending the binary data separately from the XML body by including an XML-binary Optimized Packaging (XOP) in place of the binary data that references the data that travels in a multipart-related message.
+
+.SOAP with attachments
+[source,xml,linenums]
+----
+<con:uploadAttachment xmlns:con="http://consumer.ws.extension.mule.org/">
+   <name>picture</name>
+   <attachment>VGhpcyBpcyBhIHBpY3R1cmUgY29udGVudA==</attachment>
+</con:echoAccount>
+----
+
+.MTOM
+[source,xml,linenums]
+----
+<con:uploadAttachment xmlns:con="http://consumer.ws.extension.mule.org/">
+   <name>picture</name>
+   <xop:include href="cid:SomeUniqueID"/>
+</con:echoAccount>
+----
+
+Example with a MIME attachment:
+
+[source,xml,linenums]
+----
+Content-id: "SomeUniqueID"
+Content-Type: image/png
+
+VGhpcyBpcyBhIHBpY3R1cmUgY29udGVudA==
+----
+
+For both cases, the attachments are handled the same way. The Web Service Consumer connector adds the information that is required to the body depending on the type of connection you specify.
+
+== Operation Output
+
+The output of the Consume operation can be of two different types dependending on whether the response contains
+attachments or not. If the response does not have attachments, the resulting type
+is in plain XML with the information returned by the service. If the response
+returns at least one attachment, the output type is a multi-part payload that
+carries the plain XML response in the body plus additional parts for each retrieved
+attachment by the service.
+
+The output of the Consume operation is:
+
+* *Output payload* - The output of the Consume operation can be a plain XML with the response body returned by the service or a multi-part payload with the XML response as body of the multi-part payload, plus one additional part for each attachment returned by the SOAP service.
+* *Attributes* - Web service attributes are returned by each Consume operation invocation, together with the output payload. The attributes carry all the headers returned by the SOAP service (SOAP Headers) in XML format and all protocol specific headers returned upon operation request.
+
+Both attributes and payload output provide metadata. For input information, see <<Operation Input>>.
+
+
+== See Also
+
+* link:/mule-user-guide/v/4.0/web-service-consumer[Web Service Consumer Connector].
