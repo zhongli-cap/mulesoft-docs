@@ -9,18 +9,53 @@ ext {
   publishRepoUri = 'git@github.com:mulesoft/mulesoft-docs-output-beta.git'
   siteDir = '_publish'
   siteUri = 'https://docs-beta.mulesoft.com'
+  remoteExists = false
 }
 
 task clonePublishRepo {
   outputs.dir(siteDir).upToDateWhen { false }
   doLast {
     if (file("$siteDir/.git").directory) {
-      git "fetch -q origin $publishRepoBranchName", siteDir
-      git "reset -q --hard origin/$publishRepoBranchName", siteDir
+      //git "fetch -q origin $publishRepoBranchName", siteDir
+      println "About to checkout branch repo already exists"
+      git "checkout -B $branchName", siteDir
+      gitcheckremote "ls-remote --heads $publishRepoUri $branchName", siteDir
+      if(remoteExists) {
+        println "Setting upstream of branch"
+        git "branch --set-upstream-to=origin/$branchName", siteDir
+        //println "remote exists, about to do a pull"
+        //git "pull origin $branchName", siteDir
+        println "About to do hard reset"
+        git "reset --hard origin/$branchName", siteDir
+        println "About to fetch branch as it exists"
+        //git "fetch -q origin $branchName", siteDir
+        println "About to do a pull"
+        git "pull origin $branchName", siteDir
+        //git "reset --hard origin/$branchName", siteDir
+      }
+      else {
+        println "REMOTE DOESN'T EXIST "
+      }
     }
     else {
       // NOTE not using --depth 1 because we need full history to consolidate (for now)
+      //git "clone -q $publishRepoUri $siteDir", file(siteDir).parent
+      println "About to clone the output repo"
       git "clone -q $publishRepoUri $siteDir", file(siteDir).parent
+      println "About to checkout branch or create it"
+      git "checkout -B $branchName", siteDir
+      gitcheckremote "ls-remote --heads $publishRepoUri $branchName", siteDir
+      if(remoteExists) {
+        git "reset --hard origin/$branchName", siteDir
+        println "About to fetch branch as it exists"
+        //git "fetch -q origin $branchName", siteDir
+        git "pull origin $branchName", siteDir
+        println "About to do hard reset"
+        git "reset --hard origin/$branchName", siteDir
+      }
+      else {
+        println "REMOTE DOESN'T EXIST AFTER CLONE"
+      }
     }
   }
 }
@@ -45,11 +80,19 @@ task disallowRobots(group: 'Build', description: 'Disallows robots from crawling
 }
 
 task publishSiteDir {
+  println "About to publish the site"
+  // Have taken out for now
   onlyIf { !git('status --porcelain', siteDir, true).empty }
   doLast {
     git 'add .', siteDir
-    git "commit -q -m \"$publishCommitMessage\"", siteDir
-    if (!dryRun) git "push -q origin $publishRepoBranchName", siteDir
+
+    // Print all the files
+    //println fileTree( dir: siteDir ).files
+
+    println "About to commit"
+    git "commit -m \"$publishCommitMessage\"", siteDir
+    //if (!dryRun) git "push -q origin $publishRepoBranchName", siteDir
+    if (!dryRun) git "push --set-upstream origin $branchName", siteDir
   }
 }
 
