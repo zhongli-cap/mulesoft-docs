@@ -1,0 +1,592 @@
+:toc:               left
+:toc-title:         File Connector
+:toclevels:         2
+:last-update-label!:
+:docinfo:
+:source-highlighter: coderay
+:icons: font
+
+
+= File Connector Documentation Reference
+
++++
+Connector to manipulate files on a locally mounted file system
++++
+
+
+== Configurations
+---
+[[config]]
+=== Config
+
++++
+File connector used to manipulate file systems mounted on the host operation system.
+<p>
+This class serves as both extension definition and configuration. Operations are based on the standard
+BaseFileSystemOperations
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+|Name | String | The name of this configuration. With this name can be later referenced. | | *x*{nbsp}
+| Connection a| <<config_connection, Local FileSystem Connection>>
+ | The connection types that can be provided to this configuration. | | *x*{nbsp}
+| Default Write Encoding a| String |  ++++++ |  | {nbsp}
+|======================
+
+==== Connection Types
+[[config_connection]]
+===== Local FileSystem Connection
+
++++
+A ConnectionProvider which provides instances of FileSystem from instances of FileConnector
++++
+
+====== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Working Directory a| String |  +++The directory to be considered as the root of every relative path used with this connector. If not provided, it will default
+to the value of the user.home system property. If that system property is not set, then the connector will fail to
+initialise.+++ |  | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
+| Disable Validation a| Boolean |  +++Disables connection validation+++ |  | {nbsp}
+|======================
+
+==== Associated Operations
+* <<copy>> {nbsp}
+* <<createDirectory>> {nbsp}
+* <<delete>> {nbsp}
+* <<list>> {nbsp}
+* <<move>> {nbsp}
+* <<read>> {nbsp}
+* <<rename>> {nbsp}
+* <<write>> {nbsp}
+
+==== Associated Sources
+* <<directory-listener>> {nbsp}
+
+
+== Operations
+
+[[copy]]
+=== Copy
+`<http://www.mulesoft.org/schema/mule/file:copy>`
+
++++
+Copies the file at the sourcePath into the targetPath.
+<p>
+To support pass-through scenarios, the sourcePath attribute is optional. If not provided, then the current
+Message#getAttributes() value will be tested to be an instance of FileAttributes, in which case
+FileAttributes#getPath() will be used. If that's not the case, then an IllegalArgumentException will be
+thrown.
+<p>
+If targetPath doesn't exists, and neither does its parent, then an attempt will be made to create depending on the
+value of the createParentFolder argument. If such argument is , then an IllegalArgumentException will
+be thrown.
+<p>
+If the target file already exists, then it will be overwritten if the overwrite argument is true. Otherwise,
+IllegalArgumentException will be thrown.
+<p>
+It is also possible to use the targetPath to specify that the copied file should also be renamed. For example, if
+sourcePath has the value <i>a/b/test.txt</i> and targetPath is assigned to <i>a/c/test.json</i>, then the
+file will indeed be copied to the <i>a/c/</i> directory but renamed as <i>test.json</i>
+<p>
+As for the sourcePath, it can either be a file or a directory. If it points to a directory, then it will be copied
+recursively.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | *x*{nbsp}
+| Source Path a| String |  +++the path to the file to be copied+++ |  | *x*{nbsp}
+| Target Path a| String |  +++the target directory where the file is going to be copied+++ |  | *x*{nbsp}
+| Create Parent Directories a| Boolean |  +++whether or not to attempt creating any parent directories which don't exists.+++ |  +++true+++ | {nbsp}
+| Overwrite a| Boolean |  +++whether or not overwrite the file if the target destination already exists.+++ |  +++false+++ | {nbsp}
+|======================
+
+
+==== For Configurations.
+* <<config>> {nbsp}
+
+==== Throws
+* FILE:CONNECTIVITY {nbsp}
+* FILE:RETRY_EXHAUSTED {nbsp}
+* FILE:ILLEGAL_PATH {nbsp}
+* FILE:FILE_ALREADY_EXISTS {nbsp}
+
+
+[[createDirectory]]
+=== Create Directory
+`<http://www.mulesoft.org/schema/mule/file:create-directory>`
+
++++
+Creates a new directory on directoryPath
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | *x*{nbsp}
+| Directory Path a| String |  +++the new directory's name+++ |  | *x*{nbsp}
+|======================
+
+
+==== For Configurations.
+* <<config>> {nbsp}
+
+==== Throws
+* FILE:ACCESS_DENIED {nbsp}
+* FILE:CONNECTIVITY {nbsp}
+* FILE:RETRY_EXHAUSTED {nbsp}
+* FILE:ILLEGAL_PATH {nbsp}
+* FILE:FILE_ALREADY_EXISTS {nbsp}
+
+
+[[delete]]
+=== Delete
+`<http://www.mulesoft.org/schema/mule/file:delete>`
+
++++
+Deletes the file pointed by path, provided that it's not locked
+<p>
+To support pass-through scenarios, the path attribute is optional. If not provided, then the current
+Message#getAttributes() value will be tested to be an instance of FileAttributes, in which case
+FileAttributes#getPath() will be used. If that's not the case, then an IllegalArgumentException will be
+thrown.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | *x*{nbsp}
+| Path a| String |  +++the path to the file to be deleted+++ |  | *x*{nbsp}
+|======================
+
+
+==== For Configurations.
+* <<config>> {nbsp}
+
+==== Throws
+* FILE:ACCESS_DENIED {nbsp}
+* FILE:CONNECTIVITY {nbsp}
+* FILE:RETRY_EXHAUSTED {nbsp}
+* FILE:ILLEGAL_PATH {nbsp}
+
+
+[[list]]
+=== List
+`<http://www.mulesoft.org/schema/mule/file:list>`
+
++++
+Lists all the files in the directoryPath which match the given matcher.
+<p>
+If the listing encounters a directory, the output list will include its contents depending on the value of the
+recursive parameter.
+<p>
+If recursive is set to true but a found directory is rejected by the matcher, then there won't be any
+recursion into such directory.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | *x*{nbsp}
+| Directory Path a| String |  +++the path to the directory to be listed+++ |  | *x*{nbsp}
+| Recursive a| Boolean |  +++whether to include the contents of sub-directories. Defaults to false.+++ |  +++false+++ | {nbsp}
+| File Matching Rules a| One of:
+
+* <<matcher>> |  +++a matcher used to filter the output list+++ |  | {nbsp}
+| Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+|======================
+
+==== Output
+[cols=".^50%,.^50%"]
+|======================
+| *Type* a| Array of Message of [Binary] payload and [<<LocalFileAttributes>>] attributes
+|======================
+
+==== For Configurations.
+* <<config>> {nbsp}
+
+==== Throws
+* FILE:ACCESS_DENIED {nbsp}
+* FILE:CONNECTIVITY {nbsp}
+* FILE:RETRY_EXHAUSTED {nbsp}
+* FILE:ILLEGAL_PATH {nbsp}
+
+
+[[move]]
+=== Move
+`<http://www.mulesoft.org/schema/mule/file:move>`
+
++++
+Moves the file at the sourcePath into the targetPath.
+<p>
+To support pass-through scenarios, the sourcePath attribute is optional. If not provided, then the current
+Message#getAttributes() value will be tested to be an instance of FileAttributes, in which case
+FileAttributes#getPath() will be used. If that's not the case, then an IllegalArgumentException will be
+thrown.
+<p>
+If targetPath doesn't exists, and neither does its parent, then an attempt will be made to create depending on the
+value of the createParentFolder argument. If such argument is false, then an IllegalArgumentException
+will be thrown.
+<p>
+If the target file already exists, then it will be overwritten if the overwrite argument is true. Otherwise,
+IllegalArgumentException will be thrown.
+<p>
+It is also possible to use the targetPath to specify that the moved file should also be renamed. For example, if
+sourcePath has the value <i>a/b/test.txt</i> and targetPath is assigned to <i>a/c/test.json</i>, then the
+file will indeed be copied to the <i>a/c/</i> directory but renamed as <i>test.json</i>
+<p>
+As for the sourcePath, it can either be a file or a directory. If it points to a directory, then it will be moved
+recursively.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | *x*{nbsp}
+| Source Path a| String |  +++the path to the file to be copied+++ |  | *x*{nbsp}
+| Target Path a| String |  +++the target directory+++ |  | *x*{nbsp}
+| Create Parent Directories a| Boolean |  +++whether or not to attempt creating any parent directories which don't exists.+++ |  +++true+++ | {nbsp}
+| Overwrite a| Boolean |  +++whether or not overwrite the file if the target destination already exists.+++ |  +++false+++ | {nbsp}
+|======================
+
+
+==== For Configurations.
+* <<config>> {nbsp}
+
+==== Throws
+* FILE:CONNECTIVITY {nbsp}
+* FILE:RETRY_EXHAUSTED {nbsp}
+* FILE:ILLEGAL_PATH {nbsp}
+* FILE:FILE_ALREADY_EXISTS {nbsp}
+
+
+[[read]]
+=== Read
+`<http://www.mulesoft.org/schema/mule/file:read>`
+
++++
+Obtains the content and metadata of a file at a given path. The operation itself returns a Message which payload is a
+InputStream with the file's content, and the metadata is represent as a LocalFileAttributes object that's placed
+as the message Message#getAttributes() attributes.
+<p>
+If the lock parameter is set to true, then a file system level lock will be placed on the file until the
+input stream this operation returns is closed or fully consumed. Because the lock is actually provided by the host file
+system, its behavior might change depending on the mounted drive and the operation system on which mule is running. Take that
+into consideration before blindly relying on this lock.
+<p>
+This method also makes a best effort to determine the mime type of the file being read. A MimetypesFileTypeMap will
+be used to make an educated guess on the file's mime type. The user also has the chance to force the output encoding and
+mimeType through the outputEncoding and outputMimeType optional parameters.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | *x*{nbsp}
+| File Path a| String |  +++the path to the file to be read+++ |  | *x*{nbsp}
+| Lock a| Boolean |  +++whether or not to lock the file. Defaults to false.+++ |  +++false+++ | {nbsp}
+| Output Mime Type a| String |  +++The mime type of the payload that this operation outputs.+++ |  | {nbsp}
+| Output Encoding a| String |  +++The encoding of the payload that this operation outputs.+++ |  | {nbsp}
+| Streaming Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++Configure if repeatable streams should be used and their behaviour+++ |  | {nbsp}
+| Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+|======================
+
+==== Output
+[cols=".^50%,.^50%"]
+|======================
+| *Type* a| Binary
+| *Attributes Type* a| <<LocalFileAttributes>>
+|======================
+
+==== For Configurations.
+* <<config>> {nbsp}
+
+==== Throws
+* FILE:FILE_LOCK {nbsp}
+* FILE:ACCESS_DENIED {nbsp}
+* FILE:CONNECTIVITY {nbsp}
+* FILE:RETRY_EXHAUSTED {nbsp}
+* FILE:ILLEGAL_PATH {nbsp}
+
+
+[[rename]]
+=== Rename
+`<http://www.mulesoft.org/schema/mule/file:rename>`
+
++++
+Renames the file pointed by path to the name provided on the to parameter
+<p>
+To support pass-through scenarios, the path attribute is optional. If not provided, then the current
+Message#getAttributes() value will be tested to be an instance of FileAttributes, in which case
+FileAttributes#getPath() will be used. If that's not the case, then an IllegalArgumentException will be
+thrown.
+<p>
+to argument should not contain any path separator. IllegalArgumentException will be thrown if this
+precondition is not honored.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | *x*{nbsp}
+| Path a| String |  +++the path to the file to be renamed+++ |  | *x*{nbsp}
+| New Name a| String |  +++the file's new name+++ |  | *x*{nbsp}
+| Overwrite a| Boolean |  +++whether or not overwrite the file if the target destination already exists.+++ |  +++false+++ | {nbsp}
+|======================
+
+
+==== For Configurations.
+* <<config>> {nbsp}
+
+==== Throws
+* FILE:ACCESS_DENIED {nbsp}
+* FILE:CONNECTIVITY {nbsp}
+* FILE:RETRY_EXHAUSTED {nbsp}
+* FILE:ILLEGAL_PATH {nbsp}
+* FILE:FILE_ALREADY_EXISTS {nbsp}
+
+
+[[write]]
+=== Write
+`<http://www.mulesoft.org/schema/mule/file:write>`
+
++++
+Writes the content into the file pointed by path.
+<p>
+If the directory on which the file is attempting to be written doesn't exist, then the operation will either throw
+IllegalArgumentException or create such folder depending on the value of the createParentDirectory.
+<p>
+If the file itself already exists, then the behavior depends on the supplied mode.
+<p>
+This operation also supports locking support depending on the value of the lock argument, but following the same
+rules and considerations as described in the read operation.
+not set, then it defaults to FileConnectorConfig#getDefaultWriteEncoding()
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | *x*{nbsp}
+| Path a| String |  +++the path of the file to be written+++ |  | {nbsp}
+| Content a| Binary |  +++the content to be written into the file. Defaults to the current Message payload+++ |  +++#[payload]+++ | {nbsp}
+| Encoding a| String |  +++when content is a String, this attribute specifies the encoding to be used when writing. If+++ |  | {nbsp}
+| Create Parent Directories a| Boolean |  +++whether or not to attempt creating any parent directories which don't exists.+++ |  +++true+++ | {nbsp}
+| Lock a| Boolean |  +++whether or not to lock the file. Defaults to false+++ |  +++false+++ | {nbsp}
+| Write Mode a| Enumeration, one of:
+
+** OVERWRITE
+** APPEND
+** CREATE_NEW |  +++a FileWriteMode. Defaults to OVERWRITE+++ |  +++OVERWRITE+++ | {nbsp}
+|======================
+
+
+==== For Configurations.
+* <<config>> {nbsp}
+
+==== Throws
+* FILE:ACCESS_DENIED {nbsp}
+* FILE:CONNECTIVITY {nbsp}
+* FILE:RETRY_EXHAUSTED {nbsp}
+* FILE:ILLEGAL_PATH {nbsp}
+* FILE:ILLEGAL_CONTENT {nbsp}
+* FILE:FILE_ALREADY_EXISTS {nbsp}
+
+
+== Sources
+
+[[directory-listener]]
+=== Directory Listener
+`<http://www.mulesoft.org/schema/mule/file:directory-listener>`
+
++++
+Listens for near real-time events that happens on files contained inside a directory or on the directory itself. The events are
+not acquired by polling the filesystem but rather actually listening for operating system events.
+<p>
+Whenever a file (or the directory) is created, updated or deleted, this Source will fire a Message which
+payload reference the affected file and the attributes will be a ListenerFileAttributes instance.
+<p>
+There're however some special cases to be considered:
+<p>
+<ul>
+<li>If the file has been deleted, then it's not possible to obtain its content so the message payload will be null</li>
+<li>Also in the case of file deletion, all its attributes are also not available. Thus, the message attributes will actually be
+an instance of DeletedFileAttributes which throws IllegalStateException whenever a non available attribute is
+requested</li>
+<li>When the event references a directory, then the payload is also a null</li>
+</ul>
+<p>
+<b>When to use it</b>
+<p>
+This source is useful in cases in which a flow should respond to changes done on the filesystem, examples being trigger files,
+transaction files being added on a drop folder, settings files updated, etc. All of the above cases could be done using a
+<file:list> operation inside a poll scope (maybe also combined with a <watermark>.
+<p>
+However, although polling is a powerful and reliable solution, it's not an efficient one. Because this listener relies on
+operating system notifications, it's much more efficient in terms of resources.
+<p>
+<b>Reliability</b>
+<p>
+The trade-off between a poll reliability and this listener's performance is reliability. Because operating system events don't
+generally include the concept of transaction or replay, there's no way to guarantee that no event is going to be lost in case
+of failure or server crash. Although you can always use mule to implement a reliable acquisition pattern, there's no fallback
+is such acquisition fails. What this means is that this listener is no silver bullet and it should not been seen as the
+recommended approach over a poll+list+watermark approach. Users should analyse each use case and environment to determine which
+the best option is.
+<p>
+<b>Operating system limitations</b>
+<p>
+This component's behaviour might be slightly different depending on the OS on which it is deployed. The main differences are
+usually (but not exclusively) related to:
+<ul>
+<li>Overflows: In highly concurrent scenarios a given file might be associated to hundreds of events per second. Some OS might
+not be able to handle that gracefully and decide to drop some of those events or even fail.</li>
+<li>Polling: Some operation systems (like older versions of OSX) don't actually support file system notifications. In those
+cases, the JRE decides to compensate by using a high frequency poll, in which case the listener becomes pretty much the same as
+using a poll element</li>
+</ul>
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | *x*{nbsp}
+| Directory a| String |  +++The directory on which notifications are being listened to+++ |  | {nbsp}
+| Notify On Create a| Boolean |  +++Whether to react to creation notifications. Defaults to true+++ |  +++true+++ | {nbsp}
+| Notify On Update a| Boolean |  +++Whether to react to update notifications. Defaults to true+++ |  +++true+++ | {nbsp}
+| Notify On Delete a| Boolean |  +++Whether to react to deletion notifications. Defaults to true+++ |  +++false+++ | {nbsp}
+| Recursive a| Boolean |  +++Whether or not to also listen for notification which happen on sub directories which are also contained on the main one.
+<p>
+This option is set to false by default. Consider that when enabled, some operating systems might fire many
+notifications when an event happens on a subdirectory. One per each watched directory on the notification's path.+++ |  +++false+++ | {nbsp}
+| Match with a| One of:
+
+* <<matcher>> |  +++A matcher used to filter events on files which do not meet the matcher's criteria+++ |  | {nbsp}
+| Redelivery Policy a| <<RedeliveryPolicy>> |  +++Defines a policy for processing the redelivery of the same message+++ |  | {nbsp}
+| Streaming Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++Configure if repeatable streams should be used and their behaviour+++ |  | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
+|======================
+
+==== Output
+[cols=".^50%,.^50%"]
+|======================
+| *Type* a| Binary
+| *Attributes Type* a| <<ListenerFileAttributes>>
+|======================
+
+==== For Configurations.
+* <<config>> {nbsp}
+
+
+
+== Types
+[[reconnect]]
+=== Reconnect
+
+[cols=".^50%,.^50%", options="header"]
+|======================
+| Field | Type 
+| Frequency a| Number
+| Count a| Number
+| Blocking a| Boolean
+|======================
+    
+[[reconnect-forever]]
+=== Reconnect Forever
+
+[cols=".^50%,.^50%", options="header"]
+|======================
+| Field | Type 
+| Frequency a| Number
+|======================
+    
+[[ListenerFileAttributes]]
+=== Listener File Attributes
+
+[cols=".^50%,.^50%", options="header"]
+|======================
+| Field | Type 
+| Creation Time a| DateTime
+| Directory a| Boolean
+| Event Type a| String
+| Last Access Time a| DateTime
+| Last Modified Time a| DateTime
+| Name a| String
+| Path a| String
+| Regular File a| Boolean
+| Size a| Number
+| Symbolic Link a| Boolean
+|======================
+    
+[[RedeliveryPolicy]]
+=== Redelivery Policy
+
+[cols=".^50%,.^50%", options="header"]
+|======================
+| Field | Type 
+| Max Redelivery Count a| Number
+| Use Secure Hash a| Boolean
+| Message Digest Algorithm a| String
+| Id Expression a| String
+| Object Store Ref a| String
+|======================
+    
+[[LocalFileAttributes]]
+=== Local File Attributes
+
+[cols=".^50%,.^50%", options="header"]
+|======================
+| Field | Type 
+| Creation Time a| DateTime
+| Directory a| Boolean
+| Last Access Time a| DateTime
+| Last Modified Time a| DateTime
+| Name a| String
+| Path a| String
+| Regular File a| Boolean
+| Size a| Number
+| Symbolic Link a| Boolean
+|======================
+    
+[[matcher]]
+=== Matcher
+
+[cols=".^50%,.^50%", options="header"]
+|======================
+| Field | Type 
+| Created Since a| DateTime
+| Created Until a| DateTime
+| Updated Since a| DateTime
+| Updated Until a| DateTime
+| Accessed Since a| DateTime
+| Accessed Until a| DateTime
+| Filename Pattern a| String
+| Path Pattern a| String
+| Directory a| Boolean
+| Regular File a| Boolean
+| Symbolic Link a| Boolean
+| Min Size a| Number
+| Max Size a| Number
+|======================
+    
+
+
