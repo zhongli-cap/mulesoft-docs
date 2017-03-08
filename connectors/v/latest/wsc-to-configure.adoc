@@ -7,6 +7,20 @@ toc::[]
 
 Configuring the Web Service Consumer connector means entering the connection details. The configuration for the web service consumer is basically a container for the connection. It only has one optional attribute: the *encoding*. The provided encoding in use in all requests and responses is managed by the link:/connectors/wsc-to-consume[Consume] operation. If no encoding is specified, the web service consumer uses Mule's default encoding.
 
+Before adding the Web Service Consumer connector to your Studio 7 project, add the following to your 
+project's `pom.xml` file:
+
+[source,xml,linenums]
+----
+<dependency>
+  <groupId>org.mule.modules</groupId>
+  <artifactId>mule-module-wsc</artifactId>
+  <version>${project.version}</version>
+  <classifier>mule-plugin</classifier>
+  <scope>provided</scope>
+</dependency>
+----
+
 Configuration topics:
 
 * link:/connectors/wsc-to-configure-security[To Configure Security]
@@ -17,6 +31,68 @@ Configuration topics:
 <wsc:config name="config"  encoding="UTF-8">
      <wsc:connection … />
 </wsc:config>
+----
+
+== XML Example
+
+The following XML example shows the use of the Web Service Consumer connector, DataWeave for echoing text, and an
+HTTP Listener:
+
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:httpn="http://www.mulesoft.org/schema/mule/httpn"
+      xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
+      xmlns="http://www.mulesoft.org/schema/mule/core" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core 
+      http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+          http://www.mulesoft.org/schema/mule/wsc 
+          http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
+http://www.mulesoft.org/schema/mule/httpn 
+http://www.mulesoft.org/schema/mule/httpn/current/mule-httpn.xsd">
+
+    <wsc:config name="config">
+        <wsc:connection wsdlLocation="http://localhost:${servicePort}/server?wsdl" 
+             service="TestService" port="TestPort" soapVersion="${soapVersion}">
+            <reconnect blocking="false"/>
+        </wsc:connection>
+    </wsc:config>
+    
+    <httpn:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" >
+		<httpn:listener-connection host="0.0.0.0" port="8081" />
+	</httpn:listener-config>
+	<flow name="echoWithHeadersOperation">
+        <httpn:listener config-ref="HTTP_Listener_config" path="/" doc:name="Listener" />
+		<wsc:consume config-ref="config" operation="echoWithHeaders">
+            <wsc:message>
+                <wsc:body>
+                #[
+                %dw 1.0
+                %output application/xml
+                %namespace con http://service.ws.extension.mule.org/
+                ---
+                con#echoWithHeaders: {
+                   text: "test"
+                }]
+                </wsc:body>
+                <wsc:headers>
+                #[
+                %dw 1.0
+                %output application/xml
+                %namespace con http://service.ws.extension.mule.org/
+                ---
+                "headers": {
+                    con#headerIn: "Header In Value",
+                    con#headerInOut: "Header In Out Value"
+                }]
+                </wsc:headers>
+            </wsc:message>
+        </wsc:consume>
+    </flow>
+</mule>
 ----
 
 == See Also
