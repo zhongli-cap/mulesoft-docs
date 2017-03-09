@@ -1379,6 +1379,109 @@ books: {
 ------
 
 
+== Merging Inputs
+
+In this example, we are merging the result of a scatter-gather which returns a collection of results.
+
+The first item in our payload contains an array of price objects uniquely identified by a book id, the second item in our payload contains an array of author objects identified by a book id. The objectve is two merge the two arrays to have a single array of objects with author and price data by book id using the id to merge the two sets of data.
+
+
+=== Example Transformation
+
+.DataWeave
+[source,DataWeave, linenums]
+----
+%dw 1.0
+%output application/java
+---
+
+ payload[0] map using (id = $.bookId) {
+ 	bookId:		$.bookId,
+ 	title:		$.title,
+ 	year: 		$.year,
+ 	isbn:	 	$.isbn,
+ 	price: 		$.price,
+ 	(payload[1] filter ($.*bookId contains id)  map {
+ 		author:$.author
+     })
+  }
+
+----
+
+[tabs]
+------
+[tab,title="Inputs"]
+....
+
+=== Input 1
+
+.Input 1 - Payload[0]
+[source, json, linenums]
+----
+[
+  { "bookId":"101",
+    "title":"world history",
+    "year":"2017",
+    "isbn":"11111",
+    "price":"19.99"
+  },
+  {
+    "bookId":"202",
+    "title":"the great outdoors",
+    "year":"2016",
+    "isbn":"22222",
+    "price":"15.99"
+  }
+]
+----
+
+=== Input 2
+
+.Input 2 - Payload[1]
+[source, json, linenums]
+----
+[
+  {
+    "bookId":"101",
+    "author":"john doe"
+  },
+  {
+    "bookId":"202",
+    "author":"jane doe"
+  }
+]
+----
+
+....
+[tab,title="Output"]
+....
+
+.Output
+[source, json, linenums]
+----
+[
+  {
+    "bookId": "101",
+    "title": "world history",
+    "year": "2017",
+    "isbn": "11111",
+    "price": "19.99",
+    "author": "john doe"
+  },
+  {
+    "bookId": "202",
+    "title": "the great outdoors",
+    "year": "2016",
+    "isbn": "22222",
+    "price": "15.99",
+    "author": "jane doe"
+  }
+]
+----
+....
+------
+
+
 == Remove XML Attributes
 
 As a more advanced use case, you may want to remove specific attributes from within an XML tag that are known to contain sensitive data.
