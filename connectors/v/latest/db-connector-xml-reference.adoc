@@ -1,0 +1,264 @@
+= Database Connector XML Reference
+
+The Database connector has a single configuration that accommodates child elements that define providers. For example:
+
+* `<db:derby-connection url="jdbc:derby:muleEmbeddedDB;create=true">`
+* `<db:generic-connection url="jdbc:derby:muleEmbeddedDB;create=true" driverClassName="org.apache.derby.jdbc.EmbeddedDriver"/>`
+* `<db:my-sql-connection  host="0.0.0.0" port="3306" user="Max" password="POWERS" database="someSchema"/>`
+* `<db:derby-connection database="target/muleEmbeddedDB" create="true">`
+* `<db:oracle-connection host="192.168.99.100" port="1521" instance="xe" user="system" password="oracle" />`
+
+The Database Connector Technical Reference describes exclusive and common parameters for each provider. A child element of the db:_provider_ element defines custom data types. For example:
+
+[source,linenums]
+----
+<db:config name="dbConfig">
+   <db:derby-connection url="jdbc:derby:muleEmbeddedDB;create=true">
+       <db:custom-data-types>
+           <!-- Derby uses JAVA_OBJECT for UDT-->
+           <db:custom-data-type typeName="CONTACT_DETAILS" id="2000"/>
+       </db:custom-data-types>
+   </db:derby-connection>
+</db:config>
+----
+
+== Global Data Source Reference
+
+This connection references a data source typically defined as a Spring bean. For example:
+
+[source,linenums]
+----
+<spring:bean id="jdbcDataSource" class="org.enhydra.jdbc.standard.StandardDataSource" destroy-method="shutdown">
+  <spring:property name="driverName" value="org.apache.derby.jdbc.EmbeddedDriver"/>
+  <spring:property name="url" value="jdbc:derby:muleEmbeddedDB;create=true"/>
+</spring:bean>
+
+<db:config name="dbConfig">
+   <db:data-source-connection dataSourceRef="jdbcDataSource" />
+</db:config>
+----
+
+== Operations
+
+The database connector supports the following SQL queries:
+
+* Select
+* Insert
+* Update
+* Delete
+
+=== Select Operation
+
+The Select operation returns one of the following types, depending on streaming:
+
+* List of Map<String, Object> (no streaming)
+* Iterator
+
+If the results are streamed, the connection is not released until the returned stream is fully consumed or the flow ends.
+
+The following example shows the syntax of a select operation:
+
+[source,linenums]
+----
+<db:select maxRows="2">
+  <db:sql>select * from PLANET order by ID</db:sql>
+</db:select>
+----
+
+=== Insert Operation
+
+The following example shows the syntax of an insert operation:
+
+[source,linenums]
+----
+<flow name="insertParameterized">
+  <db:insert>
+    <db:sql>INSERT INTO PLANET(POSITION, NAME) VALUES (777, :name)</db:sql>
+      <db:input-parameters>
+         <db:input-parameter key="name" value="#[payload]"/>
+     </db:input-parameters>
+  </db:insert>
+</flow>
+----
+
+=== Update Operation
+
+The following example shows the syntax of an update operation:
+
+[source,linenums]
+----
+<flow name="updateParameterized">
+  <db:update>
+    <db:sql>update PLANET set NAME= :name where NAME='Mars'</db:sql>
+      <db:input-parameters>
+        <db:input-parameter key="name" value="#[payload]"/>
+    </db:input-parameters>
+  </db:update>
+</flow>
+----
+
+=== Delete Operation
+
+The following example shows the syntax of a delete operation.
+
+[source,linenums]
+----
+<flow name="deleteParameterized">
+  <db:delete>
+    <db:sql>DELETE FROM PLANET WHERE name = :name</db:sql>
+      <db:input-parameters>
+        <db:input-parameter key="name" value="#[payload]"/>
+    </db:input-parameters>
+  </db:delete>
+</flow>
+----
+
+=== Dynamic Queries
+
+The connector supports dynamic queries:
+
+[source,linenums]
+----
+<flow name="dynamicQuery">
+  <set-variable variableName="tableName" value="PLANET"/>
+  <db:select>
+    <db:sql>select * from #[tableName] order by ID</db:sql>
+  </db:select>
+</flow>
+----
+
+Do _not_ use dynamic queries to define parameters. Doing so makes the code vulnerable to SQL injection. Instead, use parametrized queries.
+
+=== Parametrized Queries
+
+Queries can include parameters. Those parameters can be referenced and set by name. This has two advantages over doing it with dynamic queries:
+
+* Immunity from SQL injection attacks
+* Performance
+
+For example:
+
+[source,linenums]
+----
+<flow name="selectParameterizedQuery">
+  <db:select>
+    <db:sql>select * from Planet where name = :name</db:sql>
+      <db:input-parameters>
+        <db:input-parameter key="name" value="#[payload]"/>
+      </db:input-parameters>
+  </db:select>
+</flow>
+----
+
+=== Hybrid Queries
+
+You can mix dynamic and parametrized queries. For example:
+
+[source,linenums]
+----
+<flow name="selectHybridQuery">
+  <set-variable variableName="tableName" value="PLANET"/>
+  <db:select>
+    <db:sql>select * from #[tableName] where name = :name</db:sql>
+      <db:input-parameters>
+        <db:input-parameter key="name" value="#[payload]"/>
+      </db:input-parameters>
+  </db:select>
+</flow>
+----
+
+=== Query Templates
+
+Using a template, you can reuse a query to select, insert, update, or delete data. Use a template to reuse an entire query or part of it. For example, to reuse an entire query:
+
+[source,linenums]
+----
+<db:query name="selectQuery">
+   <db:sql>select * from Planet where name = :name</db:sql>
+   <db:input-parameters>
+       <db:input-parameter key="name" value="#[payload]" type="VARCHAR"/>
+   </db:input-parameters>
+</db:query>
+
+
+<flow name="selectParameterizedQuery">
+   <db:select config-ref="dbConfig" template="selectQuery" />
+</flow>
+----
+
+To partially define a query based on a template:
+
+[source,linenums]
+----
+<db:query name="namedParamsQueryTemplate">
+   <db:sql>SELECT * FROM PLANET WHERE POSITION = :position and NAME = :name</db:sql>
+</db:query>
+
+
+<flow name="inlineOverriddenParamsByName">
+   <db:select template="namedParamsQueryTemplate">
+       <db:input-parameters>
+           <!-- Note that parameters are in different order-->
+           <db:input-parameter key="name" value="Venus"/>
+           <db:input-parameter key="position" value="2"/>
+       </db:input-parameters>
+   </db:select>
+</flow>
+----
+
+To query the database by referring to a template:
+
+[source,linenums]
+----
+<db:query name="namedParamsQueryTemplate">
+   <db:sql>SELECT * FROM PLANET WHERE POSITION = :position and NAME = :name</db:sql>
+</db:query>
+
+
+<flow name="overriddenParamsByName">
+   <db:select template="namedParamsQueryTemplate"/>
+</flow>
+----
+
+To recursively query the database by referring to a template:
+
+[source,linenums]
+----
+<db:query name="namedParamsQueryTemplate">
+   <db:sql>SELECT * FROM PLANET WHERE POSITION = :position and NAME = :name</db:sql>
+   <db:input-parameters>
+       <db:input-parameter key="position" value="4"/>
+       <db:input-parameter key="name" value="Venus"/>
+   </db:input-parameters>
+</db:query>
+
+
+<db:query name="overridenQueryParamByName" template="namedParamsQueryTemplate">
+   <db:input-parameters>
+       <db:input-parameter key="name" value="Mars"/>
+   </db:input-parameters>
+</db:query>
+
+
+<flow name="overriddenParamsByName">
+   <db:select template="overridenQueryParamByName"/>
+</flow>
+----
+
+== Stored Procedures
+
+== Execute DDL
+
+== Bulk Operatins
+
+== Formatting the Output of a Query
+
+The db:output-parameter converts the output of a query from binary to a JDBC or custom type, such as JSON. For example:
+
+`<db:output-parameter paramName="myParam" type="VARCHAR"/>`
+
+
+
+== See Also
+
+* Database Connector Technical Reference
