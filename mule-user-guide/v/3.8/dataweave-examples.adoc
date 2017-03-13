@@ -1379,6 +1379,112 @@ books: {
 ------
 
 
+== Merging Inputs
+
+This example deals with an input that contains a collection of payloads, all grouped as a single Mule event. This kind of input can be produced by having a scatter-gather component in your flow before the transform component.
+
+The first item that makes up the payload contains an array of "price" objects, uniquely identified by a `book id`, the second item that makes up the payload contains an array of "author" objects, also identified by a `book id`. This DataWeave transformation merges the two arrays into one, with author and price data by book. `book id` is used to match these.
+
+
+=== Example Transformation
+
+.DataWeave
+[source,DataWeave, linenums]
+----
+%dw 1.0
+%output application/java
+---
+
+ payload[0] map using (id = $.bookId) {
+ 	bookId:		$.bookId,
+ 	title:		$.title,
+ 	year: 		$.year,
+ 	isbn:	 	$.isbn,
+ 	price: 		$.price,
+ 	(payload[1] filter ($.*bookId contains id)  map {
+ 		author:$.author
+     })
+  }
+
+----
+
+[tabs]
+------
+[tab,title="Inputs"]
+....
+
+=== Input 1
+
+.Input 1 - Payload[0]
+[source, json, linenums]
+----
+[
+  { "bookId":"101",
+    "title":"world history",
+    "year":"2017",
+    "isbn":"11111",
+    "price":"19.99"
+  },
+  {
+    "bookId":"202",
+    "title":"the great outdoors",
+    "year":"2016",
+    "isbn":"22222",
+    "price":"15.99"
+  }
+]
+----
+
+=== Input 2
+
+.Input 2 - Payload[1]
+[source, json, linenums]
+----
+[
+  {
+    "bookId":"101",
+    "author":"john doe"
+  },
+  {
+    "bookId":"202",
+    "author":"jane doe"
+  }
+]
+----
+
+....
+[tab,title="Output"]
+....
+
+.Output
+[source, json, linenums]
+----
+[
+  {
+    "bookId": "101",
+    "title": "world history",
+    "year": "2017",
+    "isbn": "11111",
+    "price": "19.99",
+    "author": "john doe"
+  },
+  {
+    "bookId": "202",
+    "title": "the great outdoors",
+    "year": "2016",
+    "isbn": "22222",
+    "price": "15.99",
+    "author": "jane doe"
+  }
+]
+----
+....
+------
+
+[NOTE]
+The *sample data* section of the Transform message component doesn't allow you to provide it a collection of multiple payloads as a sample. The only way to test this example is running it.
+
+
 == Remove XML Attributes
 
 As a more advanced use case, you may want to remove specific attributes from within an XML tag that are known to contain sensitive data.
