@@ -54,7 +54,7 @@ The Select operation returns one of the following types, depending on streaming:
 * List of Map<String, Object> (no streaming)
 * Iterator
 
-If the results are streamed, the connection is not released until the returned stream is fully consumed or the flow ends.
+If the results are streamed, the connection and its underlying resources are not released until the returned stream is fully consumed or the flow ends.
 
 The following example shows the syntax of a select operation:
 
@@ -235,11 +235,73 @@ To recursively query the database by referring to a template:
 </flow>
 ----
 
-== Stored Procedures
+=== Stored Procedures
+
+This operation accepts input, output, and input-output parameters. 
+
+*Input Parameters Example*
+
+[source,xml,linenums]
+----
+<flow name="update">
+   <db:stored-procedure>
+       <db:sql>call updateParamTestType1(:type)</db:sql>
+       <db:input-parameters>
+           <db:input-parameter key="type" value="#[payload]"/>
+       </db:input-parameters>
+   </db:stored-procedure>
+</flow>
+----
+
+*Output Parameters Example*
+
+[source,xml,linenums]
+----
+<flow name="outParam">
+   <db:stored-procedure>
+       <db:sql>{ CALL countTestRecords(:count) }</db:sql>
+       <db:output-parameters>
+           <db:output-parameter key="count"/>
+       </db:output-parameters>
+   </db:stored-procedure>
+</flow>
+----
+
+*Input-output Parameters*
+
+[source,xml,linenums]
+----
+<db:stored-procedure>
+   <db:sql>{ call doubleMyInt(:myInt) }</db:sql>
+  <db:in-out-parameters>
+    <db:in-out-parameter key="myInt" value="#[payload]"/>
+  </db:in-out-parameters>
+</db:stored-procedure>
+----
+
+DataSense is not supported because the return value is unpredictable.
+
+
+=== Templating
+
+You can reuse a query as shown in the following example:
+
+[source,xml,linenums]
+----
+<db:stored-procedure name=”split” streaming="true">
+   <db:sql>{ call getSplitTestRecords() }</db:sql>
+</db:stored-procedure>
+
+<flow name="getResultSet">
+   <db:stored-procedure template=”split” />
+</flow>
+----
 
 == Execute DDL
 
-== Bulk Operatins
+
+
+== Bulk Operations
 
 == Formatting the Output of a Query
 
