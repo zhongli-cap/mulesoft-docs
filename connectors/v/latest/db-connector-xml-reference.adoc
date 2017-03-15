@@ -169,7 +169,9 @@ You can mix dynamic and parametrized queries. For example:
 
 === Query Templates
 
-Using a template, you can reuse a query to select, insert, update, or delete data. Use a template to reuse an entire query or part of it. For example, to reuse an entire query:
+Using a template, you can reuse a query to select, insert, update, or delete data. You can reuse a stored procedure as described in the next section. 
+
+Use a template to reuse an entire query or part of it. For example, to reuse an entire query:
 
 [source,xml,linenums]
 ----
@@ -282,9 +284,7 @@ This operation accepts input, output, and input-output parameters.
 DataSense is not supported because the return value is unpredictable.
 
 
-=== Templating
-
-You can reuse a query as shown in the following example:
+You can reuse a stored procedure as shown in the following example:
 
 [source,xml,linenums]
 ----
@@ -297,18 +297,82 @@ You can reuse a query as shown in the following example:
 </flow>
 ----
 
-== Execute DDL
+=== Execute DDL
 
+You can create a table using this operation. For example:
 
+[source,xml,linenums]
+----
+<flow name="executeDdl">
+   <db:execute-ddl>
+       <db:sql>CREATE TABLE TestDdl(NAME VARCHAR(255))</db:sql>
+   </db:execute-ddl>
+</flow>
+----
 
-== Bulk Operations
+=== Bulk Operations
+
+Using these operations, you can execute several statements in a single database call, which typically improves performance. The database connector supports the following operations:
+
+* Bulk insert
+* Bulk delete
+* Execute script
+
+Bulk insert executes an insert statement multiple times using different parameter bindings. For example:
+
+[source,xml,linenums]
+----
+<flow name="bulkInsert">
+   <db:bulk-insert parameterValues="#[payload]">
+       <db:sql>INSERT INTO PLANET(POSITION, NAME) VALUES (777, :name)</db:sql>
+   </db:bulk-insert>
+</flow>
+----
+
+You do not need to provide the `input-parameters` element to bind the `:name` parameter. The parameterValues (List<Map<String, Object>>
+) attribute provides the information for this binding. You can force the database type of a single parameter, but this is optional and typically unnecessary. For example:
+
+[source,xml,linenums]
+----
+<flow name="bulkInsertWithOverriddenType">
+   <db:bulk-insert parameterValues="#[payload]">
+       <db:sql>INSERT INTO PLANET(POSITION, NAME) VALUES (777, :name)</db:sql>
+       <db:parameter-types>
+           <db:parameter-type key="name" type="VARCHAR" />
+       </db:parameter-types>
+   </db:bulk-insert>
+</flow>
+----
+
+The execute-script operation makes updates according to the script, which includes no parameter binding. You can either use execute-script in an operation or reference execute script from a file. You cannot use both ways of executing a script in the same flow.
+
+*Embedded in the Operation*
+
+[source,xml,linenums]
+----
+<flow name="executeScript">
+   <db:execute-script>
+       <db:sql>
+           update PLANET set NAME='Mercury' where POSITION=0;
+           update PLANET set NAME='Mercury' where POSITION=4
+       </db:sql>
+   </db:execute-script>
+</flow>
+----
+
+*Referenced from a File*
+[source,xml,linenums]
+----
+<flow name="executeScriptFromFile">
+   <db:execute-script file="integration/executescript/bulk-script.sql" />
+</flow>
+----
 
 == Formatting the Output of a Query
 
 The db:output-parameter converts the output of a query from binary to a JDBC or custom type, such as JSON. For example:
 
 `<db:output-parameter paramName="myParam" type="VARCHAR"/>`
-
 
 
 == See Also
