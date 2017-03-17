@@ -1,7 +1,14 @@
-= dwcore::system
+= DataWeave Operators
 
-System Module
-Defines all core functionality that all mapings will have autoimported
+In link:/mule-user-guide/v/3.8/dataweave[DataWeave] you can carry out many different operations on the elements of a DataWeave transform. This document serves as a reference for all of the available operators in the DataWeave language. See link:/mule-user-guide/v/3.8/dataweave-types#dataweave-operators-sorted-by-type[all operators sorted by type]
+* For an introduction to the essentials of the language, see link:/mule-user-guide/v/3.8/dataweave-language-introduction[DataWeave Language Intro]
+* For information on DataWeave's accepted types, see link:/mule-user-guide/v/3.8/dataweave-types[DataWeave Types]
+* For an index of all available operators, categorized by the types you need to supply as parameters, see
+* See link:/mule-user-guide/v/3.8/dataweave-types#functions-and-lambdas[Functions and Lambdas] to learn how to create your own DataWeave functions.
+
+[TIP]
+Check the link:/mule-user-guide/v/3.8/dataweave-language-introduction#precedence-table[Precedence Table] to see the order in which DataWeave expressions are compiled.
+
 
 == ++
 
@@ -30,29 +37,6 @@ a: [0, 1, 2] ++ [3, 4, 5]
 ----
 
 === Using Concat on a String
-
-.(':string', ':string') => ':string'
-
-Strings are treated as arrays of characters, so the operation works just the same with strings.
-
-.Transform
-[source,DataWeave, linenums]
-----
-%dw 1.0
-%output application/json
----
-{
-name: "Mule" ++ "Soft"
-}
-----
-
-.Output
-[source,json,linenums]
-----
-{
-"name": MuleSoft
-}
-----
 === ++(lhs: String, rhs: String): String
 
 
@@ -360,15 +344,37 @@ a: [0, 1, 1, 2] -- [1,2]
 "a": [0],
 }
 ----
-=== --(lhs: Object, rhs: Object): Array<S >
+=== --(source: Object, toRemove: Object): Array<S >
 
+Removes all the entries from the source that are present on the toRemove parameter
+.Transform
+[source,DataWeave,linenums]
+----
+%dw 1.0
+%input payload application/json
+%output application/json
+
+---
+{
+hello: 'world',
+name: "DW"
+} -- {hello: 'world'}
+----
+
+.Output
+[source,json,linenums]
+----
+{
+"name": "DW"
+}
+----
 
 == Abs
 
 === abs(rhs: Number): Number
 
 
-Returns the absolute value of a number,
+Returns the absolute value of a number.
 
 .Transform
 [source,DataWeave, linenums]
@@ -756,13 +762,13 @@ b: "Mariano" endsWith "to"
 
 === fail(message: String): T
 
-Fails with the specified message
+Throws an exception with the specified message.
 
 == FailIf
 
 === failIf(value: T , evaluator: (value: T )=> Boolean): T
 
-Fails with the specified message if the evaluator returns true
+Throws an exception with the specified message if the expression in the evaluator returns `true`.
 
 == Filter
 
@@ -796,10 +802,47 @@ biggerThanTwo: [0, 1, 2, 3, 4, 5] filter $ > 2
 
 == Find
 
-=== find(lhs: Array<T >, rhs: Any): Array<T >
+=== find(lhs: Array<T >, rhs: Any): Array<Number>
+
+Returns the array of index where the element to be found where present
+
+.Transform
+[source,DataWeave,lineums]
+----
+%dw 1.0
+%input payload application/json
+%output application/json
+---
+["name", "lastName"] find "name"
+----
+.Output
+[source,json,linenums]
+----
+[
+0
+]
+----
 
 === find(lhs: String, rhs: Regex): Array<Array<Number>>
 
+Returns the array of index where the regex matched in the text
+
+.Transform
+[source,DataWeave,lineums]
+----
+%dw 1.0
+%input payload application/json
+%output application/json
+---
+"DataWeave" find /a/
+----
+.Output
+[source,json,linenums]
+----
+[
+1,3,6
+]
+----
 === find(lhs: String, rhs: String): Array<Number>
 
 Given a string, it returns the index position within the string at which a match was matched. If found in multiple parts of the string, it returns an array with the various idex positions at which it was found. You can either look for a simple string or a regular expression.
@@ -834,7 +877,7 @@ c: "aabccdbce" find "bc"
 === flatten(rhs: Array<Array<T > | Q >): Array<T  | Q >
 
 
-If you have an array of arrays, this function can flatten it into a single simple array.
+If you have an array of arrays, this operator can flatten it into a single simple array.
 
 .Transform
 [source,DataWeave, linenums]
@@ -960,7 +1003,8 @@ If these parameters are not named, the index is defined by default as *$$* and t
 
 === isBlank(value: String): Boolean
 
-Returns true is the characters are only whitespaces.
+Returns `true` if it receives a string composed of only whitespace characters.
+
 .Transform
 [source,DataWeave,linenums]
 ----
@@ -988,7 +1032,8 @@ withText: isBlank(" 1223")
 
 === isDecimal(rhs: Number): Boolean
 
-Returns true is the number has decimals.
+Returns `true` if if receives a number that has any decimals in it.
+
 .Transform
 [source,DataWeave,linenums]
 ----
@@ -1014,7 +1059,7 @@ integer: isDecimal(1)
 
 === isEmpty(rhs: Array): Boolean
 
-Returns wether an Array is empty or not
+Returns wether an Array is empty or not.
 
 .Transform
 [source,DataWeave,linenums]
@@ -1038,7 +1083,7 @@ nonEmpty: isEmpty([1])
 ----
 === isEmpty(rhs: String): Boolean
 
-Returns wether a String is empty or not
+Returns wether a String is empty or not.
 
 .Transform
 [source,DataWeave,linenums]
@@ -1062,7 +1107,7 @@ nonEmpty: isEmpty("DataWeave")
 ----
 === isEmpty(rhs: Object): Boolean
 
-Returns wether an Object is empty or not
+Returns wether an Object is empty or not.
 
 .Transform
 [source,DataWeave,linenums]
@@ -1089,13 +1134,14 @@ nonEmpty: isEmpty({name: "DataWeave"})
 
 === isEven(n: Number): Boolean
 
-Returns true if the specified number is Even
+Returns true if the specified number is Even.
 
 == IsInteger
 
 === isInteger(rhs: Number): Boolean
 
-Returns true is the number doesn't have decimals.
+Returns true is the number doesn't have any decimals.
+
 .Transform
 [source,DataWeave,linenums]
 ----
@@ -1121,19 +1167,19 @@ integer: isInteger(1)
 
 === isLeapYear(dateTime: DateTime): Boolean
 
-Returns true is the year of the specified DateTime is leap
+Returns true if it receives a `DateTime` for a leap year.
 === isLeapYear(date: Date): Boolean
 
-Returns true is the year of the specified Date is leap
+Returns true if it receives a `Date` for a leap year.
 === isLeapYear(rhs: LocalDateTime): Boolean
 
-Returns true is the year of the specified LocalDateTime is leap
+Returns true if it receives a `LocalDateTime` for a leap year.
 
 == IsOdd
 
 === isOdd(n: Number): Boolean
 
-Returns true if the specified number is Odd
+Returns true if the specified number is Odd.
 
 == JoinBy
 
@@ -1163,8 +1209,8 @@ aa: ["a","b","c"] joinBy "-"
 
 === log(prefix: String, value: T ): T
 
-Logs the specified `value` with the given `prefix` and returns the `value`. +
-It is a identity function that as side effect log it out. +
+Logs the specified value with the specified `prefix`, it then returns the value unchanged. +
+
 Example:
 [source,DataWeave,linenums]
 ----
@@ -1184,6 +1230,9 @@ Output:
 ----
 <age>33</age>
 ----
+
+Note that besides producing the expected output, it also logs it.
+
 
 == Lower
 
@@ -1353,8 +1402,8 @@ Note that when you use a parameter to populate one of the keys of your output, a
 
 === match(lhs: String, rhs: Regex): Array<String>
 
-Match a string against a regular expression. Match returns an array that contains the entire matching expression, followed by all of the capture groups that match the provided regex.
-
+Matches a string against a regular expression. It returns an array that contains the entire matching expre
+ssion, followed by all of the capture groups that match the provided regex.
 .Transform
 [source,DataWeave, linenums]
 ----
@@ -1468,7 +1517,7 @@ d: min([1.5, 2.5, 3.5])
 === mod(lhs: Number, rhs: Number): Number
 
 
-Returns the remainder after division of the first number by the second one
+Returns the remainder after performing a division of the first number by the second one.
 
 .Transform
 [source,DataWeave, linenums]
@@ -1497,13 +1546,13 @@ c: 2.2 mod 2
 
 === native(identifier: String): T
 
-Function used to load a native function using the specified identifier.
+Loads a native function using the specified identifier.
 
 == Now
 
 === now(): DateTime
 
-Returns a datetime object with the current date and time.
+Returns a link:/mule-user-guide/v/4.0/dataweave-types#dates[(:datetime)] object with the current date and time.
 
 .Transform
 [source,DataWeave, linenums]
@@ -1512,7 +1561,9 @@ Returns a datetime object with the current date and time.
 %output application/json
 ---
 {
-current_time: now
+a: now,
+b: now.day,
+c: now.minutes
 }
 ----
 
@@ -1520,9 +1571,14 @@ current_time: now
 [source,json,linenums]
 ----
 {
-"current_time": "2016-10-20T17:15:06.196Z"
+"a": "2015-12-04T18:15:04.091Z",
+"b": 4,
+"c": 15
 }
 ----
+
+[TIP]
+See link:/mule-user-guide/v/4.0/dataweave-selectors[DataWeave Selectors] for a list of possible selectors to use here.
 
 == OrderBy
 
@@ -1587,6 +1643,26 @@ orderDescending: ([3,8,1] orderBy $)[-1..0]
 ====
 === orderBy(lhs: Array<T >, rhs: (T , Number)=> R ): Array<T >
 
+Sorts the array using the specified criteria
+
+.Transform
+[source,DataWeave,linenums]
+----
+%dw 1.0
+%input payload application/json
+%output application/json
+---
+[3,2,3] orderBy $
+----
+.Output
+[source,json,linenums]
+----
+[
+2,
+3,
+3
+]
+----
 
 == Ordinalize
 
@@ -1731,13 +1807,29 @@ c: 7 pow 3
 
 === random(): Number
 
-Returns a random value
+Returns a random number of type link:/mule-user-guide/v/4.0/dataweave-types#number[(:number)] between 0 and 1.
+
+
+.Transform
+[source, dataweave, linenums]
+----
+%dw 1.0
+%output application/json
+---
+{
+price: random * 1000
+}
+----
+
 
 == Read
 
 === read(stringToParse: String, contentType: String, readerProperties: Object): T
 
-Reads the content using the specified contentType and readerProperties
+The read function returns the result of parsing the content parameter with the specified mimeType reader.
+
+The first argument points the content that must be read, the second is the format in which to write it. A third optional argument lists reader configuration properties.
+
 Example:
 [source,DataWeave,linenums]
 ----
@@ -1755,6 +1847,7 @@ Output:
 
 === readUrl(url: String, contentType: String, readerProperties: Object): T
 
+Same as the `read` operator, but using a URL as the content provider.
 
 == Reduce
 
@@ -1848,7 +1941,7 @@ b: "admin123" replace /(\d+)/ with "ID"
 
 === round(rhs: Number): Number
 
-Rounds the value of a number to the nearest integer
+Rounds the value of a number to the nearest integer.
 
 .Transform
 [source,DataWeave, linenums]
@@ -2060,7 +2153,7 @@ split: "a-b-c" splitBy "-"
 
 === sqrt(rhs: Number): Number
 
-Returns the square root of the provided number
+Returns the square root of the provided number.
 
 .Transform
 [source,DataWeave, linenums]
@@ -2089,9 +2182,6 @@ c: sqrt(100)
 
 === startsWith(lhs: String, rhs: String): Boolean
 
-== Starts With
-
-.(':string', ':string') => ':boolean'
 
 Returns true or false depending on if a string starts with a provided substring.
 
@@ -2120,12 +2210,69 @@ b: "Mariano" startsWith "Em"
 
 === sum(rhs: Array<Number>): Number
 
+Given an array of numbers, it returns the result of adding of all of them.
+
+.Transform
+[source,DataWeave, linenums]
+----
+%dw 1.0
+%output application/json
+---
+sum(1,2,3)
+----
+
+.Output
+[source,json,linenums]
+----
+6
+----
 
 == To
 
 === to(from: Number, to: Number): Range
 
-Returns a range with the specified boundries. Upper boundry is inclusive.
+Returns a range within the specified boundries. The upper boundry is inclusive.
+
+.Transform
+[source,DataWeave, linenums]
+----
+%dw 1.0
+%output application/json
+---
+{
+"myRange": 1 to 10
+}
+----
+
+
+.Input
+[source,json,linenums]
+----
+{
+"myRange": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+}
+----
+.Output
+[source,json,linenums]
+----
+{
+"book": {
+"title": "XQuery Kick Start",
+"year": "2000",
+"authors": [
+"James McGovern",
+"Per Bothner",
+"Kurt Cagle",
+"James Linn",
+"Vaidyanathan Nagarajan"
+]
+}
+}
+----
+
+
+
+
 
 == Trim
 
@@ -2272,7 +2419,7 @@ name: upper("mulesoft")
 
 === wait(value: T , timeout: Number): T
 
-Stops the execution for the specified timeout (in milliseconds)
+Stops the execution for the specified timeout (in milliseconds).
 
 == With
 
@@ -2283,6 +2430,57 @@ Used with the replace applies the specified function
 == Write
 
 === write(value: Any, contentType: String, writerProperties: Object): Any
+
+The write function returns a string with the serialized representation of the value in the specified mimeType.
+
+The first argument points to the element that must be written, the second is the format in which to write it. A third optional argument lists writer configuration properties. See link:/mule-user-guide/v/3.8/dataweave-language-introduction#output-directive[Output Directive] and its sub-sections for a full list of available configuration options for each different format.
+
+.Transform
+[source, dataweave, linenums]
+----
+%dw 1.0
+%output application/xml
+---
+{
+output: write(payload, "application/csv", {"separator" : "|"})
+}
+----
+
+
+[tabs]
+------
+[tab,title="Input: JSON"]
+....
+.Input
+[source,json,linenums]
+----
+"Name": "Mr White",
+"Email": "white@mulesoft.com",
+"Id": "1234",
+"Title": "Chief Java Prophet"
+},
+{
+"Name": "Mr Orange",
+"Email": "orange@mulesoft.com",
+"Id": "4567",
+"Title": "Integration Ninja"
+}
+]
+----
+....
+[tab,title="Output: XML"]
+....
+.Output
+[source,xml,linenums]
+----
+<?xml version='1.0' encoding='US-ASCII'?>
+<output>Name|Email|Id|Title
+Mr White|white@mulesoft.com|1234|Chief Java Prophet
+Mr Orange|orange@mulesoft.com|4567|Integration Ninja
+</output>
+----
+....
+------
 
 
 == Zip
@@ -2372,50 +2570,4 @@ payload.list1 zip payload.list2 zip payload.list3
 "cc"
 ]
 ]
-----------------------------------------------------------------------
-
-
-
-== Iterator = Array
-
-This type is based in the link:https://docs.oracle.com/javase/8/docs/api/java/util/Iterator.html[iterator Java class]. The iterator contains a collection, and includes methods to iterate through and filter it.
-
-[NOTE]
-Just like the Java class, the iterator is designed to be consumed only once. For example, if you then pass this value to a link:/mule-user-guide/v/3.8/logger-component-reference[logger] would result in consuming it and it would no longer be readable to further elements in the flow.
-
-
-== Enum = String
-
-In order to put an enum value in a java.util.Map, the DataWeave java module defines a custom type called Enum.
-It allows you to specify that a given string should be handled as the name of a specified Enum type.
-It should always be used with the class property with the java class name of the enum.%type Enum = String
-== CData = String
-
-
-XML defines a custom type named :cdata, it extends from string and is used to identify a CDATA XML block.
-It can be used to tell the writer to wrap the content inside CDATA or to check if the input string arrives inside a CDATA block. `:cdata` inherits from the type `:string`.
-
-.Transformπ
-[source,DataWeave, linenums]
-----------------------------------------------------------------------
-%dw 1.0
-%output application/xml
----
-{
-users:
-{
-user : "Mariano" as :cdata,
-age : 31 as :cdata
-}
-}
-----------------------------------------------------------------------
-
-.Output
-[source,xml,linenums]
-----------------------------------------------------------------------
-<?xml version="1.0" encoding="UTF-8"?>
-<users>
-<user><![CDATA[Mariano]]></user>
-<age><![CDATA[31]]></age>
-</users>
 ----------------------------------------------------------------------
