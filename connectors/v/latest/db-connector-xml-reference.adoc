@@ -54,14 +54,14 @@ The Select operation returns one of the following types, depending on streaming:
 * List of Map<String, Object> (no streaming)
 * Iterator
 
-If the results are streamed, the connection is not released until the returned stream is fully consumed or the flow ends.
+If the results are streamed, the connection and its underlying resources are not released until the returned stream is fully consumed or the flow ends.
 
 The following example shows the syntax of a select operation:
 
 [source,xml,linenums]
 ----
 <db:select maxRows="2">
-  <db:sql>select * from PLANET order by ID</db:sql>
+  <db:sql>SELECT * FROM planet ORDER BY Id</db:sql>
 </db:select>
 ----
 
@@ -73,7 +73,7 @@ The following example shows the syntax of an insert operation:
 ----
 <flow name="insertParameterized">
   <db:insert>
-    <db:sql>INSERT INTO PLANET(POSITION, NAME) VALUES (777, :name)</db:sql>
+    <db:sql>INSERT INTO planet(Position, Name) VALUES (777, :name)</db:sql>
       <db:input-parameters>
          <db:input-parameter key="name" value="#[payload]"/>
      </db:input-parameters>
@@ -89,7 +89,7 @@ The following example shows the syntax of an update operation:
 ----
 <flow name="updateParameterized">
   <db:update>
-    <db:sql>update PLANET set NAME= :name where NAME='Mars'</db:sql>
+    <db:sql>UPDATE planet SET Name= :name where Name='Mars'</db:sql>
       <db:input-parameters>
         <db:input-parameter key="name" value="#[payload]"/>
     </db:input-parameters>
@@ -105,7 +105,7 @@ The following example shows the syntax of a delete operation.
 ----
 <flow name="deleteParameterized">
   <db:delete>
-    <db:sql>DELETE FROM PLANET WHERE name = :name</db:sql>
+    <db:sql>DELETE FROM planet WHERE Name = :name</db:sql>
       <db:input-parameters>
         <db:input-parameter key="name" value="#[payload]"/>
     </db:input-parameters>
@@ -122,12 +122,12 @@ The connector supports dynamic queries:
 <flow name="dynamicQuery">
   <set-variable variableName="tableName" value="PLANET"/>
   <db:select>
-    <db:sql>select * from #[tableName] order by ID</db:sql>
+    <db:sql>SELECT * from #[tableName] ORDER BY Id</db:sql>
   </db:select>
 </flow>
 ----
 
-Do _not_ use dynamic queries to define parameters. Doing so makes the code vulnerable to SQL injection. Instead, use parametrized queries.
+Do **not** use dynamic queries to define parameters. Doing so makes the code vulnerable to SQL injection. Instead, use parametrized queries.
 
 === Parametrized Queries
 
@@ -142,7 +142,7 @@ For example:
 ----
 <flow name="selectParameterizedQuery">
   <db:select>
-    <db:sql>select * from Planet where name = :name</db:sql>
+    <db:sql>select * from planet where Name = :name</db:sql>
       <db:input-parameters>
         <db:input-parameter key="name" value="#[payload]"/>
       </db:input-parameters>
@@ -169,12 +169,14 @@ You can mix dynamic and parametrized queries. For example:
 
 === Query Templates
 
-Using a template, you can reuse a query to select, insert, update, or delete data. Use a template to reuse an entire query or part of it. For example, to reuse an entire query:
+Using a template, you can reuse a query to select, insert, update, or delete data. You can reuse a stored procedure as described in the next section. 
+
+Use a template to reuse an entire query or part of it. For example, to reuse an entire query:
 
 [source,xml,linenums]
 ----
 <db:query name="selectQuery">
-   <db:sql>select * from Planet where name = :name</db:sql>
+   <db:sql>select * from Planet where Name = :name</db:sql>
    <db:input-parameters>
        <db:input-parameter key="name" value="#[payload]" type="VARCHAR"/>
    </db:input-parameters>
@@ -189,7 +191,7 @@ To partially define a query based on a template:
 [source,xml,linenums]
 ----
 <db:query name="namedParamsQueryTemplate">
-   <db:sql>SELECT * FROM PLANET WHERE POSITION = :position and NAME = :name</db:sql>
+   <db:sql>SELECT * FROM Planet WHERE Position = :position and Name = :name</db:sql>
 </db:query>
 <flow name="inlineOverriddenParamsByName">
    <db:select template="namedParamsQueryTemplate">
@@ -207,7 +209,7 @@ To query the database by referring to a template:
 [source,xml,linenums]
 ----
 <db:query name="namedParamsQueryTemplate">
-   <db:sql>SELECT * FROM PLANET WHERE POSITION = :position and NAME = :name</db:sql>
+   <db:sql>SELECT * FROM planet WHERE Position = :position and Name = :name</db:sql>
 </db:query>
 <flow name="overriddenParamsByName">
    <db:select template="namedParamsQueryTemplate"/>
@@ -219,7 +221,7 @@ To recursively query the database by referring to a template:
 [source,xml,linenums]
 ----
 <db:query name="namedParamsQueryTemplate">
-   <db:sql>SELECT * FROM PLANET WHERE POSITION = :position and NAME = :name</db:sql>
+   <db:sql>SELECT * FROM planet WHERE Position = :position and Name = :name</db:sql>
    <db:input-parameters>
        <db:input-parameter key="position" value="4"/>
        <db:input-parameter key="name" value="Venus"/>
@@ -235,11 +237,164 @@ To recursively query the database by referring to a template:
 </flow>
 ----
 
-== Stored Procedures
+=== Stored Procedures
 
-== Execute DDL
+This operation accepts input, output, and input-output parameters. 
 
-== Bulk Operatins
+*Input Parameters Example*
+
+[source,xml,linenums]
+----
+<flow name="update">
+   <db:stored-procedure>
+       <db:sql>call updateParamTestType1(:type)</db:sql>
+       <db:input-parameters>
+           <db:input-parameter key="type" value="#[payload]"/>
+       </db:input-parameters>
+   </db:stored-procedure>
+</flow>
+----
+
+*Output Parameters Example*
+
+[source,xml,linenums]
+----
+<flow name="outParam">
+   <db:stored-procedure>
+       <db:sql>{ CALL countTestRecords(:count) }</db:sql>
+       <db:output-parameters>
+           <db:output-parameter key="count"/>
+       </db:output-parameters>
+   </db:stored-procedure>
+</flow>
+----
+
+*Input-output Parameters*
+
+[source,xml,linenums]
+----
+<db:stored-procedure>
+   <db:sql>{ call doubleMyInt(:myInt) }</db:sql>
+  <db:in-out-parameters>
+    <db:in-out-parameter key="myInt" value="#[payload]"/>
+  </db:in-out-parameters>
+</db:stored-procedure>
+----
+
+DataSense is not supported because the return value is unpredictable.
+
+
+You can reuse a stored procedure as shown in the following example:
+
+[source,xml,linenums]
+----
+<db:stored-procedure name=”split” streaming="true">
+   <db:sql>{ call getSplitTestRecords() }</db:sql>
+</db:stored-procedure>
+
+<flow name="getResultSet">
+   <db:stored-procedure template=”split” />
+</flow>
+----
+
+=== Execute DDL
+
+This operation supports any DDL statement you can run on the database connected to Mule. For example, you can create a table using this operation:
+
+[source,xml,linenums]
+----
+<flow name="executeDdl">
+   <db:execute-ddl>
+       <db:sql>CREATE TABLE planet(Name VARCHAR(255))</db:sql>
+   </db:execute-ddl>
+</flow>
+----
+
+=== Bulk Operations
+
+Using these operations, you can execute several statements in a single database call, which typically improves performance. The database connector supports the following operations:
+
+* Bulk insert
+* Bulk update
+* Bulk delete
+
+Bulk insert executes an insert statement multiple times using different parameter bindings. For example:
+
+[source,xml,linenums]
+----
+<flow name="bulkInsert">
+   <db:bulk-insert parameterValues="#[payload]">
+       <db:sql>INSERT INTO planet(Position, Name) VALUES (777, :name)</db:sql>
+   </db:bulk-insert>
+</flow>
+----
+
+You do not need to provide the `input-parameters` element to bind the `:name` parameter. The parameterValues (List<Map<String, Object>>
+) attribute provides the information for this binding. You can force the database type of a single parameter, but this is optional and typically unnecessary. For example:
+
+[source,xml,linenums]
+----
+<flow name="bulkInsertWithOverriddenType">
+   <db:bulk-insert parameterValues="#[payload]">
+       <db:sql>INSERT INTO planet(Position, Name) VALUES (777, :name)</db:sql>
+       <db:parameter-types>
+           <db:parameter-type key="name" type="VARCHAR" />
+       </db:parameter-types>
+   </db:bulk-insert>
+</flow>
+----
+
+The following examples show the bulk insert and bulk delete operations.
+
+source,xml,linenums]
+----
+<flow name="bulkUpdate">
+   <db:bulk-delete parameterValues="#[payload]">
+       <db:sql>DELETE FROM planet WHERE Name = :name</db:sql>
+   </db:bulk-delete>
+</flow>
+----
+
+[source,xml,linenums]
+----
+<flow name="bulkDelete">
+   <db:bulk-update parameterValues="#[payload]">
+       <db:sql>UPDATE planet SET Name = 'Mercury' WHERE Name = :name</db:sql>
+   </db:bulk-update>
+</flow>
+----
+
+=== Execute Script
+
+The execute-script operation runs any script that does not include a parameter binding. You can use execute-script in the following ways:
+
+* Embed execute-script in an operation.
+* Reference execute-script from a file. 
+
+You cannot use both ways of executing a script at the same time.
+
+*Embed in an Operation*
+
+[source,xml,linenums]
+----
+<flow name="executeScript">
+   <db:execute-script>
+       <db:sql>
+           UPDATE planet SET Name='Mercury' WHERE Position=0;
+           UPDATE planet SET Name='Mercury' WHERE Position=4;
+       </db:sql>
+   </db:execute-script>
+</flow>
+----
+
+*Reference from a File*
+
+[source,xml,linenums]
+----
+<flow name="executeScriptFromFile">
+   <db:execute-script file="integration/executescript/bulk-script.sql" />
+</flow>
+----
 
 == Formatting the Output of a Query
 
@@ -248,7 +403,6 @@ The db:output-parameter converts the output of a query from binary to a JDBC or 
 `<db:output-parameter paramName="myParam" type="VARCHAR"/>`
 
 
-
 == See Also
 
-* Database Connector Technical Reference
+link:/connectors/database-documentation[Database Connector Technical Reference]
