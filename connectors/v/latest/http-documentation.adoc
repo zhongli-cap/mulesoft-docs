@@ -7,7 +7,7 @@
 :icons: font
 
 
-= HTTP Connector Technical Reference
+= HTTP Connector Documentation Reference
 
 +++
 Connector to handle and perform HTTP requests
@@ -19,6 +19,9 @@ Connector to handle and perform HTTP requests
 [[listener-config]]
 === Listener Config
 
++++
+Configuration element for a HttpListener.
++++
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
@@ -27,29 +30,39 @@ Connector to handle and perform HTTP requests
 |Name | String | The name of this configuration. With this name can be later referenced. | | *x*{nbsp}
 | Connection a| <<listener-config_listener-connection, Listener Connection>>
  | The connection types that can be provided to this configuration. | | *x*{nbsp}
-| Base Path a| String |  ++++++ |  | {nbsp}
-| Parse Request a| Boolean |  ++++++ |  +++true+++ | {nbsp}
-| Interpret Request Errors a| Boolean |  ++++++ |  +++false+++ | {nbsp}
+| Base Path a| String |  +++Base path to use for all requests that reference this config.+++ |  | {nbsp}
+| Parse Request a| Boolean |  +++By default, the request will be parsed (for example, a multi part request will be mapped as a Mule message with no payload
+and attributes with each part). If this property is set to false, no parsing will be done, and the payload will always
+contain the raw contents of the HTTP request.+++ |  +++true+++ | {nbsp}
+| Interpret Request Errors a| Boolean |  +++Ideal for proxy scenarios, this indicates whether errors produced by an HTTP request should be interpreted by the listener.
+If enabled, an error thrown by an HTTP request operation reaching a listener will be analysed for response data, so if a
+request operation throws a FORBIDDEN error, for example, then the listener will generate a 403 error response.+++ |  +++false+++ | {nbsp}
 |======================
 
 ==== Connection Types
 [[listener-config_listener-connection]]
 ===== Listener Connection
 
++++
+Connection provider for a HttpListener, handles the creation of HttpServer instances.
++++
 
 ====== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
-| TLS Configuration a| <<Tls>> |  ++++++ |  | {nbsp}
+| TLS Configuration a| <<Tls>> |  +++Reference to a TLS config element. This will enable HTTPS for this config.+++ |  | {nbsp}
 | Protocol a| Enumeration, one of:
 
 ** HTTP
-** HTTPS |  ++++++ |  +++HTTP+++ | {nbsp}
-| Host a| String |  ++++++ |  | *x*{nbsp}
-| Port a| Number |  ++++++ |  | *x*{nbsp}
-| Use Persistent Connections a| Boolean |  ++++++ |  +++true+++ | {nbsp}
-| Connection Idle Timeout a| Number |  ++++++ |  +++30000+++ | {nbsp}
+** HTTPS |  +++Protocol to use for communication. Valid values are HTTP and HTTPS. Default value is HTTP. When using HTTPS the HTTP
+communication is going to be secured using TLS / SSL. If HTTPS was configured as protocol then the user needs to configure at
+least the keystore in the tls:context child element of this listener-config.+++ |  +++HTTP+++ | {nbsp}
+| Host a| String |  +++Host where the requests will be sent.+++ |  | *x*{nbsp}
+| Port a| Number |  +++Port where the requests will be received.+++ |  | *x*{nbsp}
+| Use Persistent Connections a| Boolean |  +++If false, each connection will be closed after the first request is completed.+++ |  +++true+++ | {nbsp}
+| Connection Idle Timeout a| Number |  +++The number of milliseconds that a connection can remain idle before it is closed. The value of this attribute is only used
+when persistent connections are enabled.+++ |  +++30000+++ | {nbsp}
 | Reconnection Strategy a| * <<reconnect>>
 * <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 | Disable Validation a| Boolean |  +++Disables connection validation+++ |  | {nbsp}
@@ -63,6 +76,9 @@ Connector to handle and perform HTTP requests
 [[request-config]]
 === Request Config
 
++++
+Configuration element for a HTTP requests.
++++
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
@@ -71,28 +87,37 @@ Connector to handle and perform HTTP requests
 |Name | String | The name of this configuration. With this name can be later referenced. | | *x*{nbsp}
 | Connection a| <<request-config_request-connection, Request Connection>>
  | The connection types that can be provided to this configuration. | | *x*{nbsp}
-| Api Configuration a| <<RamlApiConfiguration>> |  ++++++ |  | {nbsp}
-| Follow Redirects a| Boolean |  ++++++ |  +++true+++ | {nbsp}
+| Api Configuration a| <<RamlApiConfiguration>> |  +++Specifies a RAML configuration file for the I that is being consumed.+++ |  | {nbsp}
+| Follow Redirects a| Boolean |  +++Specifies whether to follow redirects or not. Default value is true.+++ |  +++true+++ | {nbsp}
 | Send Body Mode a| Enumeration, one of:
 
 ** ALWAYS
 ** AUTO
-** NEVER |  ++++++ |  +++AUTO+++ | {nbsp}
+** NEVER |  +++Defines if the request should contain a body or not. If AUTO, it will depend on the method (GET, HEAD and OPTIONS will not
+send a body).+++ |  +++AUTO+++ | {nbsp}
 | Request Streaming Mode a| Enumeration, one of:
 
 ** AUTO
 ** ALWAYS
-** NEVER |  ++++++ |  +++AUTO+++ | {nbsp}
-| Enable Cookies a| Boolean |  ++++++ |  +++true+++ | {nbsp}
-| Parse Response a| Boolean |  ++++++ |  +++true+++ | {nbsp}
-| Response Timeout a| Number |  ++++++ |  | {nbsp}
-| Base Path a| String |  ++++++ |  +++/+++ | {nbsp}
+** NEVER |  +++Defines if the request should be sent using streaming or not. If this attribute is not present, the behavior will depend on
+the type of the payload (it will stream only for InputStream). If set to true, it will always stream. If set to false, it
+will never stream. As streaming is done the request will be sent user Transfer-Encoding: chunked.+++ |  +++AUTO+++ | {nbsp}
+| Enable Cookies a| Boolean |  +++If true, cookies received in HTTP responses will be stored, and sent in subsequent HTTP requests.+++ |  +++true+++ | {nbsp}
+| Parse Response a| Boolean |  +++By default, the response will be parsed (for example, a multipart response will be mapped as a Mule message with null payload
+and inbound attachments with each part). If this property is set to false, no parsing will be done, and the payload will
+always contain the raw contents of the HTTP response.+++ |  +++true+++ | {nbsp}
+| Response Timeout a| Number |  +++Maximum time that the request element will block the execution of the flow waiting for the HTTP response. If this value is
+not present, the default response timeout from the Mule configuration will be used.+++ |  | {nbsp}
+| Base Path a| String |  +++Base path to use for all requests that reference this config.+++ |  +++/+++ | {nbsp}
 |======================
 
 ==== Connection Types
 [[request-config_request-connection]]
 ===== Request Connection
 
++++
+Connection provider for a HTTP request, handles the creation of HttpExtensionClient instances.
++++
 
 ====== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
@@ -101,22 +126,29 @@ Connector to handle and perform HTTP requests
 | Proxy Config a| One of:
 
 * <<proxy>>
-* <<ntlm-proxy>> |  ++++++ |  | {nbsp}
+* <<ntlm-proxy>> |  +++Reusable configuration element for outbound connections through a proxy. A proxy element must define a host name and a port
+attributes, and optionally can define a username and a password.+++ |  | {nbsp}
 | Authentication a| One of:
 
 * <<BasicAuthentication>>
 * <<DigestAuthentication>>
-* <<NtlmAuthentication>> |  ++++++ |  | {nbsp}
-| TLS Configuration a| <<Tls>> |  ++++++ |  | {nbsp}
+* <<NtlmAuthentication>> |  +++Authentication method to use for the HTTP request.+++ |  | {nbsp}
+| TLS Configuration a| <<Tls>> |  +++Reference to a TLS config element. This will enable HTTPS for this config.+++ |  | {nbsp}
 | Protocol a| Enumeration, one of:
 
 ** HTTP
-** HTTPS |  ++++++ |  +++HTTP+++ | {nbsp}
-| Host a| String |  ++++++ |  | {nbsp}
-| Port a| Number |  ++++++ |  | {nbsp}
-| Use Persistent Connections a| Boolean |  ++++++ |  +++true+++ | {nbsp}
-| Max Connections a| Number |  ++++++ |  +++-1+++ | {nbsp}
-| Connection Idle Timeout a| Number |  ++++++ |  +++30000+++ | {nbsp}
+** HTTPS |  +++Protocol to use for communication. Valid values are HTTP and HTTPS. Default value is HTTP. When using HTTPS the HTTP
+communication is going to be secured using TLS / SSL. If HTTPS was configured as protocol then the user can customize the
+tls/ssl configuration by defining the tls:context child element of this listener-config. If not tls:context is defined then
+the default JVM certificates are going to be used to establish communication.+++ |  +++HTTP+++ | {nbsp}
+| Host a| String |  +++Host where the requests will be sent.+++ |  | {nbsp}
+| Port a| Number |  +++Port where the requests will be sent. If the protocol attribute is HTTP (default) then the default value is 80, if the
+protocol attribute is HTTPS then the default value is 443.+++ |  | {nbsp}
+| Use Persistent Connections a| Boolean |  +++If false, each connection will be closed after the first request is completed.+++ |  +++true+++ | {nbsp}
+| Max Connections a| Number |  +++The maximum number of outbound connections that will be kept open at the same time. By default the number of connections is
+unlimited.+++ |  +++-1+++ | {nbsp}
+| Connection Idle Timeout a| Number |  +++The number of milliseconds that a connection can remain idle before it is closed. The value of this attribute is only used
+when persistent connections are enabled.+++ |  +++30000+++ | {nbsp}
 | Client Socket Properties a| <<TcpClientSocketProperties>> |  ++++++ |  | {nbsp}
 | Reconnection Strategy a| * <<reconnect>>
 * <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
@@ -132,35 +164,35 @@ Connector to handle and perform HTTP requests
 
 [[request]]
 === Request
-`<httpn:request>`
+`<http://www.mulesoft.org/schema/mule/httpn:request>`
 
++++
+Consumes an HTTP service.
++++
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
 | Configuration | String | The name of the configuration to use. | | *x*{nbsp}
-| Path a| String |  ++++++ |  +++/+++ | {nbsp}
-| Method a| String |  ++++++ |  +++GET+++ | {nbsp}
-| Body a| Any |  ++++++ |  +++#[payload]+++ | {nbsp}
-| Headers a| Object |  ++++++ |  | {nbsp}
-| URI Parameters a| Object |  ++++++ |  | {nbsp}
-| Query Parameters a| Object |  ++++++ |  | {nbsp}
-| Host a| String |  ++++++ |  | {nbsp}
-| Port a| Number |  ++++++ |  | {nbsp}
-| Follow Redirects a| Boolean |  ++++++ |  | {nbsp}
+| Method a| String |  +++The HTTP method for the request.+++ |  +++GET+++ | {nbsp}
+| Body a| Any |  +++The body of the response message+++ |  +++#[payload]+++ | {nbsp}
+| Headers a| Object |  +++HTTP headers the message should include.+++ |  | {nbsp}
+| URI Parameters a| Object |  +++URI parameters that should be used to create the request.+++ |  | {nbsp}
+| Query Parameters a| Object |  +++Query parameters the request should include.+++ |  | {nbsp}
+| Follow Redirects a| Boolean |  +++Specifies whether to follow redirects or not.+++ |  | {nbsp}
 | Send Body Mode a| Enumeration, one of:
 
 ** ALWAYS
 ** AUTO
-** NEVER |  ++++++ |  | {nbsp}
+** NEVER |  +++Defines if the request should contain a body or not.+++ |  | {nbsp}
 | Request Streaming Mode a| Enumeration, one of:
 
 ** AUTO
 ** ALWAYS
-** NEVER |  ++++++ |  | {nbsp}
-| Parse Response a| Boolean |  ++++++ |  | {nbsp}
-| Response Timeout a| Number |  ++++++ |  | {nbsp}
+** NEVER |  +++Defines if the request should be sent using streaming or not.+++ |  | {nbsp}
+| Parse Response a| Boolean |  +++Defines if the HTTP response should be parsed or it's raw contents should be propagated instead.+++ |  | {nbsp}
+| Response Timeout a| Number |  +++Maximum time that the request element will block the execution of the flow waiting for the HTTP response.+++ |  | {nbsp}
 | Output Type a| Enumeration, one of:
 
 ** STREAM
@@ -168,10 +200,12 @@ Connector to handle and perform HTTP requests
 ** FORM
 ** ANY |  ++++++ |  +++ANY+++ | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Path a| String |  +++Path where the request will be sent.+++ |  | {nbsp}
+| URL a| String |  +++URL where to send the request.+++ |  | {nbsp}
 | Response Validator a| One of:
 
 * <<SuccessStatusCodeValidator>>
-* <<FailureStatusCodeValidator>> |  ++++++ |  | {nbsp}
+* <<FailureStatusCodeValidator>> |  +++Configures error handling of the response.+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -208,24 +242,33 @@ Connector to handle and perform HTTP requests
 
 [[listener]]
 === Listener
-`<httpn:listener>`
+`<http://www.mulesoft.org/schema/mule/httpn:listener>`
 
++++
+Represents a listener for HTTP requests.
++++
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
 | Configuration | String | The name of the configuration to use. | | *x*{nbsp}
-| Path a| String |  ++++++ |  | *x*{nbsp}
-| Allowed Methods a| String |  ++++++ |  | {nbsp}
+| Path a| String |  +++Relative path from the path set in the HTTP Listener configuration+++ |  | *x*{nbsp}
+| Allowed Methods a| String |  +++Comma separated list of allowed HTTP methods by this listener. To allow all methods do not defined the attribute.+++ |  | {nbsp}
 | Response Streaming Mode a| Enumeration, one of:
 
 ** AUTO
 ** ALWAYS
-** NEVER |  ++++++ |  +++AUTO+++ | {nbsp}
+** NEVER |  +++Defines if the response should be sent using streaming or not. If this attribute is not present, the behavior will depend on
+the type of the payload (it will stream only for InputStream). If set to true, it will always stream. If set to false, it
+will never stream. As streaming is done the response will be sent user Transfer-Encoding: chunked.+++ |  +++AUTO+++ | {nbsp}
 | Redelivery Policy a| <<RedeliveryPolicy>> |  +++Defines a policy for processing the redelivery of the same message+++ |  | {nbsp}
-| Parse Request a| Boolean |  ++++++ |  | {nbsp}
-| Interpret Request Errors a| Boolean |  ++++++ |  | {nbsp}
+| Parse Request a| Boolean |  +++By default, the request will be parsed (for example, a multi part request will be mapped as a Mule message with null payload
+and inbound attachments with each part). If this property is set to false, no parsing will be done, and the payload will
+always contain the raw contents of the HTTP request.+++ |  | {nbsp}
+| Interpret Request Errors a| Boolean |  +++Ideal for proxy scenarios, this indicates whether errors produced by an HTTP request should be interpreted by the listener.
+If enabled, an error thrown by an HTTP request operation reaching a listener will be analysed for response data, so if a
+request operation throws a FORBIDDEN error, for example, then the listener will generate a 403 error response.+++ |  | {nbsp}
 | Reconnection Strategy a| * <<reconnect>>
 * <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 | Response a| <<HttpListenerResponseBuilder>> |  ++++++ |  | {nbsp}
@@ -248,229 +291,229 @@ Connector to handle and perform HTTP requests
 [[Tls]]
 === Tls
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Enabled Protocols a| String
-| Enabled Cipher Suites a| String
-| Trust Store a| <<TrustStore>>
-| Key Store a| <<KeyStore>>
+| Field | Type | Default Value
+| Enabled Protocols a| String | 
+| Enabled Cipher Suites a| String | 
+| Trust Store a| <<TrustStore>> | 
+| Key Store a| <<KeyStore>> | 
 |======================
     
 [[TrustStore]]
 === Trust Store
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Path a| String
-| Password a| String
+| Field | Type | Default Value
+| Path a| String | 
+| Password a| String | 
 | Type a| * Enumeration, one of:
 
 ** jks
 ** jceks
 ** pkcs12
-* String
-| Algorithm a| String
-| Insecure a| Boolean
+* String | 
+| Algorithm a| String | 
+| Insecure a| Boolean | false
 |======================
     
 [[KeyStore]]
 === Key Store
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Path a| String
+| Field | Type | Default Value
+| Path a| String | 
 | Type a| * Enumeration, one of:
 
 ** jks
 ** jceks
 ** pkcs12
-* String
-| Alias a| String
-| Key Password a| String
-| Password a| String
-| Algorithm a| String
+* String | 
+| Alias a| String | 
+| Key Password a| String | 
+| Password a| String | 
+| Algorithm a| String | 
 |======================
     
 [[reconnect]]
 === Reconnect
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Frequency a| Number
-| Count a| Number
-| Blocking a| Boolean
+| Field | Type | Default Value
+| Frequency a| Number | 2000
+| Count a| Number | 2
+| Blocking a| Boolean | true
 |======================
     
 [[reconnect-forever]]
 === Reconnect Forever
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Frequency a| Number
+| Field | Type | Default Value
+| Frequency a| Number | 2000
 |======================
     
 [[HttpRequestAttributes]]
 === Http Request Attributes
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Client Certificate a| Any
-| Headers a| Object
-| Listener Path a| String
-| Method a| String
-| Query Params a| Object
-| Query String a| String
-| Relative Path a| String
-| Remote Address a| String
-| Request Path a| String
-| Request Uri a| String
-| Scheme a| String
-| Uri Params a| Object
-| Version a| String
+| Field | Type | Default Value
+| Client Certificate a| Any | 
+| Headers a| Object | 
+| Listener Path a| String | 
+| Method a| String | 
+| Query Params a| Object | 
+| Query String a| String | 
+| Relative Path a| String | 
+| Remote Address a| String | 
+| Request Path a| String | 
+| Request Uri a| String | 
+| Scheme a| String | 
+| Uri Params a| Object | 
+| Version a| String | 
 |======================
     
 [[RedeliveryPolicy]]
 === Redelivery Policy
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Max Redelivery Count a| Number
-| Use Secure Hash a| Boolean
-| Message Digest Algorithm a| String
-| Id Expression a| String
-| Object Store Ref a| String
+| Field | Type | Default Value
+| Max Redelivery Count a| Number | 5
+| Use Secure Hash a| Boolean | true
+| Message Digest Algorithm a| String | 
+| Id Expression a| String | 
+| Object Store Ref a| String | 
 |======================
     
 [[HttpListenerResponseBuilder]]
 === Http Listener Response Builder
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Status Code a| Number
-| Reason Phrase a| String
-| Body a| Any
-| Headers a| Object
+| Field | Type | Default Value
+| Status Code a| Number | 
+| Reason Phrase a| String | 
+| Body a| Any | 
+| Headers a| Object | 
 |======================
     
 [[TcpClientSocketProperties]]
 === Tcp Client Socket Properties
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Connection Timeout a| Number
-| Send Tcp No Delay a| Boolean
-| Linger a| Number
-| Keep Alive a| Boolean
-| Fail On Unresolved Host a| Boolean
-| Send Buffer Size a| Number
-| Receive Buffer Size a| Number
-| Client Timeout a| Number
-| Reuse Address a| Boolean
+| Field | Type | Default Value
+| Connection Timeout a| Number | 
+| Send Tcp No Delay a| Boolean | 
+| Linger a| Number | 
+| Keep Alive a| Boolean | 
+| Fail On Unresolved Host a| Boolean | 
+| Send Buffer Size a| Number | 
+| Receive Buffer Size a| Number | 
+| Client Timeout a| Number | 
+| Reuse Address a| Boolean | 
 |======================
     
 [[RamlApiConfiguration]]
 === Raml Api Configuration
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Location a| String
+| Field | Type | Default Value
+| Location a| String | 
 |======================
     
 [[HttpResponseAttributes]]
 === Http Response Attributes
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Headers a| Object
-| Reason Phrase a| String
-| Status Code a| Number
+| Field | Type | Default Value
+| Headers a| Object | 
+| Reason Phrase a| String | 
+| Status Code a| Number | 
 |======================
     
 [[BasicAuthentication]]
 === Basic Authentication
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Preemptive a| Boolean
-| Username a| String
-| Password a| String
+| Field | Type | Default Value
+| Preemptive a| Boolean | 
+| Username a| String | 
+| Password a| String | 
 |======================
     
 [[DigestAuthentication]]
 === Digest Authentication
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Username a| String
-| Password a| String
+| Field | Type | Default Value
+| Username a| String | 
+| Password a| String | 
 |======================
     
 [[NtlmAuthentication]]
 === Ntlm Authentication
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Domain a| String
-| Workstation a| String
-| Username a| String
-| Password a| String
+| Field | Type | Default Value
+| Domain a| String | 
+| Workstation a| String | 
+| Username a| String | 
+| Password a| String | 
 |======================
     
 [[proxy]]
 === Proxy
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Host a| String
-| Port a| Number
-| Username a| String
-| Password a| String
+| Field | Type | Default Value
+| Host a| String | 
+| Port a| Number | 
+| Username a| String | 
+| Password a| String | 
 |======================
     
 [[ntlm-proxy]]
 === Ntlm Proxy
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Ntlm Domain a| String
-| Host a| String
-| Port a| Number
-| Username a| String
-| Password a| String
+| Field | Type | Default Value
+| Ntlm Domain a| String | 
+| Host a| String | 
+| Port a| Number | 
+| Username a| String | 
+| Password a| String | 
 |======================
     
 [[SuccessStatusCodeValidator]]
 === Success Status Code Validator
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Values a| String
+| Field | Type | Default Value
+| Values a| String | 
 |======================
     
 [[FailureStatusCodeValidator]]
 === Failure Status Code Validator
 
-[cols=".^50%,.^50%", options="header"]
+[cols=".^30%,.^40%,.^30%", options="header"]
 |======================
-| Field | Type 
-| Values a| String
+| Field | Type | Default Value
+| Values a| String | 
 |======================
     
 
