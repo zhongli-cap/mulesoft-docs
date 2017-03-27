@@ -1,4 +1,4 @@
-= Anypoint MQ APIs
+= To Use the Anypoint MQ REST APIs
 :keywords: mq, destinations, queues, exchanges
 
 The Anypoint MQ APIs let you use REST to send and receive messages, administer queues and message exchanges, and analyze results. Anypoint provides these APIs, which are described later in this document:
@@ -12,17 +12,22 @@ Anypoint MQ portals are available in the link:https://anypoint.mulesoft.com/apip
 [[getoeb]]
 == Get an Organization ID, Environment ID, and Bearer Token
 
-After you get an application's client ID and client secret from Anypoint Platform > *MQ*, you can run a *curl* command from a command line to get the bearer token, organization ID, and environment ID by using the Authorize resource. Once authorized, you can use the bearer token organization ID and environment ID in the rest of the calls.
+Using link:/access-management/audit-logging#to-configure-anypoint-mq-audit-logging[MQ Audit Logging], 
+you can easily view the organization ID and environment ID in the `payload.txt` file that Anypoint Platform creates for any auditable action in MQ.
+
+However, getting the bearer token requires using either a command like curl or an application like Postman. The example that follows uses curl. 
+If you are a Windows user, you need to link:https://curl.haxx.se/download.html[download a curl
+command] before accessing the information.
 
 To get API access information:
 
 . Log into link:https://anypoint.mulesoft.com/#/signin[Anypoint Platform].
 . Click *MQ*, *Client Apps*, and click the blue plus circle icon to create an app.
-. Get the Client ID and Client Secret and plug these values into the *curl* command below replacing `myclientId` and `myclientSecret`:
+. Get the Client ID and Client Secret and plug these values into the *curl* command below replacing `CLIENTID` and `CLIENTSECRET`:
 +
 [source]
 ----
-curl -X POST -H "Contentorm-urlencoded" -d 'client_id=<client_ID>&client_secret=<client_Secret>&grant_type=client_credentials' "https://mq-us-east-1.anypoint.mulesoft.com/api/v1/authorize"
+curl -X POST -H "Content-Type: application/json" -d 'client_id=CLIENTID&client_secret=CLIENTSECRET&grant_type=client_credentials' "https://mq-us-east-1.anypoint.mulesoft.com/api/v1/authorize"
 ----
 +
 . Submit the *curl* command.
@@ -33,59 +38,6 @@ This returns output similar to:
 ----
 {"access_token":"<token>","simple_client":{"envId":"<env_ID>","orgId":"<org-ID>"},"token_type":"bearer"}
 ----
-
-Two other ways to view the Organization ID:
-
-* <<From Your Anypoint Platform Profile JSON Listing>>
-* <<From Access Management>>
-
-=== From Your Anypoint Platform Profile JSON Listing
-
-. Log into link:https://anypoint.mulesoft.com/#/signin[Anypoint Platform].
-. Copy and paste this address into your browser's address bar: `https://anypoint.mulesoft.com/accounts/api/profile`
-. Scroll down to find the `organization` profile information.
-+
-Line #4 shows your Organization ID value:
-+
-[source]
-"id": "42d0gf0g-4254-4254-4254-425442544254",
-+
-For example:
-+
-[source,xml,linenums]
-----
-},
-  "organization": {
-    "name": "memyself.andi",
-    "id": "42d0gf0g-4254-4254-4254-425442544254",
-    "createdAt": "2014-10-27T23:35:41.369Z",
-    "updatedAt": "2016-10-14T18:58:17.886Z",
-    "ownerId": "42544254-4254-4254-4254-425442544254",
-    "clientId": "42424242424242424242424242424242",
-    "domain": "memyselfandi",
-    "idprovider_id": "example",
-    "isFederated": false,
-    "parentOrganizationIds": [],
-    "subOrganizationIds": [],
-    "tenantOrganizationIds": [],
-    "isMaster": true,
-    "subscription": {
-      "type": "RocketScientist",
-      "expiration": null
-    },
-----
-
-=== From Access Management
-
-. View the Organization ID and Environment ID from Anypoint Platform by clicking *Access Management* and getting the ID values from the URLs in the *Environments* and *Organization* sections.
-+
-*Environment ID*
-+
-image:mq-envid-from-url.png[mq-envid-from-url]
-+
-*Organization ID*
-+
-image:mq-get-orgid-from-url.png[mq-get-orgid-from-url]
 
 == API Workflow
 
@@ -182,24 +134,15 @@ After you have the lock ID, you can add it to your Postman environment to facili
 Anypoint Studio lets you create a Mule application that uses the Anypoint MQ connector.
 The steps in this section are summarized. For more information, see the link:/anypoint-mq/mq-studio[Anypoint Studio guide] in the Anypoint MQ documentation set.
 
-To set up Studio for use with Anypoint MQ:
+You can set up a Studio project with: 
 
-. Use link:https://anypoint.mulesoft.com/#/signin[Anypoint Platform] > *MQ* > *Client Apps* to get Client ID and Client Secret values.
-. If you have not done so, download and install link:https://www.mulesoft.com/platform/studio[Anypoint Studio].
-. Download the *Anypoint MQ* connector using Anypoint Exchange.
-. Create a new Mule Project.
-. Search for "http" and drag the HTTP connector to the Canvas.
-. Click the *Connector Configuration* green plus icon to configure the connector.
-. In the Global Element Properties window, click *OK* (take the default settings).
-. Search for "mq" and drag the Anypoint MQ connector to the Canvas.
-. Click the *Connector Configuration* green plus icon to configure the connector.
-. In the Global Element Properties window, copy the Anypoint Platform > MQ > Client Apps > Client ID and Client Secret one at a time to the clipboard and then paste into Studio.
-. Click OK to exit the Global Element Properties window.
-. In the connector properties window, set *Operation* to consume.
-. Set the *Destination* to the name of the queue you created in Postman.
-. Search for "log" and drag the Logger to the Canvas. Set the *Message* to the `#[payload]` value.
-. Right-click the project name in the Package Explorer window and click *Run As* > *Mule Application*.
-. Ensure that the Console messages end with the "DEPLOYED" value.
+* An HTTP connector: host 0.0.0.0, port 8081, and path set to the `/mq/{messageId}` value.
+* Anypoint MQ connector with the client ID and secret you got from Anypoint Platform > MQ, and the Destination set to the queue you created in Postman.
+* Logger with *Message* set to the `#[payload]` value.
+
+Right-click the project name in the Package Explorer window and click *Run As* > *Mule Application*.
+
+Ensure that the Console messages end with the "DEPLOYED" value.
 
 Go back to Postman and publish a new message.
 
@@ -502,11 +445,6 @@ class AnypointMQAdminClient {
 }
 ----
 
-
 == See Also
 
 * link:/anypoint-mq[Anypoint MQ]
-* link:http://training.mulesoft.com[MuleSoft Training]
-* link:https://www.mulesoft.com/webinars[MuleSoft Webinars]
-* link:http://blogs.mulesoft.com[MuleSoft Blogs]
-* link:http://forums.mulesoft.com[MuleSoft's Forums]

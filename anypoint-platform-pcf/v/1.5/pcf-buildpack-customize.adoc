@@ -1,9 +1,6 @@
 = To Customize the Mule Runtime Buildpack
 
-Customizing a BuildPack is an optional step when configuring Anypoint Platform for PCF. You can use the default Mule Runtime BuildPack, which includes Mule runtime 3.8.1.
-
-Each buildpack is named according to a specific format: `mule_runtime_buildpack_<runtime_version_number>`
-For example: `mule_runtime_buildpack_3_8_1`
+In most cases, the default Mule Runtime buildpack is sufficient. However, you can create a custom buildpack if you need to add additional resource that are included when deploying a Mule application.
 
 1. Download the Mule Runtime Buildpack (zip file).
 
@@ -11,49 +8,59 @@ For example: `mule_runtime_buildpack_3_8_1`
 
 1. Add additional resources
 +
-The `resources/mule` directory replicates the *Mule runtime* directory structure. Files and directories in this location will be *overlaid* on the expanded runtime upon deployment. Typical resources to add include:
+The `resources/mule` directory replicates the Mule runtime directory structure. Files and directories in this location are included with the runtime during deployment. Common resources you may want to add include:
 +
 * Custom shared libraries (jar files) in `resources/mule/lib/user`
 * Patches (jar files) in `resources/mule/lib/user`, `resources/mule/lib/mule` and `resources/mule/plugins`
 * Custom domains in `resources/mule/domains`
 +
-1. Create the required directories as necessary. Refer to link:/mule-user-guide/v/3.8/classloader-control-in-mule[Mulesoft documentation] or Support Portal Knowledge Base for specific details on using custom libraries and patches.
+1. Create the required directories as necessary. Refer to link:/mule-user-guide/v/3.8/classloader-control-in-mule[Mulesoft documentation] for specific details on using custom libraries and patches.
 +
-1. Zip the buildpack with all the changes.
+1. Zip the customized buildpack, including your changes.
 +
 ----
 zip -r <buildpack.zip file> <buildpackdir>
 ----
 +
-1. link:https://docs.run.pivotal.io/buildpacks/custom.html[install] your buildpack on your PCF environment
+1. Add the buildpack to your PCF installation by running:
 +
-1. Install the buildpack on your PCF environment/space by executing:
+----
+cf create-buildpack <BUILDPACK_NAME> <BUILDPACK_ZIP_PATH> <POSITION> --enable
+----
 +
-`cf create-buildpack <BUILDPACK_NAME> <BUILDPACK_ZIP_PATH> <POSITION>`.
+Using the following parameters:
 +
-1. If you are using Anypoint Platform Private Cloud Edition to manage your apps then <BUILDPACK_NAME> should be in format `mule_runtime_buildpack_<runtime_version_number>` - For example: `mule_runtime_buildpack_3_8_1`
+[autowidth.spread]
+|===
+| BUILDPACK_NAME | The name of your buildpack must conform to the following format: `mule_runtime_buildpack_<runtime_version_number>`
+| BUILDPACK_ZIP_PATH | The local path to your buildpack
+| POSITION | Specifies the buildpack's position in the priority list. In general, this value should be 1.
+| --enable | Allows you to push applications with this buildpack
+|===
 +
-For example:
+The command you run should be similar to the following:
 +
-`cf create-buildpack mule_runtime_buildpack_3_8_1 mule-runtime-buildpack-3.8.1.zip 1 --enable`.
+----
+cf create-buildpack mule_runtime_buildpack_3_8_1 mule-runtime-buildpack-3.8.1.zip 1 --enable
+----
 
 == Inbound HTTP Endpoints
 
-When designing your applications, keep in mind that CloudFoundry will automatically allocate an internal port on the container linked to the routes defined on the CF Router for the application. This port is supplied to the application through the java property `${http.port}`. *This will be the only port on which your application will receive inbound traffic*. Additionally, *applications can only provide a single HTTP listener component*.
+When designing your applications, keep in mind that PCF automatically allocates an internal port on the container. This internal port is linked to the application routes created by the PCF routing subsystem. 
 
+This port is supplied to the application through the Java property `${http.port}`. This is the only port on which your application receives inbound traffic. Additionally, applications can only provide a single HTTP listener component.
 
-[WARNING]
-Ensure your application does not provide the `http.port` variable on the `mule-app.properties` file, or configuration files loaded through Spring Properties Placeholders, as this overrides the port supplied through Cloud Foundry environment variables mechanims, preventing connectivity to your app once deployed.
+You must ensure that your application does not specify the `http.port` variable in the `mule-app.properties` file or configuration files loaded through Spring Properties Placeholders. Properties defined in these locations override the port supplied through PCF environment variables mechanims. This will prevent connectivity to your app after it is deployed.
 
 == Container Disk Size
 
-Make sure you allocate more disk space than memory to your application, to be able to generate a JVM heap dump in case MuleSoft Support team requests it for diagnostics purposes.
+Ensure that you allocate more disk space than memory to your application. This enables you to generate a JVM heap dump if requrested by the MuleSoft support team for diagnostics purposes.
 
 == Application-Specific Configuration
 
-Application-specific configuration is provided through Environment Variables. These can be supplied through the Cloud Foundry Apps Manager user interface, or through link:https://docs.run.pivotal.io/devguide/deploy-apps/manifest.html#env-block[Application manifests files].
+Application-specific configuration is provided through environment variables. These can be supplied through the PCF Apps Manager user interface or through application manifest files.
 
-See a *minimal* example `manifest.yml` file below:
+The following example shows a basic `manifest.yml`:
 
 [source, yaml, linenums]
 ----
@@ -67,16 +74,14 @@ applications:
 
 == Memory Allocation
 
-The Anypoint Buildpack uses the JavaBuildpack memory heuristics to allocate memory for the different JVM memory spaces, up to the maximum memory allocated to the application through configuration.
-
-Details about this process and the estimated proportions can be found link:https://support.run.pivotal.io/entries/80755985-How-do-I-size-my-Java-or-JVM-based-applications[here].
+The Mule Runtime buildpack uses the default Java buildpack memory allocation for the different JVM memory spaces, up to the maximum memory allocated to the application through configuration.
 
 == JVM-Specific Parameters
 
-JVM-specific configuration parameters can be supplied through the `JAVA_OPTS` mechanism, either through:
+JVM-specific configuration parameters are supplied using the `JAVA_OPTS` property through one of the following:
 
-* a `JAVA_OPTS` [application environment variable](#application-specific-configuration),
-* the `config/java_opts` configuration file.
+* A `JAVA_OPTS` [application environment variable](#application-specific-configuration),
+* The `config/java_opts` configuration file.
 
 == Applying Patches to Mule Runtime
 
@@ -184,3 +189,7 @@ If you need to report an issue with the Mule runtime or the buildpack itself thr
 * Supply buildpack diagnostics information.
 * If the issue is related to the Anypoint Runtime Engine, supply JVM diagnostics information.
 * If the issue is related to the buildpack provisioning process, supply Debugging buildpack provisioning process.
+
+== See Also
+
+* link:https://docs.run.pivotal.io/devguide/deploy-apps/manifest.html[Deploying with Application Manifests]
