@@ -1,12 +1,60 @@
-= Workflow: Manage an API Using SLA Tiers
-:keywords: api, sla, policy, raml, portal, manage
+= To Manage an API Using Policies and Tiers
 
-. link:/api-manager/tutorial-set-up-and-deploy-an-api-proxy[Set up and deploy an API proxy].
-. link:/api-manager/set-up-sla-tiers-task[Set Up SLA Tiers]
-. Apply one or more SLA-based policies. For example, link:/api-manager/ [apply throttling and rate limiting policies that require IDs].
+In this procedure, you first create tiers of access for developers who want to call your API:
 
-Apply policies:
+*  A tier that accepts anyone who wants to access the API, but limits this person's application to three requests per minute, and rejects additional requests.
+* A tier for a premium access level that accepts up to five requests per minute and requires API Versions Owner approval of the developer who wants to access the API.
 
+Next, you apply SLA-based throttling and rate limiting policies to handle requests that exceed SLA limits that you added. Finally, you set up client ID-based policies, such as throttling and rate limiting, to obtain the client ID and secret as query parameters. 
+
+. In API Manager, in API Administration, click an API version link, and on the API version details page, select the SLA Tiers.
+. Add an SLA Tier and set up one limit on the tier:
++
+* Name: Free
+* Approval: Automatic
+* Limits
+** # of Reqs: 3
+** Time Period: 1
+** Time Unit: Minute
++
+. On the API version details page, click *Add SLA Tier* again, and set up one limit on the tier:
++
+* Name: Premium
+* Approval: Manual
+* Limits
+** # of Reqs: 5
+** Time Period: 1
+** Time Unit: Minute
++
+. On the API version details page of a deployed API, select Policies.
++
+. From the Available Policies, select Apply for the Throttling - SLA-based policy, and accept the defaults
+. Apply the Rate limiting - SLA-based policy also, accepting the defaults again.
+. On the list of available policies, click the *Raml snippet* for either one of the policies.
+. Add traits to RAML for enforcing the policies. Open API Designer and edit the RAML:
++
+* Add a section called `traits:` at the root level to define query parameters:
++
+[source,yaml,linenums]
+----
+traits:
+  - client-id-required:
+      queryParameters:
+       client_id:
+        type: string
+      client_secret:
+        type: string
+----
++
+* Reference the trait in each of the methods to specify that each of the methods require these query parameters. After each method in the RAML file, add `is: [client-id-required]`. For example:
++
+[source,yaml,linenums]
+----
+/products:
+  get:
+    is: [client-id-required]
+    description: Gets a list of all the inventory products.
+----
 
 == See Also
 
