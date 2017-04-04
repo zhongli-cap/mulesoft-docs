@@ -1,160 +1,92 @@
-= Design an API
+= About Designing a Basic RAML API
 :keywords: raml, api, designer
 
-In this tutorial, you design a link:/api-manager/designing-your-api#raml-1-0[RAML-based] API using link:/api-manager/designing-your-api#accessing-api-designer[API Designer]. The API creates a web service for users to order t-shirts and track orders. This API consists of a series of operations that users of your API can call. Each operation maps to a resource. All the operations in this API relate to one of the following resources:
+API Designer in Anypoint Platform is frequently used to design a RAML API to consume a web service. After setting up an API, a project name and project version exists on the API Administration page. Clicking the project version takes you to the API version details page and eventually to the RAML editor API Designer. 
 
-* `/products`
-* `/orders`
+== Prerequisites
 
-Each order has a nested `{orderId}/status`, which is a sub-resource of `orders`.
+To use API Designer in Anypoint Platform, you need the following accounts and roles:
 
-link:_attachments/t-shirt.raml[Download the RAML] code for this example.
+* An Anypoint Platform account
++
+If you do not have an account, link:https://anypoint.mulesoft.com/login/#/signin[sign up now]. If you sign up for an account, you are given the Organization Administrators role.
+* A member of API Creators or Organization Administrators link:/access-management/roles[role]
++
+If you are not a member of one of these roles, you cannot see the *Add new API* button that you use to access the API Designer.
 
-Assuming you have link:/api-manager/tutorial-set-up-an-api[set up the API] for ordering T-Shirts, perform these steps to design the API:
+== Creating an API Project
 
-. Click API Manager to go to the API Administration page.
-. Click the version number of the T-Shirt Ordering Service project: *1.0.development*.
-+
-image::walkthrough-design-new-a7e5e.png[walkthrough-design-new-a7e5e]
-+
-The API version details page appears.
-+
-. Click *Edit in API designer*:
-+
-The API Designer appears.
-+
-. On the line following the version, add a placeholder `baseUri` for simulating the API. Specify the `baseUri` as: `http://www.tshirt.com/api`
-+
-[source, yaml, linenums]
+Select Project > New File to select the RAML spec version and type of content you plan to include in the .raml file. Several lines of code based on the title and version of the API you provided appears:
+
+[source,yaml,linenums]
 ----
 #%RAML 1.0
-title: T-Shirt Ordering Service
+title: placeholder
 version: 1.0.development
-baseUri: http://www.tshirt.com/api
+description: This API consumes the JSONPlaceholder Web Service.
 ----
-+
-. Go to the next line, and if necessary, click image:shelf-icon.png[shelf-icon] to expand link:/api-manager/designing-your-api#using-hints-raml-editor-shelf-and-autocompletion[the shelf]. If you don't see the shelf icon, refresh the page.
-. Click the `New Resource` component on the shelf.
-+
-This action adds lines of skeleton code at the cursor position. 
-+
-image:new+resource.png[new+resource]
-+
-. Go to the next line, click New Resource a second time, go to the next line, and click New Resource a third time.
-. Replace the text in the resource title and in its child element `displayName`, aligning the text as follows:
-+
-[source, yaml, linenums]
+
+In addition to this generated code, you add the following things to a RAML API definition:
+
+* An optional baseURI node at the root of the RAML document
+* API resources, for example the collection of all customers or a specific customer
+* HTTP methods, such as GET, POST, PUT, and DELETE, allowed on each resource
+* The representation of the request and response messages for each method, such as `GET /customer/1 -> response: application/json`.
+
+The baseUri serves as an identifier for the API and forms the base of the URLs of the resources. Configuring this URL does not deploy the API or guarantee that the API is accessible at that URL. You need to link:/api-manager/setting-up-an-api-proxy[configure endpoints] and deploy the API.
+
+== Including Example Responses
+
+Simulating calls to the API is a critical design task that helps you troubleshoot problems and demo the API to prospective users. Valuable feedback can result from a demo and help you improve the API. To simulate calls to the API, you need to include example responses. The response consists of a map of the HTTP status codes the API returns on success. 
+
+The following example shows the syntax and indentation of a response: 
+
 ----
-/products:
-  displayName: Products
-/orders:
-  displayName: Orders
-  /{orderId}/status:
-    displayName: Status
+...
+    description: Retrieve a list of all the users
+    responses:
+      200:
+        body:
+          application/json:
+            example: |
+              [{
+              "id": 1,
+              "name": "Leanne Graham",
+              "username": "Bret",
+              "email": "Sincere@april.biz",
+              "address": {
+                "street": "Kulas Light",
+                "suite": "Apt. 556",
+                "city": "Gwenborough",
+                "zipcode": "92998-3874",
+                "geo": {
+                  "lat": "-37.3159",
+                  "lng": "81.1496"
+                }
+              },
+              "phone": "1-770-736-8031 x56442",
+              "website": "hildegard.org",
+              "company": {
+                "name": "Romaguera-Crona",
+                "catchPhrase": "Multi-layered client-server neural-net",
+                "bs": "harness real-time e-markets"
+              } }]
 ----
-+
-Here's what the RAML looks like so far:
-+
-[source, yaml, linenums]
+
+== Using !include
+
+To modularize the API definition, RAML provides several mechanisms, one of which is the `!include` property. To keep the API definition concise, you can include external content, such as documentation, schemas, and frequently used patterns outside the definition itself. The parser interprets `!include` as if the content of the externally-hosted file or a URL were declared in-line.
+
 ----
-#%RAML 1.0
-title: T-Shirt Ordering Service
-version: 1.0.development
-baseUri: http://www.tshirt.com/api
-/products:
-  displayName: Products
-/orders:
-  displayName: Orders
-  /{orderId}/status:
-    displayName: Status
+...
+      application/json:
+        example: !include user-example.json
 ----
-+
-. To the `products` resource, add a `GET` method: Go to the line below `displayName:Products`, and click GET on the shelf.
-+
-image:methods.png[methods]
-+
-Users of the API will be able to read information about products, but not post new products.
-+
-. To the `/orders` resource, add a `POST` method.
-+
-Users will be able to place orders.
-. To the `status` resource, add a `GET` method.
-+
-Users will be able to check the status of an order.
-+
-. Add descriptions for each of the methods you add.
-+
-[source, yaml, linenums]
-----
-#%RAML 1.0
-title: T-Shirt Ordering Service
-version: 1.0.development
-baseUri: http://www.tshirt.com/api
-/products:
-  displayName: Products
-  get:
-    description: Get a list of all the inventory products
-/orders:
-  displayName: Orders
-  post:
-    description: Place a new T-Shirt order
-  /{orderId}/status:
-    displayName: Status
-    get:
-      description: Get the status of an existing order
-----
-+
-. Add the following code to match the t-shirt.raml file that you downloaded. Take care to tab to the correct level for each entry:
-+
-* To ensure that `POST` requests sent to the *`/order`* resource are valid,  add a schema to match against incoming requests.
-* Add an example message, to the `post` method of the `/orders` resource, placing it within `body – application/json`.
-* At the same level on the RAML hierarchy as the operation `response` label, add a *queryParameters* element to the `GET` operation with the following attributes:
-+
-[source, yaml, linenums]
-----
-queryParameters:
-        email:
-          description: Retrieve the status of an order with the same email that was used to place the order.
-          pattern: ^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$
-          required: true
-----
-+
-The parameter makes it possible to query the `status` resource using the requester email.
-
-Check your RAML code against the t-shirt.raml file that you downloaded, and proceed to simulate API calls.
-
-== Simulating API calls
-
-To simulate the API, you call the API in the API console and check the responses. The RAML you downloaded specifies the following `responses` for the methods:
-
-* `200` (OK) response for all methods
-* `500` (server error) response for the `POST order` method in case something fails on the server side
-* `400` (client error) response for the `GET status` resource in case the user requests a nonexistent order
-
-In the case of this API, the service behind the API generates the actual response that a user receives. The response example in the RAML is for  previewing the response in API Console.
-
-To simulate calls to the API and preview the responses:
-
-. Above the API console on the right, turn on the Mocking Service.
-+
-image::walkthrough-design-new-9cacb.png[walkthrough-design-new-9cacb]
-+
-The `baseUri` has been commented out and replaced by a new URI.
-+
-. In the API console, click the GET tab for `/products`, and then click *Try It*.
-+
-. Repeat the last step for the other tabs, and enter these parameters on the `status` tab:
-+
-* Order ID: `4321`
-* Email: `max@mail.com`
-+
-The call returns a status 200 and example responses provided in the RAML file.
-
-== Next
-
-link:/api-manager/tutorial-set-up-and-deploy-an-api-proxy[Set Up and Deploy an API Proxy] 
 
 == See Also
 
-* link:https://forums.mulesoft.com[MuleSoft's Forums]
-* link:https://www.mulesoft.com/support-and-services/mule-esb-support-license-subscription[MuleSoft Support]
+* link:/api-manager/designing-your-api#accessing-api-designer[API Designer Reference]. 
+* link:/api-manager/designing-your-api#using-hints-raml-editor-shelf-and-autocompletion[The API Designer shelf]
+* link:http://jsonplaceholder.typicode.com[JSONPlaceholder free REST service]
+* link:/api-manager/designing-your-api#using-hints-raml-editor-shelf-and-autocompletion[The API Designer shelf]
+* link:/api-manager/setting-up-an-api-proxy[Configure endpoints and deploy the API]
