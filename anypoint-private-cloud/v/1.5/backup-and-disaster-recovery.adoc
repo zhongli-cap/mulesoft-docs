@@ -5,34 +5,35 @@
 This product was previously named Anypoint Platform On-Premises Edition. Beginning with the 1.5.1 release, it is named Anypoint Platform Private Cloud Edition.
 
 
-== Performing Backups
+== To Perform a Backup
 
 Scheduling hourly backups to external storage every hour is recommended to preserve your data. Make sure you copy the archive to an external reliable storage outside of the Anypoint cluster, using appropriate storage system used in your organization.
 
 [IMPORTANT]
-====
-You must be performed backup on a _master node_. If you originally installed the platform with a 6 server configuration, then only three of the original servers should be _master nodes_, if you instead used a 1 or 3 server "flavour", then all servers should be _master nodes_.
+You must perform backups on a master node of your installation. If you installed the platform with a six server configuration, only three of the servers should be master nodes. If you are running 1 or 3 node installation, all nodes should be master nodes.
 
-To know which of your nodes are registered as master, run the following command on any node of the cluster:
 
-`kubectl get nodes -o yaml|grep master -A 5|grep hostname`
-====
-
+1. Determine which of nodes is registered as a master node, run the following command on any node in the cluster:
++
+----
+kubectl get nodes -o yaml|grep master -A 5|grep hostname
+----
++
 You can launch the creation of a backup by running the commands below from any one of the servers registered as *master nodes* in the cluster:
 
-. Enter the gravity utility through this command:
+1. Enter the gravity utility through this command:
 +
 ----
 sudo gravity enter
 ----
 
-. Create the backup:
+1. Create the backup:
 +
 ----
 gravity system backup gravitational.io/anypoint:0.0.0+latest /ext/share/backup.tar.gz
 ----
-
-This will create an archive of the system state, stored in `/var/lib/gravity/planet/share/backup.tar.gz`.
++
+This command creates an archive of the system state, stored in `/var/lib/gravity/planet/share/backup.tar.gz`.
 
 [NOTE]
 ====
@@ -40,29 +41,28 @@ After running the backup command, you may see the following error message:
 
 `Error from server: container "anypoint-backup" in pod "anypoint-backup-<pod-id>" is waiting to start: PodInitializing`
 
-This simply means that the Kubernetes pod that runs the backup job is not up and running yet. It should start in a couple seconds
+This indicates that the Kubernetes pod running the backup job is not currently running.
 ====
 
-== Restoring the System
+== To Perform a System Restore
 
 To restore a system from your backup, use the existing cluster or create a new fresh cluster with the same amount of servers as the restored version. In either case, you must do the following:
 
-. Enter one of the nodes in your cluster, having root access.
-. Place the ‘tar.gz` archive file in the location `/var/lib/gravity/planet/share`. You can transfer this file securely via the following command:
-
+1. Enter one of the nodes in your cluster, having root access.
+1. Place the ‘tar.gz` archive file in the location `/var/lib/gravity/planet/share`. You can transfer this file securely via the following command:
 +
 ----
 scp /backup-path/to-restore.tar.gz your_username@remotehost.edu:/var/lib/gravity/planet/share
 ----
 
-. Enter the gravity utility through this command:
+1. Enter the gravity utility through this command:
 +
 ----
 sudo gravity enter
 ----
 
 
-. Run the command below:
+1. Run the command below:
 +
 ----
 gravity system restore gravitational.io/anypoint:0.0.0+latest /ext/share/to-restore.tar.gz
@@ -70,7 +70,7 @@ gravity system restore gravitational.io/anypoint:0.0.0+latest /ext/share/to-rest
 +
 This command will restore your entire cluster from one of your backups.
 
-. Then run this other command:
+1. Then run this other command:
 +
 ----
 ACCESS_KEY=$(kubectl get secret pithos-keys -o yaml | grep master.key | awk '{print $2}' | base64 -d) && SECRET_KEY=$(kubectl get secret pithos-keys -o yaml | grep master.secret | awk '{print $2}' | base64 -d) && \
@@ -79,7 +79,7 @@ kubectl get secret hybrid-rest-cloudhub -o yaml | grep override.properties | awk
 +
 This command manually updates a secret on Kubernetes. This step won't be necessary in further releases.
 
-. Restart all of the pods in your cluster to pull up the new secrets. You can do that through the following command:
+1. Restart all of the pods in your cluster to pull up the new secrets. You can do that through the following command:
 +
 ----
 kubectl delete pods --all
