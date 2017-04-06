@@ -20,20 +20,28 @@ The uses for resource level policies are limited mainly by your imagination. Her
 * Securing a subset of an API
 * Setting different limits on resources
 
+The following sections describe how to apply policies to resources and methods that appear in the API simulation example:
+
+image::users-api-cropped.png[API Console displays resources and methods,height=329,width=732]
+
 === Applying Policies to Specific Resources
 
-To apply a policy to an API to the resource itself and all nodes below the resource URI `/api/users/{userid}` that represents a single user, you can use the following URI template regular expression:
-
-`/api/users/.*`
-
-Do _not_ add a `.*` suffix to a placeholder, such as `/api/users/{userid}`. Such an expression does not work because the `{userid}` placeholder does not match an actual ID. The following example of an resource that matches an actual ID has two parts:
+Do _not_ use a placeholder, such as {userid}, in an expression. Using `{userid}` placeholder in an expression fails because the placeholder does not match an actual ID, which looks something like this:
 
 `/api/users/671962fc-f076-4b19-bc38-45ba3a4e4095/permissions/1234`
 
 * 671962fc-f076-4b19-bc38-45ba3a4e4095 is the user ID
 * 1234 is the ID of a permission
 
-Using the URI template regular expression `/api/users/.*/permissions.*` is a valid expression for matching only the `/permissions` nodes in this example.
+To apply a policy to the resource `/api/users/{userid}` itself, which represents a single user, and all nodes below the resource, use the following expression:
+
+`/api/users/.*`
+
+To apply a policy to only the permissions resources, `/api/users/{userId/permissions}` and `/api/users/{userid}/permissions/{premissionId}`, use the following expression:
+
+----
+/api/users/.*/permissions.*
+----
 
 === Securing a Subset of the API
 
@@ -47,12 +55,19 @@ This expression enforces security on write operations, leaving GET (read-only) u
 
 You can enforce rate limiting to user-specific operations with different limits depending on the user action. You can apply rate limiting, for example, multiple times, limiting requests to a greater extent for some resources than others. For example, you can set different limits for read, create, and delete operations per user on the following nodes:
 
-`/api/users/.*/.* → 
-   /api/users/{userId}/assignments; /api/users/{userId}/assignments/{param}/values; /api/users/{userId}/permissions; /api/users/{userId}/permissions/{permissionId}`
+----
+ /api/users/.*/.* → 
+   /api/users/{userId}/assignments; 
+   /api/users/{userId}/assignments/{param}/values; 
+   /api/users/{userId}/permissions; 
+   /api/users/{userId}/permissions/{permissionId}
+----
 
 First, you apply a rate limiting policy to specific methods and resources, selecting the GET (read) method and using the following regular expression:
 
-`/api/users/.*/.*`
+----
+/api/users/.*/.*
+----
 
 You then configure the policy to limit requests to 100 requests per 1 hour, for example.
 
