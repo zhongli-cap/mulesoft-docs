@@ -1,0 +1,81 @@
+= Data Extraction with DataWeave
+:keywords: studio, anypoint, transform, transformer, format, aggregate, rename, split, filter convert, xml, json, csv, pojo, java object, metadata, dataweave, data weave, datawave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping
+
+Based on information that is extracted from the Mule event and environment properties at runtime, Mule evaluates expressions to complete different types of tasks.
+
+== Extract information
+
+** `#[payload]`
+** `#[attributes.propertyName]`
+** `#[myVariableName]`
+** `#[sizeOf payload.shoppingCart.items]`
+
+= Evaluate conditions
+
+** `#[payload.age > 21]`
+** `#[attributes.locale  ==  'en_us']`
++
+The example below evaluates part of the payload to forward requests to different flows.
++
+[source, xml, linenums]
+----
+<choice>
+  <when expression="#[payload.purchaseType == 'book']">
+    <flow-ref name="flow1"/>
+  </when>
+  <when expression="#[payload.purchaseType == 'mp3']">
+   <flow-ref name="flow2"/>
+  </when>
+</choice>
+----
+
+* *Transform* the message.
+** `#[payload: shirtSizeArray ++ "XXL" ]`
+** `#[payload.name: upper payload.name]`
++
+The example below cycles through an array of objects, and sets "size" to upper case in each. It then filters to only those where the "count" field is not 0.
++
+[source,DataWeave, linenums]
+----
+%dw 1.0
+%output application/json
+---
+shirts: payload map {
+    size: upper $.size,
+    count: $.count
+}
+filter $.count > 0
+----
+
+== Transform Data
+
+The *Transform* component allows you to use the language to query and transform data through DataWeave. Any mappings you perform through the graphical interface are also expressed in DataWeave code in real-time and vice-versa.
+////
+* link:link:/anypoint-studio/v/7/using-dataweave-in-studio[Graphically map] fields by dragging one attribute to another
+* Implement this component through link:/mule-user-guide/v/4.0/dataweave-xml-reference[XML]
+////
+== Auto-Complete
+
+If you are configuring a field that supports expressions and need help with syntax, you can access DataWeave suggestions by one of two methods.
+
+* Place your cursor inside the brackets in a field that has `#[]` pre-populated for you, then press Ctrl + Space Bar.
+* Enter `#[` to open a new DataWeave expression and display suggestions, as shown below.
++
+image:auto_complete.png[auto_complete]
++
+[NOTE]
+Note that the autocomplete functionality described here works in the *Visual Editor only*. Although Studio's XML tab does offer some autocomplete options, the suggestions there are limited by Eclipse and are not based on DataSense or DataWeave.
+
+== Additional Tips
+
+* DataWeave performs link:http://en.wikipedia.org/wiki/Type_coercion[type coercion] at runtime. 
+* When writing in Studio's XML editor, you cannot use double quotes to express String literals, because DataWeave expressions already appear enclosed in double quotes in configuration files. Instead, you can either: +
+** use single quotes                   `('expression')`
+** escape quotes with &quot;      `(&quot;expression&quot;)`
+** escape quotes with \u0027      `(\u0027expression\u0027)`
++
+If you're writing on Studio's visual editor, Studio transforms double quotes into escaped quotes `(&quot;) `in the XML view.
+
+////
+== See Also
+////

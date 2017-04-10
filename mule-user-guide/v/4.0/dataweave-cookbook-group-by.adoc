@@ -1,0 +1,157 @@
+= Examples: Changing the Hierarchy of Fields
+:keywords: studio, anypoint, transform, transformer, format, xml, json, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping, groupby, mapobject
+
+The DataWeave examples here use `groupBy` along with `mapObject` and `map` to output a new field hierarchy. One example transforms XML to JSON. The other transforms JSON to JSON.
+
+== XML to JSON Example
+
+The DataWeave example groups `teacher` fields under `subject` in the JSON output. Notice that the subject names in the output are unique, even though they are not unique in the input.
+
+.DataWeave
+[source,DataWeave, linenums]
+----
+%dw 1.0
+%output application/json
+---
+classrooms: payload..*teacher groupBy $.subject mapObject ((teacherGroup, subject) -> {
+   class: {
+     name: subject,
+     teachers: { (teacherGroup map {
+       teacher:{
+           name: $.name,
+           lastName: $.lastName
+       }
+     })
+   }
+  }
+})
+----
+
+.Input XML
+[source, xml, linenums]
+----
+<school>
+    <teachers>
+        <teacher>
+            <name>Mariano</name>
+            <lastName>De Achaval</lastName>
+            <subject>DW</subject>
+        </teacher>
+        <teacher>
+            <name>Emiliano</name>
+            <lastName>Lesende</lastName>
+            <subject>DW</subject>
+        </teacher>
+        <teacher>
+            <name>Leandro</name>
+            <lastName>Shokida</lastName>
+            <subject>Scala</subject>
+        </teacher>
+    </teachers>
+</school>
+----
+
+.Output JSON
+[source, json, linenums]
+----
+{
+  "classrooms": {
+    "class": {
+      "name": "Scala",
+      "teachers": {
+        "teacher": {
+          "name": "Leandro",
+          "lastName": "Shokida"
+        }
+      }
+    },
+    "class": {
+      "name": "DW",
+      "teachers": {
+        "teacher": {
+          "name": "Mariano",
+          "lastName": "De Achaval"
+        },
+        "teacher": {
+          "name": "Emiliano",
+          "lastName": "Lesende"
+        }
+      }
+    }
+  }
+}
+----
+
+== JSON to JSON Example
+
+The DataWeave example changes the hierarchy of a JSON object. The output groups fields by `language` and adds a new element, `attendees`, that contains the names of attendees for each course.
+
+.Input JSON
+[source, json, linenums]
+----
+{
+  "langs": [
+    {
+      "name": "Alex",
+      "language": "Java"
+    },
+    {
+      "name": "Kris",
+      "language": "Scala"
+    },
+    {
+      "name": "Jorge",
+      "language": "Java"
+    }
+  ]
+}
+----
+
+.DataWeave
+[source,DataWeave, linenums]
+----
+%dw 1.0
+%output application/json
+---
+"langs" : (payload.langs groupBy $.language) mapObject ((nameGroup, language) -> {
+     "language" : language,
+     "attendees" :
+     (nameGroup map {
+           name: $.name
+     })
+})
+----
+
+.Output JSON
+[source, json, linenums]
+----
+{
+  "langs": {
+    "language": "Scala",
+    "attendees": [
+      {
+        "name": "Kris"
+      }
+    ],
+    "language": "Java",
+    "attendees": [
+      {
+        "name": "Alex"
+      },
+      {
+        "name": "Jorge"
+      }
+    ]
+  }
+}
+----
+
+== See Also
+
+link:/mule-user-guide/v/4.0/dataweave-types[DataWeave Value Types]
+
+link:/mule-user-guide/v/4.0/dataweave-operators[DataWeave Operators]
+
+link:/mule-user-guide/v/4.0/dataweave-selectors[DataWeave Selectors]
+
+link:/mule-user-guide/v/4.0/dataweave-examples[DataWeave Examples]

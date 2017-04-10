@@ -1,0 +1,157 @@
+= Example: Handling Multiple Inputs
+:keywords: studio, anypoint, transform, transformer, format, aggregate, rename, split, filter convert, xml, json, csv, pojo, java object, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping
+
+In this example, there are three different input JSON files, these three all arrive in one single Mule message, occupying the payload and two link:/mule-user-guide/v/4.0/dataweave-selectors#flow-variables-from-a-mule-message[flow variables]. The payload contains an array of book objects, one flow variable has a set of currency exchange rates, and the other one a query. The transform filters the first input using the conditions passed in the third input, then performs a link:/anypoint-studio/v/6/using-dataweave-in-studio#map[map] to deal with each remaining object separately. Within this map, it defines two variables: *it* and *props*. Through the use of @, attributes are added into the XML tags. A second map operation inside the first one calculates the price of each book for each of the currencies provided in the second input. Another map operation displays each element in the `author` array as a separate <author></author> tag.
+
+
+[TIP]
+See link:/mule-user-guide/v/4.0/dataweave-selectors#flow-variables-from-a-mule-message[flow variables] for how to access flow variables from the input and link:/mule-user-guide/v/4.0/dataweave-selectors#attribute-selector-expressions[Attribute selector expressions] for how to access XML attributes in DataWeave.
+
+== Example Transformation
+
+.DataWeave
+[source,DataWeave, linenums]
+----
+%dw 1.0
+%output application/xml
+---
+books: {
+  (payload filter $.item.properties.year > flowVars.filterParameter.publishedAfter map using (it = $.item, props = $.item.properties) {
+    book @(year: props.year): {
+      (flowVars.exchagneRate.USD map {
+        price @(currency: $.currency): $.ratio * it.price
+      }),
+      title: props.title,
+      authors: { (props.author map {
+        author: $
+      }) }
+    }
+  })
+}
+----
+
+[tabs]
+------
+[tab,title="Inputs"]
+....
+
+=== Input 1
+
+.Input 1 - Payload
+[source, json, linenums]
+----
+[
+  {
+    "item": {
+      "type": "book",
+      "price": 30,
+      "properties": {
+        "title": "Everyday Italian",
+        "author": [
+          "Giada De Laurentiis"
+        ],
+        "year": 2005
+      }
+    }
+  },
+  {
+    "item": {
+      "type": "book",
+      "price": 29.99,
+      "properties": {
+        "title": "Harry Potter",
+        "author": [
+          "J K. Rowling"
+        ],
+        "year": 2005
+      }
+    }
+  },
+  {
+    "item": {
+      "type": "book",
+      "price": 49.99,
+      "properties": {
+        "title": "XQuery Kick Start",
+        "author": [
+          "James McGovern",
+          "Per Bothner",
+          "Kurt Cagle",
+          "James Linn",
+          "Kurt Cagle",
+          "Vaidyanathan Nagarajan"
+        ],
+        "year": 2003
+      }
+    }
+  },
+  {
+    "item": {
+      "type": "book",
+      "price": 39.95,
+      "properties": {
+        "title": "Learning XML",
+        "author": [
+          "Erik T. Ray"
+        ],
+        "year": 2003
+      }
+    }
+  }
+]
+----
+
+=== Input 2
+
+.Input 2 - FlowVariable exchangeRate
+[source, json, linenums]
+----
+{
+  "USD": [
+    {"currency": "EUR", "ratio":0.92},
+    {"currency": "ARS", "ratio":8.76},
+    {"currency": "GBP", "ratio":0.66}
+  ]
+}
+----
+
+=== Input 3
+
+.Input 3 - FlowVariable filterParamenter
+[source, json, linenums]
+----
+{
+  "publishedAfter": 2004
+}
+----
+....
+[tab,title="Output"]
+....
+
+.Output
+[source, xml, linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<books>
+  <book year="2005">
+    <price currency="EUR">27.6</price>
+    <price currency="ARS">262.8</price>
+    <price currency="GBP">19.8</price>
+    <title>Everyday Italian</title>
+    <authors>
+      <author>Giada De Laurentiis</author>
+    </authors>
+  </book>
+  <book year="2005">
+    <price currency="EUR">27.5908</price>
+    <price currency="ARS">262.7124</price>
+    <price currency="GBP">19.7934</price>
+    <title>Harry Potter</title>
+    <authors>
+      <author>J K. Rowling</author>
+    </authors>
+  </book>
+</books>
+----
+....
+------
