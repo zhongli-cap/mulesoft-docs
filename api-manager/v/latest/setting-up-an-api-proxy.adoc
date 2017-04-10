@@ -1,4 +1,4 @@
-= About Proxies
+= Proxy Deployment Reference
 :keywords: proxy, api, rest, raml, soap, cloudhub
 
 API Gateway, incorporated in Mule Runtime 3.8 and later, is the server that hosts a Mule proxy application. To deploy an API from API Manager, you typically create a proxy application that serves to stop attacks aimed at the actual server. This proxy application is sometimes called an auto-generated proxy.
@@ -34,6 +34,102 @@ Permissions for the Runtime Manager and API Manager of your organization.
 An Anypoint Platform account and an Anypoint Platform client ID and client secret to pair the deployment with an organization.
 
 You need valid permissions for the Runtime Manager and API Manager of your organization to deploy a proxy.
+
+== To Deploy a Proxy to CloudHub
+
+In the API Status section of the API version page, click Deploy proxy to deploy the proxy. If you configured the proxy for deployment on CloudHub in the Configure Endpoint, then the proxy is deployed in CloudHub.
+
+The status of the API deployment is indicated by the marker in the API Status section of the API version page. While the app is starting, a spinner appears. After the API starts successfully, the light turns green and Re-deploy Proxy appears. If you make changes to the configuration, re-deploy the proxy application to the same application on CloudHub.
+
+image:ReDeployProxy.png[ReDeployProxy]
+
+== To Deploy a Proxy To a Server
+
+To manage the API behind this endpoint with SLAs and policies, API Manager needs to register the endpoint with the agent.
+
+. In the API Status section of the API version page, click Deploy proxy to deploy the proxy.
++
+If you did not configure the proxy for deployment in CloudHub in the Configure Endpoint dialog, the Deploy Proxy dialog appears.
++
+image::proxying-your-api-65680.png[proxying-your-api-65680]
++
+. Click `Click here`.
++
+Runtime Manager deploys the proxy using the registered Gateway Runtime instance. If there are no registered servers, you are prompted to add one.
++
+image::proxying-your-api-b3c5e.png[proxying-your-api-b3c5e]
++
+. Register your server in Runtime Manager.
+
+== To Deploy a Proxy to Pivotal Cloud Foundry
+
+This modality is in Beta and only available with the Anypoint Platform Private Cloud Edition. To make this modality available, you must first install and configure the PCF Tile.
+
+Also, the API's backend application needs to be deployed on the PCF platform before you can run the command that executes the deployment.
+
+
+Currently, this modality is only available on the command line. To instruct PCF to create and deploy a proxy, you must run the command `cf bind-route-service`. This command must include the following arguments:
+
+[%header%autowidth.spread]
+|===
+|Property |Description
+|*Domain* name| Domain where you want to host your proxy application
+|*service instance* name | Refers to the link:http://docs.pivotal.io/mulesoft/installing.html[proxy service], which is different from the service used when link:/runtime-manager/deploying-to-pcf[deploying Mule applications to PCF]. You might have multiple instances of this proxy service, as you'd have one per every link:/access-management/organization[organization] and link:/access-management/environments[environment] you own.
+|`-f`| *(optional)* Force command to avoid any message prompts.
+|`--hostname` | The host name under which your proxy app is deployed. If `nodejs-app.apps.pcf.com` is the URL to reach your proxy, then `nodejs-app` is the hostname and `apps.pcf.com` is the domain.
+|`-c parameters.json`| Reference to a .JSON file that contains more information. Its required structure is explained below.
+|===
+
+Your command should look like this:
+
+[code]
+----
+$ cf bind-route-service apps.pcf.mulesoft.com api_gateway_service --hostname myapp -c input.json
+----
+
+=== Parameters File
+
+One of your properties should be a link to a .JSON parameters file. This file should include the following information:
+
+[%header%autowidth.spread]
+|===
+|Parameter |Description
+|`orgId` | The Anypoint Platform link:/access-management/organization[organization] in which to deploy the proxy application
+|`envId` | The Runtime Manager link:/access-management/environments[environment] in which to deploy the proxy application
+|`appName` | The name with which you want your proxy application to be registered on Runtime Manager. It will also register an API on API Manager under this same name. You will also see the proxy listed under this name if you execute the command `cf apps`.
+|`--hostname` | The host name under which your proxy app is deployed. If `nodejs-app.apps.pcf.com` is the URL to reach your proxy, then `nodejs-app` is the hostname and `apps.pcf.com` is the domain.
+|'domain` | The domain name where you want to host your application. It should match the domain that you provided as properties on the command.
+| `muleRuntimeVersion` | Mule Runtime version with which to run the deployment of the proxy
+| `anypointServiceName`| The name of the PCF service that you registered in the Space configuration tool
+|`repFactor`| (optional) In case you want your proxy to be deployed on multiple PCF instances.
+|===
+
+Your file should hence resemble the following example:
+
+[source, json, linenums]
+----
+{
+    "orgId": "e2ccc210-95a3-4740-b9cf-1f2d9e693168",
+    "envId": "26ad04b9-422c-45f2-8ee0-caeb73e6c9a9",
+    "appName": "proxyApp",
+    "hostname": "myapp",
+    "muleRuntimeVersion": "3.8.1",
+   "anypointServiceName": "runtime-manager-service",
+    "domain":"apps.pcf.mulesoft.com"
+}
+----
+
+
+== To Deploy a Proxy to API Gateway 2.x
+
+To deploy a proxy to API Gateway 2.x, you can download a current or legacy API Gateway Runtime in ZIP file format. Click API Status > Download proxy. 
+
+image::setting-up-an-api-proxy-7543b.png[setting-up-an-api-proxy-7543b,height=441,width=377]
+
+1. If needed, modify the downloaded zip file to adjust for port conflicts, use shared connector resources, or include custom code for logic that you want to add to the proxy.
+1. Deploy the proxy application.
++
+After deployment, the yellow circle in the status indicator turns green.
 
 == Using HTTPS
 
