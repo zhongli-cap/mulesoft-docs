@@ -1,11 +1,12 @@
 = Examples: Changing the Hierarchy of Fields
 :keywords: studio, anypoint, transform, transformer, format, xml, json, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping, groupby, mapobject
 
-The DataWeave examples here use `groupBy` along with `mapObject` and `map` to output a new field hierarchy. One example transforms XML to JSON. The other transforms JSON to JSON.
+The examples take input that is grouped under one field and transform it into a new structure that groups data under another field.
 
-== XML to JSON Example
+Both examples use these operators:
 
-The DataWeave example groups `teacher` fields under `subject` in the JSON output. Notice that the subject names in the output are unique, even though they are not unique in the input.
+* `groupBy` to organize the fields by `subject`
+* `mapyObject` and `map` to map the fields from the input to the new hierarchy.
 
 .DataWeave
 [source,DataWeave, linenums]
@@ -82,9 +83,24 @@ classrooms: payload..*teacher groupBy $.subject mapObject ((teacherGroup, subjec
 }
 ----
 
-== JSON to JSON Example
+== Example: JSON to JSON
 
 The DataWeave example changes the hierarchy of a JSON object. The output groups fields by `language` and adds a new element, `attendees`, that contains the names of attendees for each course.
+
+.DataWeave
+[source,DataWeave, linenums]
+----
+%dw 1.0
+%output application/json
+---
+"langs" : payload.langs groupBy $.language mapObject ((nameGroup, language) -> {
+     "language" : language,
+     "attendees" :
+     (nameGroup map {
+           name: $.name
+     })
+})
+----
 
 .Input JSON
 [source, json, linenums]
@@ -105,21 +121,6 @@ The DataWeave example changes the hierarchy of a JSON object. The output groups 
     }
   ]
 }
-----
-
-.DataWeave
-[source,DataWeave, linenums]
-----
-%dw 1.0
-%output application/json
----
-"langs" : (payload.langs groupBy $.language) mapObject ((nameGroup, language) -> {
-     "language" : language,
-     "attendees" :
-     (nameGroup map {
-           name: $.name
-     })
-})
 ----
 
 .Output JSON
@@ -147,8 +148,6 @@ The DataWeave example changes the hierarchy of a JSON object. The output groups 
 ----
 
 == See Also
-
-link:/mule-user-guide/v/4.0/dataweave-types[DataWeave Value Types]
 
 link:/mule-user-guide/v/4.0/dataweave-operators[DataWeave Operators]
 
