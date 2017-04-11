@@ -3,7 +3,7 @@
 
 image:logo-cloud-active.png[link="/runtime-manager/deployment-strategies", title="CloudHub"]
 image:logo-hybrid-disabled.png[link="/runtime-manager/deployment-strategies", title="Hybrid Deployment"]
-image:logo-server-disabled.png[link="/runtime-manager/deployment-strategies", title="Anypoint Platform On-Premises"]
+image:logo-server-disabled.png[link="/runtime-manager/deployment-strategies", title="Anypoint Platform Private Cloud Edition"]
 image:logo-pcf-disabled.png[link="/runtime-manager/deployment-strategies", title="Pivotal Cloud Foundry"]
 
 == Overview
@@ -13,7 +13,7 @@ CloudHub features a backend load-balancing service designed to automate the prov
 Each dedicated load balancers allows you to:
 
 . Handle Load balancing amongst the different CloudHub workers that run your application.
-. Define <<SSL Endpoints,SSL configurations>> to enforce two-way SSL client authentication with custom certificates.
+. Define <<SSL Endpoints,SSL configurations>> to provide custom certificates and optionally enforce two-way SSL client authentication.
 . Easily configure <<Mapping Rules,proxy rules>> that map your applications to custom domains, enabling you to for example host everything under a single vanity domain.
 
 [NOTE]
@@ -35,7 +35,7 @@ Additionally, your dedicated load balancer exposes an external domain name that 
 Each Dedicated Load Balancer has a DNS A Record pairing its external domain name (`<lb-name>.lb.anypointdns.net`) to the IP addresses of your workers. +
 Through your DNS provider, you can add this DNS A record to the DNS CNAME records of your DNS servers and use your own hostnames.
 
-If you want your load balancer to handle all connections to your application and you don't want your default domain name for your application publicly exposed, then each application needs to be listening over HTTP on port 8091 or 8092, or you can create a custom mapping policy to redirect outside requests from your load balancer to your specific application.
+If you want your load balancer to handle all connections to your application and you don't want your default domain name for your application publicly exposed, then each application needs to be listening over HTTP on port *8091* or *8092*, or you can create a custom mapping policy to redirect outside requests from your load balancer to your specific application.
 
 [NOTE]
 --
@@ -44,7 +44,7 @@ Your load balancer listens for outside requests over HTTPS and, by default, comm
 
 == SSL Endpoints
 
-By providing a certificate and private key pair, you configure an *SSL endpoint* for your load balancer to validate client requests. +
+By providing a certificate and private key pair, you configure an *SSL endpoint* for your load balancer to serve to clients. +
 Each load balancer can have multiple and independent SSL endpoints. Each one of them identified by their server certificate common name.
 
 [NOTE]
@@ -60,7 +60,7 @@ To associate an SSL endpoint you need to provide:
 [CAUTION]
 The private key file needs to be _passphraseless_
 
-Each SSL Endpoint can only have one CA certificate. If the applications behind your dedicated load balancer are reached by clients that do not share the same CA certificate, you need to create one SSL endpoint per CA certificate, which requires non-overlapping server certificate common names for the various SSL endpoints
+Each SSL Endpoint can have multiple CA certificates and CRLs. Each of these certificates needs to be provided in a single unencrypted, _pem_ encoded file. Ordering for independent CA certificates is not important, but certificates in a chain of trust must be concatenated together.
 
 === Uploading Certificates
 
@@ -80,7 +80,7 @@ This file could contain the entire certificate chain ordered one after the other
 
 [NOTE]
 --
-It is not necessary to include the root certificate in the certificate chain. However, make sure to include the beginning and end tags on each certificate.
+It is not necessary to include the root certificate in the certificate chain. However, make sure to include the ASCII armor in each certificate.
 --
 
 [NOTE]
@@ -88,7 +88,7 @@ You can upload an SSL-Endpoint to your load balancer when creating one using the
 
 === Certificate Validation
 
-The load balancer passes the certificate data to the API using the HTTP headers below:
+If at least one CA certificate is provided for the SSL endpoint, the load balancer passes the client certificate data to the API using the HTTP headers below:
 
 ==== X-SSL-Client-Verify
 
@@ -110,9 +110,9 @@ Contains the serial number used by the CA to identify the client.
 
 === Adding Revocation Lists
 
-CloudHub Load balancer does not support OCSP, so you need to manage your revocations using CRL.
+The CloudHub Load balancer can optionally verify client requests against Certificate Revocation Lists (CRL). All CRL files need to be concatenated into a single _pem_ encoded file for upload. Ordering is not important.
 
-You can add a revocation list when creating the load balancer using the ´-crl´ option in your link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-create[load-balancer create] command.
+You can add a revocation list when creating the load balancer using the ´--crl´ option in your link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-create[load-balancer create] command.
 
 Additionally, if your load balancer is already created, you can use the link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/8617/versions/85955[REST API] to update it. +
 You can send a `PATCH` request to the `/organizations/{orgid}/vpcs/{vpcId}/loadbalancers/{lbId}` endpoint adding a `revocationList` element:
@@ -189,20 +189,22 @@ For example, you can literally bind two hostnames for redirect:
 
 [source,Example,linenums]
 ----
-‘app.example.com’ -> ‘app/example’
+‘app.example.com’ ->  application: `app` URI: `/example’
 ----
 
 Or you can define a pattern to hold the input value:
 
 [source,Example,linenums]
 ----
-‘example.com/{mypattern}’ -> `app/{mypattern}`
+‘example.com/{mypattern}’ -> application: `app-{mypattern}` URI: /data
 ----
 
-The example above causes that both ’example.com/bookings’ and ‘example.com/sales’ match to `app/bookings` and `app/sales` respectively, as the variable `mypattern` holds these values. +
+The example above causes that both ’example.com/bookings’ and ‘example.com/sales’ match to `app-bookings/data` and `app-sales/data` respectively, as the variable `mypattern` holds these values. +
 For input=”bookings.example.com”, the pattern can be resolved by assigning `_mypattern_=”bookings” and for input=`sales.example.com`, the pattern is resolved to assign `_mypattern_=”sales”
 
 Depending on your design, you can choose to leverage your internal redirects to your endpoints using patterns or simply literal mappings.
+
+Note that currently patterns in the application URI are not supported.
 
 === Creating Mapping Rules
 

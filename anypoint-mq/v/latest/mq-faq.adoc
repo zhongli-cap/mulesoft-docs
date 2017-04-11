@@ -1,23 +1,23 @@
-= Anypoint MQ FAQ
+= FAQ: Anypoint MQ
 :keywords: mq, faq, questions, answers
 
 This document lists frequently asked questions about link:/anypoint-mq[Anypoint MQ].
 
-== Why is MQ not shown in Anypoint Platform?
+== FAQ: Why is MQ not shown in Anypoint Platform?
 
 Anypoint MQ requires a separate Enterprise subscription and is not included in the Anypoint Platform trial version. Contact your mailto:support@mulesoft.com[MuleSoft representative] for more information. If you don't have an Enterprise subscription,
 you can use MuleSoft's link:/mule-user-guide/v/3.8/amqp-connector[Active MQ] or link:https://www.rabbitmq.com/[Rabbit MQ].
 
-== How do I create and send messages into MQ from Mule?
+== FAQ: How do I create and send messages into MQ from Mule?
 
 After you obtain an Enterprise subscription and contacted your MuleSoft representative to activate Anypoint MQ, you can use link:https://anypoint.mulesoft.com/#/signin[Anypoint Platform] to create a queue or message exchange, and send messages to it. For more information, see the link:/anypoint-mq/mq-tutorial[MQ Tutorial].
 
-== How does MQ encrypt messages?
+== FAQ: How does MQ encrypt messages?
 
-If you choose to link:/anypoint-mq/mq-queues-and-exchanges#create-a-queue[encrypt messages], Anypoint MQ provides 
+If you choose to link:/anypoint-mq/mq-queues#create-a-queue[encrypt messages], Anypoint MQ provides 
 password-based encryption using PBE with MD5 and Triple DES, and with a 168-bit key.
 
-== Why can't I see FIFO Queue in the plus button?
+== FAQ: Why can't I see FIFO Queue in the plus button?
 
 If the blue create button doesn't list *FIFO Queue*:
 
@@ -26,37 +26,97 @@ If the blue create button doesn't list *FIFO Queue*:
 +
 image:mqfifo-set-to-us-west.png[mqfifo-set-to-us-west]
 
-== Can I use Anypoint MQ on premises?
+== FAQ: How many in flight messages can I have per queue?
+
+Anypoint MQ supports up to 120,000 in flight messages per each non-FIFO queue. FIFO queues permit up to 20,000 in 
+flight messages per FIFO queue due to the extra processing required for FIFO queues. 
+An in flight message is a message received 
+by a queue, but not deleted, that is, a message awaiting ACK or NACK, or a message with an expired 
+*Default Lock TTL* (time-to-live) setting. A single queue can contain an unlimited number of
+messages; however the number of in flight messages is limited. The maximum duration for any message, either in
+flight or not is 2 weeks, after which Anypoint MQ deletes the message.
+
+////
+== FAQ: If I use AUTO acknowledgement mode without a rollback exception strategy, would the message ever be delivered back to the queue?
+
+AUTO acknowledgement mode acks the message at the end of the flow. If the message gets to the end, 
+then it’s ok to ack and the connector acks it. The message is purged once it gets an ack. 
+In the meantime it's in flight until it gets the ack and gets back to the queue due to ack timeout.
+
+If the flow is only ever returning an ACK, then the message is purged (unless the Lock TTL Timeout is fired), 
+and the only time redelivery that occurs is if the Lock TTL Timeout is fired or if a NACK is sent. 
+But in AUTO mode, the only time a NACK is implicitly sent is in a rollback exception strategy.
+
+The Max Redelivery count is not relevant. The redelivery count only increases when a 
+nack is received and when an ack timeout occurs.
+
+If you have a dead letter queue, after the number of retries, the message goes to the DLQ.
+
+When you fetch a message that you send to MQ a time, it's “locked” and not available for other consumers 
+so if you fetch a message with Timeout set to zero, 
+the message fetches repeatedly for all the consumers of that queue.
+
+The Acknowledgement timeout is the time the message is in the flow before considering that the operation was not successful.
+
+*Note:* The Default Lock TTL setting overrides the Acknowledgement Timeout.
+////
+
+== FAQ: Can I use Anypoint MQ on premises?
 
 You can publish a message from an on-premises system to Anypoint MQ and have another on-premises subscriber pull messages off of Anypoint MQ.
 Currently Anypoint MQ cannot be deployed on-premises. If you need a messaging source on-premises, you can use MuleSoft's  link:/mule-user-guide/v/3.8/amqp-connector[Active MQ] instead.
 
-== How can non-Mule applications interface with Anypoint MQ?
+== FAQ: How can non-Mule applications interface with Anypoint MQ?
 
 If you have non-Mule applications, you can use our link:/anypoint-mq/mq-apis[MQ REST API] to send and receive messages.
 
-== If a data center fails, what happens to in-flight messages?
-
-There are multiple data centers in a region which again has multiple availability zones. One availability zone going down does not affect Anypoint MQ services. If the whole region goes down, only a service in that region can be affected.
-
-== If an availability zone fails, what's the client impact?
-
-Anypoint MQ provides persistent data storage across multiple data centers in a region, ensuring that it can handle data center outages and provide full disaster recovery in case of an availability zone going down.
-
-== What is the throughput capacity of Anypoint MQ?
+== FAQ: What is the throughput capacity of Anypoint MQ?
 
 Anypoint MQ is horizontally scalable and we can support higher throughputs as needed.
 
-== Can I be notified when a message arrives in a queue?
+== FAQ: Can I be notified when a message arrives in a queue?
 
 Anypoint MQ provides long polling. You can do a REST request and ask the server
 to keep the TCP socket open for up to 20 seconds to fulfill your request if there are not enough messages.
 
-== Add MQ connector support to Mule shared resources?
+== FAQ: How can I process messages one by one?
 
-At the moment, the only officially supported connectors and transports for shared resources are: HTTP/HTTPS, VM, JMS, JMS Caching Connection Factory, Database, WMQ, JBoss Transaction Manager, and Bitronix Transaction Manager.
+To process messages one by one, set the Anypoint MQ connector to the consume operation, which retrieves a
+message from the queue, or receives null if a message is not available. In addition, use a synchronous flow 
+with a poll scope to fire the process regularly. More than one in-flight message can occur if the process 
+time between `anypoint-mq:consume` and `anypoint-mq:ack` is not lower than the *Default Lock TTL* for the queue, 
+and if you don't create exception options and NACK the message accordingly.
 
-== Can I use a retry strategy with the MQ connector?
+Example:
+
+[source,xml,linenums]
+----
+<flow name="testanypointmq1by1Flow2" processingstrategy="synchronous">
+    <poll doc:name="Poll">
+        <logger doc:name="Logger" level="INFO" message="Pooling fired"></logger>
+    </poll>
+    <anypoint-mq:consume config-ref="Anypoint_MQ_Configuration" destination="queuename" doc:name="Anypoint MQ"/>
+    <logger doc:name="Logger" level="INFO" message="Processing message received. #[payload]"/>
+    <anypoint-mq:ack config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ"/>
+    <logger doc:name="Logger" level="INFO" message="Message processed."/>
+</flow>
+----
+
+== FAQ: Add MQ connector support to Mule shared resources?
+
+The only officially supported connectors and transports for shared resources are: HTTP/HTTPS, VM, JMS, JMS Caching Connection Factory, Database, WMQ, JBoss Transaction Manager, and Bitronix Transaction Manager.
+
+== FAQ: If a data center fails, what happens to in-flight messages?
+
+There are multiple data centers in a region which again have multiple availability zones. One availability zone going down does not affect Anypoint MQ services. If the whole region goes down, only a service in that region can be affected.
+
+See also: <<How many in flight messages can I have per queue?>>
+
+== FAQ: If an availability zone fails, what's the client impact?
+
+Anypoint MQ provides persistent data storage across multiple data centers in a region, ensuring that it can handle data center outages and provide full disaster recovery in case of an availability zone going down.
+
+== FAQ: Can I use a retry strategy with the MQ connector?
 
 The Anypoint MQ connector does not exactly use a connection-based protocol,
 but uses REST behind the scenes, and therefore,
@@ -69,15 +129,23 @@ Otherwise you can use the *until-successful* element with this connector.
 
 You should also configure the HTTP connector so that Global Element Properties > *Set Max Redelivery* is set to the `-1` value.
 
-== Does MQ guarantee message delivery?
+== FAQ: How do we recover and handle failover?
+
+The network that Anypoint MQ runs on provides high availability replications across its many datacenters.
+
+== FAQ: How do we ensure a message is uniquely processed when failover occurs?
+
+If a server fails and failover occurs, messages continue to be processed on other servers in the network on which Anypoint MQ runs. Normal Anypoint MQ queues do not guarantee only-once message delivery, only FIFO queues support only-once message delivery. The high availability network deduplicates messages for FIFO queues automatically.
+
+== FAQ: Does MQ guarantee message delivery?
 
 Yes, Anypoint MQ guarantees "at least once" delivery of messages to the destination.
 
-== How do I create lots of queues and message exchanges?
+== FAQ: How do I create lots of queues and message exchanges?
 
 You can use a `curl` command with the link:/anypoint-mq/mq-apis#mqadminapi[REST Administration API] in a `for` loop to create the number of queues and message exchanges you need. See an link:/anypoint-mq/mq-apis#excoliuscu[example `curl` command] that you can alter to create a queue or message exchange.
 
-== How do I delete a queue?
+== FAQ: How do I delete a queue?
 
 To delete a queue:
 
@@ -95,7 +163,7 @@ image:mq-delete-queue.png[mq-delete-queue]
 
 *Note*: The time it takes to delete or purge a queue is approximately one minute. During this time, the status of the affected queue may not be updated.
 
-== How do I delete a message exchange?
+== FAQ: How do I delete a message exchange?
 
 To delete a message exchange:
 
@@ -113,8 +181,5 @@ image:mq-delete-exchange.png[mq-delete-exchange]
 
 == See Also
 
-* link:/anypoint-mq[Anypoint MQ]
-* link:http://training.mulesoft.com[MuleSoft Training]
-* link:https://www.mulesoft.com/webinars[MuleSoft Webinars]
-* link:http://blogs.mulesoft.com[MuleSoft Blogs]
-* link:http://forums.mulesoft.com[MuleSoft's Forums]
+* link:/anypoint-mq/[Anypoint MQ]
+
