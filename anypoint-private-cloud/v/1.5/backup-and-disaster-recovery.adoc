@@ -13,29 +13,29 @@ Scheduling hourly backups to external storage every hour is recommended to prese
 You must perform backups on a master node of your installation. If you installed the platform with a six server configuration, only three of the servers should be master nodes. If you are running 1 or 3 node installation, all nodes should be master nodes.
 
 
-1. Determine which of nodes is registered as a master node, run the following command on any node in the cluster:
+1. Determine which node is registered as a master node:
 +
 ----
 kubectl get nodes -o yaml|grep master -A 5|grep hostname
 ----
 +
-You can launch the creation of a backup by running the commands below from any one of the servers registered as *master nodes* in the cluster:
+You can run this command on any node in the cluster. To create a backup, you must run the following commands on a master node in the cluster.
 
-1. Enter the gravity utility through this command:
+1. Enter the gravity utility:
 +
 ----
 sudo gravity enter
 ----
 
-1. Create the backup:
+1. Create a backup:
 +
 ----
 gravity system backup gravitational.io/anypoint:0.0.0+latest /ext/share/backup.tar.gz
 ----
 +
-This command creates an archive of the system state, stored in `/var/lib/gravity/planet/share/backup.tar.gz`.
+This command creates an archive of the system state in `/var/lib/gravity/planet/share/backup.tar.gz`.
 
-[NOTE]
+[WARNING]
 ====
 After running the backup command, you may see the following error message:
 
@@ -46,72 +46,66 @@ This indicates that the Kubernetes pod running the backup job is not currently r
 
 == To Perform a System Restore
 
-To restore a system from your backup, use the existing cluster or create a new fresh cluster with the same amount of servers as the restored version. In either case, you must do the following:
+To restore a system from your backup, use the existing cluster or create a new cluster that contains the same number of servers as the cluster being restored.
 
-1. Enter one of the nodes in your cluster, having root access.
-1. Place the ‘tar.gz` archive file in the location `/var/lib/gravity/planet/share`. You can transfer this file securely via the following command:
+1. Log in to one of the nodes in your cluster.
+
+1. Move the compressed archive file to: `/var/lib/gravity/planet/share`. You can transfer this file securely via the following command:
 +
 ----
 scp /backup-path/to-restore.tar.gz your_username@remotehost.edu:/var/lib/gravity/planet/share
 ----
 
-1. Enter the gravity utility through this command:
+1. Enter the gravity utility:
 +
 ----
 sudo gravity enter
 ----
 
 
-1. Run the command below:
+1. Restore the cluster from the backup archive:
 +
 ----
 gravity system restore gravitational.io/anypoint:0.0.0+latest /ext/share/to-restore.tar.gz
 ----
-+
-This command will restore your entire cluster from one of your backups.
 
-1. Then run this other command:
-+
-----
-ACCESS_KEY=$(kubectl get secret pithos-keys -o yaml | grep master.key | awk '{print $2}' | base64 -d) && SECRET_KEY=$(kubectl get secret pithos-keys -o yaml | grep master.secret | awk '{print $2}' | base64 -d) && \
-kubectl get secret hybrid-rest-cloudhub -o yaml | grep override.properties | awk '{print $2}' | base64 -d | sed "s/\(hybrid\.storage\.s3\.accessKey=\).*\$/\1${ACCESS_KEY}/" | sed "s/\(hybrid\.storage\.s3\.secretKey=\).*\$/\1${SECRET_KEY}/" | base64 | tr -d '\n' | { read a; kubectl patch secret hybrid-rest-cloudhub -p '{"data":{"override.properties":"'$a'"}}'; }
-----
-+
-This command manually updates a secret on Kubernetes. This step won't be necessary in further releases.
-
-1. Restart all of the pods in your cluster to pull up the new secrets. You can do that through the following command:
+1. Restart each of the pods in your cluster to use the updated secrets:
 +
 ----
 kubectl delete pods --all
 ----
 +
-Kubernetes will take care of reinstancing every pod automatically, this will take a couple of minutes.
+Kubernetes creates an instance of every pod automatically. This will take a few minutes.
 
 
 
-== Applying Updates
+== To Apply Updates
 
-Application updates will be provided to you as a `.tar.gz` archive file. To apply them, do the following:
+Application updates are provided as an archive file in `.tar.gz` format. To apply updates, peform the following:
 
-. Copy the file to the server with scp (i.e. scp anypoint-update.tar.gz username@server:/home/username)
-. SSH to the server
-. Copy the update file to `/var/lib/gravity/planet/share`
-. Enter the gravity utility through this command:
+1. Copy the file to the server using `scp`:
++
+----
+scp anypoint-update.tar.gz username@server:/home/username
+----
+1. SSH to the server.
+1. Copy the update archive to `/var/lib/gravity/planet/share`.
+1. Enter the gravity utility:
 +
 ----
 sudo gravity enter
 ----
 
-. Run the following command:
+1. Import the archive:
 +
 ----
 gravity app import --ops-url=https://gravity-site.kube-system.svc.cluster.local:3009 --insecure /ext/share/anypoint-update.tar.gz
 ----
 
-. Then run:
+1. Run the following: 
 +
 ----
 gravity app export --ops-url=https://gravity-site.kube-system.svc.cluster.local:3009 --insecure gravitational.io/anypoint:<version>
 ----
 
-. Finally, in the Site management UI in your browser. Click the ‘Update’ button on the new version now available on the ‘Updates’ screen.
+1. In the Ops Center, click **Update** to update the Anypoint Platform to the new version.
