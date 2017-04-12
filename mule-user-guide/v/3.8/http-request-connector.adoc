@@ -16,13 +16,6 @@ The connector can also send HTTP requests to addresses that aren't associated to
 Mule 3.7 and newer provides support for HTTP request Server Name Indication (SNI), which is handled in the HTTP connector's backend.
 --
 
-[NOTE]
---
-Since Mule 3.8, the _HTTP connector_ connects using a *Round Robin DNS* technique.
-
-Mule resolves all IP addresses associated to the specified host and distributes the requests across all returned IPs improving load balancing for the host.
---
-
 == Basic Usage
 
 In Studio, to use this connector as an HTTP _Request_ Connector (and not an HTTP _Listener_ Connector), place it into the *Process* section of a flow (that is, anywhere except the beginning).
@@ -237,13 +230,13 @@ Whenever the message contains outbound attachments, the connector automatically 
 
 === HTTP Headers
 
-If there are any *outbound properties* in the Mule message that arrives to the HTTP Request Connector, these are automatically added as HTTP request headers. It’s also possible to add headers explicitly through the HTTP Request Connector's configuration. See documentation below. 
+If there are any *outbound properties* in the Mule message that arrives to the HTTP Request Connector, these are automatically added as HTTP request headers. It’s also possible to add headers explicitly through the HTTP Request Connector's configuration. See documentation below.
 
 [NOTE]
 --
-By default, the Grizzly libraries used by the HTTP connector limit the HTTP request header section size (request line + headers) to below 8192 bytes. While it is recommended that you keep your HTTP request header section below this limit, you can override this limit by setting `mule.http.headerSectionSize` to a larger value (in bytes). You can set this JVM parameter in the wrapper.conf file, or you can pass it in from the command line when you start the Mule runtime. 
+By default, the Grizzly libraries used by the HTTP connector limit the HTTP request header section size (request line + headers) to below 8192 bytes. While it is recommended that you keep your HTTP request header section below this limit, you can override this limit by setting `mule.http.headerSectionSize` to a larger value (in bytes). You can set this JVM parameter in the wrapper.conf file, or you can pass it in from the command line when you start the Mule runtime.
 
-For example, to set the HTTP header section size to 16,000 bytes, you could start the Mule runtime with the command `./mule -M-Dmule.http.headerSectionSize=16000`.  
+For example, to set the HTTP header section size to 16,000 bytes, you could start the Mule runtime with the command `./mule -M-Dmule.http.headerSectionSize=16000`.
 --
 
 == Adding Custom Parameters
@@ -640,6 +633,25 @@ As with the HTTP Listener Connector, when HTTP responses have a content type of
 
 * *XML Editor*: set the `parseResponse` attribute to false
 * *Studio UI*: Untick the *Parse Response* checkbox in the Advanced tab of the HTTP Request Connector
+
+
+== Round-Robin Requests
+
+Since Mule 3.8, the _HTTP request connector_ connects to its configured hosts using *Round Robin DNS*. Mule Runtime resolves all IP addresses associated to the specified host and distributes the requests across all returned IPs improving load balancing for the host.
+
+When connecting to resources that require authentication, the external service needs to replicate session information between all the IP addresses under the service's host. Otherwise, your requests might get rejected with `unauthorized` messages.
+
+When your external resource does not handle _sticky sessions_ you need to add the service's hostname to the `mule.http.disableRoundRobin` system property when starting the Mule Runtime:
+
+[source,Command,linenums]
+----
+./mule -M-Dmule.http.disableRoundRobin=serverhostname.com
+----
+
+This causes the _HTTP request connector_ to not use DNS round robin when connecting to configured host in the system property.
+
+[TIP]
+`mule.http.disableRoundRobin` system property is available since Mule 3.8.4. Make sure you are up to date with the latest udpate site.
 
 == HTTP Response Validation
 
