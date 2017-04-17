@@ -149,7 +149,7 @@ protocol attribute is HTTPS then the default value is 443.+++ |  | {nbsp}
 unlimited.+++ |  +++-1+++ | {nbsp}
 | Connection Idle Timeout a| Number |  +++The number of milliseconds that a connection can remain idle before it is closed. The value of this attribute is only used
 when persistent connections are enabled.+++ |  +++30000+++ | {nbsp}
-| Client Socket Properties a| <<TcpClientSocketProperties>> |  ++++++ |  | {nbsp}
+| Client Socket Properties a| <<TcpClientSocketProperties>> |  |  | {nbsp}
 | Reconnection Strategy a| * <<reconnect>>
 * <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 | Disable Validation a| Boolean |  +++Disables connection validation+++ |  | {nbsp}
@@ -176,6 +176,9 @@ Consumes an HTTP service.
 | Name | Type | Description | Default Value | Required
 | Configuration | String | The name of the configuration to use. | | *x*{nbsp}
 | Method a| String |  +++The HTTP method for the request.+++ |  +++GET+++ | {nbsp}
+| Streaming Strategy a| * <<repeatable-in-memory-stream>>
+* <<repeatable-file-store-stream>>
+* <<non-repeatable-stream>> |  +++Configure if repeatable streams should be used and their behaviour+++ |  | {nbsp}
 | Body a| Any |  +++The body of the response message+++ |  +++#[payload]+++ | {nbsp}
 | Headers a| Object |  +++HTTP headers the message should include.+++ |  | {nbsp}
 | URI Parameters a| Object |  +++URI parameters that should be used to create the request.+++ |  | {nbsp}
@@ -198,7 +201,7 @@ Consumes an HTTP service.
 ** STREAM
 ** MULTIPART
 ** FORM
-** ANY |  ++++++ |  +++ANY+++ | {nbsp}
+** ANY |  |  +++ANY+++ | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
 | Path a| String |  +++Path where the request will be sent.+++ |  | {nbsp}
 | URL a| String |  +++URL where to send the request.+++ |  | {nbsp}
@@ -263,6 +266,9 @@ Represents a listener for HTTP requests.
 the type of the payload (it will stream only for InputStream). If set to true, it will always stream. If set to false, it
 will never stream. As streaming is done the response will be sent user Transfer-Encoding: chunked.+++ |  +++AUTO+++ | {nbsp}
 | Redelivery Policy a| <<RedeliveryPolicy>> |  +++Defines a policy for processing the redelivery of the same message+++ |  | {nbsp}
+| Streaming Strategy a| * <<repeatable-in-memory-stream>>
+* <<repeatable-file-store-stream>>
+* <<non-repeatable-stream>> |  +++Configure if repeatable streams should be used and their behaviour+++ |  | {nbsp}
 | Parse Request a| Boolean |  +++By default, the request will be parsed (for example, a multi part request will be mapped as a Mule message with null payload
 and inbound attachments with each part). If this property is set to false, no parsing will be done, and the payload will
 always contain the raw contents of the HTTP request.+++ |  | {nbsp}
@@ -271,8 +277,8 @@ If enabled, an error thrown by an HTTP request operation reaching a listener wil
 request operation throws a FORBIDDEN error, for example, then the listener will generate a 403 error response.+++ |  | {nbsp}
 | Reconnection Strategy a| * <<reconnect>>
 * <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
-| Response a| <<HttpListenerResponseBuilder>> |  ++++++ |  | {nbsp}
-| Error Response a| <<HttpListenerResponseBuilder>> |  ++++++ |  | {nbsp}
+| Response a| <<HttpListenerResponseBuilder>> |  |  | {nbsp}
+| Error Response a| <<HttpListenerResponseBuilder>> |  |  | {nbsp}
 |======================
 
 ==== Output
@@ -315,7 +321,7 @@ request operation throws a FORBIDDEN error, for example, then the listener will 
 ** pkcs12
 * String | 
 | Algorithm a| String | 
-| Insecure a| Boolean | false
+| Insecure a| Boolean | 
 |======================
     
 [[KeyStore]]
@@ -343,9 +349,9 @@ request operation throws a FORBIDDEN error, for example, then the listener will 
 [cols=".^30%,.^40%,.^30%", options="header"]
 |======================
 | Field | Type | Default Value
-| Frequency a| Number | 2000
-| Count a| Number | 2
-| Blocking a| Boolean | true
+| Frequency a| Number | 
+| Count a| Number | 
+| Blocking a| Boolean | 
 |======================
     
 [[reconnect-forever]]
@@ -354,7 +360,7 @@ request operation throws a FORBIDDEN error, for example, then the listener will 
 [cols=".^30%,.^40%,.^30%", options="header"]
 |======================
 | Field | Type | Default Value
-| Frequency a| Number | 2000
+| Frequency a| Number | 
 |======================
     
 [[HttpRequestAttributes]]
@@ -384,11 +390,43 @@ request operation throws a FORBIDDEN error, for example, then the listener will 
 [cols=".^30%,.^40%,.^30%", options="header"]
 |======================
 | Field | Type | Default Value
-| Max Redelivery Count a| Number | 5
-| Use Secure Hash a| Boolean | true
+| Max Redelivery Count a| Number | 
+| Use Secure Hash a| Boolean | 
 | Message Digest Algorithm a| String | 
 | Id Expression a| String | 
 | Object Store Ref a| String | 
+|======================
+    
+[[repeatable-in-memory-stream]]
+=== Repeatable In Memory Stream
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Initial Buffer Size a| Number | 
+| Buffer Size Increment a| Number | 
+| Max In Memory Size a| Number | 
+| Buffer Unit a| Enumeration, one of:
+
+** BYTE
+** KB
+** MB
+** GB | 
+|======================
+    
+[[repeatable-file-store-stream]]
+=== Repeatable File Store Stream
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Max In Memory Size a| Number | 
+| Buffer Unit a| Enumeration, one of:
+
+** BYTE
+** KB
+** MB
+** GB | 
 |======================
     
 [[HttpListenerResponseBuilder]]
@@ -399,7 +437,7 @@ request operation throws a FORBIDDEN error, for example, then the listener will 
 | Field | Type | Default Value
 | Status Code a| Number | 
 | Reason Phrase a| String | 
-| Body a| Any | 
+| Body a| Any | #[payload]
 | Headers a| Object | 
 |======================
     
@@ -409,15 +447,15 @@ request operation throws a FORBIDDEN error, for example, then the listener will 
 [cols=".^30%,.^40%,.^30%", options="header"]
 |======================
 | Field | Type | Default Value
-| Connection Timeout a| Number | 
-| Send Tcp No Delay a| Boolean | 
+| Connection Timeout a| Number | 30000
+| Send Tcp No Delay a| Boolean | true
 | Linger a| Number | 
-| Keep Alive a| Boolean | 
-| Fail On Unresolved Host a| Boolean | 
+| Keep Alive a| Boolean | false
+| Fail On Unresolved Host a| Boolean | true
 | Send Buffer Size a| Number | 
 | Receive Buffer Size a| Number | 
 | Client Timeout a| Number | 
-| Reuse Address a| Boolean | 
+| Reuse Address a| Boolean | true
 |======================
     
 [[RamlApiConfiguration]]
@@ -446,7 +484,7 @@ request operation throws a FORBIDDEN error, for example, then the listener will 
 [cols=".^30%,.^40%,.^30%", options="header"]
 |======================
 | Field | Type | Default Value
-| Preemptive a| Boolean | 
+| Preemptive a| Boolean | true
 | Username a| String | 
 | Password a| String | 
 |======================
