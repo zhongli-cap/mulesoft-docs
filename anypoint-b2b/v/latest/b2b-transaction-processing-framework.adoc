@@ -1,15 +1,20 @@
 = B2B Transaction-Processing Framework
 
-A link:/anypoint-b2b/glossary#sectb[_B2B transaction-processing solution_] serves as a translation layer between internal systems and the various formats (X12, EDIFACT, XML, CSV, and others) and transport protocols (AS2, FTP/S, and others) commonly used in electronic transactions between companies. Because a company typically cannot dictate that all its trading partners adhere to a single configuration, it is often necessary to develop custom solutions for each trading partner. When custom software development is required for each trading partner, the effort and time of onboarding new trading partners increases dramatically, thereby limiting the business relationships a company can pursue.
+A link:/anypoint-b2b/glossary#sectb[_B2B transaction-processing solution_] serves as a translation layer between internal systems and the various formats (X12, EDIFACT, XML, CSV, and others) and transport protocols (AS2, FTP/S, and others) commonly used in electronic transactions between companies. Because a company cannot typically dictate that all its trading partners adhere to a single configuration, it is often necessary to develop custom solutions for each trading partner. When custom software development is required for each trading partner, the effort and time required to onboard new trading partners increases dramatically, thereby limiting the business relationships a company can pursue.
 
-link:/anypoint-b2b/glossary#sectb[_B2B Transaction Processing Framework_] enables developers to build a single set of link:/mule-user-guide[Mule Runtime] flows that can process a wide range of messages from many different partners by dynamically applying rules and configuration data stored in link:/anypoint-b2b/anypoint-partner-manager[Anypoint Partner Manager] (APM). This allows non-programmers such as data analysts to onboard new trading partner relationships and support new transaction types using the APM website without the need to develop, test, and deploy new Mule Runtime flows. This section identifies the high-level framework components and delineates their roles in end-to-end B2B transaction processing.		 +link:/anypoint-b2b/glossary#sectb[_B2B Transaction Processing Framework_] enables developers to build a single set of link:/mule-user-guide[Mule Runtime] flows that can process a wide range of messages from many different partners by dynamically applying rules and configuration data stored in link:/anypoint-b2b/anypoint-partner-manager[Anypoint Partner Manager] (APM).
+link:/anypoint-b2b/glossary#sectb[_B2B Transaction Processing Framework_] enables developers to build a single set of link:/mule-user-guide[Mule Runtime] flows that can process a wide range of messages from many different partners by dynamically applying rules and configuration data stored in link:/anypoint-b2b/anypoint-partner-manager[Anypoint Partner Manager] (APM).
+Thus, non-programmers such as data analysts can use APM to onboard new trading partner relationships and support new transaction types without having to develop, test, or deploy new Mule Runtime flows.
+
+This section identifies high-level framework components and their roles in end-to-end B2B transaction processing.
 
 == Functional Architecture
 
-B2B transaction processing typically proceeds through some combination of the following stages. (The exact processing stages used and the order can vary between companies.)
+B2B transaction processing typically proceeds through some combination of the stages shown in xref:img-functional-architecture[].
 
-image:1-functional-architecture.png[1-functional-architecture.png]
+NOTE: Processing stages and their sequence can vary between implementations.
 
+[[img-functional-architecture]]
+image::functional-architecture.png[img-functional-architecture,title="Functional Architecture"]
 === Receive
 
 Each incoming transaction from a partner or internal system is delivered through a transport protocol link:/anypoint-b2b/endpoints[_endpoint_] configured to receive the message.
@@ -32,10 +37,13 @@ Makes sure the required data is present in the required format. This validation 
 Using endpoint configuration data retrieved from the Trading Partner Management (TPM) API the flow dynamically delivers the message to the Business Service endpoint address.
 
 == Technical Architecture
-The following diagram shows the primary components of the framework and how these components interact to process B2B transactions.
+
+xref:img-b2b-message-processing-framework[] shows the primary components of the framework and how these components interact to process B2B transactions.
 Component definitions follow the diagram.
 
-image:2-b2b-message-processing-framework.png[2-b2b-message-processing-framework.png]
+
+[[img-b2b-message-processing-framework]]
+image::b2b-message-processing-framework.png[img-b2b-message-processing-framework,title="B2B Message Processing Framework"]
 
 === MuleSoft-Provided Components
 
@@ -116,9 +124,10 @@ The replay flow coordinates replaying transactions. It polls the Tracking servic
 . Updates the TPM service to indicate that the replay is complete
 
 == Information Architecture: APM-Configurable Entities and Terms
-APM stores the following configuration data in order to support the dynamic processing of different transaction types for different trading partners.
+APM stores the configuration data shown in xref:img-b2b-transaction[] in order to support the dynamic processing of different transaction types for different trading partners.
 
-image:3-b2b-transaction.png[3-b2b-transaction.png]
+[[img-b2b-transaction]]
+image::b2b-transaction.png[img-b2b-transaction,title="B2B Transaction"]
 
 === Partner
 Represents an external company with which your company does business. Your company itself is also considered a Partner.
@@ -191,7 +200,10 @@ Connects a Source Channel to a Target Channel.
 === Transaction
 Denotes the end-to-end processing of a single instance of a document from the receipt at an endpoint all the way to the desired destination. A TransactionId can be used to find metadata and persisted payloads for the transaction at each stage.
 
-=== Inbound and Outbound Transactions
+=== Directional Processing
+
+Transactions are either _inbound_ or _outbound_.
+
 Inbound transaction::  A transaction between an external partner and the home organization, initiated by the external partner.
 
 Outbound transaction:: A transaction between the home organization and an external partner, initiated by the home organization.
@@ -199,11 +211,11 @@ Outbound transaction:: A transaction between the home organization and an extern
 ////
 Inbound versus Outbound is always used to denote direction of documents being exchanged between partners. A document from an external partner to the home organization is considered Inbound. A document sent from the home organization to an external partner is considered Outbound.
 ////
-The following diagram depicts the relationships between these configuration entities relative to the processing of inbound or outbound transactions:
+xref:img-inbound-outbound[] depicts the relationships between these configuration entities relative to the processing of inbound or outbound transactions:
 
-image:4-inbound-outbound.png[4-inbound-outbound.png]
-
-NOTE: In the interest of covering the range of possible usage scenarios, this information architecture supports configuration options that are not all needed in every scenario.
+[[img-inbound-outbound]]
+image::inbound-outbound.png[img-inbound-outbound,title="B2B Directional Processing"]
+NOTE: In the interest of illustrating a range of usage scenarios, the architecture shown in xref:img-inbound-outbound depicts configuration details that may not appear in a specific scenario.
 
 For example, a common pattern for inbound transactions is to map an incoming document into a standard internal format, often called the “canonical” format. If the target system accepts this canonical format, there is no need to apply two maps. A map can be configured for the Source Channel to transform into the canonical format, and there is no map needed for the Target Channel. However, if there are multiple Target Channels for a given Source Channel, there may be a need to apply an additional map in one of the Target Channels, so in that case two different maps would be applied.
 
@@ -211,8 +223,7 @@ For an Outbound transaction, the document might originate in the canonical forma
 
 == User Interface
 
-The APM user interface enables detailed link:/anypoint-b2b/transaction-monitoring[Transaction Monitoring] and
-configuration.
+The APM user interface enables link:/anypoint-b2b/partner-configuration[partner configuration] and detailed link:/anypoint-b2b/transaction-monitoring[Transaction Monitoring].
 
 === Configuration
 
