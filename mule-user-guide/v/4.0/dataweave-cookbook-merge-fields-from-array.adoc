@@ -1,16 +1,20 @@
-= Example: Merging and Filtering Fields
+= Example: Merging Multiple Inputs
 :keywords: studio, anypoint, transform, transformer, format, aggregate, filter, json, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping, contains, as
 
-This example merges data within `author` and `price` fields from an array of objects. Each object is uniquely identified by a `bookId` key.
 
-It uses these operations:
+This example deals with an input that contains a collection of payloads. The first payload lists price by book, the second lists authors by book, where each book can be identified by a unique `bookId` key. This transformation merges both payloads into one, matching their keys, where one book may have several authors.
 
-* `map` goes through the fields within the first index of the payload's array (`payload[0]`).
-* `using` and `filter` allow you to capture data from fields in objects that share the same `bookId` so you can merge the correct `author` fields from `payload[1]` into the output.
 
-////
-Note that the same DataWeave script can merge a collection of payloads that are grouped into a single Mule event. Such input can be produced with a Scatter-Gather component in your flow before the Transformer component.
-////
+[NOTE]
+Note that this is not the same as having as an input a single payload that consists of an array. Here, there are multiple separate payload elements within one single Mule Event object. This kind of data structure can be produced, for example, by a scatter-gather component.
+
+It uses these functions:
+
+* `map` goes through the elements of the first payload (`payload[0]`). While on each element, a second `map` function goes through the elements of the second payload (`payload[1]`) that match the filter criteria.
+* `using` defines a shorter alias within the scope of the main `map` function.
+* `filter` limits the scope of the second `map` function to only objects that share the same `bookId` as is currently being processed by the first `map` function. In that way, only relevant authors for each are listed in the output.
+
+
 
 .DataWeave
 [source,DataWeave, linenums]
@@ -19,16 +23,21 @@ Note that the same DataWeave script can merge a collection of payloads that are 
 %output application/json
 ---
 
-payload[0] map using (id = $.bookId) {
-	bookId:	 	$.bookId,
-  title:    $.title,
-	price: 		$.price as Number,
-	(payload[1] filter ($.*bookId contains id)  map {
-		author:$.author
+payload[0]  map (bookPrice) -> using (id = bookPrice.bookId) {
+	bookId:	id,
+    title:  bookPrice.title,
+	price: 	bookPrice.price as Number,
+	(payload[1] filter ($.*bookId contains id)  map (authorByBook) -> {
+		author:authorByBook.author
    })
 }
-
 ----
+
+////
+This is not the same as the original example. Like that it's not too different from the "group by" example, except that it does things in a less efficient way.
+
+The whole point of this example is that the input is in separate objects.
+
 
 .Input
 [source,JSON, linenums]
@@ -56,9 +65,8 @@ payload[0] map using (id = $.bookId) {
     }]
 }
 ----
-
 ////
-=== JSON Inputs for the Collection
+
 .Input 1 for Collection - Payload[0]
 [source, json, linenums]
 ----
@@ -89,9 +97,38 @@ payload[0] map using (id = $.bookId) {
   }
 ]
 ----
-////
 
-=== Output
+
+
+
+.Output
+[source, json, linenums]
+----
+[
+  {
+    "bookId": "101",
+    "title": "world history",
+    "year": "2017",
+    "isbn": "11111",
+    "price": "19.99",
+    "author": "john doe"
+  },
+  {
+    "bookId": "202",
+    "title": "the great outdoors",
+    "year": "2016",
+    "isbn": "22222",
+    "price": "15.99",
+    "author": "jane doe"
+  }
+]
+----
+
+
+
+
+
+////
 .Output
 [source, json, linenums]
 ----
@@ -110,7 +147,7 @@ payload[0] map using (id = $.bookId) {
   }
 ]
 ----
-
+////
 ////
 Note that the *sample data* section of the Transform message component does not allow you to provide it a collection of multiple payloads as a sample. The only way to test this example is running it.
 ////

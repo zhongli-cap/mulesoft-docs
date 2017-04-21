@@ -1,12 +1,13 @@
 = Example: Mapping Data with DataWeave
 :keywords: studio, anypoint, transform, transformer, format, aggregate, rename, split, filter convert, json, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping, as
 
-This example uses the DataWeave `map` operator to reorganize an array of books.
+This example uses the DataWeave `map` function to iterate through an array of books and perform a series of tasks on each.
 
-It uses these DataWeave operators:
+It uses these DataWeave functions:
 
 * `map` to go through each object in the `books` array.
 * `as` to coerce the price data into a Number type, which ensures that the transformation generates the correct type for each element.
+
 
 .DataWeave
 [source,DataWeave,linenums]
@@ -14,16 +15,20 @@ It uses these DataWeave operators:
 %dw 1.0
 %output application/json
 ---
-items: (payload.books map {
+items: payload.books map (item, index) -> {
       type: "book",
-      price: $.price as Number,
+      price: item.price as Number,
+      id: index,
       properties: {
-        title: $.title,
-        author: $.author,
-        year: $.year as Number
+        title: item.title,
+        author: item.author,
+        year: item.year as Number
       }
-})
+}
 ----
+
+
+
 
 .Input JSON
 [source, json, linenums]
@@ -89,6 +94,7 @@ items: (payload.books map {
     {
       "type": "book",
       "price": 30.00,
+      "id": 0,
       "properties": {
         "title": {
           "-lang": "en",
@@ -101,6 +107,7 @@ items: (payload.books map {
     {
       "type": "book",
       "price": 29.99,
+      "id": 1,
       "properties": {
         "title": {
           "-lang": "en",
@@ -113,6 +120,7 @@ items: (payload.books map {
     {
       "type": "book",
       "price": 49.99,
+      "id": 2,
       "properties": {
         "title": {
           "-lang": "en",
@@ -131,6 +139,7 @@ items: (payload.books map {
     {
       "type": "book",
       "price": 39.95,
+      "id": 3,
       "properties": {
         "title": {
           "-lang": "en",
@@ -143,6 +152,35 @@ items: (payload.books map {
   ]
 }
 ----
+
+
+
+
+== Using Default Values
+
+
+The following example performs the same transformation as above, but it doesn't explicitly define the properties "item" ad "index". Instead, it calls them through the default names: `$` and `$$` respectively.
+
+
+.DataWeave
+[source,DataWeave,linenums]
+----
+%dw 1.0
+%output application/json
+---
+items: (payload.books map {
+      type: "book",
+      price: $.price as Number,
+      id: $$,
+      properties: {
+        title: $.title,
+        author: $.author,
+        year: $.year as Number
+      }
+})
+----
+
+
 
 == See Also
 
