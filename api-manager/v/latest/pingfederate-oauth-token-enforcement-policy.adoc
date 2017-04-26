@@ -1,14 +1,14 @@
 = OpenAM and PingFederate OAuth Token Enforcement Policies
 
-The authorization enforcement policy you apply to an API in Anypoint Platform to connect to an OpenAM or PingFederate authorization server enforces access according to the way you configure the policy. You configure the following things as described in this document:
+The authorization enforcement policy, which you apply to an API in Anypoint Platform, connects to an OpenAM or PingFederate authorization server. The policy enforces access according to the configuration of the following things:
 
 * Scope of access (optional)
 * The proxy connection to the authorization server (PingFederate only)
 * OpenAM OAuth clients (OpenAM only)
 
-This document also describes modifying the API to verify the credentials of the user requesting an access token. 
-
 To apply the OpenAM or PingFederate OAuth Token Enforcement policy to an API, use the general procedure for applying policies. You configure scope of access as you apply the policy. 
+
+In addition to configuration tasks, you can implement verification of the credentials of the user requesting an access token. 
 
 == Prerequisites
 
@@ -20,7 +20,7 @@ To apply the OpenAM or PingFederate OAuth Token Enforcement policy to an API, us
 
 This diagram shows how the policy works with an existing OpenAM or PingFederate authorization server to protect access to your API version.
 
-image::openam-oauth-token-enforcement-policy-0fbb9.png[]
+image::openam-oauth-token-enforcement-policy-0fbb9.png[1 Authorize app to access API 2 Send user credentials 3 Send valid token 4 Call API 5 Check scope and token in header/parameter 6 Validate token in header/parameter and scope 7 API is called]
 
 * First, the client application requests the token directly from the authorization server before making an API call. The client application makes this request by authenticating with user credentials. 
 * The server supplies the client application with a valid token. 
@@ -42,13 +42,17 @@ You optionally fill in the scopes field when you apply the policy to your API ve
 
 Assuming you have deployed the API, to configure `scopes`:
 
-. In API Manager, navigate to the link:/api-manager/tutorial-set-up-and-deploy-an-api-proxy[API version details page]page of your API.
-. Click *Apply*.  
+. In API Manager, navigate to the API version details page of your API.
+. Click Apply.  
 . In the Configure PingFederate OAuth Token Enforcement Policy dialog, enter a space-separated list of strings that indicate the scope of application access to your API. This access needs to correspond to credentials defined for applications in OpenAM or PingFederate.
 
 == Configuring the Proxy Connection to PingFederate
 
-You optionally enable or disable the proxy network connection between the API and PingFederate by setting the `anypoint.platform.ping_federate_enable_proxy_setting` parameter. This parameter is located in the following wrapper configuration file, depending on the Mule Runtime or API Gateway Runtime version:
+You optionally enable or disable the proxy network connection between the API and PingFederate by setting the following parameter:
+
+`anypoint.platform.ping_federate_enable_proxy_setting`
+
+This parameter is located in the following wrapper configuration file, depending on the Mule Runtime or API Gateway Runtime version:
 
 * Mule Runtime 3.8.x with unified API Gateway: `$MULE_HOME/conf/wrapper.conf`
 * API Gateway Runtime 2.1.x and 2.2.x: `/conf/wrapper.conf` file from the API Gateway software distribution 
@@ -84,10 +88,7 @@ The API can include a check of the credentials of the user requesting the access
 
 This example accesses the user ID of the end user who is calling the API through the application:
 
-[source, code, linenums]
-----
-#[flowVars['_agwUser']['uid']]
-----
+`#[flowVars['_agwUser']['uid']]`
 
 [%header,cols="10a,90a",width=80%]
 |===
@@ -102,7 +103,7 @@ This example accesses the user ID of the end user who is calling the API through
 The policy returns a Mule message that includes outbound properties that provide information about what externally authenticated users or applications are using your API. Depending on the grant type of the incoming request token, this is expressed in different headers:
 
 * If the token of the request is of Grant types resource owner credentials, implicit, or authorization code, the header X-AGW-userid contains the ID of the user that made the request.
-* If the token of the request is of Grant type client credentials, the header`X-AGW-client_id` contains the ID of the application that made the request.
+* If the token of the request is of Grant type client credentials, the header `X-AGW-client_id` contains the ID of the application that made the request.
 
 Either of the two properties are available to be referenced and used internally in your proxy by any component that follows it in the flow.
 
@@ -135,4 +136,5 @@ Transfer-Encoding: chunked
 * link:https://www.pingidentity.com/en/products/pingfederate.html[Ping Federate] identity provider (IdP)
 * link:/access-management/external-identity#instructions-for-saml-configuration[SAML 2.0]
 * link:/mule-user-guide/v/3.8/mule-expression-language-mel[MEL expressions]
+* link:/api-manager/tutorial-set-up-and-deploy-an-api-proxy[API version details page]
 
