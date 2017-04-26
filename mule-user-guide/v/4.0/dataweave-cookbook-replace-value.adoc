@@ -3,9 +3,9 @@
 
 This examples changes the values of some XML elements. Here, it changes the values of keys containing sensitive data to a set of asterisks (\****).
 
-It uses these operators:
+It uses these functions:
 
-* `mapObject` to go through the `key:value` pairs in an XML object.
+* `mapObject` to go through the users in the input. When on each user, it uses two other `mapObject` functions to go through the fields in both personal information and the login information.
 * `unless` with `otherwise` to mask the values of the `ssn` and `password` keys.
 
 .DataWeave
@@ -14,13 +14,15 @@ It uses these operators:
 %dw 1.0
 %output application/xml
 ---
-users: { (payload.users mapObject {
+users: { (payload.users mapObject (userObject, data) -> {
     user: {
-         personal_information: $.personal_information mapObject {
-              ($$): $ unless $$ ~= "ssn" otherwise "****"
+         personal_information: userObject.personal_information mapObject (value, key) ->
+         {
+              (key): value unless key ~= "ssn" otherwise "****"
          },
-         login_information: $.login_information mapObject {
-            ($$): $ unless $$ ~= "password" otherwise "****"
+         login_information: userObject.login_information mapObject (value, key) ->
+         {
+            (key): value unless key ~= "password" otherwise "****"
          }
       }
    })
@@ -89,6 +91,28 @@ users: { (payload.users mapObject {
   </user>
 </users>
 ----
+
+
+
+////
+Without explicitly defined keys:
+
+%dw 1.0
+%output application/xml
+---
+users: { (payload.users mapObject {
+    user: {
+         personal_information: $.personal_information mapObject {
+              ($$): $ unless $$ ~= "ssn" otherwise "****"
+         },
+         login_information: $.login_information mapObject {
+            ($$): $ unless $$ ~= "password" otherwise "****"
+         }
+      }
+   })
+}
+
+////
 
 
 == See Also
