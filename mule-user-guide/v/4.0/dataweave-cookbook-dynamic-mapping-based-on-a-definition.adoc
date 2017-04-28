@@ -1,0 +1,105 @@
+= Example: Dynamic Mapping Based on a Definiton
+:keywords: studio, anypoint, transform, transformer, format, aggregate, rename, split, filter convert, xml, json, csv, pojo, java object, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping
+
+
+Based on a mapping definition, stored for instance in a DB table, you can execute a transformation that can dynamically change depending on the contents of this mapping definition. This example receives both a payload input, and a variable named `mapping` that specifies how to rename each field and what default value to use in each.
+
+The example uses the following:
+
+* A `map` function to go through all of the elements in the input array. Also a second `map` function to go through each field in each element.
+* A custom function that applies the changes specified in the `mapping` variable
+* `default` to set a default value, that comes from the `mapping` variable
+
+
+.DataWeave
+[source,dataweave, linenums]
+----
+%dw 1.0
+%output application/json
+%var applyMapping = (input, mappingsDef) -> (
+   mappingsDef map (def) -> {
+    (def.target) : input[def.source] default def."default"
+  }
+)
+---
+payload.sfdc_users.*sfdc_user map (user) -> (
+        applyMapping(user, variables.mapping)
+)
+----
+
+
+.Input Payload
+[source,XML, linenums]
+----
+<sfdc_users>
+    <sfdc_user>
+      <sfdc_name>Mariano</sfdc_name>
+      <sfdc_last_name>Achaval</sfdc_last_name>
+      <sfdc_employee>true</sfdc_employee>
+    </sfdc_user>
+    <sfdc_user>
+      <sfdc_name>Julian</sfdc_name>
+      <sfdc_last_name>Esevich</sfdc_last_name>
+      <sfdc_employee>true</sfdc_employee>
+    </sfdc_user>
+    <sfdc_user>
+      <sfdc_name>Leandro</sfdc_name>
+      <sfdc_last_name>Shokida</sfdc_last_name>
+    </sfdc_user>
+</sfdc_users>
+----
+
+
+.Input Variable `mappings`
+[source,json, linenums]
+----
+[
+  {
+    "source": "sfdc_name",
+    "target": "name",
+    "default": "---"
+  },
+  {
+    "source": "sfdc_last_name",
+    "target": "lastName",
+    "default": "---"
+  },
+  {
+    "source": "sfdc_employee",
+    "target": "user",
+    "default": true
+  }
+]
+----
+
+.Output JSON
+[source,json, linenums]
+----
+[
+  [
+    {"name": "Mariano"},
+    {"lastName": "Achaval"},
+    {"user": "true"}
+  ],
+  [
+    {"name": "Julian"},
+    {"lastName": "Esevich"},
+    {"user": "true"}
+  ],
+  [
+    {"name": "Leandro"},
+    {"lastName": "Shokida"},
+    {"user": true}
+  ]
+]
+----
+
+== See Also
+
+link:/mule-user-guide/v/4.0/dataweave-types[DataWeave Value Types]
+
+link:/mule-user-guide/v/4.0/dataweave-operators[DataWeave Operators]
+
+link:/mule-user-guide/v/4.0/dataweave-selectors[DataWeave Selectors]
+
+link:/mule-user-guide/v/4.0/dataweave-examples[DataWeave Examples]
