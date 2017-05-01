@@ -1,0 +1,88 @@
+= To Use a Dynamic Query
+
+This procedure builds on the example that connects a Mule app to a database using the Classic Models sample database. Use a dynamic query correctly to avoid exposing your data to SQL injection. You can safely substitute an expression for a database object name by using a variable expression. For example, in the SELECT statement using a variable expression to represent a dynamic table name in the FROM clause is ok. In a WHERE clause, using a variable expression to represent different parameter values is bad. To construct queries that take different parameter values, use the input parameter syntax: `:<value>`
+
+In this procedure, you set up a flow containing the following components:
+
+* HTTP
++
+Serves as a listener that does not specify a method.
++
+* Transformer 
++
+Declares and sets a variable table name.
++
+* Database
++
+Connects to the MySQL classic models database and issues a select query using the variable table name. 
+
+You run the app using one table name and then another in the URL to trigger the app.
+
+. In Design Center, create a new project and select a trigger, for example, select HTTP, and accept or change the listener configuration. For example, accept the default CloudHub HTTP configuration, which is host name = 0.0.0.0 and port = 8081.
+. In General, set Path to the path of the HTTP URL, for example, set Path to `/`, and accept the other default listener settings. Close the connector.
+. Click `+`, select the Transformer component, and declare a variable named cm_table:
++
+* In Transform, on the Mappings tab, select Output Payload > Add Transformation.
++
+* In Type, select Variable.
++
+* In Name, enter a variable name, for example cm_table.
++
+* Click Create.
++
+* In the center of the Mappings pane, click Customize Data Type.
++
+* In Transform, in Data Type for Variables cm_table, select New Data Type.
++
+* In Name, type tablename.
++
+* In Format, accept the default, JSON.
++
+* In Type, select From Example.
++
+* Enter the following JSON example, enclosed in quotation marks as shown:
++
+`"productlines"`
++
+`productlines` is the case-sensitive name of a classicmodels table.
++
+. Set the variable to an expression based on how you intend to fire the app trigger. For example, on the Source tab, in Transformation Source, enter the following DataWeave code to set the variable to a query parameter that you intend to use:
++
+----
+%dw 1.0
+
+%output application/java  
+---
+{
+  "cm_table": attributes.queryParams
+}
+----
++
+. Add a database connector to the flow, set up a classicmodels database for a Select operation.
+. In Database - Select, in General, click image:function-key.png[f of x key]. 
++
+Enter the following SQL query text and concatenated expression:
++
+`'SELECT * FROM ' ++ attributes.queryParams.cm_table`
++
+. In Design Center, click Run or Update. Fire the app trigger:
++
+* Select Running > Copy Link.
++
+* Paste the link in a browser or client.
++
+* To the URL, add the variable name equals a table name as a query parameter. For example:
++
+`+https://...cloudhub.io/?cm_table=productlines+`
++
+The HTTP listener hears the request, starts the app, and a file containing the query results is downloaded to your localhost. 
++
+. Open the database connector and select Live > Output.
++
+The results of querying the productlines table appear in JSON format.
++
+. Repeat the previous two steps using a different table name, for example:
++
+`+https://...cloudhub.io/?cm_table=productlines+`
++
+The results of querying the payments table appear when you select Live > Output.
