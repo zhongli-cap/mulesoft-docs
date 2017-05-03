@@ -68,7 +68,7 @@ Settings: Leave fields empty.
 * *JSON to Object* - Converts the String to a Java Map object. +
 Settings: Set *Return Class* to `java.util.Map`
 * *ObjectStore* - Stores data in the Runtime Manager Application Data area. +
-Settings: Set *Connector Configuration*: `ObjectStore_Configuration`, in the plus menu leave fields empty, *Operation*: `Store`, *Key*: `&#x0023;[payload.key]`, *Value Reference*: `&#x0023;[payload.value]`
+Settings: Set *Connector Configuration*: `ObjectStore_Configuration`, in the plus menu, specify a Partion Name, which can be any unique name. You can leave the other fields empty -- If you specify a value for entryTtl, values for expirationInterval and maxEntries are also required. You can set entryTtl to 0 for never expire. For *Operation*: `Store`, *Key*: `&#x0023;[payload.key]`, and *Value Reference*: `&#x0023;[payload.value]`
 * *Set Payload* - Displays a confirmation prompt that appears after you use the *curl* command. +
 Settings: Set *Settings* to `KEY: &#x0023;[payload.key] AND VALUE: &#x0023;[payload.value] WERE SAVED OK`
 +
@@ -78,29 +78,43 @@ The source for this example is:
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:json="http://www.mulesoft.org/schema/mule/json"
-	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="
-http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
-    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
-    <objectstore:config name="ObjectStore__Connector" doc:name="ObjectStore: Connector"/>
-    <flow name="objstoredemoFlow">
-        <http:listener config-ref="HTTP_Listener_Configuration" path="/store" doc:name="HTTP"/>
-        <object-to-string-transformer doc:name="Object to String" />
-        <json:json-to-object-transformer returnClass="java.util.Map" doc:name="JSON to Object" />
-       <objectstore:store config-ref="ObjectStore__Connector" doc:name="ObjectStore" key="#[payload.key]" value-ref="#[payload.value]"/>
-       <set-payload value="KEY: #[payload.key] AND VALUE: #[payload.value] WERE SAVED OK" />
+<mule xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore" 
+xmlns:json="http://www.mulesoft.org/schema/mule/json" 
+xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+xmlns="http://www.mulesoft.org/schema/mule/core" 
+xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+xmlns:spring="http://www.springframework.org/schema/beans" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://www.springframework.org/schema/beans 
+http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core 
+http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/json 
+http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/http 
+http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/objectstore 
+http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" 
+     port="8081" doc:name="HTTP Listener Configuration"/>
+    <objectstore:config name="ObjectStore__Connector" partition="mypartition" entryTtl="0" expirationInterval="42" maxEntries="42" doc:name="ObjectStore: Connector"/>
+    <flow name="objectstoreFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" 
+        path="/store" doc:name="HTTP"/>
+        <object-to-string-transformer doc:name="Object to String"/>
+        <json:json-to-object-transformer returnClass="java.util.Map" 
+        doc:name="JSON to Object"/>
+        <objectstore:store config-ref="ObjectStore__Connector" 
+        key="#[payload.key]" value-ref="#[payload.value]" doc:name="ObjectStore"/>
+        <set-payload value="KEY: #[payload.key] AND VALUE: #[payload.value] WERE STORED__" 
+        doc:name="Set Payload"/>
     </flow>
 </mule>
 ----
 +
 . Run this application as a Mule application to test it. After the application works, you can stop the application.
-. Export the application and save it as a zip file on your computer.
+. Export the application and save it as a zip file on your computer. Right-click the project name in Package Explorer, 
+click Export > Mule > Anypoint Studio Project to Mule Deployable Archive.
 . Log into link:https://anypoint.mulesoft.com/#/signin[Anypoint Platform] and click
 *Runtime Manager*. Deploy the application and use the zip file that you exported to your computer for the deployed application.
 . Start the deployed application.
@@ -110,7 +124,7 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 ----
 curl -X POST -H "Content-Type: application/json" -d '{
     "key": "Test",
-    "value": "Test sent to the object store"
+    "value": "This text sent to the object store"
 }' "http://objectstoredemo.cloudhub.io/store"
 ----
 +

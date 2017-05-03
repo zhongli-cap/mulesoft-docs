@@ -5,7 +5,7 @@
 This product was previously named Anypoint Platform On-Premises Edition. Beginning with the 1.5.1 release, it is named Anypoint Platform Private Cloud Edition.
 
 
-== To Create a Backup
+== Creating a Backup
 
 To preserve your data in case of system failure, you must ensure that you system is automatically backed up. You should configure your backup to run at least once per day, although MuleSoft recommends that you back up your system hourly.
 
@@ -47,7 +47,7 @@ After running the backup command, you may see the following error message:
 This indicates that the Kubernetes pod running the backup job is not currently running.
 ====
 
-== To Perform a System Restore
+== Performing a System Restore
 
 To restore a system from your backup, use the existing cluster or create a new cluster containing the same number of servers as the cluster being restored.
 
@@ -65,20 +65,38 @@ scp /backup-path/to-restore.tar.gz your_username@remotehost.edu:/var/lib/gravity
 sudo gravity enter
 ----
 
-
 1. Restore the cluster from the backup archive:
 +
 ----
 gravity system restore gravitational.io/anypoint:0.0.0+latest /ext/share/to-restore.tar.gz
 ----
 
-1. Restart each of the pods in your cluster to use the updated secrets:
+1. Run the following script after the restore is complete. This script recreates each pod to ensure that it uses the restored secrets.
 +
 ----
-kubectl delete pods --all
+deployments=$(kubectl get deployments | awk 'NR>1 {print $1}')
+now=$(date "+%Y-%m-%d-%H-%M-%S")
+
+    #Recreate stolon-keeper pods to update database's certificate
+    kubectl delete pods --selector stolon-keeper=yes
+
+    # Wait for database pods to restart
+    while kubectl get pods | grep stolon-keeper | grep -q ContainerCreating; do
+        echo "Waiting for database pods..."
+        sleep 5s
+    done
+
+    # Patching deployment's metadata will trigger redeploy of pods automatically
+    for deployment in $deployments; do
+        kubectl patch deployment $deployment -p '{"spec":{"template":{"metadata":{"labels":{"restore": "'"$now"'"}}}}}'
+        sleep 5s
+        while kubectl get pods | grep -q -e ContainerCreating -e Pending; do
+            echo "Waiting for service pods..."
+            sleep 5s
+        done
+done
 ----
-+
-Kubernetes creates an instance of every pod automatically. This will take a few minutes.
+
 
 == See Also
 
