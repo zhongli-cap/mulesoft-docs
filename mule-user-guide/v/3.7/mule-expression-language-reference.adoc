@@ -210,25 +210,38 @@ Applies the XPath expression to the XML element specified by the MEL expression 
 
 Regular expressions provide a means of specifying patterns to look for in a stream of text, and actions to take upon the patterns when found. The regex function enables you to use regular expressions from within MEL. Regular expressions in MEL use the syntax recognized by the `java.util.regex` package. 
 
-* `&#x0023;[regex(regularExpression)]` +
-Applies the regular expression to the message payload. MEL processes as follows:
+[%header,cols="35a,65a"]
+|===
+|Expression |Description
+|`&#x0023;[regex(regularExpression)]`|Applies the regular expression to the message payload. 
 
-. Creates a `java.util.regex.Matcher` using a compiled version of the regular expression and a string representing the payload.
-. If there are no matches, return null.
-+
-Else if there is one match, return the match.
-+
-Else if there are multiple matches, return matches in an array.
-+
-The example returns all lines of the payload that begin with To:, From:, or Cc:
-+
-Example: `regex('^(To\|From\|Cc):')`
-+
-* `&#x0023;[regex(regularExpression, melExpression)]`
-+
-Applies the regular expression to the value of the MEL expression, rather than the payload. Any string-valued MEL expression can appear as the second argument, using the same process as described above.
-+
-* `&#x0023;[regex(regularExpression, melExpression, matchFlags)]` + Applies the regular expression to the value of the MEL expression, but uses the `matchFlags` bit mask as described in the Java documentation for `java.util.regex.Pattern`.
+MEL processes this as follows:
+
+* Creates a java.util.regex.Matcher using a compiled version of the regular expression and a string representing the payload.
+* Uses the link:https://docs.oracle.com/javase/8/docs/api/java/util/regex/Matcher.html#matches[Matcher.matches()] method to match the payload against the given pattern.
+* Uses the link:https://docs.oracle.com/javase/8/docs/api/java/util/regex/Matcher.html#group(int)[Matcher.group()] method to get the match of each group defined in the regular expression (each group is delimited by parentheses).
+* If there are no matches, return null.
+* Else if there is only a group and It matches return the match,
+* Else if there are many groups and every group matches returns matches in an array.
+
+Examples:
+
+With a payload of: `aaabbbbbbbbbbccc` returns an array with three elements: `aaa`, `bbbbbbbbbb`, and `ccc`:
+
+[source]
+----
+regex('(aa)(.*)(cc)')
+----
+
+With a payload of: `aaabbbbccc` returns null because the second group doesn't match:
+
+[source]
+----
+regex('(aa)(bb)(cc)')
+----
+|`&#x0023;[regex(regularExpression, melExpression)]` |Applies the regular expression to the value of the MEL expression, rather than the payload. Any string-valued MEL expression can appear as the second argument, using the same process as described above. 
+|`&#x0023;[regex(regularExpression, melExpression, matchFlags)]` |Applies the regular expression to the value of the MEL expression, but uses the `matchFlags` bit mask as described in the Java documentation for `java.util.regex.Pattern`.
+|===
 
 == Operators
 
