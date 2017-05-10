@@ -3,17 +3,16 @@
 
 
 
-This example applies changes to strings, depending on the type of their corresponding values. Keys at the top level are converted to proper camel case (with the first letter in lower case). On fields that have an array as a value, it adds additional keys on each index that take the name of their parent converted to singular (ie "items" becomes "item").
+This example applies changes to the keys in an object, depending on the type of their corresponding values. When the element is an array, the keys are pluralized. When it's a number, they are set to camel case. In any other case they are capitalized.
 
 
 This example uses:
 
 * `mapObject` to go through each element in the payload.
-* `map` to go through each array element in these.
-
-* `is` to check that an element is of type array
-* `camelize` to apply a camel case format to strings
-* `singularize` to change plural words to singular in strings
+* `is` to check that an element is of a given type.
+* `camelize` to apply a camel case format to strings (all words stringed together, using upper case letters to mark separations).
+* `capitalize` to apply a capitalized format to strings (all words are separate and start with an upper case letter).
+* `pluralize` to change singular words into plural.
 
 
 
@@ -24,32 +23,37 @@ This example uses:
 %output application/json
 ---
 payload mapObject (elementValue, elementKey) -> {
-  (camelize(elementKey)) : elementValue
-  when not elementValue is Array
-  otherwise
-  elementValue map (itemArrayValue, itemArrayIndex) -> {
-    (camelize(singularize(elementKey))) : itemArrayValue
-  }
+  (pluralize(elementKey)
+  when elementValue is Array
+  otherwise camelize(elementKey)
+  when elementValue is Number
+  otherwise (capitalize(elementKey))
+   )
+   : elementValue
 }
 ----
+
+[NOTE]
+Note that the `when not` condition in this case scopes the value of the element, not the key. `(camelize(elmentKey))` is always applied.
+
 
 .Input
 [source,json, linenums]
 ----
 {
-  "VersionNo":"1.6",
+  "VersionNo": 1.6,
   "StoreOfOrigin": "SFO",
-  "Items":
+  "Item":
     [
       {
         "ID":"34546315801",
-        "DeliveryMethod":"SHIP",
+        "DeliveryMethod":"AIR",
         "Quantity":8
       },
       {
         "ID":"56722087289",
         "Boxes": 3,
-        "DeliveryMethod":"SHIP",
+        "DeliveryMethod":"GROUND",
         "Quantity":2
       }
     ]
@@ -62,23 +66,19 @@ payload mapObject (elementValue, elementKey) -> {
 [source,json, linenums]
 ----
 {
-  "versionNo": "1.6",
-  "storeOfOrigin": "SFO",
-  "items": [
+  "versionNo": 1.6,
+  "Store Of Origin": "SFO",
+  "Items": [
     {
-      "item": {
-        "ID": "34546315801",
-        "DeliveryMethod": "SHIP",
-        "Quantity": 8
-      }
+      "ID": "34546315801",
+      "DeliveryMethod": "AIR",
+      "Quantity": 8
     },
     {
-      "item": {
-        "ID": "56722087289",
-        "Boxes": 3,
-        "DeliveryMethod": "SHIP",
-        "Quantity": 2
-      }
+      "ID": "56722087289",
+      "Boxes": 3,
+      "DeliveryMethod": "GROUND",
+      "Quantity": 2
     }
   ]
 }
