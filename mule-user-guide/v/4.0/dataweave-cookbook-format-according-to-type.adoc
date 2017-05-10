@@ -1,0 +1,103 @@
+= Example: Format According to Type
+:keywords: studio, anypoint, transform, transformer, format, aggregate, rename, split, filter convert, xml, json, csv, pojo, java object, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping
+
+
+
+This example applies changes to strings, depending on the type of their corresponding values. Keys at the top level are converted to proper camel case (with the first letter in lower case). On fields that have an array as a value, it adds additional keys on each index that take the name of their parent converted to singular (ie "items" becomes "item").
+
+
+This example uses:
+
+* `mapObject` to go through each element in the payload.
+* `map` to go through each array element in these.
+
+* `is` to check that an element is of type array
+* `camelize` to apply a camel case format to strings
+* `singularize` to change plural words to singular in strings
+
+
+
+.DataWeave
+[source,dataweave, linenums]
+----
+%dw 1.0
+%output application/json
+---
+payload mapObject (elementValue, elementKey) -> {
+  (camelize(elementKey)) : elementValue
+  when not elementValue is Array
+  otherwise
+  elementValue map (itemArrayValue, itemArrayIndex) -> {
+    (camelize(singularize(elementKey))) : itemArrayValue
+  }
+}
+----
+
+.Input
+[source,json, linenums]
+----
+{
+  "VersionNo":"1.6",
+  "StoreOfOrigin": "SFO",
+  "Items":
+    [
+      {
+        "ID":"34546315801",
+        "DeliveryMethod":"SHIP",
+        "Quantity":8
+      },
+      {
+        "ID":"56722087289",
+        "Boxes": 3,
+        "DeliveryMethod":"SHIP",
+        "Quantity":2
+      }
+    ]
+  }
+----
+
+
+
+.Output
+[source,json, linenums]
+----
+{
+  "versionNo": "1.6",
+  "storeOfOrigin": "SFO",
+  "items": [
+    {
+      "item": {
+        "ID": "34546315801",
+        "DeliveryMethod": "SHIP",
+        "Quantity": 8
+      }
+    },
+    {
+      "item": {
+        "ID": "56722087289",
+        "Boxes": 3,
+        "DeliveryMethod": "SHIP",
+        "Quantity": 2
+      }
+    }
+  ]
+}
+----
+
+== Related Examples
+
+
+* link:/mule-user-guide/v/4.0/dataweave-cookbook-output-self-closing-xml-tags[Outputting self-closing XML tags]
+
+* link:/mule-user-guide/v/4.0/dataweave-cookbook-insert-attribute[Inserting an Attribute into an XML Tag]
+
+
+
+== See Also
+
+
+* link:/mule-user-guide/v/4.0/dataweave-operators[DataWeave Operators]
+
+* link:/mule-user-guide/v/4.0/dataweave-selectors[DataWeave Selectors]
+
+* link:/mule-user-guide/v/4.0/dataweave-cookbook[DataWeave Cookbook]
