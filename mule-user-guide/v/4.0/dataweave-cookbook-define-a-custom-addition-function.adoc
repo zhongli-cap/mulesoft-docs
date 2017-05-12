@@ -1,4 +1,4 @@
-= Example: Defining a Custom Addition Function
+= Example: Define a Custom Addition Function
 :keywords: studio, anypoint, transform, transformer, format, xml, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping
 
 This example takes in a set of item prices and stock amounts and uses several functions to calculate subtotals, deduct discounts and add taxes.
@@ -6,7 +6,6 @@ This example takes in a set of item prices and stock amounts and uses several fu
 It makes use of the following:
 
 * `map` function to go through all the items in the input.
-* `@` to insert an "index" attribute to the XML output.
 * basic math operations like `*`, `+` and `-`.
 * String concatenation with `++`.
 * `as` to force string values into numbers.
@@ -19,7 +18,7 @@ It makes use of the following:
 [source,Dataweave,linenums]
 ----
 %dw 1.0
-%output application/xml
+%output application/json
 %var tax = 0.085
 %var discount = 0.05
 %function getSubtotal (items) = items reduce ((item, accumulator = 0) ->
@@ -28,18 +27,18 @@ It makes use of the following:
 invoice: {
     header: payload.invoice.header,
     items: { (payload.invoice.items map {
-        item @(index: $$ + 1): {
+        item : {
             description: $.description,
             quantity: $.quantity,
             unit_price: $.unit_price,
-            discount: (discount * 100) as Number { format: "##" } ++ "%",
+            discount: (discount * 100) as Number ++ "%",
             subtotal: $.unit_price * $.quantity * (1 - discount)
         }
     }) },
     totals:
     {
         subtotal: getSubtotal(payload.invoice.items ),
-        tax: (tax * 100) as Number { format: "##.#" } ++ "%",
+        tax: (tax * 100) as Number ++ "%",
         total: getSubtotal(payload.invoice.items ) * (1 + tax)
     }
 }
@@ -70,37 +69,38 @@ invoice: {
 }
 ----
 
-.Output XML
-[source,xml,linenums]
+.Output
+[source, json, linenums]
 ----
-<?xml version='1.0' encoding='US-ASCII'?>
-<invoice>
-  <header>
-    <customer_name>ACME, Inc.</customer_name>
-    <customer_state>CA</customer_state>
-  </header>
-  <items>
-    <item index="1">
-      <description>Product 1</description>
-      <quantity>2</quantity>
-      <unit_price>10</unit_price>
-      <discount>5.00%</discount>
-      <subtotal>19.00</subtotal>
-    </item>
-    <item index="2">
-      <description>Product 2</description>
-      <quantity>1</quantity>
-      <unit_price>30</unit_price>
-      <discount>5.00%</discount>
-      <subtotal>28.50</subtotal>
-    </item>
-  </items>
-  <totals>
-    <subtotal>47.50</subtotal>
-    <tax>8.500%</tax>
-    <total>51.53750</total>
-  </totals>
-</invoice>
+{
+  "invoice": {
+    "header": {
+      "customer_name": "ACME, Inc.",
+      "customer_state": "CA"
+    },
+    "items": {
+      "item": {
+        "description": "Product 1",
+        "quantity": "2",
+        "unit_price": "10",
+        "discount": "5.00%",
+        "subtotal": 19.00
+      },
+      "item": {
+        "description": "Product 2",
+        "quantity": "1",
+        "unit_price": "30",
+        "discount": "5.00%",
+        "subtotal": 28.50
+      }
+    },
+    "totals": {
+      "subtotal": 47.50,
+      "tax": "8.500%",
+      "total": 51.53750
+    }
+  }
+}
 ----
 
 
