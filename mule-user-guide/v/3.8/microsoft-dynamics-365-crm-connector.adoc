@@ -12,9 +12,28 @@ you access Microsoft Dynamics CRM’s SOAP Organization Service. You can add th
 *Technical Reference*: link:http://mulesoft.github.io/ms-dynamics-365-crm-connector[MS Dynamics 365 CRM Connector Technical Reference] (Coming) +
 *Sample*: link:_attachments/dynamics-365-crm-connector-samples.zip[dynamics-crm-365-connector-samples.zip] (To be Added)
 
+This connector lets you perform the operations to:
+
+* Create, update, and delete entities.
+* Retrieve a single entity or query multiple entities.
+* Associate and disassociate entities.
+* Execute actions.
+
 == Prerequisites
 
-Before starting, you need login credentials to a Microsoft Dynamics 365 CRM instance: user name, password, resource, endpoint, client ID, and client secret.
+This document assumes that you are familiar with Mule, link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors], and the link:/anypoint-studio/v/8/index[Anypoint Studio Essentials]. To increase your familiarity with Studio, consider completing one or more link:/anypoint-studio/v/6/basic-studio-tutorial[Anypoint Studio Tutorials]. Further, this page assumes that you have a basic understanding of link:/mule-user-guide/v/3.6/mule-concepts[Mule flows] and link:/mule-user-guide/v/3.6/global-elements[Mule Global Elements].
+
+Before starting, you need access to a Microsoft Dynamics 365 instance (online or on-premise) leveraged by Azure Active Directory.
+
+== Terminology
+
+* Actions - Operations that allow side effects, such as data modification, and cannot be further composed in order to avoid non-deterministic behavior.
+* Complex types - Keyless named structured types consisting of a set of properties. Complex types are commonly used as property values in model entities, or as parameters or return values for operations.
+* Entities - Instances of entity types, for example, an account or opportunity.
+* Entity sets - Named collections of entities, for example, an account is an entity set containing account entities. An entity's key uniquely identifies the entity within an entity set.
+* Entity types - Named structured types with a key. Entity types define the named properties and relationships of an entity, and may derive by single inheritance from other entity types.
+* Enumeration types or Enum types - Named primitive types whose values are named constants with underlying integer values.
+* Functions - Operations that do not have side effects and may support further composition, for example, with additional filter operations, functions or an action.
 
 == To Install and Configure the Connector
 
@@ -32,7 +51,7 @@ Download JCE for Java 8 from link:http://www.oracle.com/technetwork/java/javase/
 Replace existing files of the same names.
 . Click the Anypoint Exchange image:crm-365-exchange-icon.png[exchange-icon] icon in the taskbar, search for 365, and follow the prompts to install the CRM connector.
 
-== To Create a New Mule Project Using Anypoint Studio Visual Editor
+== To Create a New Mule Project Using the Anypoint Studio Visual Editor
 
 . In Anypoint Studio, click File > New > Mule Project.
 . Specify a Project Name and click Finish.
@@ -42,8 +61,10 @@ plus sign next to Connector Configuration, and click OK in the menu to accept th
 Click the green plus next to Connector Configuration, and specify your access credentials.
 . Click a connection strategy for authentication:
 +
-** Microsoft Dynamics 365 OAuth Connection 
-** Microsoft Dynamics 365 OAuth Username-Password
+** Microsoft Dynamics 365 OAuth 2.0 Connection
+** Microsoft Dynamics 365 OAuth 2.0 Username-Password
+
+For OAuth 2.0, a patch for the Mule Runtime is needed, that can be provided upon request. There is an issue with the Mule DevKit Support module described in link:https://www.mulesoft.org/jira/browse/SE-5166[SE-5166] that can only be fixed with a Patch.
 
 === To Configure for OAuth Connection
 
@@ -57,8 +78,15 @@ Click the green plus next to Connector Configuration, and specify your access cr
 === To Configure for OAuth Username-Password
 
 . Click the green plus sign to the right of Connector Configuration.
-. Provide the Client ID, Username, Paassword, Resource, Client Secret,
-and Token Request Endpoint to enable access to your Microsoft Dynamics 365 server.
+. Provide the following credentials to enable access to your Microsoft Dynamics 365 server:
++
+** Username - Username used to initialize the session.
+** Password - Password used to authenticate the user.
+** Resource - The application ID URI of the web API (secured resource). This must be the root URI, without specifing the CRM version. Example: `+https://YOUR_ORG.crm.dynamics.com/+`
+** Client ID - The application ID assigned to your app when you registered it with Azure AD. You can find this in the Azure Portal. Click Active Directory, click the directory, choose the application, and click Configure.
+** Client Secret - The application secret that you created in the app registration portal for your app. This should not be used in a native app, because client secrets cannot be reliably stored on devices. This is required for web apps and web APIs, which have the ability to store the client secret securely on the server side.
+** Token Request Endpoint - The token endpoint that is called to get the access token. Example: `+https://login.windows.net/TENANT_ID/oauth2/token+` where TENANT_ID is the Azure AD ID.
++
 . Click Test Connection to ensure that your credentials are accepted at the server
 endpoint.
 . Click Enable DataSense to let your application acquire metadata from the server.
@@ -95,8 +123,8 @@ INFO  2017-05-14 22:12:42,006 [main] org.mule.module.launcher.StartupSummaryDepl
 
 == To Configure Connector Operations
 
-* xref:authop[Authorize]
-* xref:aunuthop[Unauthorize]
+* xref:authop[Authorize - only for OAuth 2.0 Connection]
+* xref:unauthop[Unauthorize - only for OAuth 2.0 Connection]
 * xref:createop[Create]
 * xref:createmultop[Create multiple]
 * xref:delop[Delete]
@@ -114,34 +142,35 @@ INFO  2017-05-14 22:12:42,006 [main] org.mule.module.launcher.StartupSummaryDepl
 [[authop]]
 === To Authorize Access to the CRM Server
 
-. Set Operation to Authorize.
-. Specify a string to be sent with the callback from the authentication server.
+. Set Operation to Authorize (only works with OAuth 2.0 Connection).
+. Leave the value for the State field empty, it is handled internally by Mule.
 . Provide the Access Token URL given to you by the service provider.
-. Provide the Authorization URL given to you by the service provider. This URL indicates where the resource owner redirects to grant authorization to the connector.
-. Provide the access token ID for authenticating the authorize call.
-. Specify the Scope.
-. Specify the Response_mode, which is the method that sends the token back to your app. Possible values are query or form_post.
-. Specify the Resource (required).
+. Provide the endpoint (required) that issues the token: Example: `+https://login.windows.net/TENANT/oauth2/token+`, where TENANT is the Azure AD ID.
+. Provide the Authorization URL (required) - Indicates where the resource owner is redirected to grant authorization to the connector. Example: https://login.microsoftonline.com/TENANT/oauth2/authorize, where TENANT is the Azure AD ID.
+. Provide the access token ID (required) - The ID of the access token that's used to identify the call
+. Specify the Scope (required) - For OpenID Connect, the scope must include the openid, which translates to login permission in the consent UI.
+. Specify the Response_mode (required) - This field specifies the method to use to send the resulting token back to your app. To work with Mule, the value must be `query`.
+. Specify the Resource (required) - This is the App ID URI of the web API (secured resource). To find the App ID URI of the web API, in the Azure Portal, click Active Directory, click the directory, click the application and then click Configure. Example: `+https://YOUR_ORG.crm.dynamics.com/+`.
 
 [[unauthop]]
 === To Unauthorize Access from the CRM Server
 
-. Set Operation to Unauthorize.
-. Provide the Access Token URL that you used to authorize access to the CRM server.
+. Set Operation to Unauthorize (only works with OAuth 2.0 Connection).
+. Provide the Access Token URL that you used to authorize access to the Microsoft Dynamics 365 server.
 
 [[createop]]
 === To Create an Entity
 
 . Set Operation to Create.
-. Specify the required Logical Name, which is the name of the schema in lowercase. 
+. Specify the Logical Name (required), which is the name of the schema in lowercase. 
 . Define optional attributes for the default, from a MEL expression, or manually set attributes as one or more key and value Map pairs.
 
 [[createmultop]]
 === To Create Multiple Entities
 
 . Set Operation to Create Multiple.
-. Specify the required Logical Name, which is the name of the schema in lowercase. 
-. Click Use Single Transaction to indicate that if the transaction fails it is rolled back.
+. Specify the Logical Name (required), which is the name of the schema in lowercase. 
+. Click Use Single Transaction to indicate that if the transaction fails, the transaction is rolled back.
 . Click image:crm-365-add-expression-icon.png[crm-add-expression-icon] to add a MEL expression for the Logical Name attribute.
 . Define optional attributes from a MEL expression, or manually set attributes as one or more key and value Map pairs.
 
@@ -156,14 +185,14 @@ INFO  2017-05-14 22:12:42,006 [main] org.mule.module.launcher.StartupSummaryDepl
 === To Delete Multiple Entities
 
 . Set Operation to Delete Multiple.
-. Specify the  Logical Name (required), which is the name of the schema in lowercase. 
+. Specify the Logical Name (required), which is the name of the schema in lowercase. 
 . Define optional attributes for the default, from a MEL expression, or manually set attributes as one or more key and value Map pairs.
 
 [[disop]]
 === To Disassociate an Entity
 
 . Set Operation to Disassociate.
-. Specify the required Logical Name (required), which is the name of the schema in lowercase. 
+. Specify the Logical Name (required), which is the name of the schema in lowercase. 
 . Define optional attributes for the default, from a MEL expression, or manually set attributes as one or more key and value Map pairs.
 
 [[doactop]]
@@ -176,10 +205,10 @@ INFO  2017-05-14 22:12:42,006 [main] org.mule.module.launcher.StartupSummaryDepl
 . Define optional attributes for the default, from a MEL expression, or manually set attributes as one or more key and value Map pairs.
 
 [[invop]]
-=== To Invoke an Entity
+=== To Invoke the Web API
 
 . Set Operation to Invoke.
-. Specify a URI or MEL expression.
+. Specify a URI or MEL expression for the Web API.
 . Speciy an HTTP method (required): DELETE, GET, PATCH, POST, or PUT.
 . Specify the request HTTP Headers from the expression or manually.
 . Specify the JSON string value (required) that is placed in the body 
@@ -190,7 +219,7 @@ of the request.
 
 . Set Operation to Retrieve.
 . Specify a MEL expression for the ID field.
-. Specify a logical name (required).
+. Specify a Logical Name (required).
 
 [[retmultop]]
 === To Retrieve Multiple Entities
@@ -267,7 +296,7 @@ You can use the selection menu from `+http://0.0.0.0:8081+` to test the flows or
 +
 ** `dynamics365.username` - Username used to initialize the session.
 ** `dynamics365.password` - Password used to authenticate the user.
-** `dynamics365.resource` - The App ID URI of the web API (secured resource). This must be root URI, without specifing the CRM version. Example: `+https://YOUR_ORG.operations.dynamics.com/+`
+** `dynamics365.resource` - The App ID URI of the web API (secured resource). This must be root URI, without specifing the CRM version. Example: `+https://YOUR_ORG.crm.dynamics.com/+`
 ** `dynamics365.clientId` - The Application ID assigned to your app when you registered it with Azure AD. You can find this in the Azure Portal. Click Active Directory, click the directory, choose the application, and click Configure.
 ** `dynamics365.clientSecret` - The Application Secret that you created in the app registration portal for your app. This should not be used in a native app, because client_secrets cannot be reliably stored on devices. This is required for web apps and web APIs, which have the ability to store the client_secret securely on the server side.
 ** `dynamics365.tokenRequestEndpoint` - The token endpoint that is called to get the access token. Example: `+https://login.windows.net/TENANT_ID/oauth2/token where TENANT_ID is the Azure AD ID.
@@ -477,6 +506,8 @@ payload.EntityId]]></dw:set-payload>
         <logger message="Finished 'Do Action Operation'" level="INFO" doc:name="Logger"/>
     </flow>
 </mule>
-
 ----
 
+== See Also
+
+* link:https://msdn.microsoft.com/en-us/library/mt607990.aspx[Web API Terminology]
