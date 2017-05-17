@@ -1,46 +1,72 @@
-= OpenAM OAuth Token Enforcement Policy
+= OpenAM and PingFederate OAuth Token Enforcement Policies
 
-The OpenAM OAuth Token Enforcement policy connects to your existing OpenAM authorization server and enforces access according to your configuration. Anypoint platform supports the link:https://forgerock.org/openam/[OpenAM] identity provider (IdP) link:/access-management/external-identity#instructions-for-saml-configuration[configured for SAML 2.0]-compliant identiy management.
+The authorization enforcement policy, which you apply to an API in Anypoint Platform, connects to an OpenAM or PingFederate authorization server. The policy enforces access according to the configuration of the following things:
+
+* Scope of access (optional)
+* OAuth clients
+* The proxy connection to the authorization server (PingFederate only)
+
+To apply the OpenAM or PingFederate OAuth Token Enforcement policy to an API, use the general procedure for applying policies. You configure scope of access as you apply the policy. 
+
+In addition to configuration tasks, you can implement verification of the credentials of the user requesting an access token. 
 
 == Prerequisites
 
-The prerequisites for using the OpenAM OAuth Token Enforcement policy are:
-
-* Your Anypoint Platform organization is setup as a federated organization using OpenAM.
+* Your Anypoint Platform organization is setup as a federated organization using either OpenAM or PingFederate.
 +
-* Your user is an Anypoint Platform organization administrator, or has permissions to create or manage APIs.
+* You are an Anypoint Platform organization administrator or have permission to create or manage APIs.
 
 == Policy Implementation
 
-This diagram shows how the OpenAM OAuth Token Enforcement policy works with an existing OpenAM authorization server to protect access to your API version.
+This diagram shows how the policy works with an existing OpenAM or PingFederate authorization server to protect access to your API version.
 
-image::openam-oauth-token-enforcement-policy-0fbb9.png[openam-oauth-token-enforcement-policy-0fbb9]
+image::openam-oauth-token-enforcement-policy-0fbb9.png[1 Authorize app to access API 2 Send user credentials 3 Send valid token 4 Call API 5 Check scope and token in header/parameter 6 Validate token in header/parameter and scope 7 API is called]
 
-To improve performance, the API Gateway caches the call to OpenAM, which is only performed once during the lifetime of the token.
+* First, the client application requests the token directly from the authorization server before making an API call. The client application makes this request by authenticating with user credentials. 
+* The server supplies the client application with a valid token. 
+* Next, the client application sends the valid token in the API call.
+* Mule, governed by the OpenAM or PingFederate OAuth Token Enforcement policy, checks that the token in the header or query parameter is valid and matches the correct scopes. 
+* The policy invokes the OpenAM or PingFederate authorization server to validate the token and check scopes.
+* Finally, the API receives the call from the client application.
 
-If the OAuth token is not valid, OpenAM returns one of the following errors:
 
-* *OpenAM 11.0.0* returns `404 NOT FOUND`
-* *OpenAM 12.0.0* returns `400 BAD REQUEST`
+To improve performance, Mule caches the call to the authorization server, which is only performed once during the lifetime of the token. If the OAuth token is not valid, the authorization server returns one of the following errors:
 
-OpenAM defines and supports two kinds of OAuth clients: a _confidential_ client, which must keep its credentials confidential; or a _public_ client, which can share its credentials with other parties. Each type of client supports three of the four OAuth grant types. For this reason, when configuring API Gateway for the client, you will be able to select only three of the four grant types, and the unavailable grant type will appear grayed-out. API Gateway does not display information on whether your client is public or confidential; this depends on the grant types that you select.
+* OpenAM 11.0.0 returns `404 NOT FOUND`
+* OpenAM 12.0.0 returns `400 BAD REQUEST`
+* PingFederate returns `403 FORBIDDEN`
 
-== Configuration
+== Configuring Scope of Access
 
-There is minimal configuration necessary for the OpenAM OAuth Token Enforcement policy. The connection to your OpenAM authorization server is handled behind the scenes, so the only field that you need to configure to apply the policy to your API version is the *scopes*. Enter a space-separated list of strings that indicate the scopes to which applications must have access per their credentials defined for that application in OpenAM.
+You optionally fill in the scopes field when you apply the policy to your API version in Anypoint Platform. Enter a space-separated list of strings that indicate the scopes to which applications must have access per their credentials defined for that application in OpenAM. You need to know the names of the scopes as defined in OpenAM or PingFederate. Scope names are case-sensitive.
 
-You need to know the names of the scopes as defined in OpenAM. Scope names are case-sensitive.
+Assuming you have deployed the API, to configure `scopes`:
 
-== Incorporating Authorization into an API
+. In API Manager, navigate to the API version details page of your API.
+. Click Apply.  
+. In the Configure PingFederate OAuth Token Enforcement Policy dialog, enter a space-separated list of strings that indicate the scope of application access to your API. This access needs to correspond to credentials defined for applications in OpenAM or PingFederate.
 
-To include user authorization at the API implementation level, use link:/mule-user-guide/v/3.8/mule-expression-language-mel[MEL expressions] to access a map of user information that is associated with the valid token. Use the flow variable `['_agwUser']`. To access a particular value in the map, specify it directly.
+== Configuring OAuth Clients
+
+OpenAM and PingFederate define and support two kinds of OAuth clients: 
+
+* confidential client
++
+Keeps its credentials confidential
++
+* public client
++
+Shares its credentials with other parties. 
+
+Each type of client supports three of the four OAuth grant types. For this reason, when configuring Mule 3.8 or later, or the legacy API Gateway, for the client, you are able to select only three of the four grant types. The other grant type is unavailable. You determine the public or confidential property of the client depending on the grant types that you select.
+
+== User Verification
+
+The API can include a check of the credentials of the user requesting the access token. Use MEL expressions to access a map of user information that is associated with the valid token. Use the flow variable `['_agwUser']`. To access a particular value in the map, specify it directly.
 
 This example accesses the user ID of the end user who is calling the API through the application:
 
-[source, code, linenums]
-----
-#[flowVars['_agwUser']['uid']]
-----
+`#[flowVars['_agwUser']['uid']]`
 
 [%header,cols="10a,90a",width=80%]
 |===
@@ -52,20 +78,21 @@ This example accesses the user ID of the end user who is calling the API through
 
 == Obtaining User Credentials
 
-You can access information about what externally authenticated users or applications are using your API. 
+The policy returns a Mule message that includes outbound properties that provide information about what externally authenticated users or applications are using your API. Depending on the grant type of the incoming request token, this is expressed in different headers:
 
-The OpenAM policy returns a Mule message that includes outbound properties that are useful for this. Depending on the grant type of the incoming request's token, this is expressed in different headers:
-
-* If the token of the request is of Grant types *resource owner credentials* *implicit*, or *authorization code*, the header `X-AGW-userid` contains the ID of the user that made the request.
-* If the token of the request is of Grant type *client credentials*, the header`X-AGWclient_id` contains the ID of the application that made the request.
+* If the token of the request is of Grant types resource owner credentials, implicit, or authorization code, the header X-AGW-userid contains the ID of the user that made the request.
+* If the token of the request is of Grant type client credentials, the header `X-AGW-client_id` contains the ID of the application that made the request.
 
 Either of the two properties are available to be referenced and used internally in your proxy by any component that follows it in the flow.
 
-The HTTP Connector that generates the proxy's output, transforms any outbound properties that reach it in the HTTP message headers, so the message that reaches your API after passing through your proxy includes either an HTTP header named `X-AGW-userid`with the username, or an HTTP header named `X-AGW-client_id` with a client ID.
+The HTTP Connector that generates the proxy output transforms any received outbound properties in the HTTP message headers. The message that reaches your API after passing through your proxy includes one of the following HTTP headers:
+
+* X-AGW-userid with the username
+* X-AGW-client_id with a client ID
 
 === Token Validation Response Example
 
-Below is an example of the information returned by OpenAM, from which the HTTP message headers are formed.
+The following example shows the information returned that forms the HTTP message headers.
 
 [source, code, linenums]
 ----
@@ -79,3 +106,40 @@ Content-Type: application/json;charset=UTF-8
 Transfer-Encoding: chunked
 {"uid":"john.doe","mail":"john.doe@example.com","scope":["uid","mail","cn","givenName"],"grant_type":"password","cn":"John Doe Full","realm":"/","token_type":"Bearer","expires_in":580,"givenName":"John","access_token":"fa017a0e-1bd5-214c-b19d-03efe9f9847e"}
 ----
+
+== Configuring the Proxy Connection
+
+In Mule 3.8.x, you optionally enable or disable the proxy network connection between the API and PingFederate or OpenAM by setting the following parameter:
+
+`external_authentication_provider_enable_proxy_setting`
+
+This parameter is located in the following wrapper configuration file: `$MULE_HOME/conf/wrapper.conf`
+
+Set the parameter to true or false. For example:
+
+`wrapper.java.additional.<n>=-Dexternal_authentication_provider_enable_proxy_setting=true`
+
+In Mule 3.7.x, use the parameter in the wrapper configuration file. For example:
+
+`anypoint.platform.ping_federate_enable_proxy_setting`
+
+In API Gateway Runtime 2.1.x and 2.2.x, the wrapper configuration file is in `/conf/wrapper.conf`.
+
+// default changing in 3.9 
+
+By default, the parameter is false, so the proxy connection between the API and PingFederate is disabled because the following proxy settings are ignored:
+
+----
+wrapper.java.additional.<n>=-Danypoint.platform.proxy_host=localhost
+wrapper.java.additional.<n>=-Danypoint.platform.proxy_port=8080
+----
+
+== See Also
+
+* link:/api-manager/using-policies#applying-and-removing-policies[General procedure for applying policies]
+* link:https://forgerock.org/openam/[OpenAM] identity provider
+* link:https://www.pingidentity.com/en/products/pingfederate.html[Ping Federate] identity provider
+* link:/access-management/external-identity#instructions-for-saml-configuration[SAML 2.0]
+* link:/mule-user-guide/v/3.8/mule-expression-language-mel[MEL expressions]
+* link:/api-manager/tutorial-set-up-and-deploy-an-api-proxy[API version details page]
+
