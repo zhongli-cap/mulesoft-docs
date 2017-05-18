@@ -289,135 +289,405 @@ Example: `+https://login.windows.net/TENANT_ID/oauth2/token` where TENANT_ID is 
 The Connection Timeout is the timeout in making the initial connection with the server. 
 The Read Timeout is the timeout on waiting to read data from the server.
 
-=== About the Test Components
+You can use the selection menu from `+http://0.0.0.0:8081+` to test the flows or you can POST JSONs using a tool like curl, or any other tool (Chrome/Mozilla Firefox extensions) that lets you POST a body when calling the URL.
 
-. CREATE_EMPTY_CONTACT_DEMO: This flow creates an empty contact entity that is required later in other flows.
-+
+
+=== Example: Parse Template
+
+Parses the template.
+
+image:365-demo-parse-template.png[365-demo-parse-template]
+
+[source,xml,linenums]
+----
+<flow name="PARSE_DEMO_TEMPLATE">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
+    <parse-template location="form.html" doc:name="Parse Template"/>
+    <set-property propertyName="content-type" value="text/html" encoding="US-ASCII" mimeType="text/html" doc:name="Property"/>
+</flow>
+----
+
+=== Example: Create Empty Contact
+
+Creates an empty contact entity that is required later in other flows.
+
 GET - The HTTP endpoint listens to the following URL: `+http://0.0.0.0:8081/createContact+`
-+
-. CREATE_EMPTY_OPPORTUNITY_DEMO: This flow creates an empty opportunity entity that is required later in other flows.
-+
-GET - The HTTP endpoint listens to the following URL: `+http://0.0.0.0:8081/createOpportunity+`
-+
-. CREATE_ACCOUNT_DEMO: This flow creates an account with specified attributes and also associates the account with a contact.
-+
-POST - HTTP endpoint listens to the following URL: `+http://0.0.0.0:8081/createAccount+`
-+
-Request example:
-+
-[source,xml]
+
+image:365-demo-create-empty-contact.png[365-demo-create-empty-contact]
+
+[source,xml,linenums]
 ----
-{"AccountName":"Test Account Name","CreditOnHold":true,"CreditLimit":1000,"ContactID":"CONTACT_ID"}`
+<flow name="CREATE_EMPTY_CONTACT_DEMO">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="/createContact" doc:name="HTTP"/>
+    <logger message="Requested 'Create Contact Operation'" level="INFO" doc:name="Logger"/>
+    <dynamics365:create config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password" logicalName="contact" doc:name="Microsoft Dynamics 365"/>
+    <logger message="Received Response from 'Create Contact Operation'" level="INFO" doc:name="Logger"/>
+</flow>
 ----
-+
-. CREATE_MULTIPLE_ENTITIES_DEMO: This flow creates multiple entities of the same type in a single batch request.
-+
-POST - The HTTP endpoint listens to the following URL: `+http://0.0.0.0:8081/createMultipleAccounts+`
-+
+
+=== Example: Create Empty Opportunity
+
+Creates an empty opportunity entity that is required later in other flows.
+
+GET - The HTTP endpoint listens at: `+http://0.0.0.0:8081/createOpportunity+`
+
+image:365-demo-create-empty-oppo.png[365-demo-create-empty-oppo]
+
+[source,xml,linenums]
+----
+<flow name="CREATE_EMPTY_OPPORTUNITY_DEMO">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="/createOpportunity" doc:name="HTTP"/>
+    <logger message="Requested 'Create Opportunity Operation'" level="INFO" doc:name="Logger"/>
+    <dynamics365:create config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password" logicalName="opportunity" doc:name="Microsoft Dynamics 365"/>
+    <logger message="Received Response from 'Create Opportunity Operation'" level="INFO" doc:name="Logger"/>
+</flow>
+----
+
+=== Example: Create Acccount
+
+Creates an account with specified attributes and also associates the account with a contact.
+
+POST - HTTP endpoint listens at: `+http://0.0.0.0:8081/createAccount+`
+
 Request example:
-+
+
+[source,xml,linenums]
+----
+{"AccountName":"Test Account Name","CreditOnHold":true,
+"CreditLimit":1000,"ContactID":"CONTACT_ID"}`
+----
+
+image:365-demo-create-account.png[365-demo-create-account]
+
+[source,xml,linenums]
+----
+<flow name="CREATE_ACCOUNT_DEMO">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="/createAccount" 
+    doc:name="HTTP"/>
+    <logger message="Requested 'Create Account Operation'" level="INFO" 
+    doc:name="Logger"/>
+    <dw:transform-message doc:name="Transform Message">
+        <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	name: payload.AccountName,
+	creditonhold: payload.CreditOnHold,
+	creditlimit: payload.CreditLimit,
+	"primarycontactid@odata.bind": "/contacts(" ++ payload.ContactID ++ ")"
+}]]></dw:set-payload>
+    </dw:transform-message>
+    <dynamics365:create config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password" 
+     logicalName="account" doc:name="Microsoft Dynamics 365">
+        <dynamics365:attributes ref="#[payload]"/>
+    </dynamics365:create>
+    <logger message="Received Response from 'Create Account Operation'" level="INFO" 
+    doc:name="Logger"/>
+</flow>
+----
+
+=== Example: Create Multiple Entities
+
+Creates multiple entities of the same type in a single batch request.
+
+POST - The HTTP endpoint listens at: `+http://0.0.0.0:8081/createMultipleAccounts+`
+
+Request example:
+
 [source,xml,linenums]
 ----
 [{"AccountName":"Account Name 1","CreditOnHold":true,"CreditLimit":1500},
 {"AccountName":"Account Name 2","CreditOnHold":false,"CreditLimit":2000}]
 ----
-+
-. CREATE_MULTIPLE_ENTITIES_DEMO: This flow creates multiple entities of the same type in a single batch request.
-+
-POST - The HTTP endpoint listens to the following URL: `+http://0.0.0.0:8081/createMultipleAccounts+`
-+
-Request example:
-+
+
+image:365-demo-create-multi-ents.png[365-demo-create-multi-ents]
+
 [source,xml,linenums]
 ----
-[{"AccountName":"Account Name 1","CreditOnHold":true,"CreditLimit":1500},
-{"AccountName":"Account Name 2","CreditOnHold":false,"CreditLimit":2000}]
+<flow name="CREATE_MULTIPLE_ENTITIES_DEMO">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="/createMultipleAccounts" doc:name="HTTP"/>
+    <logger message="Requested 'Create Multiple Accounts Operation'" level="INFO" doc:name="Logger"/>
+    <dw:transform-message doc:name="Transform Message">
+        <dw:set-payload><![CDATA[%dw 1.0
+%input payload application/json
+%output application/java
+---
+payload map {
+      name: $.AccountName,
+      creditlimit : $.CreditLimit,
+      creditonhold : $.CreditOnHold
+}]]></dw:set-payload>
+    </dw:transform-message>
+    <dynamics365:create-multiple config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password" logicalName="account" doc:name="Microsoft Dynamics 365">
+        <dynamics365:attributes-list ref="#[payload]"/>
+    </dynamics365:create-multiple>
+    <logger message="Received Response from 'Create Multiple Entities Operation'" level="INFO" doc:name="Logger"/>
+    <json:object-to-json-transformer doc:name="Object to JSON"/>
+</flow>
 ----
-+
-. UPDATE_ENTITY_DEMO: This flow updates an account with specified attributes.
-+
-POST - The HTTP endpoint listens to the following URL: `+http://0.0.0.0:8081/updateAccount+`
-+
+
+=== Example: Update Entity
+
+Updates an account with specified attributes.
+
+POST - The HTTP endpoint listens at: `+http://0.0.0.0:8081/updateAccount+`
+
 Request example:
-+
+
 [source,xml]
 ----
 {"EntityId":"ENTRY_ID","AccountName":"Updated Name","CreditLimit":1500}
 ----
-+
-. UPDATE_MULTIPLE_ENTITIES_DEMO: This flow updated multiple entities of the same type in a single batch request.
-+
-POST - The HTTP endpoint listens to the following URL: `+http://0.0.0.0:8081/updateMultipleAccounts+`
-+
+
+image:365-demo-update-entity.png[365-demo-update-entity]
+
+[source,xml,linenums]
+----
+<flow name="UPDATE_ENTITY_DEMO">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="/updateAccount" doc:name="HTTP"/>
+    <logger message="Requested 'Update Entity Operation'" level="INFO" doc:name="Logger"/>
+    <dw:transform-message doc:name="Transform Message">
+        <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	entityId: payload.EntityId,
+	attributes: {
+		creditlimit: payload.CreditLimit,
+		name: payload.AccountName
+	}
+}]]></dw:set-payload>
+    </dw:transform-message>
+    <dynamics365:update config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password" logicalName="account" doc:name="Microsoft Dynamics 365">
+        <dynamics365:attributes ref="#[payload]"/>
+    </dynamics365:update>
+    <logger message="'Update Entity Operation' has ended with success" level="INFO" doc:name="Logger"/>
+    <json:object-to-json-transformer doc:name="Object to JSON"/>
+</flow>
+----
+
+=== Example: Update Multiple Entities
+
+Updates multiple entities of the same type in a single batch request.
+
+POST - The HTTP endpoint listens at: `+http://0.0.0.0:8081/updateMultipleAccounts+`
+
 Request example:
-+
+
 [source,xml,linenums]
 ----
 [{"EntityId":"ENTRY_ID","AccountName":"Updated Name 1"},
 {"EntityId":"ENTRY_ID","AccountName":"Updated Name 2"}]
 ----
-+
-. DELETE_ENTITY_DEMO: This flow deletes an entity of a specified type.
-+
-POST - The HTTP endpoint listens to the following URL: `+http://0.0.0.0:8081/deleteAccount+`
-+
+
+image:365-demo-update-multi-ents.png[365-demo-update-multi-ents]
+
+[source,xml,linenums]
+----
+<flow name="UPDATE_MULTIPLE_ENTITIES_DEMO">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="/updateMultipleAccounts" doc:name="HTTP"/>
+    <logger message="Requested 'Multiple Entities Operation'" level="INFO" doc:name="Logger"/>
+    <dw:transform-message doc:name="Transform Message">
+        <dw:set-payload><![CDATA[%dw 1.0
+%input payload application/json
+%output application/java
+---
+payload map {
+	entityId: $.EntityId,
+	attributes: {
+		name: $.AccountName
+	}
+}]]></dw:set-payload>
+    </dw:transform-message>
+    <dynamics365:update-multiple config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password" logicalName="account" doc:name="Microsoft Dynamics 365">
+        <dynamics365:attributes-list ref="#[payload]"/>
+    </dynamics365:update-multiple>
+    <logger message="Received Response from 'Update Multiple Entities Operation'" level="INFO" doc:name="Logger"/>
+    <json:object-to-json-transformer doc:name="Object to JSON"/>
+</flow>
+----
+
+=== Example: Delete Entity
+
+Deletes an entity of a specified type.
+
+POST - The HTTP endpoint listens at: `+http://0.0.0.0:8081/deleteAccount+`
+
 Request example:
-+
+
 [source,xml]
 ----
 {"EntityId":"ENTRY_ID"}
 ----
-+
-. RETRIEVE_ENTITY_DEMO: This flow retrieves an entity of a specified type.
-+
-POST - The HTTP endpoint listens to the following URL: `+http://0.0.0.0:8081/retrieveAccount+`
-+
+
+image:365-demo-delete-entity.png[365-demo-delete-entity]
+
+[source,xml,linenums]
+----
+<flow name="DELETE_ENTITY_DEMO">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="/deleteAccount" doc:name="HTTP"/>
+    <logger message="Requested 'Delete Entitiy Operation'" level="INFO" doc:name="Logger"/>
+    <dw:transform-message doc:name="Transform Message">
+        <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload.EntityId]]></dw:set-payload>
+    </dw:transform-message>
+    <dynamics365:delete config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password" logicalName="account" doc:name="Microsoft Dynamics 365"/>
+    <logger message="'Delete Entity Operation' has ended with success" level="INFO" doc:name="Logger"/>
+</flow>
+----
+
+=== Example: Retrieve Entity
+
+Retrieves an entity of a specified type.
+
+POST - The HTTP endpoint listens at: `+http://0.0.0.0:8081/retrieveAccount+`
+
 Request example:
-+
+
 [source,xml]
 ----
 {"EntityId":"ENTRY_ID"}
 ----
-+
-. RETRIEVE_ENTITIES_BY_URL_DEMO: This flow retrieves multiple entities based on url request.
-+
-GET - The HTTP endpoint listens to the following URL: `+http://0.0.0.0:8081/retrieveAccountsByURL+`
-+
-. RETRIEVE_ENTITIES_BY_QUERY_DEMO: This flow retrieves multiple entities based on Datasense Query Language.
-+
-GET - The HTTP endpoint listens to the following URL: `+http://0.0.0.0:8081/retrieveAccountsByQuery+`
-+
-. DISASSOCIATE_ENTITIES_DEMO: This flow dissasociates entities. You provide the id of the entity upon which the request will be made and the keys that will be dissasociated.
-+
-POST - The HTTP endpoint listens to the following URL: `+http://0.0.0.0:8081/disassociateEntities+`
-+
+
+image:365-demo-retrieve-entity.png[365-demo-retrieve-entity]
+
+[source,xml,linenums]
+----
+<flow name="RETRIEVE_ENTITY_DEMO">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="/retrieveAccount" doc:name="HTTP"/>
+    <logger message="Requested 'Retrieve Entitiy Operation'" level="INFO" doc:name="Logger"/>
+    <dw:transform-message doc:name="Transform Message">
+        <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload.EntityId]]></dw:set-payload>
+    </dw:transform-message>
+    <dynamics365:retrieve config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password" logicalName="account" doc:name="Microsoft Dynamics 365"/>
+    <logger message="Received Response from 'Retrieve Entitiy Operation'" level="INFO" doc:name="Logger"/>
+    <json:object-to-json-transformer doc:name="Object to JSON"/>
+</flow>
+----
+
+=== Example: Retrieve Entities by URL
+
+Retrieves multiple entities based on the URL request.
+
+GET - The HTTP endpoint listens at: `+http://0.0.0.0:8081/retrieveAccountsByURL+`
+
+image:365-demo-retrieve-entities-by-url.png[365-demo-retrieve-entities-by-url]
+
+[source,xml,linenums]
+----
+<flow name="RETRIEVE_ENTITIES_BY_URL_DEMO">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="/retrieveAccountsByURL" doc:name="HTTP"/>
+    <logger message="Requested 'Retrieve Multiple Operation'" level="INFO" doc:name="Logger"/>
+    <dynamics365:retrieve-multiple config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password"
+     dataQueryURL="${dynamics365.resource}/api/data/v8.2/accounts?$select=name,accountnumber&amp;$top=3"
+      doc:name="Microsoft Dynamics 365"/>
+    <logger message="Received Response from 'Retrieve Multiple Operation'" level="INFO" doc:name="Logger"/>
+    <json:object-to-json-transformer doc:name="Object to JSON"/>
+</flow>
+----
+
+=== Example: Retrieve Entities by Query
+
+Retrieves multiple entities based on Datasense Query Language.
+
+GET - The HTTP endpoint listens at: `+http://0.0.0.0:8081/retrieveAccountsByQuery+`
+
+image:3365-demo-retrieve-entities-by-query.png[365-demo-retrieve-entities-by-query]
+
+[source,xml,linenums]
+----
+<flow name="RETRIEVE_ENTITIES_BY_QUERY_DEMO">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="/retrieveAccountsByQuery" doc:name="HTTP"/>
+    <logger message="Requested 'Retrieve Multiple By Query Operation'" level="INFO" doc:name="Logger"/>
+    <dynamics365:retrieve-multiple-by-query config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password"
+     query="dsql:SELECT accountid,accountnumber,name FROM account LIMIT 2" doc:name="Microsoft Dynamics 365"/>
+    <logger message="Received Response from 'Retrieve Multiple By Query Operation'" level="INFO"
+     doc:name="Logger"/>
+    <json:object-to-json-transformer doc:name="Object to JSON"/>
+</flow>
+----
+
+=== Example: Disassociate Entities
+
+Dissasociates entities. Provide the ID of the entity upon which the request was made and the keys to dissasociate.
+
+POST - The HTTP endpoint listens at: `+http://0.0.0.0:8081/disassociateEntities+`
+
 Request example:
-+
+
 [source,xml]
 ----
 {"EntityId":"ENTRY_ID","EntityLinkKeys":["primarycontactid"]}
 ----
-+
-. DO_ACTION_DEMO: This flow calls the WinOpportunity Action.
-+
-POST - The HTTP endpoint listens to the following URL: `+http://0.0.0.0:8081/doAction+`
-+
+
+image:365-demo-disassociate-entities.png[365-demo-disassociate-entities]
+
+[source,xml,linenums]
+----
+<flow name="DISASSOCIATE_ENTITIES_DEMO">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="/disassociateEntities" doc:name="HTTP"/>
+    <logger level="INFO" doc:name="Logger" message="Requested 'Dissasociate Entities Operation'"/>
+    <dw:transform-message doc:name="Transform Message">
+        <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	entityId: payload.EntityId,
+	attributes: payload.EntityLinkKeys
+}]]></dw:set-payload>
+    </dw:transform-message>
+    <dynamics365:disassociate config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password" logicalName="account" doc:name="Microsoft Dynamics 365">
+        <dynamics365:attributes ref="#[payload]"/>
+    </dynamics365:disassociate>
+    <logger level="INFO" doc:name="Logger" message="Finished 'Dissasociate Entities Operation' with success"/>
+</flow>
+----
+
+=== Example: Do Action
+
+Calls the WinOpportunity Action.
+
+POST - The HTTP endpoint listens at: `+http://0.0.0.0:8081/doAction+`
+
 Request example:
-+
+
 [source,xml]
 ----
 {"Subject":"Won Opportunity","Status":3,"OpportunityId":"OPPORTUNITY_ID"}
 ----
 
-You can use the selection menu from `+http://0.0.0.0:8081+` to test the flows or you can POST JSONs using a tool like curl, or any other tool (Chrome/Mozilla Firefox extensions) that lets you POST a body when calling the URL.
+image:3365-demo-do-action.png[365-demo-do-action]
 
-=== Visual Editor Flow
+[source,xml,linenums]
+----
+<flow name="DO_ACTION_DEMO">
+    <http:listener config-ref="HTTP_Listener_Configuration" path="/doAction" doc:name="HTTP"/>
+    <logger message="Requested 'Do Action Operation'" level="INFO" doc:name="Logger"/>
+    <dw:transform-message doc:name="Transform Message">
+        <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	OpportunityClose: {
+		subject: payload.Subject,
+		"opportunityid@odata.bind": "/opportunities(" ++ payload.OpportunityId ++ ")"
+	},
+	Status: payload.Status
+}]]></dw:set-payload>
+    </dw:transform-message>
+    <dynamics365:do-action config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password" actionName="WinOpportunity" doc:name="Microsoft Dynamics 365"/>
+    <logger message="Finished 'Do Action Operation'" level="INFO" doc:name="Logger"/>
+</flow>
+----
 
-image:365-demo-1.png[365-demo-1]
-image:365-demo-2.png[365-demo-2]
-image:365-demo-3.png[365-demo-3]
 
-=== XML Flow
+
+=== Example XML Flow
 
 [source,xml,linenums]
 ----
@@ -444,7 +714,6 @@ http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/jso
         <http:listener config-ref="HTTP_Listener_Configuration" path="/createContact" doc:name="HTTP"/>
         <logger message="Requested 'Create Contact Operation'" level="INFO" doc:name="Logger"/>
         <dynamics365:create config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password" logicalName="contact" doc:name="Microsoft Dynamics 365"/>
-
         <logger message="Received Response from 'Create Contact Operation'" level="INFO" doc:name="Logger"/>
     </flow>
     <flow name="CREATE_EMPTY_OPPORTUNITY_DEMO">
@@ -563,7 +832,6 @@ payload.EntityId]]></dw:set-payload>
         <http:listener config-ref="HTTP_Listener_Configuration" path="/retrieveAccountsByURL" doc:name="HTTP"/>
         <logger message="Requested 'Retrieve Multiple Operation'" level="INFO" doc:name="Logger"/>
         <dynamics365:retrieve-multiple config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password" dataQueryURL="${dynamics365.resource}/api/data/v8.2/accounts?$select=name,accountnumber&amp;$top=3" doc:name="Microsoft Dynamics 365"/>
-
         <logger message="Received Response from 'Retrieve Multiple Operation'" level="INFO" doc:name="Logger"/>
         <json:object-to-json-transformer doc:name="Object to JSON"/>
     </flow>
@@ -571,7 +839,6 @@ payload.EntityId]]></dw:set-payload>
         <http:listener config-ref="HTTP_Listener_Configuration" path="/retrieveAccountsByQuery" doc:name="HTTP"/>
         <logger message="Requested 'Retrieve Multiple By Query Operation'" level="INFO" doc:name="Logger"/>
         <dynamics365:retrieve-multiple-by-query config-ref="Microsoft_Dynamics_365__OAuth_2_0_Username_Password" query="dsql:SELECT accountid,accountnumber,name FROM account LIMIT 2" doc:name="Microsoft Dynamics 365"/>
-
         <logger message="Received Response from 'Retrieve Multiple By Query Operation'" level="INFO" doc:name="Logger"/>
         <json:object-to-json-transformer doc:name="Object to JSON"/>
     </flow>
