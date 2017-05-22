@@ -1,0 +1,111 @@
+= To Create a Cassandra Table
+
+This procedure creates a table having a compound primary key, id and username, and clustering columns name and email. In the Transform Message component, you optionally specify an existing keyspace, so you need to provide an existing keyspace name in the input; otherwise an error occurs.
+
+. Start Cassandra and Anypoint Studio.
+. Create a new Anypoint Studio project, and in the Package Explorer, open mule-app-properties. Add the following properties and values:
++
+----
+username=cassandra
+password=cassandra
+host=localhost
+keyspace=Excelsior
+port=9042
+----
++
+. Create a flow by dragging an HTTP connector from the Mule palette to the canvas, select the connector, set the Path in Basic Properties to */createtable* and Allowed Methods to *POST*. In Connector Configuration, click image:plus.png[Plus control].
+. In HTTP Listener Configuration, set the following options:
++
+* Host = 0.0.0.0
+* Port = 8081
++
+. Drag a Transform Message component from the Mule palette to the right (process) side of the flow, select the component, and set the output payload as follows:
++
+----
+%dw 1.0
+%output application/java
+---
+{
+	"columns": payload.columns,
+	"tableName": payload.tableName,
+	"keyspaceName": payload.keyspaceName
+} as :object {
+	class : "com.mulesoft.mule.cassandradb.metadata.CreateTableInput"
+}
+----
++
+. Drag a Cassandra connector from the Mule palette to the right of the Transform Message component, and select the connector. In Operation, select Create Table, and click image:plus.png[Plus control].
+. In CassandraDB Username/Password Connection, set the following options to placeholder values, and test the connections:
++
+* Username: *${username}*
+* Password: *${password}*
+* Host: *${host}*
+* Port: *${port}*
++
+. Run the Mule app. In Postman, select POST. Select Body > Raw, select the JSON (application/json) MIME type, and enter the following JSON code.
++
+----
+{
+	"tableName": "jp_users",
+	"keyspaceName": "Excelsior",
+	"columns": [{
+			"name": "id",
+			"type": "INT",
+			"primaryKey": "true"
+		},
+		{
+			"name": "username",
+			"type": "TEXT",
+			"primaryKey": "true"
+		},
+		{
+			"name": "name",
+			"type": "TEXT",
+			"primaryKey": "false"
+		},
+		{
+			"name": "email",
+			"type": "TEXT",
+			"primaryKey": "false"
+		}
+	]
+}
+----
++
+. In Postman, click Send, look for Status: 200 OK. On the cqlsh command line, check that the app created the table:
++
+----
+use excelsior;
+describe table jp_users;
+----
++
+Cassandra output:
++
+----
+cassandra@cqlsh> use excelsior;
+cassandra@cqlsh:excelsior> use Excelsior;
+cassandra@cqlsh:excelsior> describe table jp_users;
+
+CREATE TABLE excelsior.jp_users (
+    id int,
+    username text,
+    email text,
+    name text,
+    PRIMARY KEY ((id, username))
+) WITH bloom_filter_fp_chance = 0.01
+    AND caching = {'keys': 'ALL', 'rows_per_partition': 'NONE'}
+    AND comment = ''
+    AND compaction = {'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'max_threshold': '32', 'min_threshold': '4'}
+    AND compression = {'chunk_length_in_kb': '64', 'class': 'org.apache.cassandra.io.compress.LZ4Compressor'}
+    AND crc_check_chance = 1.0
+    AND dclocal_read_repair_chance = 0.1
+    AND default_time_to_live = 0
+    AND gc_grace_seconds = 864000
+    AND max_index_interval = 2048
+    AND memtable_flush_period_in_ms = 0
+    AND min_index_interval = 128
+    AND read_repair_chance = 0.0
+    AND speculative_retry = '99PERCENTILE';
+    ----
+...
+----
