@@ -5,7 +5,7 @@
 
 Previous to Mule 3.7, Mule relied on plain old Java serialization (in which Java classes must implement `java.io.Serializable` or `java.io.Externalizable`) to store objects in files or to replicate them through a Mule cluster. Starting with the Mule 3.7 Enterprise Edition, the Kryo Serializer and the Community Edition Serialization API decouple Mule and its extensions from the actual serialization mechanism to be use, enabling you to configure the mechanism you want to use, or to create your own serializer.
 
-Mule relies on serialization each time that:
+Mule relies on serialization when:
 
 * You read from or write to a persistent ObjectStore
 * You read from or write to a persistent VM or JMS queue
@@ -149,7 +149,7 @@ The following are the performance results:
 |Kryo + GZip |8.53% |-8.69% |13.93% |23.96%
 |===
 
-The conclusions from table are that:
+The conclusions from the table are:
 
 * You can get up to a 77.13% improvement in performance when using distributed ObjectStores, 63.77% when using distributed VM queues and 64.71% when using local persistent VM queues.
 * Although local object stores don’t show much improvement. They are actually slower when using compression. There’s no use case in which you don’t get some level of gain when using Kryo.
@@ -162,11 +162,11 @@ The following sections provide information you need to use serializers.
 
 === Changing Serializers Requires a Clean Slate
 
-Serializers are not interoperable nor interchangeable. That means that if you decide to change the serializer your application uses, you need to make sure that all messages in VM and JMS queues have been consumed and that those queues are empty by the time the new serializer kicks in. This is because Kryo serializer won’t be able to read datagrams written by the Java searializer and vice-versa. The same thing applies to persistent ObjectStores. If you try to read an entry generated with a different serializer, you’ll find yourself out of luck.
+Serializers are not interoperable nor interchangeable. That means that if you decide to change the serializer your application uses, you need to make sure that all messages in VM and JMS queues have been consumed and that those queues are empty by the time the new serializer kicks in. This is because Kryo serializer won’t be able to read datagrams written by the Java serializer and vice-versa. The same thing applies to persistent ObjectStores. If you try to read an entry generated with a different serializer, you can't read the entry.
 
 === Serialization in a Shared VM Connector
 
-Version 3.5.0 of link:http://www.mulesoft.com/platform/soa/mule-esb-open-source-esb[Mule] introduced the concept of domains as a way to shared resources between applications. For example, you can define a VM link:https://www.mulesoft.com/exchange#!/?types=connector[connector] on a domain to allow inter-app communication through VM message queues. However, serializers can only be configured at an application level, they cannot be configured at a domain. So what happens if two applications (A and B) communicate with each other through a VM connector defined on a domain to which both belong, but A serializes using Java and B using Kryo? The answer is: it just works. Whenever either app tries to write to an endpoint which uses the shared connector, that particular message is not serialized with the application’s serializer but the one the VM connector is using. So this is good right? Yes, it’s good from the point of view of the plug&play experience. But notice that you won’t be able to tell that shared VM connector to use Kryo and get a performance improvement out of it.
+Domains provide a way to share resources between applications. For example, you can define a VM connector on a domain to allow inter-app communication through VM message queues. However, serializers can only be configured at an application level, they cannot be configured at a domain. If applications A and B communicate with each other through a VM connector defined on a domain to which both belong, but A serializes using Java and B using Kryo, it just works. Whenever either app tries to write to an endpoint which uses the shared connector, that particular message is not serialized with the application’s serializer but the one the VM connector uses. This is good from the point of view of the plug and play experience, but you won’t be able to tell that shared VM connector to use Kryo and get a performance improvement out of it.
 
 === Less Improvement for a Local Persistent ObjectStore
 
@@ -190,7 +190,3 @@ Although Kryo is capable is serializing objects that don’t implement the Seria
 * link:http://blogs.mulesoft.com/performance-choke/[MuleSoft Performance and the Choke in the Wire]
 * link:https://github.com/EsotericSoftware/kryo[Kryo information]
 * link:/mule-user-guide/v/3.8/object-store-module-reference[Object Store Module Reference]
-
-
-
-
