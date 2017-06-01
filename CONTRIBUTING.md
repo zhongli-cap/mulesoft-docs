@@ -12,7 +12,7 @@ MuleSoft welcomes contributions from the community! You can contribute or provid
 Before you can contribute to our documentation, you need to complete two steps to acknowledge that you've read and accepted our Contributor's Agreement:
 
 . Review the agreement, which is [available here](http://www.mulesoft.org/legal/contributor-agreement.html).
-. After you've read and agree to the agreement, you need to fill out the [MuleSoft Contributor's Agreement](https://api-notebook.anypoint.mulesoft.com/notebooks#bc1cf75a0284268407e4) form and submit it to us. This form exists as an API notebook and does two things:
+. After you've read and agree to the agreement, you need to fill out the [MuleSoft Contributor's Agreement](https://api-notebook.anypoint.mulesoft.com/notebooks/#d28e8f95e739ee1e1e30d5ec577f4a27) form and submit it to us. This form exists as an API notebook and does two things:
 * Identifies you using your GitHub account, and
 * Records your name as a contributor
 
