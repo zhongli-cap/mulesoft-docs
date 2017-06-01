@@ -2,7 +2,6 @@
 
 The Database connector has a single configuration that accommodates child elements that define providers. For example:
 
-* `<db:derby-connection url="jdbc:derby:muleEmbeddedDB;create=true">`
 * `<db:generic-connection url="jdbc:derby:muleEmbeddedDB;create=true" driverClassName="org.apache.derby.jdbc.EmbeddedDriver"/>`
 * `<db:my-sql-connection  host="0.0.0.0" port="3306" user="Max" password="POWERS" database="someSchema"/>`
 * `<db:derby-connection database="target/muleEmbeddedDB" create="true">`
@@ -119,19 +118,20 @@ The connector supports dynamic queries:
 
 [source,xml,linenums]
 ----
-<flow name="dynamicQuery">
-  <set-variable variableName="tableName" value="PLANET"/>
-  <db:select>
-    <db:sql>SELECT * from #[tableName] ORDER BY Id</db:sql>
-  </db:select>
-</flow>
+<set-variable variableName="table" value="PLANET"/>
+   <db:select config-ref="dbConfig">
+       <db:sql>#["SELECT * FROM $(table) WHERE name = :name”]</db:sql>
+       <db:input-parameters>
+           #[{'name' : payload}]
+       </db:input-parameters>
+   </db:select>
 ----
 
 Do **not** use dynamic queries to define parameters. Doing so makes the code vulnerable to SQL injection. For example, do not use `#[tableName]` in a WHERE clause. Instead, use parametrized queries.
 
 === Parametrized Queries
 
-Queries can include parameters. Parametrized queries are parameters you reference and set by name. To include parameters in queries, use parametrized queries instead of dynamic queries for the following reasons:
+Queries can include parameters. Parametrized queries are parameters you reference and set by name. you can use a colon (:) to reference to a parameter by name. To include parameters in queries, use parametrized queries instead of dynamic queries for the following reasons:
 
 * Immunity from SQL injection attacks
 * Performance
@@ -141,12 +141,12 @@ For example, use a parametrized query as follows:
 [source,xml,linenums]
 ----
 <flow name="selectParameterizedQuery">
-  <db:select>
-    <db:sql>SELECT * FROM planet WHERE Name = :name</db:sql>
-      <db:input-parameters>
-        <db:input-parameter key="name" value="#[payload]"/>
-      </db:input-parameters>
-  </db:select>
+   <db:select config-ref="dbConfig">
+       <db:sql>select * from PLANET where name = :name</db:sql>
+       <db:input-parameters>
+           #[{'name' : payload}]
+       </db:input-parameters>
+   </db:select>
 </flow>
 ----
 
