@@ -1,23 +1,17 @@
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
 = About Try Scope
 
-The Try scope allows you to handle errors that may occur when attempting to execute its child components. It distinguishes different error types, and can apply different behaviors accordingly. You can also configure what happens to execution upon an error.
+The Try scope allows you to handle errors that may occur when attempting to execute its child components. It distinguishes different error types, and can apply different behaviors accordingly. You can also configure it so that it treats its child operations as an indivisible transaction.
 
-<<<<<<< Updated upstream
+
 == Error Handling
 
 You can set different paths to be executed depending on the error type. These paths can also use different strategies, explained below.
 
 * On Error Continue
 +
-If an error occurs within the try scope, any other components in the scope are skipped, and execution continues inmedately after the scope ends.
+If an error occurs within the Try scope, any other components in the scope are skipped, and execution continues immedately after the scope ends.
 
-
-
- the entire flow breaks execution. If the try scope is nested within another try scope, it continues outside the other scope
++
 If a transaction is being handled, it's committed.
 +
 image:about-try-scope-46faf.png[]
@@ -26,86 +20,51 @@ image:about-try-scope-46faf.png[]
 
 * On Error Propagate
 +
-If an error occurs within the try scope, execution continues directly outside the next element in the flow
+
+If an error occurs within the Try scope, the execution of the entire flow breaks. If the failing Try scope is nested within another Try scope, execution is continued outside the parent scope.
++
 If a transaction is being handled, it's rolled back.
 +
 image:about-try-scope-33c5d.png[]
 
 * On Error Retry
 +
-If an error occurs within the try scope, the entire scope is attempted again.
+If an error occurs within the Try scope, the entire scope is attempted again.
 + diagram
 
-=== Select conditions
+Each error handling path can be set up to be triggered by a different set of error types. Both in Studio and Design Center, you can pick from a list of errors that could be raised by the components you placed inside the scope.
 
-A single try scope can have multiple error handlers, depending on the type of the error.
+You can also set up a path to be triggered by type *All*, referring to all error types that aren't used by other paths. Note that conditions are evaluated in order, so for other paths to be evaluated, the *All* path must always be the last.
 
+As an alternative to mapping a path to a set of error types, you can map it to a freely defined condition. For example, you can map a path to a condition like this:
 
-
-Each error handler
-
-Based on the components in the scope, a list of possible errors
-
-
-
-
-
-[NOTE]
-If you want to have a handler set to *All*, make sure that you place it in the last position. Conditions are evaluated in order, so anything placed after "All" would never be evaluated.
-
-=== Advanced Conditions
-
-
-Instead of mapping an error type to an action, you can map them to more complex conditions
+`when error.cause.message.contains(“fatal”)`
 
 
 == Handling Transactions
 
-A transaction is a series of actions that should never be partially executed, upon error actions should either be rolled back or committed.
+A transaction is a series of actions that should never be partially executed, errors should lead to either a rollback or a commit.
 
-The Try scope ignores transactions by default, but can be set to treat the components within it as a transaction.
+The Try scope can be set to treat the components within it as a transaction. It can be configured in the following ways:
 
-* Ignore (default)
+* *Ignore* (default)
 +
 Actions aren't treated as a transaction, errors cause no rollbacks or commits.
 
+* *Always Begin*
++
+A new transaction is started every time the scope is executed.
 
-You can set the Transactional Action to *Always Begin*, which means that a new transaction is started every time the scope is executed. In some cases where execution order may vary (due to asynchronous actions happening in parallel), you can set the Transactional Action to *Begin or Join*. With this option selected, a new transaction is started only if there are none already affecting the stream of execution.
-
-=======
-== Different Errors
-
-You can set different paths to be executed depending on the error type.
-
-== Handling Transactions
-
-A transaction is a series of actions that should never be partially executed, upon error actions should either be rolled back or committed.
-
-The Try scope ignores transactions by default, but you can configure it so that actions within it are treated as a transaction.
-
-You can set it to *Always Begin*, which means that a new transaction is started every time the scope is executed. In some cases where execution order may vary (due to asynchronous actions happening in parallel), you can set it to *Begin or Join*. With this option selected, a new transaction is started only if there are none already affecting the stream of execution. 
+* *Begin or Join*
++
+Only relevant in cases where execution order may vary (for example due to asynchronous actions happening outside the flow). If the current processing of the flow has already begun a transaction, join it. Otherwise, begin a new one.
 
 
+== Custom Error Types
 
 
-== Behavior Upon Fail
+In each Try scope, you can map standard error types to a custom error type. When using multiple Try scopes, you can use these custom error types to differentiate similar errors that may occur in different parts of the flow. For example, if your flow has two HTTP Request connectors that reach out to different REST services, a connectivity error on either produces the same error message. By wrapping each in a different Try scope and setting custom error types, you can differentiate them.
 
-Propagate vs continue
-
-
-Propagate: If an error occurs within the try scope, execution continues directly outside the next element in the flow
-
-Continue: If an error occurs within the try scope, the entire flow breaks execution. If the try scope is nested within another try scope,
->>>>>>> Stashed changes
-
-
-
-
-
-<<<<<<< Updated upstream
-=======
-== Advanced Conditions
->>>>>>> Stashed changes
 
 
 == See Also
