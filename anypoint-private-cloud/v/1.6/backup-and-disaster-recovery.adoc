@@ -7,41 +7,17 @@ To preserve your data in case of system failure, you must ensure that you system
 
 Your backup archive must be stored on external storage outside the Anypoint cluster.
 
-You must perform backups from a master node of your installation. If you installed the platform with a six server configuration, only three of the servers are master nodes. If you are running 1 or 3 node installation, all nodes are master nodes.
+You can trigger backups from any of the nodes of your installation.
 
-
-1. Determine which node is registered as a master node:
-+
-----
-kubectl get nodes -o yaml|grep master -A 5|grep hostname
-----
-+
-You can run this command on any node in the cluster to determine which nodes are master nodes. 
-+
-To create a backup, you must run the following commands on a master node in the cluster.
-
-1. Enter the gravity utility:
-+
-----
-sudo gravity enter
-----
+To create a backup, you must run the following command on any node in the cluster.
 
 1. Create a backup archive:
 +
 ----
-gravity system backup gravitational.io/anypoint:0.0.0+latest /ext/share/backup.tar.gz
+gravity backup /var/lib/gravity/planet/share/backup.tar.gz
 ----
 +
 This command creates an archive of the current system state in: `/var/lib/gravity/planet/share/backup.tar.gz`.
-
-[WARNING]
-====
-After running the backup command, you may see the following error message:
-
-`Error from server: container "anypoint-backup" in pod "anypoint-backup-<pod-id>" is waiting to start: PodInitializing`
-
-This indicates that the Kubernetes pod running the backup job is not currently running.
-====
 
 == To Perform a System Restore
 
@@ -49,32 +25,19 @@ To restore a system from your backup, use the existing cluster or create a new c
 
 1. Log in to one of the nodes in your cluster.
 
-1. Move the compressed archive file to: `/var/lib/gravity/planet/share`. You can transfer this file securely via the following command:
+1. Move the compressed backup archive file to a folder in any of the nodes of the to-restore environment. You can transfer this file securely via the following command:
 +
 ----
 scp /backup-path/to-restore.tar.gz your_username@remotehost.edu:/var/lib/gravity/planet/share
 ----
 
-1. Enter the gravity utility:
-+
-----
-sudo gravity enter
-----
-
-
 1. Restore the cluster from the backup archive:
 +
 ----
-gravity system restore gravitational.io/anypoint:0.0.0+latest /ext/share/to-restore.tar.gz
+gravity restore /var/lib/gravity/planet/share/to-restore.tar.gz
 ----
 
-1. Restart each of the pods in your cluster to use the updated secrets:
-+
-----
-kubectl delete pods --all
-----
-+
-Kubernetes creates an instance of every pod automatically. This will take a few minutes.
+This will take a few minutes.
 
 == See Also
 
