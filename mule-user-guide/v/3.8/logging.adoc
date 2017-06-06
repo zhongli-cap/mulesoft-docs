@@ -22,10 +22,37 @@ The Logger component is a quick and easy way to log the payload of an in-flight 
 [source, xml, linenums]
 ----
 <flow name="FlowWithLoggers">
-  <http:listener config-ref="HTTP_Listener_Configuration1" path="hello" doc:name="HTTP"/>
-  <logger level="INFO" doc:name="Logger-before"/>
+  <http:listener config-ref="HTTP_Listener_Configuration1" path="/hello" doc:name="HTTP"/>
+  <logger level="INFO" message="Payload received from HTTP: #[payload]" doc:name="Logger-before"/>
   <base64-encoder-transformer/>
-  <logger level="INFO" doc:name="Logger-after"/>
+  <logger level="INFO" message="Payload after base64: #[payload]" doc:name="Logger-after"/>
+  <vm:outbound-endpoint path="next.in.line" />
+</flow>
+----
+
+== Empty logger
+
+When a message is not supplied, the Logger component logs the message. This is equivalent to message="#[message]":
+
+[source, xml, linenums]
+----
+<flow name="FlowWithEmptyLogger">
+  <http:listener config-ref="HTTP_Listener_Configuration" path="/test" doc:name="HTTP"/>
+  <logger level="INFO" doc:name="Log message"/>
+</flow>
+----
+
+Because the message contains all the session, inbound, outbound and invocation (flow variables) properties it can be somewhat verbose. The message contains the payload but the logger will only print the type of the payload, *not* its contents.
+
+If you log the message in several places it is recommended to add some text in the logger's message to identify where the log entries were genereated:
+
+[source, xml, linenums]
+----
+<flow name="FlowWithLoggers">
+  <http:listener config-ref="HTTP_Listener_Configuration1" path="/hello" doc:name="HTTP"/>
+  <logger level="INFO" message="Message before base64: #[message]" doc:name="Log message before"/>
+  <base64-encoder-transformer/>
+  <logger level="INFO" message="Message after base64: #[message]" doc:name="Log message after"/>
   <vm:outbound-endpoint path="next.in.line" />
 </flow>
 ----
