@@ -1,53 +1,55 @@
 = To Disable the Local User after Installing Private Cloud Edition
 
-During installation, Anypoint Private Cloud Edition creates a local Anypoint Platform user.
-This user enables you to configure platform components during installation.
-The credentials for this user are stored locally in Anypoint Platform. However, after configuring an external authentication provider such as LDAP, you can disable this user to ensure that all users are authenticated correctly.
+During installation, Anypoint Private Cloud Edition creates a local Anypoint Platform user that enables you to configure platform components during installation. The credentials for this user are stored locally in Anypoint Platform. However, after configuring an external authentication provider such as LDAP, you can disable this user to ensure that all users are authenticated correctly.
 
 == Prerequisites
 
 Before disabling the local user, perform the following:
 
 * Install and configure your external identity provider.
-* Ensure that `SystemAdmin` user is not the owner of any other organizations
+* Ensure that `SystemAdmin` user is not the owner of any other organizations.
 
 == Disabling the Local User
 
-1. Select the new user you want to assign administrator priviledges.
+. Select the new user you want to assign administrator privileges. This user must be defined in your external identity provider.
 
-1. Determine the internal user ID for this user.
-	+
-	a. From Anypoint Platform, select Access Management.
-	b. Click the Users tab, then click the name of the user.
-	c. Record the internal user ID. This ID appears in the URL as shown below.
-	+
-	image:access-management-user-id.png[User ID]
+. Determine the internal user ID for this user.
+.. From Anypoint Platform, select Access Management.
+.. Click the Users tab, then click the name of the user.
+.. Record the internal user ID. This ID appears in the URL as:
++
+image::access-management-user-id.png[User ID]
 
-1. Enter the gravity shell. 
+. Enter the gravity shell. 
 +
 ----
 gravity enter
 ----
 
-1. Identify the `cs-auth` container using the following command:
+. Identify one of the `cs-auth` containers using the following command:
 +
 ----
 kubectl get pods -l microservice=cs-auth
 ----
 
-1. Change the owner using the following command using the internal user ID and the `cs-auth` container.
+
+. Change the owner using the following command, providing the internal the `cs-auth` container and user ID obtained above:
++
+----
+kubectl exec -it <cs-auth-container> – node bin/change_owner.js --new-owner-id <user_id>
+----
++
+This command changes the owner from the default system user to a new user managed by the external authentication provider. The command you use should be similar to the follwoing example:
 +
 ----
 kubectl exec -it cs-auth-1572348378-0kb57 – node bin/change_owner.js --new-owner-id a363279f-982f-493c-b08f-9feb91be90d4
 ----
-+
-Running this command changes the owner from the default system user to a new user managed by the external authentication provider.
 
-1. Disable the `SystemAdmin` user.
+
+. Disable and delete the `System Admin` user.
+.. Login as the user you just added as the organization owner. as owner.
+.. From Anypoint Platform, select Access Management.
+.. Click the Users tab, then click `username` in the same row as `SystemAdmin`.
+.. Click Disable, then click Delete.
 +
-	a. Login as the user you added as owner.
-	a. From Anypoint Platform, select Access Management.
-	a. Click the Users tab, then click `username` in the same row as `SystemAdmin`.
-	a. Click Disable.
-	a. Click the Roles tab, then click Organization Administrators.
-	a. Verify that the `System Admin` user is not 
+This removes the default user from the platform.
