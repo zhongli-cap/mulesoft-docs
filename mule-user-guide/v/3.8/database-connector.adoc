@@ -1,13 +1,6 @@
 = Database Connector
 :keywords: database connector, jdbc, anypoint studio, data base, connectors, mysql, stored procedure, sql, derby, oracle
 :imagesdir: ./_images
-:toc: macro
-:toclevels: 2
-
-
-image:database-connector-icon.png[db conn icon]
-
-toc::[]
 
 == Introduction
 
@@ -27,7 +20,6 @@ The Database connector lets you perform predefined queries or dynamically constr
 
 This document assumes that you are familiar with databases in general and with link:http://www.w3schools.com/sql/sql_syntax.asp[SQL syntax]. Furthermore, to complete the examples presented here, we assume that you have access to the database that you are to connect to, and that you have downloaded the proper database driver for your database.
 
-== Overview
 
 To use a Database connector in your Mule application, check whether your *database engine* is supported out-of-the-box.
 
@@ -35,20 +27,18 @@ The database connector currently includes out of the box support for Oracle, MyS
 
 All other database engines – including MS SQL – are supported by the *Generic Database Configuration* option.
 
-[WARNING]
-====
-Note that the steps below differ depending on whether you connect to one of the databases supported out-of-the-box or not -- follow as per your use case.
-====
+== Basic Setup Steps
 
-. Configure a *Database global element* where you define:
+. Configure a *Database connector* where you define:
 .. Your database's location and connection details
+[NOTE]
+You may need to add your database driver as a dependency to your app for the connector to work.
 .. Advanced connection parameters such as connection pooling
-. Configure the *Database connector* building block that you place in your Mule flow, which:
+. Configure the operation:
 .. Contains the query to perform on the database
-.. References the Database Global Element
 
-
-To really take advantage of the design-time power of the connector, use it in conjunction with *DataWeave* (replaces DataMapper), which can extract message metadata and assist in transforming it to a different data format or structure. For more information, see link:/mule-user-guide/v/3.8/dataweave[DataWeave].
+[TIP]
+*DataWeave* can extract message metadata and assist in transforming data to a different structure. For more information, see link:/mule-user-guide/v/3.8/dataweave[DataWeave].
 
 
 == Supported Operations
@@ -64,10 +54,11 @@ The database connector supports the following operations:
 * *DDL operations* such as CREATE, ALTER, etc.
 
 [TIP]
-You can run a *TRUNCATE* query on the database by selecting *Update* as the operation.
+* You can run a *TRUNCATE* query on the database by selecting *Update* as the operation.
+* To enhance connector performance, verify whether your query is valid for use in link:#bulk-mode[Bulk Mode].
 
 
-== Database Connector Global Element Configuration
+== Configuring Database Connector
 
 Follow these steps to set up and test a connection to your database by creating a reusable *global element* for the database connector to reference.
 
@@ -79,7 +70,6 @@ You can use the *Poll* scope to monitor changes to your database and trigger sub
 +
 . Select the type of *database global element* to configure by clicking the green plus sign and navigate the dropdown to the applicable database engine. Or edit an existing configuration by clicking the "Edit" icon.
 +
-//image:database-connector-fd04e.png[]
 image:add-db-config.png[add-db-config 1]
 +
 . Choose a type of database global element to set up.
@@ -102,32 +92,16 @@ image:database-connector-380c4.png[db config props]
 +
 ////
 The diagram and section below describe how to address these requirements and troubleshoot connection issues.
+
 image:modif_flowchart.png[modif_flowchart]
 ////
 
 . At this point, the database connection should be confirmed via *Test Connection* button. Click *OK* when confirmed.
 . Back in the properties window ensure a valid operation and query have been specified for the database connector building block(s) before running your app.
 
-== Fields That Support MEL Expressions
-
-In Mule version 3.7 and later, the following connector fields support MEL expressions. For a usage example, see <<Example MEL Expression for Database URL, Example MEL Expression for Database URL>>.
-
-
-[%header,cols="4*"]
-|===
-|*Generic* |*Derby* |*Oracle* |*MySQL*
-|`url` |`user` |`user` |`user`
-|`driverClassName` |`password` |`password` |`password`
-|Properties inside `connection-properties` element |`url` |`host` |`database`
-|- |`driverClassName` |`instance` |`host`
-|- |Properties inside `connection-properties` element |`url` |`url`
-|- |- |`driverClassName` |`driverClassName`
-|- |- |Properties inside `connection-properties` element |Properties inside `connection-properties` element
-|===
-
 
 [[config-out-of-box]]
-== Configuration Details for Database Engines Supported Out of the Box
+=== Configuring for Database Engines Supported Out of the Box
 
 Currently, the following database engines are supported out of the box:
 
@@ -199,9 +173,14 @@ OR +
 .Example Derby global element - blank
 image:derby_global_elem.png[derby_global_elem]
 
-=== General Tab - Optional Attribute
+== Optional Attributes
 
-This section and the next describe the attributes of the element that you can _optionally_ configure to customize some functionality of the global database connector element. For a full list of elements, attributes and default values, consult the link:/mule-user-guide/v/3.8/database-connector-reference[Database Connector Reference]. See also <<Fields That Support MEL Expressions, Fields That Support MEL Expressions>>.
+This section and the next describe the attributes of the element that you can _optionally_ configure to customize some functionality of the global database connector element.
+
+For a full list of elements, attributes and default values, consult the link:/mule-user-guide/v/3.8/database-connector-reference[Database Connector Reference].
+
+[TIP]
+See also <<Fields That Support MEL Expressions, Fields That Support MEL Expressions>>.
 
 
 === Advanced Tab - Optional Attributes
@@ -258,11 +237,11 @@ a|`maxPoolSize` +
 `preparedStatementCacheSize` +
 `maxWaitMillis` |Define values for any of the connection pooling attributes to customize how your Database Connector reuses connections to the database. You can define values for:
 
-* Max Pool Size
-* Min Pool Size
-* Acquire Increment
-* Prepared Statement Cache Size
-* Max Wait Millis
+* Max Pool Size (default: 5)
+* Min Pool Size (default: 0)
+* Acquire Increment (default: 1)
+* Prepared Statement Cache Size (default: 5)
+* Max Wait Millis: limits how long a client will wait for a Connection (default: 30000) 
 
 Note: By default, no pool is used. A single connection is created for every request. You need to configure a Pooling Profile to use a pool.
 |===
@@ -285,11 +264,11 @@ Note: By default, no pool is used. A single connection is created for every requ
 ....
 ------
 
-== Database Engines Not Supported Out of the Box - Generic Installation
+=== Configuring for Database Engines Not Supported Out of the Box
 
 All databases that are not configured link:#config-out-of-box[Database Engines Supported Out of the Box] must be added through the generic database installation, and then configured accordingly.
 
-=== Adding a Generic Database Driver
+==== Adding a Generic Database Driver
 
 When using the *Generic* Database Configuration, you manually import the driver for your database engine into your application as a referenced library, or preferably add it as a Maven dependency. Remember to later specify the fully qualified driver class as one of the connection parameters in the connector configuration. You can use the database connector with any database engine for which you have a driver.
 
@@ -321,7 +300,7 @@ image:referenced-libraries-in-proj.png[referenced-libraries-in-proj pack_explore
 After adding the database driver for a database engine not supported out of the box, you need to enter the fully qualified name of the driver class in the global element referenced by the database connector. For details, see the next section.
 
 
-=== Configuration for Generic Database
+==== Configuration for Generic Database
 
 [tabs]
 ------
@@ -357,11 +336,11 @@ image:generic-db-global-elem-props.png[generic-db-global-elem-props]
 |*Connection Timeout* |Define the amount of time a database connection remains securely active during a period of non-usage before timing-out and demanding logging in again.
 |*Connection Pooling* |Define values for any of the connection pooling attributes to customize how your database connector reuses connections to the database. You can define values for:
 
-* Max Pool Size
-* Min Pool Size
-* Acquire Increment
-* Prepared Statement Cache Size
-* Max Wait Millis
+* Max Pool Size (default: 5)
+* Min Pool Size (default: 0)
+* Acquire Increment (default: 1)
+* Prepared Statement Cache Size (default: 5) 
+* Max Wait Millis: limits how long a client will wait for a Connection (default: 300000)
 
 |*Use XA Transactions* |Enable to indicate that the created datasource must support extended architecture (XA) transactions. Default: *false*.
 |===
@@ -413,7 +392,7 @@ See also <<Fields That Support MEL Expressions, Fields That Support MEL Expressi
 ....
 ------
 
-=== Common Driver Class Specifications
+==== Common Driver Class Specifications
 
 When you configure a global element for a generic database server, you need to enter the fully qualified name of the driver class as explained in the Driver Class Name cell in the table above. Below are the driver class names provided by some of the most common database drivers.
 
@@ -424,7 +403,7 @@ When you configure a global element for a generic database server, you need to e
 |MS-SQL |*sqljdbc4.jar* |*com.microsoft.sqlserver.jdbc.SQLServerDriver*
 |===
 
-=== Example Generic Database Connector Configuration for PostgreSQL
+==== Example Generic Database Connector Configuration for PostgreSQL
 
 Taking PostgreSQL as an example, go to the properties window of the generic database connector configuration, specify the *Driver Class Name* and the connection *URL* as parameters: `org.postgresql.Driver` and `jdbc:postgresql://localhost:5432/tictactoe?password=pass&user=yourusername`. In XML format, this configuration would be:
 
@@ -434,7 +413,7 @@ Taking PostgreSQL as an example, go to the properties window of the generic data
     </db:generic-config>
 ----
 
-=== Configuring a Database Connector Instance Inside a Flow
+== Setting up Database Connector Operation
 
 *Required:* The following table describes the attributes of the Database Connector element that you _must_ configure in order to be able to connect, then submit queries to a database. For a full list of elements, attributes, and default values, consult the link:/mule-user-guide/v/3.8/database-connector-reference[Database Connector Reference]. See also <<Fields That Support MEL Expressions, Fields That Support MEL Expressions>>.
 
@@ -459,7 +438,7 @@ The Oracle and Derby databases are supported by Mule, but you can only configure
 
 [TIP]
 ====
-You can also run a TRUNCATE query by selecting *Update* as the operation.
+Run a TRUNCATE query by selecting *Update* as the operation.
 ====
 
 a|*SQL Statement*
@@ -483,100 +462,20 @@ image:truncate.png[truncate]
 
 ////
 
-[TIP]
-====
-*Bulk Mode*
 
-Enable this optional feature to submit collections of data with one query, as opposed to executing one query for every parameter set in a collection. Enabling bulk mode improves the performance of your applications as it reduces the number of individual query executions your application triggers. Bulk mode requires a parameterized query with at least one parameter, or a dynamic query with at least one expression.
+===== Select and Stored Procedure - Advanced Tab Fields
 
-See configuration details below.
-====
-
-==== General Tab
-
-===== Parameterized Stored Procedure Fields
-
-The following are optional attributes:
-
-* *Parameter Name* - Use to identify a named parameter in your SQL statement for which you wish to use the value at runtime, when your application submits your query which calls upon stored in the database instance.
-* *Parameter Type* - Use to identify the type of data the stored procedure can expect to receive from your query statement.
-* *IN/OUT* - Defines the use of your stored procedure's parameter:
-** IN - Stored procedure that can expect only to receive data
-** OUT - Stored procedure that can expect only to return data
-** INOUT - Stored procedure that can expect to receive, then return data
-* *Value* - Parameterized Stored Procedure. Use to define the value that overrides the default value for the named parameter in your SQL statement when your application submits your query.
-
-.Example Call to Stored Procedure with In and Out Params
-[source,xml,linenums]
-----
-    <flow name="QueryRequestResponse">
-        <inbound-endpoint address="vm://testRequestResponse" exchange-pattern="request-response"/>
-
-        <db:stored-procedure config-ref="MySQL_Configuration" doc:name="Database">
-            <db:parameterized-query><![CDATA[{ call getRecords(:v1, :v2, :total_value) }]]></db:parameterized-query>
-            <db:in-param name="v1" type="INTEGER" value="1"/>
-            <db:in-param name="v2" type="INTEGER" value="2"/>
-            <db:out-param name="total_value" type="INTEGER"/>
-        </db:stored-procedure>
-    </flow>
-----
-
-image:stored_procedure.png[stored_procedure]
-
-==== Bulk Execute Operation Parameters
-
-* *Query Text* - Type several statements (separated by a semicolon and a new line character) to perform them in bulk.
-Supports all operations except *Select* and *Stored procedure*.
-* *From File* - Reference a file with several statements (separated by a semicolon and a new line character) to perform them in bulk.
-Supports all operations except *Select* and *Stored procedure*.
-
-image:bulk-execute.png[bulk execute]
-
-==== Execute DDL Operation Parameters
-
-* *Dynamic query* - Use with: Execute DDL. Perform an operation on the data structure, rather than the data itself through a DDL request.
-
-image:execute-dll.png[DDL]
-
-==== Advanced Tab - Optional Attributes
-
-The following are optional attributes.
-
-
-===== Fields to Use With All Operations
-
-* *Target* - Use with: *All*. Use an enricher expression to enrich the message with the result of the SQL processing. Use this attribute to specify an alternate source for the output data, such as a variable or property.
-* *Query Timeout* - Indicates the minimum amount of time (in seconds) before the connector will attempt to cancel a running query. No timeout is used by default.
-* *Source* - Use this expression to obtain the value for calculating the parameters. By default, this is *#[payload]*
-* *Transactional Action* |ALL |Use this attribute to change the default to one of the following values:
-** JOIN_IF_POSSIBLE - _(Default)_ joins an in-flight transaction; if no transaction exists, Mule creates a transaction.
-** ALWAYS_JOIN - always expects a transaction to be in progress; if it cannot find a transaction to join, it throws an exception.
-** NOT_SUPPORTED - executes outside any existent transaction.
-
-===== Select and Stored Procedure Fields
-
-* *Max Rows* - Use to define the maximum number of rows your application accepts in a response from a database.
+* *Max Rows* (_applies to SELECT_) - Use to define the maximum number of rows your application accepts in a response from a database.
 * *Fetch Size* - Indicates how many rows should be fetched from the resultSet. This property is required when streaming is true, the default value is 10.
 * *Streaming* - Enable to facilitate streaming content through the Database Connector to the database. Mule reads data from the database in chunks of records instead of loading the full result set into memory.
 
-===== Insert, Update, and Delete Fields
-
-* *Bulk Mode* - Enable to submit collections of data with one query, as opposed to executing one query for every parameter set in a collection. Enabling bulk mode improves the performance of your applications as it reduces the number of individual query executions.
-+
-Bulk mode requires a parameterized query with at least one parameter.
-+
-[NOTE]
-If you set bulk mode without a parameterized query it won't result in a single query in bulk mode, but rather numerous single queries, which has a much lower performance.
-+
-For example, imagine you have a query which is designed to insert employees into a database table, and for each employee, it must insert a last name and an ID. If the Database Connector submitted one query for each one of 1000 employees, the operation would be very time consuming and non-performant. If you enable bulk mode, the Database Connector executes one query to the database to insert all the employees' values as a list of parameter sets of last names and IDs.
-
-===== Insert Fields
+===== INSERT - Advanced Tab Fields
 
 * *Auto-generated Keys* - Use this attribute to indicate that auto-generated keys should be made available for retrieval.
 * *Auto-generated Keys Column Indexes* - Provide a comma-separated list of column indexes that indicates which auto-generated keys should be made available for retrieval.
 * *Auto-generated Keys Column Names* - Provide a comma-separated list of column names that indicates which auto-generated keys should be made available for retrieval.
 
-== Query Types
+=== Query Types
 
 Mule makes available three types of queries you can use to execute queries to your database from within an application. The following table describes the three types of queries, and the advantages of using each. 
 
@@ -707,7 +606,7 @@ For each variable, the database connector automatically determines and sets the 
 ....
 ------
 
-== Execute DDL
+=== Execute DDL
 
 Data Definition Language (DDL) is a subset of SQL that serves for manipulating the data structure rather than the data itself. This kind of request is used to create, alter, or drop tables.
 
@@ -721,7 +620,7 @@ When using DDL, you can only make dynamic queries (which may or may not have MEL
 * templates
 ====
 
-=== Examples
+==== Execute DDL Examples
 
 [tabs]
 ------
@@ -770,20 +669,25 @@ image::database-connector-03cce.png[]
 ....
 ------
 
-== Bulk Updates
+[[bulk-mode]]
+=== Bulk Mode
 
-The Database Connector can run multiple SQL statements in bulk mode. The return type of this kind of request is an update count, not actual data from the database.
+The Database Connector can consolidate multiple SQL statements into one through *Bulk Mode*. Enable this optional feature to INSERT, UPDATE or DELETE data with one query, as opposed to executing one query for every parameter set in a collection. The return type from a bulk mode operation is an update count, not actual data from the database.
 
-The individual SQL statements within this MP must be separated by semicolons, and line break characters. All queries must be dynamic, they may or may not include MEL expressions.
+==== Notes
 
-Instead of writing a statement directly, you can reference a file that contains multiple statements that are separated by semicolons and line breaks.
+* Bulk mode improves the performance of your applications as it reduces the number of individual query executions your application triggers.
+* Bulk mode for a parameterized query requires at least one parameter. For a dynamic query requires at least one expression.
+* The only memory constraints on this are imposed by the JVM, though some database drivers may have constraints on the number of parameters you can use on a bulk update.
+* The individual SQL statements must be separated by semicolons, and line break characters. All queries must be dynamic. You may include MEL expressions.
+* Instead of writing a statement in the editor, you can reference a file that contains multiple statements that are separated by semicolons and line breaks.
+* if the amount of data is large, to avoid out of memory error use a Batch Commit approach with segmented Inserts in Bulk Mode. You must adjust the size of each commit to avoid memory issues.
 
-[WARNING]
-====
-You cannot perform *select* operations as part of a bulk operation. You can only use *insert, delete, and update.*
-====
 
-=== Examples
+[NOTE]
+For example, imagine you have a query to insert employees into a database table. For each employee, it must insert a last name and an ID. If you enable bulk mode, the Database Connector executes one query to the database to insert the values, rather than once per employee.
+
+==== Examples
 
 [tabs]
 ------
@@ -821,6 +725,23 @@ image:bulkex2.png[bulkex2]
 ....
 ------
 
+== Fields That Support MEL Expressions
+
+In Mule version 3.7 and later, the following connector fields support MEL expressions. For a usage example, see <<Example MEL Expression for Database URL, Example MEL Expression for Database URL>>.
+
+
+[%header,cols="4*"]
+|===
+|*Generic* |*Derby* |*Oracle* |*MySQL*
+|`url` |`user` |`user` |`user`
+|`driverClassName` |`password` |`password` |`password`
+|Properties inside `connection-properties` element |`url` |`host` |`database`
+|- |`driverClassName` |`instance` |`host`
+|- |Properties inside `connection-properties` element |`url` |`url`
+|- |- |`driverClassName` |`driverClassName`
+|- |- |Properties inside `connection-properties` element |Properties inside `connection-properties` element
+|===
+
 == Tips
 
 * *Installing the database driver:* Be sure to install the *.jar* file for your database driver in your Mule project, then configure the build path of the project to include the *.jar* as a referenced library.
@@ -857,15 +778,18 @@ select * from emp where id = '#[payload.id]'
 * *Streaming with the Database connector:* When you enable streaming on your Database connector, you leave the connection, statement, and result set open after execution. Mule closes these resources when either of the following occurs:
 ** The result iterator is consumed.
 ** There is an exception during the processing of the message (when the result iterator is in the payload of the current message).
+** You enclose the select operation, and the message processors using the iterator, inside a transactional scope. The transactional scrope closes the transaction and there is no need to consume the iterator.
+
+Trying to consume the iterator after closing the transaction causes an error.
 
 == JDBC User-Defined Data Types
 
-In Mule 3.6 and newer, you can use user-defined data types with the Database connector. This feature provides the ability to use JDBC supported types in a query; for example, array, struct, and other types. 
+In Mule 3.6 and newer, you can use user-defined data types with the Database connector. This feature provides the ability to use JDBC supported types in a query; for example, array, struct, and other types.
 
 To use a JDBC data type, specify the type in the database configuration by the name of the type, along with type ID corresponding to the structured data type.
 
 [TIP]
-See the link:/mule-user-guide/v/3.8/database-connector-reference#jdbc-user-defined-data-types-udt[list of supported types]. 
+See the link:/mule-user-guide/v/3.8/database-connector-reference#jdbc-user-defined-data-types-udt[list of supported types].
 
 Here in the example below you can see `java.sql.STRUCT` is referenced using ID of 2002, and `java.sql.ARRAY` as 2003:
 
@@ -939,7 +863,7 @@ The following example shows the Mule 3.7 and newer change where you can specify 
 
 * link:/mule-user-guide/v/3.8/database-connector-reference[Database Connector Reference].
 * See also <<Fields That Support MEL Expressions, Fields That Support MEL Expressions>>.
-* link:http://training.mulesoft.com[MuleSoft Training]
-* link:https://www.mulesoft.com/webinars[MuleSoft Webinars]
-* link:http://blogs.mulesoft.com[MuleSoft Blogs]
-* link:http://forums.mulesoft.com[MuleSoft Forums]
+
+
+
+

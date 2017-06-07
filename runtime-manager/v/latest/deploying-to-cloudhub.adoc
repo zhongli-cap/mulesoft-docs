@@ -3,7 +3,7 @@
 
 image:logo-cloud-active.png[link="/runtime-manager/deployment-strategies", title="CloudHub"]
 image:logo-hybrid-disabled.png[link="/runtime-manager/deployment-strategies", title="Hybrid Deployment"]
-image:logo-server-disabled.png[link="/runtime-manager/deployment-strategies", title="Anypoint Platform On-Premises"]
+image:logo-server-disabled.png[link="/runtime-manager/deployment-strategies", title="Anypoint Platform Private Cloud Edition"]
 image:logo-pcf-disabled.png[link="/runtime-manager/deployment-strategies", title="Pivotal Cloud Foundry"]
 
 You can deploy a Mule application to CloudHub via:
@@ -24,12 +24,12 @@ Additionally, you can also deploy to CloudHub through:
 
 [NOTE]
 ====
-Deploying to CloudHub is not possible via the Anypoint Platform On-Premises Edition.
+Deploying to CloudHub is not possible via the Anypoint Platform Private Cloud Edition.
 
-If you’re still interested in requesting the Anypoint Platform on-Premises Edition, please contact your sales representative.
+If you’re still interested in requesting the Anypoint Platform Private Cloud Edition, please contact your sales representative.
 ====
 
-== Accessing the Deploy Application Screen
+== Deploying an Application
 
 === From Anypoint Platform
 
@@ -49,22 +49,38 @@ image::deploying-to-cloudhub-3dcbb.png[deploying-to-cloudhub-3dcbb]
 image::deploying-to-cloudhub-8524f.png[deploying-to-cloudhub-8524f]
 
 
-[NOTE]
---
+=== From SandBox
+
+
 If you created an application in a sandbox environment and tested it, you would eventually want to migrate it to production.
 
-To do so, create a new app in your production environment, then when picking the application file, instead of choosing a file, click *Get from sandbox*.
+To do so:
 
+. Logged into your Anypoint Platform account, go to your production environment
+. In the *Applications* tab, click the *Deploy Application* button
++
+image:deploying-to-your-own-servers-d84f7.png[]
+
+. Then when picking the application file, instead of uploading a new file, click *Get from sandbox*.
++
 image::deploying-to-cloudhub-d6f7a.png[]
 
-You can then choose between your sandbox environments, and select an application to deploy in production.
---
+. You can then choose between your sandbox environments, and select an application to deploy in production. Select an application and click *Apply*
+
+. Continue setting up your deployment as you would with any normal deployment
+
 
 ==== Limitations
 
 * Only a *CloudHub* Administrator can move applications between environments. 
 * To avoid domain name conflict, an application cannot exist in two environments at the same time. Alter the application's name slightly to deploy it to another environment.
-* You cannot move the same application into the same environment. CloudHub prevents you from duplicating applications in a single environment. If you wish to have the same, or similar applications in a single environment, modify one application's file to distinguish it from the original.
+* You cannot move an application into the same environment it's in already. Runtime Manager prevents you from duplicating applications in a single environment. If you wish to have the same, or similar applications in a single environment, modify one application's file to distinguish it from the original.
+
+
+
+
+
+
 
 
 === From Anypoint Studio
@@ -86,7 +102,18 @@ You can manage these credentials through the Studio *Preferences* menu, in *Anyp
 image:DeployAppFirstScreen.png[DeployAppFirstScreen] 
 
 [TIP]
-For an example of deploying to CloudHub directly from Anypoint Studio, see link:/runtime-manager/hello-world-on-cloudhub[Hello World on CloudHub].
+For an example of deploying to CloudHub directly from Anypoint Studio, see link:/getting-started/deploy-to-cloudhub[Deploy to CloudHub].
+
+
+////
+=== From the Design Center
+
+link to Mozart
+
+
+////
+
+
 
 == Creating an Application Name
 
@@ -162,6 +189,7 @@ There are 5 different worker sizes to choose from, with the compute and memory c
 
 Workers that have less than 1 vCore capacity (0.1 vCores and 0.2 vCores)  offer limited CPU and IO for smaller work loads. Each worker has 8 GB of storage, which is used for both system and application storage. Applications with greater storage needs (verbose logging etc.) should use one of the larger worker sizes - 2 vCores or 4 vCores, which have additional storage as follows:
 
+* 1 vCores workers have an additional 4 GB of SSD storage mounted on /tmp
 * 2 vCores workers have an additional 32 GB of SSD storage mounted on /tmp
 * 4 vCores workers have an additional 80 GB of storage, mounted as two volumes on /tmp (40 GB), and /opt/storage (40 GB)
 
@@ -198,8 +226,11 @@ Read more about link:/runtime-manager/worker-monitoring[Worker Monitoring].
 Check this box to enable persistent queues on your application. Persistent queues protect against message loss and allow you to distribute workloads across a set of workers. Before you can take advantage of persistent queueing, your application needs to be set up to use queues. See link:/runtime-manager/cloudhub-fabric[CloudHub Fabric] for more information.
 
 [IMPORTANT]
+====
 If your mule application is using link:/mule-user-guide/v/3.8/batch-processing[Batch] component and persistent queues, then you might see batch record being processed multiple times. All batch records are stored in Amazon SQS and by default the visibility of the message is set to 70 seconds. If your batch process takes longer than 70 seconds, then batch process might see the same message again and process it multiple times.  To avoid this issue please set 'persistent.queue.min.timeout' system parameter to a reasonable value, for example if your batch process takes 30 minutes to complete then set value to 'persistent.queue.min.timeout=2700000' milliseconds ( 45 Minutes). Maximum value of 43000000 milliseconds (12 hours) is supported. See screen shot below for setting the value in cloudhub
+
 image:MuleBatchWithPersistentQueueDuplicationSolution.png[MuleBatchWithPersistentQueues]
+====
 
 == Properties Tab
 
@@ -241,7 +272,7 @@ With CloudHub, these techniques to override properties work differently.
 
 The first approach is difficult to translate to CloudHub: when an application is deployed into CloudHub it is harder to write override properties files into the file system.
 
-The second approach is much easier to translate to CloudHub: the Properties tab does allow you to specify Java system environment variables which will function in the same way as adding environment variables when you deploy to an on-premises server. Read more about how to set these variables in link:/runtime-manager/managing-cloudhub-applications#updating-environment-variables-and-application-properties[Managing CloudHub Applications].
+The second approach is much easier to translate to CloudHub: the Properties tab does allow you to specify Java system environment variables which will function in the same way as adding environment variables when you deploy to an on-premises server. Read more about how to set these variables in link:/runtime-manager/managing-applications-on-cloudhub#updating-environment-variables-and-application-properties[Managing Applications on CloudHub].
 
 If you also have any property names set in a mule-app.properties file inside your application or in bundled property placeholder files, then when your application is deployed, any entries in the CloudHub Properties tab with the same name will override the matching value bundled with the application.
 
@@ -261,7 +292,7 @@ image:CHInsightTab.png[CHInsightTab]
 
 == Logging Tab
 
-The Logging tab lets you change the logging setting (INFO, DEBUG, WARN, or ERROR). For more information,
+CloudHub stores activity logs, which can be viewed or downloaded from the platform. The Logging tab of the deploy menu lets you configure how these logs are structured. Specifically, it lets you set how the different logging levels are applied (INFO, DEBUG, WARN, or ERROR), so that they don't follow the default usage. For more information,
 see link:/runtime-manager/viewing-log-data[Viewing Log Data].
 
 image:CHLoggingTab.png[CHLoggingTab]
@@ -327,12 +358,12 @@ If an error occurs and the application cannot be deployed, the application statu
 
 == See Also
 
-* See a tutorial about deploying to CloudHub directly from Anypoint Studio link:/runtime-manager/hello-world-on-cloudhub[Hello World on CloudHub]
+* See a tutorial about deploying to CloudHub directly from Anypoint Studio link:/getting-started/deploy-to-cloudhub[Deploy to CloudHub]
 * Read more about what link:/runtime-manager/cloudhub[CloudHub] is and what features it has
 * link:/runtime-manager/managing-deployed-applications[Managing Deployed Applications] contains general information about hoy to manage your application once deployed
-* link:/runtime-manager/managing-cloudhub-applications[Managing CloudHub Applications] contains more information on how to manage your applications with setting that are specific to CloudHub
+* link:/runtime-manager/managing-applications-on-cloudhub[Managing Applications on CloudHub] contains more information on how to manage your applications with setting that are specific to CloudHub
 * link:/runtime-manager/monitoring[Monitoring Applications] shows you how you can set up email alerts for whenever certain events occur with your application or workers
-* link:/runtime-manager/developing-a-cloudhub-application[Developing a CloudHub Application]
+* link:/runtime-manager/developing-applications-for-cloudhub[Developing Applications for CloudHub]
 * Deploy using the link:/runtime-manager/anypoint-platform-cli[CloudHub Command Line Interface].
 * A link:/runtime-manager/cloudhub-api[REST API] is also available for automating deployments to CloudHub.
 * For information on deploying to servers, server groups and clusters, see link:/runtime-manager/deploying-to-your-own-servers[Deploying to Your Own Servers].

@@ -9,7 +9,7 @@ This document assumes that you are familiar with the link:/anypoint-studio/v/6/
 
 == Configuring Auto-Paging
 
-The table below lists the link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors] which support auto-paging functionality. (Additionally, you can use auto-paging with any custom-built connector which supports auto-paging functionality.)
+The table below lists the link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors] which support auto-paging functionality. Additionally, you can use auto-paging with any custom-built connector which supports auto-paging functionality.
 
 === Connectors with Auto-Paging
 
@@ -21,23 +21,19 @@ The table below lists the link:/mule-user-guide/v/3.8/anypoint-connectors[Anypo
 * Google Spreadsheets
 * Google Tasks
 * Marketo
-* Microsoft Dynamics CRM (on Demand)
-* Microsoft Dynamics CRM (on Premise)
+* Microsoft Dynamics CRM (On Demand)
+* Microsoft Dynamics CRM (On Premise)
 * NetSuite
 * QuickBooks
 * Salesforce _(bundled with Studio)_
 
+Learn how to link:/getting-started/anypoint-exchange#installing-a-connector-from-anypoint-exchange[add connectors] to your instance of Anypoint Studio.
 
-Learn how to link:/anypoint-studio/v/6/installing-extensions[add connectors] to your instance of Anypoint Studio.
-
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
+== To Configure Using Studio Visual Editor
 
 . To make the *Paging* section visible in a connector, you must first select an *Operation* which outputs a collection, for example `Get calendar list`. Otherwise, Studio does not display the Paging section in the properties editor.
 
-. Enter an integer in the *Fetch Size* field to indicate the batch size of objects in a "page". For example, set the Fetch Size to `50` to return information in batches of 50 objects. +
+. Enter an integer in the *Fetch Size* field to indicate the batch size of objects in a "page". For example, set the Fetch Size to `50` to return information in batches of 50 objects.
 +
 image:googlecalendarpagingex.png[googlecalendarpagingex]
 +
@@ -46,9 +42,9 @@ image:googlecalendarpagingex.png[googlecalendarpagingex]
 |Attribute |Default Value |Description
 |*Fetch Size* |100 |Specify the number of objects that Mule returns in each page.
 |===
-....
-[tab,title="XML Editor"]
-....
+
+== To Configure Using the XML Editor
+
 . To the connector in your flow, add a `fetchSize` attribute.
 
 . Set the value of the attribute to an integer to indicate the batch size of objects in a "page". For example, set `fetchSize` to `50` to return information in batches of 50 objects.
@@ -65,19 +61,13 @@ image:googlecalendarpagingex.png[googlecalendarpagingex]
 |Property |Default Value |Description
 |`fetchSize` |100 |Specify the number of objects that Mule returns in each page.
 |===
-....
-------
 
-=== Handling Auto-Paged Output
+== Handling Auto-Paged Output
 
 When you use a connector that employs paging, Mule creates an iterator object that splits the payload into manageable pages. Regardless of the page-size, the iterator pushes out objects one at a time, then fetches the next pages on demand. To process the paginated output, you must use elements in your flow that can handle collections, such as a link:/mule-user-guide/v/3.8/foreach[Foreach scope], a collection splitter, a link:/mule-user-guide/v/3.8/dataweave[Transform Message component], etc. Because Mule processes the set of pages one page at a time, it prevents memory usage from exceeding its limits.
 
-=== Example
+== Example Using Studio Visual Editor
 
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
 . Drag an *HTTP* endpoint onto the canvas.
 . Set its *Path* to `authenticate`.
 . Create a *Connector Configuration* element for the HTTP endpoint. Set its *Host* to `localhost` and its *Port* to *8081*
@@ -92,9 +82,9 @@ When you use a connector that employs paging, Mule creates an iterator object th
 image:autopaging-with-google-calendars.png[autopaging google cal flow]
 
 When a message reaches the Google Calendar connector, the Logger outputs a separate message for each object. If there are more than 50 objects, Mule paginates the output.
-....
-[tab,title="XML Editor"]
-....
+
+== Example Using XML
+
 . Create a *google-contacts* *Global Element,* then define its *Consumer Key* and *Consumer secret*.
 +
 [source,xml, linenums]
@@ -106,35 +96,35 @@ When a message reaches the Google Calendar connector, the Logger outputs a separ
 +
 . Create an *HTTP* connector and set the value of its *Path* to `authenticate`.
 +
-[source,xml, linenums]
+[source,xml]
 ----
 <http:listener config-ref="HTTP_Listener_Configuration" path="authenticate" doc:name="HTTP"/>
 ----
 +
-. Outside the flow, create a configuration element that matches the name referenced by the connector. Set the host to *localhost* and the port to **8081**.
+. Outside the flow, create a configuration element that matches the name referenced by the connector. Set the host to *localhost* and the port to *8081*.
 +
-[source,xml, linenums]
+[source,xml]
 ----
 <http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" doc:name="HTTP Listener Configuration"/>
 ----
 +
 . Add a *Google Calendars connector* setting its *operation* to `authorize`.
 +
-[source,xml, linenums]
+[source,xml]
 ----
 <google-contacts:authorize config-ref="Google_Contacts" doc:name="Google Contacts"/> 
 ----
 +
 . Create a new flow with a new *HTTP* endpoint. Set the value of its *Path* to `get_events`, and reference the same configuration element as the other connector.
 +
-[source,xml, linenums]
+[source,xml]
 ----
 <http:listener config-ref="HTTP_Listener_Configuration" path="get_events" doc:name="HTTP Connector"/>
 ----
 +
 . Add a new *Google Contacts connector* in the new flow setting its *operation* to `get-events` and *fetchSize* to `50`.
 +
-[source,xml, linenums]
+[source,xml]
 ----
 <google-calendars:get-events config-ref="Google_Calendars1" doc:name="Google Calendars Paging Example" fetchSize="50" calendarId="myCal"/>
 ----
@@ -148,8 +138,7 @@ When a message reaches the Google Calendar connector, the Logger outputs a separ
 </foreach>
 ----
 
-
-=== Final Flows
+== Example Final Flows
 
 [source,xml,linenums]
 ----
@@ -167,8 +156,7 @@ When a message reaches the Google Calendar connector, the Logger outputs a separ
 ----
 
 When a message reaches the Google Contacts connector, the Logger outputs a separate message for each object. If there are more than 50 objects, Mule paginates the output. See below for a complete example.
-....
-------
+
 
 == Additional MEL Expressions
 
@@ -225,7 +213,3 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 * Learn more about the link:/mule-user-guide/v/3.8/foreach[Foreach] scope.
 
 * Need to handle really large payloads? Learn about link:/mule-user-guide/v/3.8/mule-high-availability-ha-clusters[Mule High Availability HA Clusters].
-* link:http://training.mulesoft.com[MuleSoft Training]
-* link:https://www.mulesoft.com/webinars[MuleSoft Webinars]
-* link:http://blogs.mulesoft.com[MuleSoft Blogs]
-* link:http://forums.mulesoft.com[MuleSoft Forums]

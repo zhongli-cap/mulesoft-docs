@@ -1,65 +1,20 @@
 = OAuth 2.0 Access Token Enforcement Using External Provider Policy
 :keywords: oauth, raml, token, validation, policy
 
-You can use the OAuth 2.0 Access Token Enforcement Using External Provider policy to secure an API from client apps that try to access the API. To access resources on an OAuth2 authentication server, such as the Github authenication server outside Anypoint Platform, from a Mule client app configure authentication in link:/mule-user-guide/v/3.8/authentication-in-http-requests[the HTTP Requester connector] of your app.
+Using one of the following policies to secure an API in Anypoint Platform is recommended:
 
-The documentation about the OAuth 2.0 Access Token Enforcement Using External Provider policy covers the following topics:
+* OpenAM OAuth Token Enforcement policy
+* PingFederate OAuth Token Enforcement policy
 
-* link:/api-manager/external-oauth-2.0-token-validation-policy#applying-the-oauth-2-0-token-validation-policy[How to apply] the OAuth 2.0 Access Token Enforcemen Using External Provider policy.
-* link:/api-manager/building-an-external-oauth-2.0-provider-application[How to build, deploy, and test] an OAuth2 provider, which must be a Mule provider.
-* link:/api-manager/oauth2-provider-configuration[How to configure] provider options.
+// Add OpenID Connect
 
-Like other API Manager-enforced policies, the API needs to be registered in API Manager to apply this policy. 
+Alternatively, you can use the OAuth 2.0 Access Token Enforcement Using External Provider policy to secure an API in Anypoint Platform from client apps that try to access the API. However, if you want a Mule client app to access OAuth 2.0-protected resources outside Anypoint Platform, you configure link:/mule-user-guide/v/3.8/authentication-in-http-requests[the HTTP Requester connector]. In this case, you do not use the OAuth 2.0 Access Token Enforcement Using External Provider policy.
 
-You can restrict access to your API service on Anypoint Platform by applying the OAuth 2.0 Access Token Enforcement Using External Provider policy. This policy enforces the OAuth interaction, called the OAuth dance, between the OAuth 2.0 provider, API, and client application as described in link:https://tools.ietf.org/html/rfc6749#section-4.1[RFC 6749]. You can get a hands-on perspective of the OAuth dance by following the link:/api-manager/building-an-external-oauth-2.0-provider-application[step-by-step procedure] to build, run, and test the custom Mule OAuth provider in Anypoint Platform.
-
-image::oauth+policy1.png[oauth+policy1,height=366,width=640]
-
-. The client application requests a token from the provider.
-. The provider returns a token.
-. The client application includes the token either as an authentication header or a query parameter in a request to the API.
-. The OAuth 2.0 Access Token Enforcement Using External Provider Policy intercepts this request and communicates with the provider to validate the token.
-. The validated token is whitelisted and kept on record until expiration. Any further requests that contain this token are not validated against the OAuth provider.
-. If the token is valid, the request is forwarded to the API.
-. The API responds to the client application.
-
-The OAuth is secure because the client application gets authorization from an OAuth provider instead of directly gaining access to the user's credentials. The user owns the credentials and authorizes the provider to interact with the API. The application has knowledge of the user's authentication in the form of an access token.
-
-== Prerequisites
-
-Prerequisites for using the OAuth 2.0 Access Token Enforcement Using External Provider policy are:
-
-* Applying the policy to the API.
-* Having access to an link:/api-manager/building-an-external-oauth-2.0-provider-application[external (Mule) OAuth 2.0 provider].
-* The Mule OAuth2 provider needs to run in the same organization as your API.
-
-=== Requirements for RAML APIs
-
-If the API protected by the OAuth 2.0 Access Token Enforcement Using External Provider policy is defined using RAML (recommended), define link:https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md#oauth-20[RAML securitySchemes] for OAuth 2.0. The example of link:/api-manager/building-an-external-oauth-2.0-provider-application#using-and-testing-oauth2[testing the custom provider] from MuleSoft Consulting provides this RAML code. Within the RAML securitySchemes definition, you include URIs for the authorization and access token as shown in the example.
-
-You specify grant types in RAML securitySchemes. The following example RAML syntax shows the authorizationGrants setting:
-
-----
-settings:
-   authorizationUri: https://oauth2provider.cloudhub.io/authorize
-   accessTokenUri:  https://oauth2provider.cloudhub.io/access_token
-   authorizationGrants: [authorization_code, password, client_credentials, implicit]
-----
-
-The following table shows the mapping of the RAML grant types to the grant type names in the OAuth 2.0 Token Validation policy configuration. 
-
-[%header,cols="3*a"]
-|===
-|Authorization Grant Types Defined in RAML Definition |Equivalent Authorization Grant Type to Enable in the OAuth Provider Policy |Supported in embedded APIkit Console?
-|`[implicit]` |Implicit |Yes
-|`[client_credentials]` |Client Credentials |No
-|`[password]` |Resource Owner Password Credentials |No
-|`[authorization_code]` |Authorization Code |Yes
-|===
+To use the OAuth 2.0 Access Token Enforcement Using External Provider policy, you need a Mule link:/api-manager/aes-oauth-faq[OAuth 2.0 provider] to provide an access token. You restrict access to your API service on Anypoint Platform by applying the OAuth 2.0 Access Token Enforcement Using External Provider policy. Like other API Manager-enforced policies, the API needs to be registered in API Manager to apply this policy.
 
 == Applying the OAuth 2.0 Token Validation Policy
 
-To apply the OAuth 2.0 Access Token Enforcement Using External Provider policy to an API, use the link:/api-manager/using-policies#applying-and-removing-policies[procedure for applying policies] described earlier. Configure the optional scopes and required token validation endpoint URL as follows:
+To apply the OAuth 2.0 Access Token Enforcement Using External Provider policy to an API, use the general procedure for applying policies. Configure the optional scopes and required token validation endpoint URL as follows:
 
 * *Scopes*
 +
@@ -70,6 +25,27 @@ In the optional Scopes field, you can enter a space-separated list of supported 
 In the required *Access Token validation endpoint url* field, you must enter the URL of the external OAuth 2.0 Provider used for granting the access token, for example `https://oauth2provider.cloudhub.io/validate`.
 +
 image::external-oauth-2.0-token-validation-policy-ba3c0.png[external-oauth-2.0-token-validation-policy-ba3c0,height=375,width=404]
+
+== Configuring the Proxy Connection to External Authentication Provider
+
+In Mule 3.8.x, you optionally enable or disable the proxy network connection between the API and External Authentication Provider by setting the following parameter:
+
+`external_authentication_provider_enable_proxy_setting`
+
+This parameter is located in the following wrapper configuration file: `$MULE_HOME/conf/wrapper.conf`
+
+Set the parameter to true or false. For example:
+
+`wrapper.java.additional.<n>=-Dexternal_authentication_provider_enable_proxy_setting=true`
+
+// default changing in 3.9 
+
+By default, the parameter is false, so the proxy connection between the API and External Authentication Provider is disabled because the following proxy settings are ignored:
+
+----
+wrapper.java.additional.<n>=-Danypoint.platform.proxy_host=localhost
+wrapper.java.additional.<n>=-Danypoint.platform.proxy_port=8080
+----
 
 == Obtaining API User Information
 
@@ -88,5 +64,6 @@ You can modify this code to change the name of the header being created.
 
 == See Also
 
-* link:/api-manager/building-an-external-oauth-2.0-provider-application[Example of building an external OAuth 2.0 provider]
-* link:/api-manager/aes-oauth-faq[Supported OAuth providers]
+link:/api-manager/using-policies#applying-and-removing-policies[General procedure for applying policies]
+
+

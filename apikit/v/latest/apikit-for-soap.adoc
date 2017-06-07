@@ -11,7 +11,7 @@ In this tutorial, you create an API using Studio and APIkit for SOAP. You can li
 * Mule EE Runtime
 * The link:_attachments/tshirt2.wsdl[tshirt2.wsdl] file
 
-APIkit for SOAP supports consuming a remote WSDL, such as the link:http://devkit-cookbook.cloudhub.io/soap?wsdl[Cookbook WSDL file]. This tutorial, however, uses a local WSDL.
+APIkit for SOAP supports consuming a remote WSDL. This tutorial, however, uses a local WSDL.
 
 == Create a New Project
 
@@ -207,7 +207,7 @@ Double-clicking apiCallsRemaining: _Integer_ adds `APIUsageInformation: { apiCal
 +
 . Change `null` to `10`.
 . Save and rerun the project.
-. In the SoapUI, executing the OrderTshirt request again. The response envelope from APIkit for SOAP is:
+. In the SoapUI, execute the OrderTshirt request again. The response envelope from APIkit for SOAP is:
 +
 [source,xml,linenums]
 ----
@@ -243,19 +243,24 @@ To make the ListInventory operation display the typed fault:
 . In the properties editor, select `ListInventory` from the *Operation* drop-down.
 . Select or accept the default `TshirtFault` from the *Fault Type* drop-down.
 . Add a Transform Message component before the SOAP Fault component.
-. Edit the mapping to use the value 500:
+. In the component properties, set up the following DataWeave code:
 +
 [source,xml,linenums]
 ----
 %dw 1.0
-%output application/xml
-%namespace ns0 http://mulesoft.org/tshirt-service
+ %output application/xml
+ %namespace ns0 http://mulesoft.org/tshirt-service
+ %namespace soap http://www.w3.org/2003/05/soap-envelope
 ---
-{
-  ns0#TshirtFault: {
-    errorStuff: 500
-  }
-}
+ soap#Fault: {
+   faultcode: "soap:Server",
+   faultstring: "The error details",
+   detail: {
+     ns0#TshirtFault: {
+      errorStuff: 500
+     }
+   }
+ }
 ----
 +
 . Save and rerun the project.
@@ -268,9 +273,15 @@ The client returns the following envelope instead of the default fault:
 ----
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
    <soap:Body>
-      <ns0:TshirtFault xmlns:ns0="http://mulesoft.org/tshirt-service">
-         <errorStuff>500</errorStuff>
-      </ns0:TshirtFault>
+      <soap:Fault xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
+         <faultcode>soap:Server</faultcode>
+         <faultstring>The error details</faultstring>
+         <detail>
+            <ns0:TshirtFault xmlns:ns0="http://mulesoft.org/tshirt-service">
+               <errorStuff>500</errorStuff>
+            </ns0:TshirtFault>
+         </detail>
+      </soap:Fault>
    </soap:Body>
 </soap:Envelope>
 ----

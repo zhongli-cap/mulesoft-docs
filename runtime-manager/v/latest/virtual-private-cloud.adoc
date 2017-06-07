@@ -3,7 +3,7 @@
 
 image:logo-cloud-active.png[link="/runtime-manager/deployment-strategies", title="CloudHub"]
 image:logo-hybrid-disabled.png[link="/runtime-manager/deployment-strategies", title="Hybrid Deployment"]
-image:logo-server-disabled.png[link="/runtime-manager/deployment-strategies", title="Anypoint Platform On-Premises"]
+image:logo-server-disabled.png[link="/runtime-manager/deployment-strategies", title="Anypoint Platform Private Cloud Edition"]
 image:logo-pcf-disabled.png[link="/runtime-manager/deployment-strategies", title="Pivotal Cloud Foundry"]
 
 The Virtual Private Cloud (VPC) offering allows you to virtually create a private and isolated network in the cloud to host your link:/runtime-manager/cloudhub-architecture#cloudhub-workers[CloudHub workers]. +
@@ -20,7 +20,6 @@ As opposed to the default configuration, where all CloudHub workers reside in a 
 
 Additionally, you can choose to expose or block your custom ports using your own firewall rules, and even block requests to your apps coming from CloudHub's publicly accessible load balancer so you balance your requests using your own dedicated load balancer. +
 Each VPC can host one or more link:/runtime-manager/cloudhub-dedicated-load-balancer[dedicated load balancers] with a _DNS A record_ that you can add to your own DNS CNAME record to point to. This way you can configure your VPC's load balancer to handle requests to your own domain. +
-You can also configure an SSL endpoint with a link:https://en.wikipedia.org/wiki/Subject_Alternative_Name[Subject Alternative Names (SAN)] so the same certificate can be used across all matching rules. This allows you to host your applications in a maintainable, secure, and scalable environment, that you can control and administrate.
 
 Alternatively, you can connect this network to any other network via a secure VPN connection. This allows CloudHub workers to access resources behind your corporate firewall. You can leverage an *IPSec* gateway or *Amazon Web Services (AWS) _Direct Connect_* for VPN connectivity. +
 Learn more about each connection alternative in the <<VPC Connectivity Methods>> section below, and how you can configure your own DNS server to redirect to your internal network using your private hostnames.
@@ -40,11 +39,11 @@ You also need to make sure that the firewall rules are configured according to y
 Once this is defined, you can proceed to create your VPC using:
 
 . The link:/runtime-manager/vpc-tutorial[VPC UI] available in your Runtime Manager section.
-. The link:/anypoint-platform-for-apis/anypoint-platform-cli[Anypoint Platform CLI] (Look for the specific `vpc create` command).
+. The link:/runtime-manager/anypoint-platform-cli[Anypoint Platform CLI] (Look for the specific `vpc create` command).
 
 If you need to connect other private networks to your CloudHub VPC, follow the steps described in the <<VPC Connectivity Methods, connectivity methods section>>.
 
-=== Size Your VPC
+== Size Your VPC
 
 When you create a VPC, the range of IP addresses for this network needs to be specified in the form of a Classless Inter-Domain Routing (CIDR) block, using link:https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing#IPv4_CIDR_blocks[CIDR notation].
 
@@ -67,7 +66,7 @@ When planning a VPC size, keep in mind to leave a few spare IP addresses in case
 
 The safe rule of thumb for deciding the size of your VPC subnet is `10 times the maximum number of expected apps to deploy in the VPC`. +
 
-=== Deploying To Your VPC
+== Deploying To Your VPC
 
 All VPCs need to be associated with a CloudHub region and to an environment inside one of your CloudHub organization or business group.
 
@@ -86,7 +85,7 @@ And setting one VPC (`vpc-1`) for _Production_ in *US-EAST* and another VPC (`vp
 
 Applications that were deployed before creating your VPC are not automatically migrated. It is necessary to redeploy the applications so they can be hosted in the VPC.
 
-=== VPC Management Permissions
+== VPC Management Permissions
 
 As an organization administrator, you can create a VPC and share it with any business group within your main organization. +
 However, once the VPC is inherited by a business group, only the administrator of said business group can operate the VPC (i.e. set worker's firewall rules, assign it as default to an environment within that business group, etc). +
@@ -107,25 +106,69 @@ A CloudHub organization administrator or a Business Group Owner can create or up
 However, if such association already exists, it's overwritten by the requested VPC.
 --
 
-
-=== Firewall Rules
+== Firewall Rules
 
 In CloudHub's default configuration, all applications are hosted in a multi-tenant cloud balanced by a publicly accessible load balancer. +
-When creating your own isolated network, you can create its own firewall rules to block or allow specific IP ranges from reaching your workers. Additionally, you can block or allow the ports you want.
+When creating your own isolated network, you can need its own firewall rules to allow specific IP ranges and ports from reaching your workers.
 
 [CAUTION]
 --
 A Firewall Rule checks inbound connections only to your workers. Not to the VPC or your dedicated load balancer.
 --
 
+All traffic to your VPC is blocked, unless it's allowed in a firewall rule.
+When creating a VPC, 4 firewall rules are created by default:
+
+* 2 rules to allow inbound connections from your local VPC from ports `8091` and `8092`:
++
+[source,json,linenums]
+----
+{
+  "CIDR Block": "10.111.0.0/24", // (Local VPC)
+  "Protocol": "TCP",
+  "From port": 8092,
+},
+
+{
+  "CIDR Block": "10.111.0.0/24", // (Local VPC)
+  "Protocol": "TCP",
+  "From port": 8091,
+},
+----
++
+These firewall rules allow traffic from the VPC to reach your workers through ports *8091* and *8092* (these are the only ports used by your link:/runtime-manager/cloudhub-dedicated-load-balancer[*CloudHub dedicated load balancer*] to proxy all external communications to your workers through).
+
+[TIP]
+The `10.111.0.0/24` is an example of a firewall rule whose private address space was set to `10.111.0.0` and sized to have 256 IP addresses. +
+These default firewall rules will show the CIDR block that you set for your VPC.
+
+* 2 rules to allow inbound connections from anywhere through ports `8081` and `8082`:
++
+[source,json,linenums]
+----
+{
+  "CIDR Block": "0.0.0.0/0", // (Anywhere)
+  "Protocol": "TCP",
+  "From port": 8082,
+},
+
+{
+  "CIDR Block": "0.0.0.0/0", // (Anywhere)
+  "Protocol": "TCP",
+  "From port": 8081,
+}
+----
++
+These rules allow traffic from any host to reach your workers through ports 8081 and 8082 (these ports are used by *CloudHub's default load balancer* to proxy external requests to your workers).
+
 [TIP]
 --
-If you don't want your internal workers to be reached by the default load balancer, you need to set up a firewall rule to block requests coming from the port 8081 (which is the port that Cloudhub's load balancer uses to proxy external requests to your workers) and set your application to listen on port ´8091´, which is the port used to communicate internally within your VPC.
+If you don't want your internal workers to be reached by the default load balancer, follow our networking guide to link:/runtime-manager/cloudhub-networking-guide#avoiding-public-discoverability-for-applications-on-cloudhub[avoid public discoverability for applications on CloudHub].
 --
 
 You can set these rules using the Anypoint Platform CLI's link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-firewall-rules-add[firewall rule creation command] or use link:/runtime-manager/vpc-tutorial[the UI].
 
-=== Set up Internal DNS
+== Set up Internal DNS
 
 If you choose to connect other networks to your VPC, you can use your custom private domain names by specifying your custom hostnames and the DNS server IP address through which resolve them.
 
@@ -140,28 +183,33 @@ This feature is supported by workers running Mule versions 3.5.x, 3.6.x, 3.7.4, 
 
 You can configure this feature using the link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-dns-servers-set[Anypoint Platform CLI's command], or through the link:/runtime-manager/vpc-tutorial#set-dns[VPC UI].
 
-=== VPC Connectivity Methods
+== VPC Connectivity Methods
 
 If you need to connect your VPC to your internal network, or to another Cloud network, select the appropriate connectivity method for your use case. Then, contact your MuleSoft account representative to discuss your specific requirements. 
-Once you have selected an option, download link:_attachments/VPC-Gateway-Questionnaire-v8.xlsm[the VPC discovery form] (requires at least MS Excel 2007 with macros enabled), then enter data to communicate the necessary details required for your connectivity method. Once they receive your form and answer any remaining questions, the CloudHub support team securely exchanges keys and supplies instructions on how to configure your router(s).
+Once you have selected an option, download link:_attachments/VPN-form-v9.1-template.xlsx[the VPC discovery form] (requires at least MS Excel 2007 with macros enabled), then enter data to communicate the necessary details required for your connectivity method. Once they receive your form and answer any remaining questions, the CloudHub support team securely exchanges keys and supplies instructions on how to configure your router(s).
 
 You can connect a Virtual Private Cloud to a datacenter using any of these methods:
 
 . *Public Internet:* Default connectivity to CloudHub VPC.
 
-. *IPsec tunnel with network-to-network configuration:* Connect a network to a CloudHub VPC with an link:http://en.wikipedia.org/wiki/IPsec[IPsec] VPN connection as shown in the diagram below: +
+. *IPsec tunnel with network-to-network configuration:* Connect a network to a CloudHub VPC with an link:http://en.wikipedia.org/wiki/IPsec[IPsec] VPN connection as shown in the diagram below:
++
 image:CHVPC02.png[CHVPC02]
++
 [NOTE]
 IPsec is, in general, the recommended solution for VPC to on-premise connectivity. It provides a standardized, secure way to connect, which integrates well with existing IT infrastructure such as routers/appliances.
 
-. *VPC Peering:* Pair an Amazon VPC directly to a CloudHub VPC. +
-If the services you are connecting to are hosted on AWS, then you can choose to peer your CloudHub VPC and your AWS VPC. +
-The diagram below illustrates connecting a CloudHub VPC and Amazon VPC together directly through VPC peering: +
+. *VPC Peering:* Pair an Amazon VPC directly to a CloudHub VPC.
++
+If the services you are connecting to are hosted on AWS, then you can choose to peer your CloudHub VPC and your AWS VPC.
++
+The diagram below illustrates connecting a CloudHub VPC and Amazon VPC together directly through VPC peering:
++
 image:CHVPC05.png[CHVPC05]
 
 . *CloudHub Direct Connect:* If your network connects to your Amazon VPC using link:https://aws.amazon.com/directconnect/[Amazon Direct Connect], you can create a hosted virtual interface to your CloudHub VPC.
 
-The SLA for configuring VPC is 5 business days after link:_attachments/VPC-Gateway-Questionnaire-v8.xlsm[the VPC discovery form] has been completed and returned, though it may be completed sooner.
+The SLA for configuring VPC is 5 business days after link:_attachments/VPN-form-v9.1-template.xlsx[the VPC discovery form] has been completed and returned, though it may be completed sooner.
 
 == Frequently Asked Questions about CloudHub VPC
 
@@ -181,14 +229,6 @@ Yes, customers can purchase as many VPCs as required, with a minimum purchase of
 
 Yes, this is possible, but not included in our standard setup. Contact your account representative to discuss your requirements.
 
-*How do I limit communication with my workers to my VPC channel?*
-
-If you have VPC and you don't want your application exposed via the publicly accessible load balancer at `myapp.cloudhub.io`, you need to use 8091 or 8092 instead of `${http.port}` or `${https.port}`, respectively, when deploying your application.
-
 *How do I communicate with my workers through my VPC without going over the public Internet?*
 
 You can communicate with your Mule worker by using mule-worker-internal-myapp.cloudhub.io as the address in your configuration. This is a DNS A record which includes the IP addresses of all your workers.
-
-== See Also
-
-* For more options that provide scalability, workload distribution, zero message loss, and added reliability to applications on CloudHub, see link:/runtime-manager/cloudhub-fabric[CloudHub Fabric].
