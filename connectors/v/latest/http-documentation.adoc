@@ -28,20 +28,17 @@ Configuration element for a HttpListener.
 |======================
 | Name | Type | Description | Default Value | Required
 |Name | String | The name of this configuration. With this name can be later referenced. | | *x*{nbsp}
-| Connection a| <<listener-config_listener-connection, Listener Connection>>
+| Connection a| <<listener-config_listener, Listener>>
  | The connection types that can be provided to this configuration. | | *x*{nbsp}
 | Base Path a| String |  +++Base path to use for all requests that reference this config.+++ |  | {nbsp}
 | Parse Request a| Boolean |  +++By default, the request will be parsed (for example, a multi part request will be mapped as a Mule message with no payload
 and attributes with each part). If this property is set to false, no parsing will be done, and the payload will always
 contain the raw contents of the HTTP request.+++ |  +++true+++ | {nbsp}
-| Interpret Request Errors a| Boolean |  +++Ideal for proxy scenarios, this indicates whether errors produced by an HTTP request should be interpreted by the listener.
-If enabled, an error thrown by an HTTP request operation reaching a listener will be analysed for response data, so if a
-request operation throws a FORBIDDEN error, for example, then the listener will generate a 403 error response.+++ |  +++false+++ | {nbsp}
 |======================
 
 ==== Connection Types
-[[listener-config_listener-connection]]
-===== Listener Connection
+[[listener-config_listener]]
+===== Listener
 
 +++
 Connection provider for a HttpListener, handles the creation of HttpServer instances.
@@ -85,9 +82,9 @@ Configuration element for a HTTP requests.
 |======================
 | Name | Type | Description | Default Value | Required
 |Name | String | The name of this configuration. With this name can be later referenced. | | *x*{nbsp}
-| Connection a| <<request-config_request-connection, Request Connection>>
+| Connection a| <<request-config_request, Request>>
  | The connection types that can be provided to this configuration. | | *x*{nbsp}
-| Api Configuration a| <<RamlApiConfiguration>> |  +++Specifies a RAML configuration file for the I that is being consumed.+++ |  | {nbsp}
+| Base Path a| String |  +++Base path to use for all requests that reference this config.+++ |  +++/+++ | {nbsp}
 | Follow Redirects a| Boolean |  +++Specifies whether to follow redirects or not. Default value is true.+++ |  +++true+++ | {nbsp}
 | Send Body Mode a| Enumeration, one of:
 
@@ -108,12 +105,11 @@ and inbound attachments with each part). If this property is set to false, no pa
 always contain the raw contents of the HTTP response.+++ |  +++true+++ | {nbsp}
 | Response Timeout a| Number |  +++Maximum time that the request element will block the execution of the flow waiting for the HTTP response. If this value is
 not present, the default response timeout from the Mule configuration will be used.+++ |  | {nbsp}
-| Base Path a| String |  +++Base path to use for all requests that reference this config.+++ |  +++/+++ | {nbsp}
 |======================
 
 ==== Connection Types
-[[request-config_request-connection]]
-===== Request Connection
+[[request-config_request]]
+===== Request
 
 +++
 Connection provider for a HTTP request, handles the creation of HttpExtensionClient instances.
@@ -149,6 +145,10 @@ protocol attribute is HTTPS then the default value is 443.+++ |  | {nbsp}
 unlimited.+++ |  +++-1+++ | {nbsp}
 | Connection Idle Timeout a| Number |  +++The number of milliseconds that a connection can remain idle before it is closed. The value of this attribute is only used
 when persistent connections are enabled.+++ |  +++30000+++ | {nbsp}
+| Stream Response a| Boolean |  +++Whether or not received responses should be streamed, meaning processing will continue as soon as all headers are parsed and
+the body streamed as it arrives. When enabled, the response MUST be eventually read since depending on the configured buffer
+size it may not fit into memory and processing will stop until space is available.+++ |  +++true+++ | {nbsp}
+| Response Buffer Size a| Number |  +++The space in bytes for the buffer where the HTTP response will be stored.+++ |  +++10240+++ | {nbsp}
 | Client Socket Properties a| <<TcpClientSocketProperties>> |  |  | {nbsp}
 | Reconnection Strategy a| * <<reconnect>>
 * <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
@@ -164,7 +164,7 @@ when persistent connections are enabled.+++ |  +++30000+++ | {nbsp}
 
 [[request]]
 === Request
-`<http://www.mulesoft.org/schema/mule/httpn:request>`
+`<http://www.mulesoft.org/schema/mule/http:request>`
 
 +++
 Consumes an HTTP service.
@@ -176,13 +176,17 @@ Consumes an HTTP service.
 | Name | Type | Description | Default Value | Required
 | Configuration | String | The name of the configuration to use. | | *x*{nbsp}
 | Method a| String |  +++The HTTP method for the request.+++ |  +++GET+++ | {nbsp}
+| Output Type a| Enumeration, one of:
+
+** STREAM
+** MULTIPART
+** FORM
+** ANY |  +++the expected response type (STREAM, MULTIPART, FORM or ANY)+++ |  +++STREAM+++ | {nbsp}
 | Streaming Strategy a| * <<repeatable-in-memory-stream>>
 * <<repeatable-file-store-stream>>
 * <<non-repeatable-stream>> |  +++Configure if repeatable streams should be used and their behaviour+++ |  | {nbsp}
-| Body a| Any |  +++The body of the response message+++ |  +++#[payload]+++ | {nbsp}
-| Headers a| Object |  +++HTTP headers the message should include.+++ |  | {nbsp}
-| URI Parameters a| Object |  +++URI parameters that should be used to create the request.+++ |  | {nbsp}
-| Query Parameters a| Object |  +++Query parameters the request should include.+++ |  | {nbsp}
+| Path a| String |  +++Path where the request will be sent.+++ |  | {nbsp}
+| URL a| String |  +++URL where to send the request.+++ |  | {nbsp}
 | Follow Redirects a| Boolean |  +++Specifies whether to follow redirects or not.+++ |  | {nbsp}
 | Send Body Mode a| Enumeration, one of:
 
@@ -196,19 +200,15 @@ Consumes an HTTP service.
 ** NEVER |  +++Defines if the request should be sent using streaming or not.+++ |  | {nbsp}
 | Parse Response a| Boolean |  +++Defines if the HTTP response should be parsed or it's raw contents should be propagated instead.+++ |  | {nbsp}
 | Response Timeout a| Number |  +++Maximum time that the request element will block the execution of the flow waiting for the HTTP response.+++ |  | {nbsp}
-| Output Type a| Enumeration, one of:
-
-** STREAM
-** MULTIPART
-** FORM
-** ANY |  |  +++ANY+++ | {nbsp}
-| Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
-| Path a| String |  +++Path where the request will be sent.+++ |  | {nbsp}
-| URL a| String |  +++URL where to send the request.+++ |  | {nbsp}
+| Body a| Any |  +++The body of the response message+++ |  +++#[payload]+++ | {nbsp}
+| Headers a| Object |  +++HTTP headers the message should include.+++ |  | {nbsp}
+| URI Parameters a| Object |  +++URI parameters that should be used to create the request.+++ |  | {nbsp}
+| Query Parameters a| Object |  +++Query parameters the request should include.+++ |  | {nbsp}
 | Response Validator a| One of:
 
 * <<SuccessStatusCodeValidator>>
 * <<FailureStatusCodeValidator>> |  +++Configures error handling of the response.+++ |  | {nbsp}
+| Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -222,30 +222,29 @@ Consumes an HTTP service.
 * <<request-config>> {nbsp}
 
 ==== Throws
-* HTTPN:CONNECTIVITY {nbsp}
-* HTTPN:METHOD_NOT_ALLOWED {nbsp}
-* HTTPN:TRANSFORMATION {nbsp}
-* HTTPN:NOT_FOUND {nbsp}
-* HTTPN:PARSING {nbsp}
-* HTTPN:SERVICE_UNAVAILABLE {nbsp}
-* HTTPN:SECURITY {nbsp}
-* HTTPN:RESPONSE_VALIDATION {nbsp}
-* HTTPN:BAD_REQUEST {nbsp}
-* HTTPN:UNAUTHORIZED {nbsp}
-* HTTPN:INTERNAL_SERVER_ERROR {nbsp}
-* HTTPN:UNSUPPORTED_MEDIA_TYPE {nbsp}
-* HTTPN:RETRY_EXHAUSTED {nbsp}
-* HTTPN:TOO_MANY_REQUESTS {nbsp}
-* HTTPN:FORBIDDEN {nbsp}
-* HTTPN:TIMEOUT {nbsp}
-* HTTPN:NOT_ACCEPTABLE {nbsp}
+* HTTP:TOO_MANY_REQUESTS {nbsp}
+* HTTP:CLIENT_SECURITY {nbsp}
+* HTTP:INTERNAL_SERVER_ERROR {nbsp}
+* HTTP:TIMEOUT {nbsp}
+* HTTP:BAD_REQUEST {nbsp}
+* HTTP:CONNECTIVITY {nbsp}
+* HTTP:UNAUTHORIZED {nbsp}
+* HTTP:SERVICE_UNAVAILABLE {nbsp}
+* HTTP:NOT_ACCEPTABLE {nbsp}
+* HTTP:RETRY_EXHAUSTED {nbsp}
+* HTTP:FORBIDDEN {nbsp}
+* HTTP:METHOD_NOT_ALLOWED {nbsp}
+* HTTP:SECURITY {nbsp}
+* HTTP:UNSUPPORTED_MEDIA_TYPE {nbsp}
+* HTTP:PARSING {nbsp}
+* HTTP:NOT_FOUND {nbsp}
 
 
 == Sources
 
 [[listener]]
 === Listener
-`<http://www.mulesoft.org/schema/mule/httpn:listener>`
+`<http://www.mulesoft.org/schema/mule/http:listener>`
 
 +++
 Represents a listener for HTTP requests.
@@ -272,13 +271,12 @@ will never stream. As streaming is done the response will be sent user Transfer-
 | Parse Request a| Boolean |  +++By default, the request will be parsed (for example, a multi part request will be mapped as a Mule message with null payload
 and inbound attachments with each part). If this property is set to false, no parsing will be done, and the payload will
 always contain the raw contents of the HTTP request.+++ |  | {nbsp}
-| Interpret Request Errors a| Boolean |  +++Ideal for proxy scenarios, this indicates whether errors produced by an HTTP request should be interpreted by the listener.
-If enabled, an error thrown by an HTTP request operation reaching a listener will be analysed for response data, so if a
-request operation throws a FORBIDDEN error, for example, then the listener will generate a 403 error response.+++ |  | {nbsp}
 | Reconnection Strategy a| * <<reconnect>>
 * <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
-| Response a| <<HttpListenerResponseBuilder>> |  |  | {nbsp}
-| Error Response a| <<HttpListenerResponseBuilder>> |  |  | {nbsp}
+| Body a| Any |  |  +++#[payload]+++ | {nbsp}
+| Headers a| Object |  |  | {nbsp}
+| Status Code a| Number |  |  | {nbsp}
+| Reason Phrase a| String |  |  | {nbsp}
 |======================
 
 ==== Output
@@ -291,6 +289,11 @@ request operation throws a FORBIDDEN error, for example, then the listener will 
 ==== For Configurations.
 * <<listener-config>> {nbsp}
 
+==== Throws
+* MULE:SOURCE_RESPONSE_SEND {nbsp}
+* MULE:SOURCE_ERROR_RESPONSE_SEND {nbsp}
+* MULE:SOURCE_ERROR_RESPONSE_GENERATE {nbsp}
+* MULE:SOURCE_RESPONSE_GENERATE {nbsp}
 
 
 == Types
@@ -405,7 +408,7 @@ request operation throws a FORBIDDEN error, for example, then the listener will 
 | Field | Type | Default Value
 | Initial Buffer Size a| Number | 
 | Buffer Size Increment a| Number | 
-| Max In Memory Size a| Number | 
+| Max Buffer Size a| Number | 
 | Buffer Unit a| Enumeration, one of:
 
 ** BYTE
@@ -429,18 +432,6 @@ request operation throws a FORBIDDEN error, for example, then the listener will 
 ** GB | 
 |======================
     
-[[HttpListenerResponseBuilder]]
-=== Http Listener Response Builder
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Status Code a| Number | 
-| Reason Phrase a| String | 
-| Body a| Any | #[payload]
-| Headers a| Object | 
-|======================
-    
 [[TcpClientSocketProperties]]
 === Tcp Client Socket Properties
 
@@ -456,15 +447,6 @@ request operation throws a FORBIDDEN error, for example, then the listener will 
 | Receive Buffer Size a| Number | 
 | Client Timeout a| Number | 
 | Reuse Address a| Boolean | true
-|======================
-    
-[[RamlApiConfiguration]]
-=== Raml Api Configuration
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Location a| String | 
 |======================
     
 [[HttpResponseAttributes]]
