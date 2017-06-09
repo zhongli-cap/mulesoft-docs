@@ -233,94 +233,22 @@ By default, when you create a custom policy, you have access to the following de
 
 In addition to these default properties, you can specify new ones in the policy definition YAML file and reference them in the policy configuration XML file. 
 
-=== Referencing Properties
+=== Policy Tag Properties
 
-In the configuration XML, you can access the default set of properties for a policy definition and properties defined in the Policy Template YAML file. To reference a property, type its name enclosed in two curly brackets as follows:
+The policy tag properties are important parts of a custom policy XML configuration:
 
-----
-{{propertyName}}
-----
+* `order` property in the `<policy>` tag
+* `order` property in the <before></before>and <after></after> 
 
-=== requiresContracts in Policy Tag
+These properties the order of execution of policies. 
 
-The following versions support a `requiresContracts` property in the policy tag of the configuration XML:
+The `requiresContracts` property is critical for client validation. 
 
-* The API Gateway Runtime 2.2.0 or later
-* Mule Runtime 3.8 or later 
+For more information about and examples of using these properties, see the  "Configuration XML Properties Reference". A link to this reference is in the "See Also" section of this topic.
 
-In earlier versions, you do not need this property because API Gateway Runtime caches client credentials by default.
+=== Custom Policy Exception Blocks
 
-*Important*: Enabling the `requiresContracts` property is vital for client validation. In the event Anypoint Platform goes down, a policy can continue to validate clients. Validation checks occur in-memory, which is naturally more performant than checks that involve an HTTP request over a network.
-
-Custom policies that validate client IDs are often variations of out-of-the-box policies that authenticate clients, such as Client ID Enforcement or SLA-based policies.
-
-In a custom policy that validates client IDs, include `requiresContracts` and set this boolean property to true as shown in the following example snippet. 
-
-[source,xml,linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-<policy id="{{policyId}}"
-        policyName="Custom Client Id Enforcement"
-        online="true"
-        requiresContracts="true"
-        xmlns="http://www.mulesoft.org/schema/mule/policy"
-...
-----
-
-API client identity and authentication credentials are downloaded to API Gateway Runtime or Mule Runtime and stored. Validation occurs within the Runtime, eliminating the need for an outbound HTTP Request to do the validation. 
-
-Downloading and retrieving client information takes place in the background and occurs every 15 seconds by default. You can configure the polling frequency using the `anypoint.platform.poll_clients_freq` property. Configure this property on the CloubHub properties tab or the `wrapper.conf` file in your `<MULE_HOME>/conf` folder.
-
-
-=== Order Property in Policy Tag
-
-You can set the order of execution of a policy using the `order` property, however setting the order of policy execution in a message processor takes precedence over setting the order of execution in the policy tag. Set the order to an integer greater than 2 because the order values 0 - 2 are reserved for CORS, Throttling, and Rate Limit policies, respectively. These policies must execute before others. The following example shows how to set the `order` property in the `<policy>` tag:
-
-[source,xml,linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-<policy id="7777"
-        policyName="A"
-        order="3"
-        xmlns="http://www.mulesoft.org/schema/mule/policy"
-        xmlns:mule="http://www.mulesoft.org/schema/mule/core"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
-        xsi:schemaLocation="http://www.mulesoft.org/schema/mule/policy http://www.mulesoft.org/schema/mule/policy/current/mule-policy.xsd
-              http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-              http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd">
-
-    <before>
-         <mule:logger level="INFO" message="POLICY A" />
-    </before>
-
-    <pointcut>
-        <api-platform-gw:api-pointcut apiName="Leagues API" apiVersion="1.0.0"/>
-    </pointcut>
-</policy>
-
-----
-
-=== Order Property in Before or After Tags
-
-Alternatively, you can set the order of execution of policies in the <before></before>and <after></after> tags. Setting the `order `property in the `before` and `after` tags takes precedence over any order setting in the policy tag. Set order to an integer greater than 2. For example:
-
-[source,xml,linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-<policy id="2"
-       ...
-
-    <before order="4">
-       <mule:set-payload value=" before cust2 "/>
-       <mule:logger level="INFO" message="#[payload]" />
-    </before>
-
-    <before order="3">
-       <mule:set-payload value=" before cust2.1 "/>
-       <mule:logger level="INFO" message="#[payload]" />
-    </before>
-----
+You can define before and after exception blocks in custom policy definitions to enhance the catch exception strategy of a flow without the need to modify it. For more information, see the link to the "Custom Policy Exception Blocks Reference" in the "See Also" section of this topic.
 
 === Before and After Tags
 
@@ -352,7 +280,7 @@ In addition to the `<before></before>` and `<after></after>` tags, you can also
 </policy>
 ----
 
-The "Using Pointcuts" section of this document covers enabling resource level policies. The following example runs versions earlier than Mule 3.8.4 and does not support resource level policies.
+The "Pointcuts Reference" section of this document covers enabling resource level policies. The following example runs versions earlier than Mule 3.8.4 and does not support resource level policies.
 
 [source,xml,linenums]
 ----
@@ -422,239 +350,12 @@ The "Using Pointcuts" section of this document covers enabling resource level po
 The DataWeave component is not supported for use within your Custom Policies.
 
 
-=== Using Pointcuts
-
-A custom policy must contain a pointcut declaration. Pointcuts control the scope of a policy application and they use regular expressions to indicate what flows in the application are affected by a policy.
-
-If you're applying your policy to APIs that are deployed in Anypoint Platform, then set your pointcut to the default properties `apiName` and `apiVersion`. This action guarantees that your policy is applied to only the API that you're activating the policy. This is what your pointcut should look like:
-
-[source,xml,linenums]
-----
-<pointcut>
-   <api-platform-gw:api-pointcut apiName="{{ apiName }}" apiVersion="{{ apiVersionName }}"/>
-</pointcut>
-----
-
-Setting your pointcut to a broad regular expression such as `regex=”.*”` may have undesirable effects.
-
-Applying this policy to a single API through the platform, might actually affect other APIs you're deploying as well.
-
-If you're using your policies in an on-site deployment, then you might want to modify the pointcut to apply your policy to multiple APIs simultaneously.
-
-=== Enabling Resource Level Policies
-
-If your API runs on Mule 3.8.4 and later, use the following code to include resource level policies:
-
-[source,xml,linenums]
-----
-  {{#pointcutData}}
-    <pointcut>
-      <api-platform-gw:api-pointcut apiName="{{apiName}}" apiVersion="{{apiVersionName}}"/>
-      <resource methodRegex="{{methodRegex}}" uriTemplateRegex="{{uriTemplateRegex}}"/>
-    </pointcut>
-  {{/pointcutData}}
-{{/pointcutData.length}}
-{{^pointcutData.length}}
-  <pointcut>
-    <api-platform-gw:api-pointcut apiName="{{apiName}}" apiVersion="{{apiVersionName}}"/>
-  </pointcut>
-{{/pointcutData.length}}
-----
-
-Also, include the following property in the YAML: `resourceLevelSupported: true`
-
-=== Customizing a Pointcut
-
-In a pointcut you can reference the following kinds of elements:
-
-* Endpoints
-* Apps
-* Resources
-
-If several elements are specified inside a single pointcut, then they are implemented as if you were using an AND expression.
-
-[source,xml,linenums]
-----
-<pointcut>
-   <resource uriTemplateRegex="/items/.*" />
-   <resource methodRegex="GET" />
-</pointcut>
-----
-
-If several elements are specified in separate pointcut parent elements, they are implemented as if you were using an OR expression.
-
-==== Reference Apps
-
-[source,xml,linenums]
-----
-<pointcut>
-   <app regex=".*" />
-</pointcut>
-----
-
-=== Reference Endpoints
-
-[source,xml,linenums]
-----
-<pointcut>
-   <endpoint regex=".*" />
-</pointcut> 
-----
-
-The following example uses values from properties:
-
-[source,xml,linenums]
-----
-<pointcut>
-    <endpoint regex="http://localhost:${http.port}/gateway/.*" />
-</pointcut>
-----
-
-This example is also valid:
-
-[source,xml,linenums]
-----
-<pointcut>
-   <endpoint regex="http\:\/\/localhost:${http.port}\/gateway\/.*" />
-</pointcut>
-----
-
-For the two previous examples to work you have to define `http.port` when starting Mule or in your wrapper.conf file, define something like this:
-
-`wrapper.java.additional.4=-Dhttp.port=8081`
-
-If `http.port` is defined at application level, a parse exception occurs when you apply the policy.
-
-=== Reference Resources
-
-[source,xml,linenums]
-----
-<pointcut>
-   <resource methodRegex=".*" />
-</pointcut>
-----
-
-You can reference specific methods (GET, POST, PUT, etc.).
-
-For example: `<resource methodRegex=”P.*” />` applies to all POST, PUT and PATCH methods. +
-
-Example using defaults:
-
-[source,xml,linenums]
-----
-<pointcut>
-   <resource uriTemplateRegex=".*" />
-</pointcut>
-----
-
-In this example you can specify the path from the baseUri specified on the RAML file.
-
-Example filtering of the first level of resources:
-
-[source,xml,linenums]
-----
-<pointcut>
-    <resource uriTemplateRegex="/items/.*" />
-</pointcut>
-----
-
-
-You can only use the Java classes that are provided by Mule.
-
-Although you can use any message processor that is available in Mule to build your custom policy, you can only use the Java classes that are provided by Mule. Unlike building a Mule application, you can't define and call a custom Java class when building a custom policy, as you have no way of bundling the custom Java class with your policy.
-
-== Minimal Policy Configuration File
-
-You can use the following minimal policy configuration file to start building your custom policy:
-
-[source,xml,linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-<policy xmlns="http://www.mulesoft.org/schema/mule/policy"
-        id="{{policyId}}"
-        policyName="IP whitelist"  
-        xmlns:mule="http://www.mulesoft.org/schema/mule/core"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
-        xsi:schemaLocation="http://www.mulesoft.org/schema/mule/policy http://www.mulesoft.org/schema/mule/policy/current/mule-policy.xsd
-                            http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-                            http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd">
- 
-    <before>
-        <mule:set-payload value="PRE" />
-    </before>
- 
-    <after>
-        <mule:set-payload value="POST" />
-    </after>
- 
-    <pointcut>
-       <api-platform-gw:api-pointcut apiName="{{ apiName }}" apiVersion="{{ apiVersionName }}"/>
-    </pointcut>
- 
-</policy> 
-----
-
-== Full Example of a Policy Configuration File
-
-Below is an example of a policy configuration file that implements an IP whitelist filter that matches the previous YAML example. This XML file references several variables enclosed in curly brackets that the YAML file defines and resource level policies supported in Mule 3.8.4 and later.
-
-The IP whitelist filter policy adds a validation that requires all requests to contain a valid IP Address based on a valid list of IPs  configured.
-
-[source,xml,linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-<policy online="true"
-        id="{{policyId}}"
-        policyName="IP whitelist"
-        xmlns="http://www.mulesoft.org/schema/mule/policy"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xmlns:spring="http://www.springframework.org/schema/beans"
-        xmlns:mule="http://www.mulesoft.org/schema/mule/core"
-        xmlns:ip-filter-gw="http://www.mulesoft.org/schema/mule/ip-filter-gw"
-        xsi:schemaLocation="http://www.mulesoft.org/schema/mule/policy http://www.mulesoft.org/schema/mule/policy/current/mule-policy.xsd
-                            http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
-                            http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-                            http://www.mulesoft.org/schema/mule/ip-filter-gw http://www.mulesoft.org/schema/mule/ip-filter-gw/current/mule-ip-filter-gw.xsd">
- 
-    <!-- This section is for building response messages when the policy fails. -->
-    <mule:processor-chain name="{{policyId}}-build-response">
-        <mule:set-property propertyName="http.status" value="403"/> <!-- Set HTTP status code to 403 -->
-        <mule:set-property propertyName="Content-Type" value="application/json"/>
-        <mule:set-payload value="#[_ipViolationMessage]"/> <!-- Set the payload to the description of the violation -->
-    </mule:processor-chain>
- 
-    <!-- This is the element that gets injected at the beginning of every flow. According to the pointcut specified below. -->
-    <before>
-        <ip-filter-gw:filter ipAddress="{{ipExpression}}" onUnaccepted="{{policyId}}-build-response">   <!-- If failed, the mule:processor-chain above is executed -->
-            <ip-filter-gw:whitelist>
-                {{#ips}}
-                <ip-filter-gw:ip>{{.}}</ip-filter-gw:ip>
-                {{/ips}}
-            </ip-filter-gw:whitelist>
-        </ip-filter-gw:filter>
-    </before>
- 
-    <!-- Pointcuts specify where this policy takes effect-->
-    {{#pointcutData.length}}
-      {{#pointcutData}}
-        <pointcut>
-          <api-platform-gw:api-pointcut apiName="{{apiName}}" apiVersion="{{apiVersionName}}"/>
-          <resource methodRegex="{{methodRegex}}" uriTemplateRegex="{{uriTemplateRegex}}"/>
-        </pointcut>
-      {{/pointcutData}}
-    {{/pointcutData.length}}
-    {{^pointcutData.length}}
-      <pointcut>
-        <api-platform-gw:api-pointcut apiName="{{apiName}}" apiVersion="{{apiVersionName}}"/>
-      </pointcut>
-    {{/pointcutData.length}}
-</policy>
-----
-
 == See Also
 
+* link:/api-manager/custom-policy-reference[Custom Policy Reference]
+* link:/api-manager/custom-pol-config-xml-props-reference[Configuration XML Properties Reference]
+* link:/api-manager/cust-pol-exception-blocks-reference[Custom Policy Exception Blocks Reference]
+* link:/api-manager/pointcuts-reference[Pointcuts Reference]
 * link:/mule-user-guide/v/3.8/elements-in-a-mule-flow[Elements for defining the configuration of a custom policy] 
-* link:/api-manager/custom-policy-reference#referencing-properties[Referencing properties]
 * link:/api-manager/custom-policy-reference#ramlsnippet-and-ramlv1snippet-parameters[ramlSnippet]
 
