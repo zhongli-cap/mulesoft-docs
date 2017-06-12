@@ -27,8 +27,6 @@ Web Service Consumer extension used to consume SOAP web services.
 |Name | String | The name of this configuration. With this name can be later referenced. | | *x*{nbsp}
 | Connection a| <<config_connection, Connection>>
  | The connection types that can be provided to this configuration. | | *x*{nbsp}
-| Encoding a| String |  +++Default character encoding to be used in all the messages. If not specified, the default charset in the mule configuration
-will be used+++ |  | {nbsp}
 |======================
 
 ==== Connection Types
@@ -47,21 +45,22 @@ ConnectionProvider that returns instances of SoapClient.
 | Service a| String |  +++The service name.+++ |  | *x*{nbsp}
 | Port a| String |  +++The port name.+++ |  | *x*{nbsp}
 | Address a| String |  +++The address of the web service.+++ |  | {nbsp}
-| Security Strategies a| Array of One of:
-
-* <<WssDecryptSecurityStrategy>>
-* <<WssEncryptSecurityStrategy>>
-* <<WssSignSecurityStrategy>>
-* <<WssUsernameTokenSecurityStrategy>>
-* <<WssTimestampSecurityStrategy>>
-* <<WssVerifySignatureSecurityStrategy>> |  +++The security strategies configured to protect the SOAP messages.+++ |  | {nbsp}
-| Transport Configuration a| String |  |  | {nbsp}
 | Soap Version a| Enumeration, one of:
 
 ** SOAP11
 ** SOAP12 |  +++The soap version of the WSDL.+++ |  +++SOAP11+++ | {nbsp}
 | Mtom Enabled a| Boolean |  +++If should use the MTOM protocol to manage the attachments or not.+++ |  +++false+++ | {nbsp}
-| Message Dispatcher a| <<MessageDispatcher>> |  |  | {nbsp}
+| Encoding a| String |  +++Default character encoding to be used in all the messages. If not specified, the default charset in the mule configuration
+will be used+++ |  | {nbsp}
+| Custom Transport Configuration a| One of:
+
+* <<http-transport-configuration>> |  +++The transport configuration used to dispatch the SOAP messages.+++ |  | {nbsp}
+| Sign Security Strategy a| <<WssSignSecurityStrategy>> |  +++a sign WSS configuration+++ |  | {nbsp}
+| Verify Signature Security Strategy a| <<WssVerifySignatureSecurityStrategy>> |  +++a verify signature WSS configuration+++ |  | {nbsp}
+| Username Token Security Strategy a| <<WssUsernameTokenSecurityStrategy>> |  +++a usernameToken WSS configuration+++ |  | {nbsp}
+| Timestamp Security Strategy a| <<WssTimestampSecurityStrategy>> |  +++a timestamp WSS configuration+++ |  | {nbsp}
+| Decrypt Security Strategy a| <<WssDecryptSecurityStrategy>> |  +++a decrypt WSS configuration+++ |  | {nbsp}
+| Encrypt Security Strategy a| <<WssEncryptSecurityStrategy>> |  +++an encrypt WSS configuration+++ |  | {nbsp}
 | Reconnection Strategy a| * <<reconnect>>
 * <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 | Disable Validation a| Boolean |  +++Disables connection validation+++ |  | {nbsp}
@@ -89,7 +88,10 @@ Consumes an operation from a SOAP Web Service.
 | Name | Type | Description | Default Value | Required
 | Configuration | String | The name of the configuration to use. | | *x*{nbsp}
 | Operation a| String |  +++the name of the web service operation that aims to invoke.+++ |  | *x*{nbsp}
-| Message a| <<SoapMessageBuilder>> |  +++the constructed SOAP message to perform the request.+++ |  | {nbsp}
+| Body a| Binary |  +++The XML body to include in the SOAP message, with all the required parameters, or null if no params are required.+++ |  +++#[payload]+++ | {nbsp}
+| Headers a| Binary |  +++The XML headers to include in the SOAP message.+++ |  | {nbsp}
+| Attachments a| Object |  +++The attachments to include in the SOAP request.+++ |  | {nbsp}
+| Headers a| Object |  +++A group of transport headers that will be bounded with the transport request.+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
 |======================
 
@@ -104,19 +106,113 @@ Consumes an operation from a SOAP Web Service.
 * <<config>> {nbsp}
 
 ==== Throws
+* WSC:INVALID_WSDL {nbsp}
 * WSC:RETRY_EXHAUSTED {nbsp}
-* WSC:Error Sending Request {nbsp}
-* WSC:Invalid WSDL {nbsp}
-* WSC:Soap Fault {nbsp}
-* WSC:XML Encoding {nbsp}
-* WSC:Bad Request {nbsp}
-* WSC:Timeout {nbsp}
-* WSC:Bad Response {nbsp}
+* WSC:BAD_REQUEST {nbsp}
+* WSC:SOAP_FAULT {nbsp}
+* WSC:TIMEOUT {nbsp}
+* WSC:BAD_RESPONSE {nbsp}
+* WSC:CANNOT_DISPATCH {nbsp}
+* WSC:ENCODING {nbsp}
 * WSC:CONNECTIVITY {nbsp}
 
 
 
 == Types
+[[WssSignSecurityStrategy]]
+=== Wss Sign Security Strategy
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Key Store Configuration a| <<wss-key-store-configuration>> | 
+|======================
+    
+[[wss-key-store-configuration]]
+=== Wss Key Store Configuration
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Alias a| String | 
+| Key Password a| String | 
+| Password a| String | 
+| Key Store Path a| String | 
+| Type a| String | jks
+|======================
+    
+[[WssVerifySignatureSecurityStrategy]]
+=== Wss Verify Signature Security Strategy
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Trust Store Configuration a| <<wss-trust-store-configuration>> | 
+|======================
+    
+[[wss-trust-store-configuration]]
+=== Wss Trust Store Configuration
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Trust Store Path a| String | 
+| Password a| String | 
+| Type a| String | jks
+|======================
+    
+[[WssUsernameTokenSecurityStrategy]]
+=== Wss Username Token Security Strategy
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Username a| String | 
+| Password a| String | 
+| Password Type a| Enumeration, one of:
+
+** TEXT
+** DIGEST | TEXT
+| Add Nonce a| Boolean | false
+| Add Created a| Boolean | false
+|======================
+    
+[[WssTimestampSecurityStrategy]]
+=== Wss Timestamp Security Strategy
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Time To Live a| Number | 60
+| Time To Live Unit a| Enumeration, one of:
+
+** NANOSECONDS
+** MICROSECONDS
+** MILLISECONDS
+** SECONDS
+** MINUTES
+** HOURS
+** DAYS | SECONDS
+|======================
+    
+[[WssDecryptSecurityStrategy]]
+=== Wss Decrypt Security Strategy
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Key Store Configuration a| <<wss-key-store-configuration>> | 
+|======================
+    
+[[WssEncryptSecurityStrategy]]
+=== Wss Encrypt Security Strategy
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Key Store Configuration a| <<wss-key-store-configuration>> | 
+|======================
+    
 [[reconnect]]
 === Reconnect
 
@@ -171,109 +267,13 @@ Consumes an operation from a SOAP Web Service.
 | Soap Headers a| Object | 
 |======================
     
-[[SoapMessageBuilder]]
-=== Soap Message Builder
+[[http-transport-configuration]]
+=== Http Transport Configuration
 
 [cols=".^30%,.^40%,.^30%", options="header"]
 |======================
 | Field | Type | Default Value
-| Body a| String | #[payload]
-| Headers a| String | 
-| Attachments a| Object | 
-|======================
-    
-[[WssDecryptSecurityStrategy]]
-=== Wss Decrypt Security Strategy
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Key Store Configuration a| <<wss-key-store-configuration>> | 
-|======================
-    
-[[wss-key-store-configuration]]
-=== Wss Key Store Configuration
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Alias a| String | 
-| Key Password a| String | 
-| Password a| String | 
-| Key Store Path a| String | 
-| Type a| String | jks
-|======================
-    
-[[WssEncryptSecurityStrategy]]
-=== Wss Encrypt Security Strategy
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Key Store Configuration a| <<wss-key-store-configuration>> | 
-|======================
-    
-[[WssSignSecurityStrategy]]
-=== Wss Sign Security Strategy
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Key Store Configuration a| <<wss-key-store-configuration>> | 
-|======================
-    
-[[WssUsernameTokenSecurityStrategy]]
-=== Wss Username Token Security Strategy
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Username a| String | 
-| Password a| String | 
-| Password Type a| Enumeration, one of:
-
-** TEXT
-** DIGEST | TEXT
-| Add Nonce a| Boolean | 
-| Add Created a| Boolean | 
-|======================
-    
-[[WssTimestampSecurityStrategy]]
-=== Wss Timestamp Security Strategy
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Time To Live a| Number | 60
-| Time To Live Unit a| Enumeration, one of:
-
-** NANOSECONDS
-** MICROSECONDS
-** MILLISECONDS
-** SECONDS
-** MINUTES
-** HOURS
-** DAYS | SECONDS
-|======================
-    
-[[WssVerifySignatureSecurityStrategy]]
-=== Wss Verify Signature Security Strategy
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Trust Store Configuration a| <<wss-trust-store-configuration>> | 
-|======================
-    
-[[wss-trust-store-configuration]]
-=== Wss Trust Store Configuration
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Trust Store Path a| String | 
-| Password a| String | 
-| Type a| String | jks
+| Config Name a| String | 
 |======================
     
 
