@@ -66,8 +66,6 @@ initialise.+++ |  | {nbsp}
 * <<rename>> {nbsp}
 * <<write>> {nbsp}
 
-==== Associated Sources
-* <<directory-listener>> {nbsp}
 
 
 == Operations
@@ -382,93 +380,6 @@ not set, then it defaults to FileConnectorConfig#getDefaultWriteEncoding()
 * FILE:FILE_ALREADY_EXISTS {nbsp}
 
 
-== Sources
-
-[[directory-listener]]
-=== Directory Listener
-`<http://www.mulesoft.org/schema/mule/file:directory-listener>`
-
-+++
-Listens for near real-time events that happens on files contained inside a directory or on the directory itself. The events are
-not acquired by polling the filesystem but rather actually listening for operating system events.
-<p>
-Whenever a file (or the directory) is created, updated or deleted, this Source will fire a Message which
-payload reference the affected file and the attributes will be a ListenerFileAttributes instance.
-<p>
-There're however some special cases to be considered:
-<p>
-<ul>
-<li>If the file has been deleted, then it's not possible to obtain its content so the message payload will be null</li>
-<li>Also in the case of file deletion, all its attributes are also not available. Thus, the message attributes will actually be
-an instance of DeletedFileAttributes which throws IllegalStateException whenever a non available attribute is
-requested</li>
-<li>When the event references a directory, then the payload is also a null</li>
-</ul>
-<p>
-<b>When to use it</b>
-<p>
-This source is useful in cases in which a flow should respond to changes done on the filesystem, examples being trigger files,
-transaction files being added on a drop folder, settings files updated, etc. All of the above cases could be done using a
-<file:list> operation inside a poll scope (maybe also combined with a <watermark>.
-<p>
-However, although polling is a powerful and reliable solution, it's not an efficient one. Because this listener relies on
-operating system notifications, it's much more efficient in terms of resources.
-<p>
-<b>Reliability</b>
-<p>
-The trade-off between a poll reliability and this listener's performance is reliability. Because operating system events don't
-generally include the concept of transaction or replay, there's no way to guarantee that no event is going to be lost in case
-of failure or server crash. Although you can always use mule to implement a reliable acquisition pattern, there's no fallback
-is such acquisition fails. What this means is that this listener is no silver bullet and it should not been seen as the
-recommended approach over a poll+list+watermark approach. Users should analyse each use case and environment to determine which
-the best option is.
-<p>
-<b>Operating system limitations</b>
-<p>
-This component's behaviour might be slightly different depending on the OS on which it is deployed. The main differences are
-usually (but not exclusively) related to:
-<ul>
-<li>Overflows: In highly concurrent scenarios a given file might be associated to hundreds of events per second. Some OS might
-not be able to handle that gracefully and decide to drop some of those events or even fail.</li>
-<li>Polling: Some operation systems (like older versions of OSX) don't actually support file system notifications. In those
-cases, the JRE decides to compensate by using a high frequency poll, in which case the listener becomes pretty much the same as
-using a poll element</li>
-</ul>
-+++
-
-==== Parameters
-[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
-|======================
-| Name | Type | Description | Default Value | Required
-| Configuration | String | The name of the configuration to use. | | *x*{nbsp}
-| Directory a| String |  +++The directory on which notifications are being listened to+++ |  | {nbsp}
-| Notify On Create a| Boolean |  +++Whether to react to creation notifications. Defaults to true+++ |  +++true+++ | {nbsp}
-| Notify On Update a| Boolean |  +++Whether to react to update notifications. Defaults to true+++ |  +++true+++ | {nbsp}
-| Notify On Delete a| Boolean |  +++Whether to react to deletion notifications. Defaults to true+++ |  +++false+++ | {nbsp}
-| Recursive a| Boolean |  +++Whether or not to also listen for notification which happen on sub directories which are also contained on the main one.
-<p>
-This option is set to false by default. Consider that when enabled, some operating systems might fire many
-notifications when an event happens on a subdirectory. One per each watched directory on the notification's path.+++ |  +++false+++ | {nbsp}
-| Matcher a| <<matcher>> |  +++A matcher used to filter events on files which do not meet the matcher's criteria+++ |  | {nbsp}
-| Redelivery Policy a| <<RedeliveryPolicy>> |  +++Defines a policy for processing the redelivery of the same message+++ |  | {nbsp}
-| Streaming Strategy a| * <<repeatable-in-memory-stream>>
-* <<repeatable-file-store-stream>>
-* <<non-repeatable-stream>> |  +++Configure if repeatable streams should be used and their behaviour+++ |  | {nbsp}
-| Reconnection Strategy a| * <<reconnect>>
-* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
-|======================
-
-==== Output
-[cols=".^50%,.^50%"]
-|======================
-| *Type* a| Binary
-| *Attributes Type* a| <<ListenerFileAttributes>>
-|======================
-
-==== For Configurations.
-* <<config>> {nbsp}
-
-
 
 == Types
 [[reconnect]]
@@ -491,15 +402,14 @@ notifications when an event happens on a subdirectory. One per each watched dire
 | Frequency a| Number | 
 |======================
     
-[[ListenerFileAttributes]]
-=== Listener File Attributes
+[[LocalFileAttributes]]
+=== Local File Attributes
 
 [cols=".^30%,.^40%,.^30%", options="header"]
 |======================
 | Field | Type | Default Value
 | Creation Time a| DateTime | 
 | Directory a| Boolean | 
-| Event Type a| String | 
 | Last Access Time a| DateTime | 
 | Last Modified Time a| DateTime | 
 | Name a| String | 
@@ -542,19 +452,6 @@ notifications when an event happens on a subdirectory. One per each watched dire
 | Max Size a| Number | 
 |======================
     
-[[RedeliveryPolicy]]
-=== Redelivery Policy
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Max Redelivery Count a| Number | 
-| Use Secure Hash a| Boolean | 
-| Message Digest Algorithm a| String | 
-| Id Expression a| String | 
-| Object Store Ref a| String | 
-|======================
-    
 [[repeatable-in-memory-stream]]
 === Repeatable In Memory Stream
 
@@ -585,23 +482,6 @@ notifications when an event happens on a subdirectory. One per each watched dire
 ** KB
 ** MB
 ** GB | 
-|======================
-    
-[[LocalFileAttributes]]
-=== Local File Attributes
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Creation Time a| DateTime | 
-| Directory a| Boolean | 
-| Last Access Time a| DateTime | 
-| Last Modified Time a| DateTime | 
-| Name a| String | 
-| Path a| String | 
-| Regular File a| Boolean | 
-| Size a| Number | 
-| Symbolic Link a| Boolean | 
 |======================
     
 
