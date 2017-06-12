@@ -27,8 +27,63 @@ Base configuration for JmsExtension
 |Name | String | The name of this configuration. With this name can be later referenced. | | *x*{nbsp}
 | Encoding a| String |  +++The encoding of the Message body to consume if the message doesn't communicate it+++ |  | {nbsp}
 | Content Type a| String |  +++The default content type of the Message body to consume if the message doesn't communicate it+++ |  +++*/*+++ | {nbsp}
-| Consumer Config a| <<JmsConsumerConfig>> |  +++Configuration parameters for consuming Messages from a JMS Queue or Topic+++ |  | {nbsp}
-| Producer Config a| <<JmsProducerConfig>> |  +++Configuration parameters for sending Messages to a JMS Queue or Topic+++ |  | {nbsp}
+| Ack Mode a| Enumeration, one of:
+
+** NONE
+** AUTO
+** MANUAL
+** DUPS_OK |  +++The ConsumerAckMode to use when consuming a Message
+Can be overridden at the message source level.
+This attribute has to be NONE if transactionType is LOCAL or MULTI+++ |  +++AUTO+++ | {nbsp}
+| Consumer Type a| One of:
+
+* <<queue-consumer>>
+* <<topic-consumer>> |  +++The ConsumerType to be used by default when consuming a Message
+Can be overridden at the message source level.+++ |  | {nbsp}
+| Selector a| String |  +++Default selector to be used for filtering when consuming a Message
+Can be overridden at the message source level.+++ |  | {nbsp}
+| Max Redelivery a| Number |  +++Used to configure the number of redelivers before discarding the message.
+No redelivery is represented with 0, while -1 means infinite re deliveries accepted.+++ |  +++0+++ | {nbsp}
+| Persistent Delivery a| Boolean |  +++Sets the default value for the Message#getJMSDeliveryMode.
+If true, the DeliveryMode#PERSISTENT mode will be used,
+which instructs the JMS provider to take extra care to insure the message
+is not lost in transit due to a JMS provider failure.+++ |  +++true+++ | {nbsp}
+| Priority a| Number |  +++Defines the default Message#getJMSPriority to use when sending messages+++ |  +++4+++ | {nbsp}
+| Time To Live a| Number |  +++Defines the default time the message will be in the broker before it expires and is discarded+++ |  +++0+++ | {nbsp}
+| Time To Live Unit a| Enumeration, one of:
+
+** NANOSECONDS
+** MICROSECONDS
+** MILLISECONDS
+** SECONDS
+** MINUTES
+** HOURS
+** DAYS |  +++A TimeUnit which qualifies the #timeToLive attribute.
+<p>
+Defaults to MILLISECONDS+++ |  +++MILLISECONDS+++ | {nbsp}
+| Disable Message Id a| Boolean |  +++Defines the default value to use when producing messages,
+for disabling the Message#getJMSMessageID generation in the broker.
+Depending on the provider it may or may not have effect+++ |  +++false+++ | {nbsp}
+| Disable Message Timestamp a| Boolean |  +++Defines the default value to use, when producing messages,
+for disable Message#getJMSTimestamp generation in the broker.
+Depending on the provider it may or may not have effect.+++ |  +++false+++ | {nbsp}
+| Delivery Delay a| Number |  +++This is used to determine the Message delivery delay time which is
+calculated by adding the deliveryDelay value specified on the
+send method to the time the message was sent.
+<p>
+Only used in JmsSpecification#JMS_2_0+++ |  | {nbsp}
+| Delivery Delay Unit a| Enumeration, one of:
+
+** NANOSECONDS
+** MICROSECONDS
+** MILLISECONDS
+** SECONDS
+** MINUTES
+** HOURS
+** DAYS |  +++A TimeUnit which qualifies the #deliveryDelay attribute.
+<p>
+Defaults to MILLISECONDS+++ |  +++MILLISECONDS+++ | {nbsp}
+| Jms Type a| String |  +++A message JMSType identifier supplied by a client when a message is sent.+++ |  | {nbsp}
 |======================
 
 
@@ -65,11 +120,9 @@ and headers as Result#getAttributes
 * <<topic-consumer>> |  +++the type of the MessageConsumer that is required for the given destination, along with any+++ |  | {nbsp}
 | Ack Mode a| Enumeration, one of:
 
-** NONE
 ** AUTO
 ** MANUAL
-** DUPS_OK
-** TRANSACTED |  +++the AckMode that will be configured over the Message and Session+++ |  | {nbsp}
+** DUPS_OK |  +++the ConsumerAckMode that will be configured over the Message and Session+++ |  | {nbsp}
 | Selector a| String |  +++a custom JMS selector for filtering the messages+++ |  | {nbsp}
 | Content Type a| String |  +++the Message's content content type+++ |  | {nbsp}
 | Encoding a| String |  +++the Message's content encoding+++ |  | {nbsp}
@@ -83,6 +136,11 @@ and headers as Result#getAttributes
 ** MINUTES
 ** HOURS
 ** DAYS |  +++Time unit to be used in the maximumWaitTime configurations+++ |  +++MILLISECONDS+++ | {nbsp}
+| Transactional Action a| Enumeration, one of:
+
+** ALWAYS_JOIN
+** JOIN_IF_POSSIBLE
+** NOT_SUPPORTED |  +++The type of joining action that operations can take regarding transactions.+++ |  +++JOIN_IF_POSSIBLE+++ | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
 |======================
 
@@ -123,7 +181,22 @@ Operation that allows the user to send a Message to a JMS Destination
 
 ** QUEUE
 ** TOPIC |  +++The type of the Destination+++ |  +++QUEUE+++ | {nbsp}
-| Message Builder a| <<MessageBuilder>> |  +++the MessageBuilder  used to create the Message to be sent+++ |  | {nbsp}
+| Transactional Action a| Enumeration, one of:
+
+** ALWAYS_JOIN
+** JOIN_IF_POSSIBLE
+** NOT_SUPPORTED |  +++The type of joining action that operations can take regarding transactions.+++ |  +++JOIN_IF_POSSIBLE+++ | {nbsp}
+| Body a| Any |  +++The body of the Message+++ |  +++#[payload]+++ | {nbsp}
+| Jms Type a| String |  +++The JMSType header of the Message+++ |  | {nbsp}
+| Correlation Id a| String |  +++The JMSCorrelationID header of the Message+++ |  | {nbsp}
+| Send Content Type a| Boolean |  +++true if the body type should be sent as a Message property+++ |  +++true+++ | {nbsp}
+| ContentType a| String |  +++The content type of the body+++ |  | {nbsp}
+| Send Encoding a| Boolean |  +++true if the body outboundEncoding should be sent as a Message property+++ |  +++true+++ | {nbsp}
+| Encoding a| String |  +++The outboundEncoding of the message's body+++ |  | {nbsp}
+| Reply To a| <<JmsDestination>> |  +++The JMSReplyTo header information of the Destination where
+this Message should be replied to+++ |  | {nbsp}
+| User Properties a| Object |  +++The custom user properties that should be set to this Message+++ |  | {nbsp}
+| JMSX Properties a| <<JmsxProperties>> |  +++The JMSX properties that should be set to this Message+++ |  | {nbsp}
 | Persistent Delivery a| Boolean |  +++If true; the Message will be sent using the PERSISTENT JMSDeliveryMode+++ |  | {nbsp}
 | Priority a| Number |  +++The default JMSPriority value to be used when sending the message+++ |  | {nbsp}
 | Time To Live a| Number |  +++Defines the default time the message will be in the broker before it expires and is discarded+++ |  | {nbsp}
@@ -178,27 +251,17 @@ and headers as Result#getAttributes
 | Name | Type | Description | Default Value | Required
 | Configuration | String | The name of the configuration to use. | | *x*{nbsp}
 | Destination a| String |  +++the name of the Destination where the Message should be sent+++ |  | *x*{nbsp}
-| Message Builder a| <<MessageBuilder>> |  +++the MessageBuilder used to create the Message to be sent+++ |  | {nbsp}
-| Ack Mode a| Enumeration, one of:
-
-** NONE
-** AUTO
-** MANUAL
-** DUPS_OK
-** TRANSACTED |  +++the AckMode that will be configured over the Message and Session+++ |  | {nbsp}
-| Maximum Wait a| Number |  +++Maximum time to wait for a response before timeout+++ |  +++10000+++ | {nbsp}
-| Maximum Wait Unit a| Enumeration, one of:
-
-** NANOSECONDS
-** MICROSECONDS
-** MILLISECONDS
-** SECONDS
-** MINUTES
-** HOURS
-** DAYS |  +++Time unit to be used in the maximumWaitTime configuration+++ |  +++MILLISECONDS+++ | {nbsp}
-| Content Type a| String |  +++The content type of the consumed message body+++ |  | {nbsp}
-| Encoding a| String |  +++The encoding of the consumed message body+++ |  | {nbsp}
-| Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Body a| Any |  +++The body of the Message+++ |  +++#[payload]+++ | {nbsp}
+| Jms Type a| String |  +++The JMSType header of the Message+++ |  | {nbsp}
+| Correlation Id a| String |  +++The JMSCorrelationID header of the Message+++ |  | {nbsp}
+| Send Content Type a| Boolean |  +++true if the body type should be sent as a Message property+++ |  +++true+++ | {nbsp}
+| ContentType a| String |  +++The content type of the body+++ |  | {nbsp}
+| Send Encoding a| Boolean |  +++true if the body outboundEncoding should be sent as a Message property+++ |  +++true+++ | {nbsp}
+| Encoding a| String |  +++The outboundEncoding of the message's body+++ |  | {nbsp}
+| Reply To a| <<JmsDestination>> |  +++The JMSReplyTo header information of the Destination where
+this Message should be replied to+++ |  | {nbsp}
+| User Properties a| Object |  +++The custom user properties that should be set to this Message+++ |  | {nbsp}
+| JMSX Properties a| <<JmsxProperties>> |  +++The JMSX properties that should be set to this Message+++ |  | {nbsp}
 | Persistent Delivery a| Boolean |  +++If true; the Message will be sent using the PERSISTENT JMSDeliveryMode+++ |  | {nbsp}
 | Priority a| Number |  +++The default JMSPriority value to be used when sending the message+++ |  | {nbsp}
 | Time To Live a| Number |  +++Defines the default time the message will be in the broker before it expires and is discarded+++ |  | {nbsp}
@@ -223,6 +286,24 @@ and headers as Result#getAttributes
 ** MINUTES
 ** HOURS
 ** DAYS |  +++Time unit to be used in the deliveryDelay configurations+++ |  | {nbsp}
+| Ack Mode a| Enumeration, one of:
+
+** AUTO
+** MANUAL
+** DUPS_OK |  +++The Session ACK mode to use when consuming the message+++ |  | {nbsp}
+| Maximum Wait a| Number |  +++Maximum time to wait for a message to arrive before timeout+++ |  +++10000+++ | {nbsp}
+| Maximum Wait Unit a| Enumeration, one of:
+
+** NANOSECONDS
+** MICROSECONDS
+** MILLISECONDS
+** SECONDS
+** MINUTES
+** HOURS
+** DAYS |  +++Time unit to be used in the maximumWaitTime configuration+++ |  +++MILLISECONDS+++ | {nbsp}
+| Content Type a| String |  +++The content type of the message body to be consumed+++ |  | {nbsp}
+| Encoding a| String |  +++The encoding of the message body to be consumed+++ |  | {nbsp}
+| Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -272,18 +353,52 @@ for incoming Messages
 ** NONE
 ** AUTO
 ** MANUAL
-** DUPS_OK
-** TRANSACTED |  +++The Session ACK mode to use when consuming a message+++ |  | {nbsp}
+** DUPS_OK |  +++The Session ACK mode to use when consuming a message+++ |  | {nbsp}
 | Selector a| String |  +++JMS selector to be used for filtering incoming messages+++ |  | {nbsp}
-| Content Type a| String |  +++The content type of the message body+++ |  | {nbsp}
-| Encoding a| String |  +++The encoding of the message body+++ |  | {nbsp}
-| Synchronous a| Boolean |  +++This makes the message listener to work synchronously, only one message at a time will be consumed, delivered
-and waited to be processed in the flow.+++ |  +++true+++ | {nbsp}
+| Inbound Content Type a| String |  +++The content type of the message body+++ |  | {nbsp}
+| Inbound Encoding a| String |  +++The inboundEncoding of the message body+++ |  | {nbsp}
 | Number Of Consumers a| Number |  +++The number of concurrent consumers that will be used to receive JMS Messages+++ |  +++4+++ | {nbsp}
+| Transactional Action a| Enumeration, one of:
+
+** ALWAYS_BEGIN
+** NONE |  +++The type of beginning action that sources can take regarding transactions.+++ |  +++NONE+++ | {nbsp}
 | Redelivery Policy a| <<RedeliveryPolicy>> |  +++Defines a policy for processing the redelivery of the same message+++ |  | {nbsp}
 | Reconnection Strategy a| * <<reconnect>>
 * <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
-| Response a| <<response-builder>> |  |  | {nbsp}
+| Body a| Any |  +++The body of the Message+++ |  +++#[payload]+++ | {nbsp}
+| Jms Type a| String |  +++The JMSType identifier header of the Message+++ |  | {nbsp}
+| Correlation Id a| String |  +++The JMSCorrelationID header of the Message+++ |  | {nbsp}
+| Send Content Type a| Boolean |  +++Whether or not the body content type should be sent as a property+++ |  +++true+++ | {nbsp}
+| ContentType a| String |  +++The content type of the message's body+++ |  | {nbsp}
+| Send Encoding a| Boolean |  +++Whether or not the body outboundEncoding should be sent as a Message property+++ |  +++true+++ | {nbsp}
+| Encoding a| String |  +++The encoding of the message's body+++ |  | {nbsp}
+| Reply To a| <<JmsDestination>> |  +++The destination where a reply to this Message should be sent+++ |  | {nbsp}
+| User Properties a| Object |  +++The custom user properties that should be set to this Message+++ |  | {nbsp}
+| JMSX Properties a| <<JmsxProperties>> |  +++The JMSX properties that should be set to this Message+++ |  | {nbsp}
+| Persistent Delivery a| Boolean |  +++Whether or not the delivery should be done with a persistent configuration+++ |  | {nbsp}
+| Priority a| Number |  +++The default JMSPriority value to be used when sending the message+++ |  | {nbsp}
+| Time To Live a| Number |  +++Defines the default time the message will be in the broker before it expires and is discarded+++ |  | {nbsp}
+| Time To Live Unit a| Enumeration, one of:
+
+** NANOSECONDS
+** MICROSECONDS
+** MILLISECONDS
+** SECONDS
+** MINUTES
+** HOURS
+** DAYS |  +++Time unit to be used in the timeToLive configurations+++ |  | {nbsp}
+| Disable Message Id a| Boolean |  +++If true; the Message will be flagged to avoid generating its MessageID+++ |  | {nbsp}
+| Disable Message Timestamp a| Boolean |  +++If true; the Message will be flagged to avoid generating its sent Timestamp+++ |  | {nbsp}
+| Delivery Delay a| Number |  +++Only used by JMS 2.0. Sets the delivery delay to be applied in order to postpone the Message delivery+++ |  | {nbsp}
+| Delivery Delay Unit a| Enumeration, one of:
+
+** NANOSECONDS
+** MICROSECONDS
+** MILLISECONDS
+** SECONDS
+** MINUTES
+** HOURS
+** DAYS |  +++Time unit to be used in the deliveryDelay configurations+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -296,63 +411,14 @@ and waited to be processed in the flow.+++ |  +++true+++ | {nbsp}
 ==== For Configurations.
 * <<config>> {nbsp}
 
+==== Throws
+* MULE:SOURCE_RESPONSE_SEND {nbsp}
+* MULE:SOURCE_ERROR_RESPONSE_SEND {nbsp}
+* MULE:SOURCE_ERROR_RESPONSE_GENERATE {nbsp}
+* MULE:SOURCE_RESPONSE_GENERATE {nbsp}
 
 
 == Types
-[[JmsConsumerConfig]]
-=== Jms Consumer Config
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Ack Mode a| Enumeration, one of:
-
-** NONE
-** AUTO
-** MANUAL
-** DUPS_OK
-** TRANSACTED | AUTO
-| Consumer Type a| One of:
-
-* <<queue-consumer>>
-* <<topic-consumer>> | 
-| Selector a| String | 
-| Max Redelivery a| Number | 0
-|======================
-    
-[[JmsProducerConfig]]
-=== Jms Producer Config
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Persistent Delivery a| Boolean | true
-| Priority a| Number | 4
-| Time To Live a| Number | 0
-| Time To Live Unit a| Enumeration, one of:
-
-** NANOSECONDS
-** MICROSECONDS
-** MILLISECONDS
-** SECONDS
-** MINUTES
-** HOURS
-** DAYS | MILLISECONDS
-| Disable Message Id a| Boolean | false
-| Disable Message Timestamp a| Boolean | false
-| Delivery Delay a| Number | 
-| Delivery Delay Unit a| Enumeration, one of:
-
-** NANOSECONDS
-** MICROSECONDS
-** MILLISECONDS
-** SECONDS
-** MINUTES
-** HOURS
-** DAYS | MILLISECONDS
-| Jms Type a| String | 
-|======================
-    
 [[RedeliveryPolicy]]
 === Redelivery Policy
 
@@ -386,34 +452,6 @@ and waited to be processed in the flow.+++ |  +++true+++ | {nbsp}
 | Frequency a| Number | 
 |======================
     
-[[response-builder]]
-=== Response Builder
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Message Builder a| <<MessageBuilder>> | 
-| Overrides a| <<JmsPublishParameters>> | 
-|======================
-    
-[[MessageBuilder]]
-=== Message Builder
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Body a| Any | #[payload]
-| Jms Type a| String | 
-| Correlation Id a| String | 
-| Send Content Type a| Boolean | true
-| Content Type a| String | 
-| Send Encoding a| Boolean | true
-| Encoding a| String | 
-| Reply To a| <<JmsDestination>> | 
-| Properties a| Object | 
-| Jmsx Properties a| <<JmsxProperties>> | 
-|======================
-    
 [[JmsDestination]]
 === Jms Destination
 
@@ -441,38 +479,6 @@ and waited to be processed in the flow.+++ |  +++true+++ | {nbsp}
 | Jmsx Producer TXID a| String | 
 | Jmsx Consumer TXID a| String | 
 | Jmsx Rcv Timestamp a| Number | 
-|======================
-    
-[[JmsPublishParameters]]
-=== Jms Publish Parameters
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Persistent Delivery a| Boolean | 
-| Priority a| Number | 
-| Time To Live a| Number | 
-| Time To Live Unit a| Enumeration, one of:
-
-** NANOSECONDS
-** MICROSECONDS
-** MILLISECONDS
-** SECONDS
-** MINUTES
-** HOURS
-** DAYS | 
-| Disable Message Id a| Boolean | 
-| Disable Message Timestamp a| Boolean | 
-| Delivery Delay a| Number | 
-| Delivery Delay Unit a| Enumeration, one of:
-
-** NANOSECONDS
-** MICROSECONDS
-** MILLISECONDS
-** SECONDS
-** MINUTES
-** HOURS
-** DAYS | 
 |======================
     
 [[PoolingProfile]]
@@ -510,15 +516,6 @@ and waited to be processed in the flow.+++ |  +++true+++ | {nbsp}
 | Initial Redelivery Delay a| Number | 1000
 | Redelivery Delay a| Number | 1000
 | Max Redelivery a| Number | 0
-|======================
-    
-[[queue-consumer]]
-=== Queue Consumer
-
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Topic a| Boolean | 
 |======================
     
 [[topic-consumer]]
