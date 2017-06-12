@@ -22,10 +22,37 @@ The Logger component is a quick and easy way to log the payload of an in-flight 
 [source, xml, linenums]
 ----
 <flow name="FlowWithLoggers">
-  <http:listener config-ref="HTTP_Listener_Configuration1" path="hello" doc:name="HTTP"/>
-  <logger level="INFO" doc:name="Logger-before"/>
+  <http:listener config-ref="HTTP_Listener_Configuration1" path="/hello" doc:name="HTTP"/>
+  <logger level="INFO" message="Payload received from HTTP: #[payload]" doc:name="Logger-before"/>
   <base64-encoder-transformer/>
-  <logger level="INFO" doc:name="Logger-after"/>
+  <logger level="INFO" message="Payload after base64: #[payload]" doc:name="Logger-after"/>
+  <vm:outbound-endpoint path="next.in.line" />
+</flow>
+----
+
+== Default Behavior
+
+If nothing is specified in the Message field, the logger logs the entire Mule message, including all session, inbound and outbound properties, as well as flow variables. As it could be very verbose to show all the contents of everything, the contents of the payload aren't shown, only its type.
+
+[source, xml, linenums]
+----
+<flow name="FlowWithEmptyLogger">
+  <http:listener config-ref="HTTP_Listener_Configuration" path="/test" doc:name="HTTP"/>
+  <logger level="INFO" doc:name="Log message"/>
+</flow>
+----
+
+== Best Practice - Diferentiate Instances
+
+If a flow uses several loggers, add some fixed text in the logger's message to identify where it was genereated:
+
+[source, xml, linenums]
+----
+<flow name="FlowWithLoggers">
+  <http:listener config-ref="HTTP_Listener_Configuration1" path="/hello" doc:name="HTTP"/>
+  <logger level="INFO" message="Message before base64: #[message]" doc:name="Log message before"/>
+  <base64-encoder-transformer/>
+  <logger level="INFO" message="Message after base64: #[message]" doc:name="Log message after"/>
   <vm:outbound-endpoint path="next.in.line" />
 </flow>
 ----
