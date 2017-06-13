@@ -2,7 +2,8 @@
 
 A link:/anypoint-b2b/glossary#sectb[_B2B transaction-processing solution_] serves as a translation layer between internal systems and the various formats (X12, EDIFACT, XML, CSV, and others) and transport protocols (AS2, FTP/S, and others) commonly used in electronic transactions between companies. Because a company cannot typically dictate that all its trading partners adhere to a single configuration, it is often necessary to develop custom solutions for each trading partner. When custom software development is required for each trading partner, the effort and time required to onboard new trading partners increases dramatically, thereby limiting the business relationships a company can pursue.
 
-link:/anypoint-b2b/glossary#sectb[_B2B Transaction Processing Framework_] enables developers to build a single set of link:/mule-user-guide[Mule Runtime] flows that can process a wide range of messages from many different partners by dynamically applying rules and configuration data stored in link:/anypoint-b2b/anypoint-partner-manager[Anypoint Partner Manager] (APM).
+link:/anypoint-b2b/glossary#sectb[_B2B Transaction Processing Framework_] enables developers to build a single set of link:/mule-user-guide[Mule Runtime] flows that can process a wide range of messages from many different partners by dynamically applying rules and configuration data stored in
+link:/anypoint-b2b/anypoint-partner-manager[Anypoint Partner Manager] (APM).
 Thus, non-programmers such as data analysts can use APM to onboard new trading partner relationships and support new transaction types without having to develop, test, or deploy new Mule Runtime flows.
 
 This section identifies high-level framework components and their roles in end-to-end B2B transaction processing.
@@ -22,19 +23,20 @@ Each incoming transaction from a partner or internal system is delivered through
 === Resolve
 Using data that may be inside a document or in incoming metadata (such as HTTP headers or filenames), this stage identifies the partner and the transaction type, then uses these to retrieve corresponding processing details from APM. These details include:
 
-* Schema to use for validation
-* link:/anypoint-b2b/maps[Map] to transform the message into the required target format
 * link:/anypoint-b2b/endpoints[Endpoint] to which the transformed message is to be delivered
+* <<Schema>> to use for validation
+* <<Map>> to transform the message into the required target format
 
 === Transform
 
-Each incoming message is translated into the canonical message format for the target service being invoked. This translation is performed dynamically using a link:/anypoint-b2b/maps[map] retrieved from the Trading Partner Management (TPM) API.
+Each incoming message is translated into a message format appropriate for the target service being invoked. This translation is performed dynamically using a <<Map>> retrieved from the <<Trading Partner Management (TPM) API>>.
 
 === Validate
-Makes sure the required data is present in the required format. This validation is performed dynamically using a schema retrieved from the Trading Partner Management (TPM) API.
+Makes sure the required data is present in the required format. This validation is performed dynamically using a <<Schema>> retrieved from the link:/anypoint-b2b/trading-partner-management-(TPM)-API[TPM API].
 
 === Deliver
-Using endpoint configuration data retrieved from the Trading Partner Management (TPM) API the flow dynamically delivers the message to the Business Service endpoint address.
+Using endpoint configuration data retrieved from the
+link:/anypoint-b2b/Trading Partner Management (TPM) API[TPM API] the flow dynamically delivers the message to the Business Service endpoint address.
 
 == Technical Architecture
 
@@ -48,9 +50,13 @@ image::b2b-message-processing-framework.png[img-b2b-message-processing-framework
 === MuleSoft-Provided Components
 
 ==== Anypoint Partner Manager
-Anypoint Partner Manager (APM) is the user interface for configuring how B2B transactions are processed and for monitoring and managing processed transactions.
+link:/anypoint-b2b/anypoint-partner-manager[Anypoint Partner Manager] (APM)
+is the B2B Transaction Processing Framework user interface, enabling you to:
 
-===== Trading Partner Management API
+* link:/anypoint-b2b/partner-configuration[Configure how B2B transactions are processed]
+* link:/anypoint-b2b/transaction-monitoring[Monitor and manage processed transactions]
+
+===== Trading Partner Management (TPM) API
 The Trading Partner Management (TPM) API manages storage and retrieval of configuration data for partners, including the details for processing their transactions.
 
 ===== Tracking API
@@ -85,7 +91,7 @@ Receive flows are activated dynamically by a Receive Endpoint listener flow whic
 ==== Resolve Flow
 
 * Pulls together from the message and any transport headers the needed metadata fields for identifying the specific document type.
-* Passes the metadata fields to the TPM service to look up the document type and associated configuration settings (<<Map>>, <<Schema>>, target endpoint) and adds this information to the context headers that travel with the message to be used by later stages.
+* Passes the metadata fields to the TPM service to look up the document type and associated configuration settings (<<Map>>, <<Schema>>, target <<endpoint>>) and adds this information to the context headers that travel with the message to be used by later stages.
 * Passes the message to the next processing stage.
 
 ==== Transform Flow
@@ -138,6 +144,14 @@ The relationship between your company and an external company with which your co
 === Partner Identifier
 A predefined identifier of a specific Partner. There are several types of Partner Identifiers used in B2B transactions and configurable in APM. For example, for EDI X12 documents there are ISA identifiers, which are used in EDI interchanges to identify the sender and receiver. AS2 is another type of identifier, used in AS2 transmissions.
 
+=== Endpoint
+
+An _receive endpoint_ is a URL to which a document can be sent.
+
+A _send endpoint_ is a URL from which a document can be sent.
+
+For information about how endpoints are created, see link:/anypoint-b2b/resolution-processes#endpoint-resolution[Endpoint Resolution].
+
 === Document, Message, File
 These terms are used interchangeably in the B2B world to reflect an instance of a structured payload being passed through a system to convey information about a transaction. For consistency, we use the term _document_ to represent these instances.
 
@@ -149,8 +163,10 @@ is identified by the following pieces of information:
 ** Examples: X12, EDIFACT, XML, CSV, JSON
 * Version
 ** X12 (Examples: 4010, 5010)
-** RosettaNet (Example: PIP3B3v11.12.00 +
-NOTE: For standards that don’t have versions (XML, CSV, etc.), *Version* does not appear on the <<
+** RosettaNet (Example: PIP3B3v11.12.00
+
+NOTE: For standards that don’t have version, such as XML and CSV, *Version* is not part of the Document Type configuration.
+
 * Message Type
 ** X12 - 850, 855, 856, etc.
 ** RosettaNet - 3B3
@@ -217,9 +233,9 @@ xref:img-inbound-outbound[] depicts the relationships between these configuratio
 image::inbound-outbound.png[img-inbound-outbound,title="B2B Directional Processing"]
 NOTE: In the interest of illustrating a range of usage scenarios, the architecture shown in xref:img-inbound-outbound depicts configuration details that may not appear in a specific scenario.
 
-For example, a common pattern for inbound transactions is to map an incoming document into a standard internal format, often called the _canonical_ format. If the target system accepts this canonical format, there is no need to apply two maps. A map can be configured for the Source Channel to transform into the canonical format, and there is no map needed for the Target Channel. However, if there are multiple Target Channels for a given Source Channel, there may be a need to apply an additional map in one of the Target Channels, so in that case two different maps would be applied.
+A common practice is to map each incoming document to a standard internal format, (often called the _canonical_ format). If the target system accepts this format, there is no need to apply a second map. That is, a map can be configured for the Source Channel to transform into the canonical format, and there is no map needed for the Target Channel. However, if there are multiple Target Channels for a given Source Channel, there may be a need to apply an additional map in one of the Target Channels; in that case two different maps would be applied.
 
-For an outbound transaction, the document might originate in the canonical format and so there may not be a map required in the Source Channel, but there would be one in the Target Channel to map to the desired format of the external partner.
+For an outbound transaction, the document might originate in the canonical format, so there may not be a map required in the Source Channel. However there would be one in the Target Channel to map to the desired format of the external partner.
 
 == User Interface
 
