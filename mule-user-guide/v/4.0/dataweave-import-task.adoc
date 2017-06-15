@@ -1,0 +1,209 @@
+= To Import DataWeave Modules
+:keywords: studio, anypoint, esb, transform, transformer, format, aggregate, rename, split, filter convert, xml, json, csv, pojo, java object, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping
+
+In DataWeave code, you can import additional components to extend the available functions. This may include additional libraries that are packaged with Mule, such as the Crypto library, or custom built libraries that may contain any predefined functions you want.
+
+
+== Import a library
+
+When you import a library, all of the functions an variables that the library includes become available to use in the DataWeave body.
+
+In the example below, the library `MyLib` is imported in the header. Thanks to that, the function `myFunc` (that is packaged in that library) can be called, which adds an underscore at the end of the string.
+
+.Example
+[source,DataWeave,linenums]
+----
+%dw 2.0
+import mylibs::MyLib
+output application/json
+---
+MyLib::myFunc("dataweave")
+----
+
+.Output
+[source,Json,linenums]
+----
+"dataweave_"
+----
+
+
+In this case, the library that's being imported is stored in the path `mylibs/MyLib.dwl` and contains the following:
+
+.Example Library
+[source,DataWeave,linenums]
+----
+%dw 2.0
+fun myfunc(name:String) = name ++ "_"
+----
+
+
+== Import an Element from a Library
+
+You can choose to import only a specific element from a library, like a single function. This also helps you avoid typing the library name each time you refer to the element.
+
+.Example
+[source,DataWeave,linenums]
+----
+%dw 2.0
+import myFunc, a from mylibs::MyLib
+output application/json
+---
+myFunc("dataweave") ++ name
+----
+
+.Output
+[source,Json,linenums]
+----
+"dataweave_name"
+----
+
+In this case, the library that's being imported is stored in the path `mylibs/MyLib.dwl` and contains the following:
+
+.Example Library
+[source,DataWeave,linenums]
+----
+%dw 2.0
+fun myfunc(name:String) = name ++ "_"
+----
+
+You can also invoke an element directly in the DataWeave body, without needing to import it in the header:
+
+.Example
+[source,DataWeave,linenums]
+----
+%dw 2.0
+output application/json
+---
+mylibs::MyLib::myFunc("dataweave") ++ name
+----
+
+
+
+
+== Import All Elements from a Library
+
+As an alternative to importing the library, you can instead import all elements from the library. The advantage of this is that it then saves you from having to type the library name each time you refer to the element.
+
+
+.Example
+[source,DataWeave,linenums]
+----
+%dw 2.0
+import * from mylibs::MyLib
+output application/json
+---
+myFunc("dataweave") ++ myVar
+----
+
+.Output
+[source,Json,linenums]
+----
+"dataweave_name"
+----
+
+In this case, the library that's being imported is stored in the path `mylibs/MyLib.dwl` and contains the following:
+
+.Example Library
+[source,DataWeave,linenums]
+----
+%dw 2.0
+fun myfunc(name:String) = name ++ "_"
+var myVar = "Test"
+----
+
+== Assign a Local Alias for an Imported Element
+
+You can assign an alternative alias to imported libraries or elements from within them to avoid name clashes.
+
+.Example
+[source,DataWeave,linenums]
+----
+%dw 2.0
+import myFunc as appendDash, myVar as weaveName from mylibs::MyLib
+var myVar = "Mapping"
+output application/json
+---
+appendDash("dataweave") ++ weaveName ++ "_" ++ myVar
+----
+
+.Output
+[source,Json,linenums]
+----
+"dataweave_name_Mapping"
+----
+
+You can also apply an alias to an imported library.
+
+.Example
+[source,DataWeave,linenums]
+----
+%dw 2.0
+import mylibs::MyLib as WeaveLib
+output application/json
+---
+WeaveLib::myFunc("dataweave")
+----
+
+.Output
+[source,Json,linenums]
+----
+"dataweave_"
+----
+
+
+In this case, the library that's being imported is stored in the path `mylibs/MyLib.dwl` and contains the following:
+
+.Example Library
+[source,DataWeave,linenums]
+----
+%dw 2.0
+fun myfunc(name:String) = name ++ "_"
+var myVar = "Test"
+----
+
+
+== Import a Mapping as a Function
+
+When you import a .dwl file, its body is considered to be an additional function named `main`. This function expects an input that follows the structure of the input that the transformation uses.
+
+
+
+.Example
+[source,DataWeave,linenums]
+----
+%dw 2.0
+import mylibs::MyMapping
+output application/json
+---
+MyMapping::main({"payload": {foo: "bar"}}
+----
+
+.Output
+[source,Json,linenums]
+----
+{
+    "foo": "bar"
+}
+----
+
+
+
+In this case, the library that's being imported is stored in the path `mylibs/MyMapping.dwl` and contains the following:
+
+
+.Reusable Mapping
+[source,DataWeave,linenums]
+----
+%dw 2.0
+output application/json
+---
+{
+  foo: payload.name
+}
+----
+
+Note that there are no functions defined in this DataWeave code, yet the transformation described in the body is packaged as a function called `main`.
+
+== See Also
+
+* link:/mule-user-guide/v/4.0/dataweave-import-task[To Import DataWeave Modules]
