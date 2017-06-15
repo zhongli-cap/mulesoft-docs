@@ -1,0 +1,73 @@
+= Bulk Operations Reference
+
+Using bulk operations, you can execute multiple statements in a single database call, which typically improves performance. The database connector supports the following bulk operations:
+
+* Bulk insert
+* Bulk update
+* Bulk delete
+
+Non-bulk insert, update, and delete database connector operations receive input parameters as key-value pairs. Bulk operations, however, receive input parameters as a list of key-value pairs.
+
+To use a bulk delete to remove data from many rows that match a certain criteria, you provide the criteria, for example (POSITION = X), to the query. For example, the following query applies a ten percent discount on the price column of a products table by providing only one the price input parameter value:  
+
+`UPDATE PRODUCTS set PRICE = PRICE * 0.9 where PRICE > :price`
+
+Bulk operations offer a more efficient way to process data than the non-bulk counterpart. For example, to apply different discount rates on products of different prices, assume you have a payload consisting of a list of objects having the following structure `{ price : number, discountRate: number}`:
+
+*Example Query, Not a Bulk Operation*
+
+[source,xml,linenums]
+----
+<foreach>
+	<db:update config-ref="dbConfig">
+  		<db:sql>
+      UPDATE PRODUCTS set PRICE = PRICE * :discountRate where PRICE > :price
+  </db:sql>
+   <db:input-parameters>
+       #[
+           {'discountRate' : payload.discountRate,
+     'price' : payload.price,
+    }
+       ]
+   </db:input-parameters>
+</db:update>
+</foreach>
+----
+ 
+This approach is inefficient. One query needs to be executed per each element in the list. Network overhead is high. For each element, the following tasks are required:
+ 
+* Parse the query.
+* Resolve parameters.
+* Grab a connection to the database (either by getting one for the pool or establishing a new one).
+* Process the query and apply changes.
+* Release the connection.
+ 
+A better approach is to use a bulk operation to execute one, static update query, supplying a different set of parameters for each iteration.
+ 
+The counterpart bulk update, having capabilities inherent in the JDBC API, performs the following tasks:
+ 
+* Parse the query once.
+* Use one DB connection to execute a single statement.
+* Process the bulk operation atomically.
+ 
+The network overhead is low. 
+
+Bulk insert executes an insert statement multiple times using different parameter bindings. For example:
+
+[source,xml,linenums]
+----
+<db:bulk-insert config-ref="dbConfig" >
+      <db:sql>
+        #["insert into customers (id, name, lastName) values (:id, :name, :lastName)"]
+      </db:sql>
+	<db:bulk-input-parameters>
+        #[[{'id': 2, 'name': 'George', 'lastName': 'Costanza'}, {'id': 3, 'name': 'Cosmo', 'lastName': 'Kramer'}]]
+	</db:bulk-input-parameters>
+</db:bulk-insert>
+----
+
+Bulk update and bulk delete operate in a similar manner.
+
+== See Also
+
+link:/connectors/database-documentation[Database Connector Technical Reference]

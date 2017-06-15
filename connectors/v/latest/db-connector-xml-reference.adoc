@@ -25,10 +25,10 @@ The Database Connector Technical Reference describes exclusive and common parame
 
 The database connector supports the following SQL queries:
 
-* Delete
-* Insert
 * Select
+* Insert
 * Update
+* Delete
 
 === Select Operation
 
@@ -47,6 +47,95 @@ The following examples shows the syntax of a select operation:
   <db:sql>SELECT * FROM planet ORDER BY Id</db:sql>
 </db:select>
 ----
+
+=== Insert Operation
+
+You supply parameters as key value pairs to insert data into the database. This operation supports dynamic queries. Do _not_ use dynamic queries to actually assign parameter values, as described in the Select Operation, to avoid exposure to SQL injection.
+ 
+The Insert operation returns an StatementResult, an object that communicates the result of a statement that doesn’t have a projection.
+
+The following example shows the syntax of an insert operation:
+
+[source,xml,linenums]
+----
+<db:insert config-ref="dbConfig">
+  <db:sql>
+      INSERT INTO PLANET(POSITION, NAME, DESCRIPTION) VALUES (777, 'Pluto', :description)
+  </db:sql>
+   <db:input-parameters>
+       #[
+           {'description' : payload}
+       ]
+   </db:input-parameters>
+</db:insert>
+
+----
+
+=== Update Operation
+
+You supply parameters as key value pairs to update data in the database. This operation supports dynamic queries. Do _not_ use dynamic queries to actually assign parameter values, as described in the Select Operation, to avoid exposure to SQL injection. The Update operation returns an StatementResult, an object that communicates the result of a statement that doesn’t have a projection. The following example shows the syntax of an update operation:
+
+[source,xml,linenums]
+----
+<db:update config-ref="dbConfig">
+  <db:sql>
+      UPDATE PLANET SET DESCRIPTION = :description where POSITION = :position
+  </db:sql>
+   <db:input-parameters>
+       #[
+           {'description' : payload,
+     'position' : 7,
+    }
+       ]
+   </db:input-parameters>
+</db:update>
+----
+
+=== Delete Operation
+
+You supply parameters as key value pairs to delete data from the database. This operation supports dynamic queries. Do _not_ use dynamic queries to actually assign parameter values, as described in the Select Operation, to avoid exposure to SQL injection. 
+
+The following example shows the Delete operation:
+
+[source,xml,linenums]
+----
+<db:delete config-ref="dbConfig">
+  <db:sql>
+      DELETE FROM PLANET where POSITION = :position
+  </db:sql>
+   <db:input-parameters>
+       #[
+           {'position' : 7}
+       ]
+   </db:input-parameters>
+</db:insert>
+----
+
+This operation returns the number of affected rows. You can use $(affected), a target parameter which all operations have, to log the result of the query:
+
+`<logger message="#['Deleted a total of $(affected) planets at position $(payload.id)']" />`
+
+////
+=== Hybrid Queries
+
+You can mix dynamic and parametrized queries. For example:
+
+[source,xml,linenums]
+----
+<flow name="selectHybridQuery">
+  <set-variable variableName="tableName" value="PLANET"/>
+  <db:select>
+    <db:sql>SELECT * FROM #[tableName] WHERE Name = :name</db:sql>
+      <db:input-parameters>
+        <db:input-parameter key="name" value="#[payload]"/>
+      </db:input-parameters>
+  </db:select>
+</flow>
+----
+
+
+Do _not_ swap the position of the dynamic and parametrized query because the dynamic `#[tableName]` construct misplaced in the WHERE clause makes the code vulnerable to SQL injection. 
+////
 
 === Parametrized Queries
 
@@ -71,84 +160,6 @@ You can use input parameters only in a WHERE clause. For example, use the colon 
 
 This operation uses DataWeave to supply the parameters.
 
-=== Insert Operation
-
-The following example shows the syntax of an insert operation:
-
-[source,xml,linenums]
-----
-<db:insert config-ref="dbConfig">
-  <db:sql>
-      INSERT INTO PLANET(POSITION, NAME, DESCRIPTION) VALUES (777, 'Pluto', :description)
-  </db:sql>
-   <db:input-parameters>
-       #[
-           {'description' : payload}
-       ]
-   </db:input-parameters>
-</db:insert>
-
-----
-
-=== Update Operation
-
-The following example shows the syntax of an update operation:
-
-[source,xml,linenums]
-----
-<db:update config-ref="dbConfig">
-  <db:sql>
-      UPDATE PLANET SET DESCRIPTION = :description where POSITION = :position
-  </db:sql>
-   <db:input-parameters>
-       #[
-           {'description' : payload,
-     'position' : 7,
-    }
-       ]
-   </db:input-parameters>
-</db:update>
-----
-
-=== Delete Operation
-
-The following example shows the syntax of a delete operation.
-
-[source,xml,linenums]
-----
-<db:delete config-ref="dbConfig">
-  <db:sql>
-      DELETE FROM PLANET where POSITION = :position
-  </db:sql>
-   <db:input-parameters>
-       #[
-           {'position' : 7}
-       ]
-   </db:input-parameters>
-</db:insert>
-----
-
-////
-=== Hybrid Queries
-
-You can mix dynamic and parametrized queries. For example:
-
-[source,xml,linenums]
-----
-<flow name="selectHybridQuery">
-  <set-variable variableName="tableName" value="PLANET"/>
-  <db:select>
-    <db:sql>SELECT * FROM #[tableName] WHERE Name = :name</db:sql>
-      <db:input-parameters>
-        <db:input-parameter key="name" value="#[payload]"/>
-      </db:input-parameters>
-  </db:select>
-</flow>
-----
-
-
-Do _not_ swap the position of the dynamic and parametrized query because the dynamic `#[tableName]` construct misplaced in the WHERE clause makes the code vulnerable to SQL injection. 
-////
 
 === Stored Procedures
 
@@ -229,102 +240,26 @@ This operation supports any DDL statement you can run on the database connected 
 </db:execute-ddl>
 ----
 
-=== Bulk Operations
-
-Using these operations, you can execute multiple statements in a single database call, which typically improves performance. The database connector supports the following operations:
-
-* Bulk insert
-* Bulk update
-* Bulk delete
-
-Bulk insert executes an insert statement multiple times using different parameter bindings. For example:
-
-[source,xml,linenums]
-----
-<flow name="bulkInsert">
-   <db:bulk-insert parameterValues="#[payload]">
-       <db:sql>INSERT INTO planet(Position, Name) VALUES (777, :name)</db:sql>
-   </db:bulk-insert>
-</flow>
-----
-
-You do not need to provide the `input-parameters` element to bind the `:name` parameter. The parameterValues (List<Map<String, Object>>
-) attribute provides the information for this binding. You can force the database type of a single parameter, but this is optional and typically unnecessary. For example:
-
-[source,xml,linenums]
-----
-<flow name="bulkInsertWithOverriddenType">
-   <db:bulk-insert parameterValues="#[payload]">
-       <db:sql>INSERT INTO planet(Position, Name) VALUES (777, :name)</db:sql>
-       <db:parameter-types>
-           <db:parameter-type key="name" type="VARCHAR" />
-       </db:parameter-types>
-   </db:bulk-insert>
-</flow>
-----
-
-The following examples show the bulk update and bulk delete operations.
-
-*Update*
-
-[source,xml,linenums]
-----
-<flow name="bulkUpdate">
-   <db:bulk-delete parameterValues="#[payload]">
-       <db:sql>DELETE FROM planet WHERE Name = :name</db:sql>
-   </db:bulk-delete>
-</flow>
-----
-
-*Update*
-
-[source,xml,linenums]
-----
-<flow name="bulkDelete">
-   <db:bulk-update parameterValues="#[payload]">
-       <db:sql>UPDATE planet SET Name = 'Mercury' WHERE Name = :name</db:sql>
-   </db:bulk-update>
-</flow>
-----
-
-=== Execute Script
-
-The execute-script operation runs any script that does not involve a SQL projection. You can use execute-script in the following ways:
-
-* Embed execute-script in an operation.
-* Reference execute-script from a file. 
-
-You cannot use both ways of executing a script at the same time.
-
-*Embed in an Operation*
-
-[source,xml,linenums]
-----
-<flow name="executeScript">
-   <db:execute-script>
-       <db:sql>
-           UPDATE planet SET Name='Mercury' WHERE Position=0;
-           UPDATE planet SET Name='Mercury' WHERE Position=4;
-       </db:sql>
-   </db:execute-script>
-</flow>
-----
-
-*Reference from a File*
-
-[source,xml,linenums]
-----
-<flow name="executeScriptFromFile">
-   <db:execute-script file="integration/executescript/bulk-script.sql" />
-</flow>
-----
-
 == Formatting the Output of a Query
 
 The db:output-parameter converts the output of a query from binary to a JDBC or custom type, such as JSON. For example:
 
 `<db:output-parameter paramName="myParam" type="VARCHAR"/>`
 
+== Forcing Parameter types
+ 
+Although uncommon, at some point you might need to force the underlying JDBC driver to coerce an input parameter to an specific type. For example, if your JDBC driver cannot determine the type of the input, or a parameter is of a custom type, you might need to apply force by specifing the type of each input parameter:
+
+[source,xml,linenums]
+----
+<db:bulk-insert queryTimeout="0" queryTimeoutUnit="SECONDS">
+     <db:sql>INSERT INTO PLANET(POSITION, NAME) VALUES (:position, :name)</db:sql>
+     <db:parameter-types>
+         <db:parameter-type key="name" type="VARCHAR" />
+         <db:parameter-type key="position" type="INTEGER" />
+     </db:parameter-types>
+ </db:bulk-insert>
+----
 
 == See Also
 
