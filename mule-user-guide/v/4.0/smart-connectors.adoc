@@ -2,12 +2,532 @@
 :keywords:
 
 == About Smart Connectors
+A Smart Connector is a framework that enables the development of MuleSoft Anypoint Connector entirely in Mule DSL, taking all the advantages of an experienced Mule runtime user to quickly allowing the reuse of a connector.
 
-== Create a Smart Connector
+Even for novice Mule runtime users will be simple, as there are just a few constraints around a Smart Connector such as the `<module>`, `<operation>s`, or `<parameter>s`. There is a short snippet below that defines a single operation in the `Math Smart Connector`:
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<module name="Math Smart Connector" minMuleVersion="4.0.0" ...>
+  <operation name="random" doc:description="Returns a random number">
+    <body>
+      <mule:set-payload value="#[random()]"/>
+    </body>
+    <output type="integer"/>
+  </operation>
+</module>
+----
+Its usage in a Mule `<flow>` element will be the same as any other connector, executing the flow `"random-flow"` will return the random value (result of executing the expression `#[random()]`):
+[source,xml,linenums]
+----
+<flow name="random-flow">
+  <math-smart-connector:random>
+</module>
+----
+A great advantage of building through Smart Connectors is its debugging capabilities, once created, a connector can be easily debuggable by any user as its internals are composed of either already known message processors (e.g.: `mule:set-payload`, `http:requester`, `mule:choice`, etc.) or unknown (e.g.: `sfdc:create`).
 
-== Use a Smart Connector
+It is also worth of mentioning that a Smart Connector is strongly typed, which means every defined parameter for every operation is statically known, for both input and outputs.
+
+== Basics of a Smart Connectors
+The structure of a Smart Connector is composed by three distinctive and key elements that will delineate both behavior and contract of it: operations, properties + global elements.
+
+=== Operation
+An `<operation>`, similarly to a function, is a prescriptive way of defining a set of input parameters and a single output. Any given operation will have three well defined blocks: *input parameters*, *body* and *output*, similar to a function with the following conditions.
+
+* *Input parameters*: define a set of values to be entered when calling the operation. Keep in mind that these parameters are the only data the message processors within the `<body>` scope will be able to read.
+* *Body*: a chain of message processors (e.g.: `mule:set-payload`, `http:requester`, `mule:choice`, etc.) to be executed.
+* *Output*: define the expected outcome of the body’s chain execution. Notice that the outcome of an operation is what was left behind as the payload in the current event.
+
+Lets create a Smart Connector with a single operation that does the sum of two numbers
+[source,xml,linenums]
+----
+<module name="Math Smart Connector"...>
+  ...
+  <operation name="sum" doc:description="Takes two numbers and returns the sum of them">
+    <parameters>
+      <parameter name="numberA" type="integer"/>
+      <parameter name="numberB" type="integer"/>
+    </parameters>
+    <body>
+      <mule:set-payload value="#[parameters.numberA + parameters.numberB]"/>
+    </body>
+    <output type="integer"/>
+  </operation>
+</module>
+----
+To invoke this from a Mule Application, we would need to do the following:
+[source,xml,linenums]
+----
+<flow name="mule-flow">
+  <module-math:sum numberA="10" numberB="5"/>
+  <!-- payload here is 15 -->
+</flow>
+----
+.<parameter> attributes
+|===
+|name | use | default value | description
+
+|name
+|required
+|NA
+|Name of the `<parameter>`
+
+|defaultValue
+|optional
+|NA
+|If used, when invoking the current `<operation>` without any value for this `<parameter>`, it will take the default value.
+
+|use
+|required
+|AUTO
+| Set of defined uses for a given property/parameter. *REQUIRED* implies the property/parameter must be present. It can not be *REQUIRED* if the parameter/property has a defaultValue; *OPTIONAL* implies the property/parameter could be absent; *AUTO* will default at runtime to *REQUIRED* if defaultValue is absent, otherwise it will be marked as *OPTIONAL*.
+
+|type
+|required
+|NA
+|Defines the type of the `<parameter>` by using any primitive type such as *string*, *boolean*, *datetime*, *date*, *integer*, *time*, or it can also rely on any type defined in the catalog.
+
+|password
+|optional
+|false
+|Marks the `<parameter>` with `\****` in the UI.
+
+|role
+|required
+|BEHAVIOUR
+|Set of defined roles for a given parameter that modifies the generated XSD for the current `<parameter>`. *BEHAVIOUR* will render an attribute; *CONTENT* implies support for DataWeave in place as a child element; *PRIMARY* works similarly to *CONTENT* although it also implies it will map to the payload by default.
+
+|doc:description
+|optional
+|NA
+|Documentation of the current `<parameter>`
+|===
+
+Finally, the attribute `type=".."` of the `<output>` element is allowed to use `void` as a valid value, which will make the `<operation>` call not modify the event *despite* of putting values in the payload as described above.
+
+=== Properties + Global elements
+There will be cases where several operations will need to handle state between them, which is the case of a connector that handles session to an external API. A configuration of a Smart Connector is composed by two well defined elements: *properties* and *global elements*.
+
+* *Properties*: similarly to the `<parameter>` exposed by operations, they are usually simple types to initialize elements of the Smart Connector or have default values for every operation.
+* *Global Elements*: Mule link:https://docs.mulesoft.com/mule-user-guide/v/3.7/global-elements[Global elements], such as `<http:requester-config ../>`, to delegate connectivity to, allowing the use of any other connector in a Smart Connector.
+
+The intention behind using a parametrization by properties is to expose just the right amount of values for a given Smart Connector, not "confusing" the consumer of it by setting lots of properties.
+As a sample, lets imagine we create a Smart Connector that hits link:https://developer.github.com/v3/users/#get-the-authenticated-user[GitHub API V3] to retrieve an authenticated user:
+[source,xml,linenums]
+----
+<module name="Github" minMuleVersion="4.0.0" ...>
+  <property name="username" type="string" doc:description="Username credential."/>
+  <property name="password" type="string" password="true" doc:description="Password credential"/>
+
+  <httpn:request-config name="github-httpreq-config" basePath="/">
+    <httpn:request-connection host="api.github.com" protocol="HTTPS" port="443">
+      <httpn:authentication>
+        <httpn:basic-authentication username="#[properties.username]" password="#[properties.password]"/>
+      </httpn:authentication>
+    </httpn:request-connection>
+  </httpn:request-config>
+
+  <operation name="get-user" doc:description="Lists public and private profile information when authenticated.">
+    <body>
+      <httpn:request config-ref="github-httpreq-config" path="user" method="GET"/>
+    </body>
+    <output type="string" doc:description="User information if logged properly."/>
+    </operation>
+  </module>
+----
+To properly consume the previous Smart Connector, we would need something like the following in a Mule Application:
+[source,xml,linenums]
+----
+<mule ...>
+  <github:config name="lautaro-github-config" username="fernandezlautaro" password="****"/>
+  <flow name="test-github-flow">
+    <github:get-user config-ref="lautaro-github-config"/>
+  </flow>
+</mule>
+----
+Every execution of the `"test-github-flow"` will return, if provided with the correct credentials, the GitHub information of the authenticated user:
+[source,json,linenums]
+----
+{
+  "login": "fernandezlautaro",
+  "id": 4719511,
+  "avatar_url": "https://avatars1.githubusercontent.com/u/4719511?v=3",
+  "gravatar_id": "",
+  "url": "https://api.github.com/users/fernandezlautaro",
+  ...
+}
+----
+Or the error response from GitHub:
+[source,json,linenums]
+----
+{
+  "message": "Requires authentication",
+  "documentation_url": "https://developer.github.com/v3"
+}
+----
+In this sample we are seeing how a `<property>` can be used in a global element as the `http:requester-config`, but it is also accessible from any `<operation>` within the `<module>` its defined.
+.<property> attributes
+|===
+|name | use | default value | description
+
+|name
+|required
+|NA
+|Name of the `<property>`
+
+|defaultValue
+|optional
+|NA
+|If used, when invoking the current `<module>` without any value for this `<property>`, it will take the default value.
+
+|use
+|required
+|AUTO
+| Set of defined uses for a given property/parameter. *REQUIRED* implies the property/parameter must be present. It can not be *REQUIRED* if the parameter/property has a defaultValue; *OPTIONAL* implies the property/parameter could be absent; *AUTO* will default at runtime to *REQUIRED* if defaultValue is absent, otherwise it will be marked as *OPTIONAL*.
+
+|type
+|required
+|NA
+|Defines the type of the `<property>` by using any primitive type such as *string*, *boolean*, *datetime*, *date*, *integer*, *time*, or it can also rely on any type defined in the catalog.
+
+|password
+|optional
+|false
+|Marks the `<parameter>` with `\****` in the UI.
+
+|doc:description
+|optional
+|NA
+|Documentation of the current `<parameter>`
+|===
+
+== Create a Smart Connector Project
+In order to be able to create a Smart Connector, you need to have Maven previously installed.
+Then, from a command line execute the following:
+[source,json,linenums]
+----
+mvn archetype:generate                                       \
+  -DarchetypeGroupId=org.mule.smart.connector                \
+  -DarchetypeArtifactId=smart-connector-project-archetype    \
+  -DarchetypeVersion=1.0.0-BETA-SNAPSHOT                     \
+  -DgroupId=org.mule.smart.connector                         \
+  -DartifactId=hello-smart-connector                         \
+  -DmuleConnectorName=Hello
+----
+When prompted if the values are correct, press `enter` to continue. This maven archetype will create a stub project with the minimal amount of code to have a Smart Connector and a functional test to run it.
+The structure will be something like the following:
+[source,xml,linenums]
+----
+➜  ~ tree hello-smart-connector
+hello-smart-connector
+├── pom.xml
+├── smart-connector
+│   ├── pom.xml
+│   └── src
+│       └── main
+│           └── resources
+│               └── module-Hello.xml // <1>
+└── smart-connector-it
+    ├── mule-application.json
+    ├── pom.xml
+    └── src
+        ├── main
+        │   └── mule
+        │       └── mule-config.xml
+        └── test
+            └── munit
+                └── assertion-munit-test.xml // <2>
+
+10 directories, 7 files
+➜  ~
+----
+The resource (1) `hello-smart-connector/smart-connector/src/main/resources/module-Hello.xml` defines the Smart Connector root element and the (2) `hello-smart-connector/smart-connector-it/src/test/munit/assertion-munit-test.xml` an assertion operation that calls the Smart Connector operation.
+
+Running `mvn clean install` in the `hello-smart-connector` folder will create the plugin for the `Hello Smart Connector` and it will also run the suite through MUnit for the operation defined in the connector.
+[source,xml,linenums]
+----
+➜  hello-smart-connector mvn clean install
+ ...
+ ..
+ .
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary:
+[INFO]
+[INFO] Parent POM Hello Smart Connector and Mule App integration test SUCCESS [  0.142 s]
+[INFO] Hello Smart Connector .............................. SUCCESS [  4.540 s]
+[INFO] Hello Smart Connector Mule Application Integration Test SUCCESS [ 33.389 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time: 39.166 s
+[INFO] Finished at: 2017-06-14T22:07:42-03:00
+[INFO] Final Memory: 61M/928M
+[INFO] ------------------------------------------------------------------------
+➜  hello-smart-connector
+----
+
+== Relying on other Connectors
+We previously show that it is possible to leverage code into a working connector from a Smart Connector, which is quite similar to what happens in a Mule Application.
+In order to properly consume other connector from within a Smart Connector is:
+
+*1)* Add the dependency into the Smart Connector POM file.
+Lets say a specific connector needs the HTTP Connector and the OAuth module, then it needs to add the following dependencies into the Smart Connector:
+[source,xml,linenums]
+----
+<dependencies>
+  <dependency>
+    <groupId>org.mule.connectors</groupId>
+    <artifactId>mule-http-connector</artifactId>
+    <version>0.8.0-SNAPSHOT</version>
+    <classifier>mule-plugin</classifier>
+    <scope>compile</scope>
+  </dependency>
+  <dependency>
+    <groupId>org.mule.modules</groupId>
+    <artifactId>mule-oauth-module</artifactId>
+    <version>0.8.0-SNAPSHOT</version>
+    <classifier>mule-plugin</classifier>
+    <scope>compile</scope>
+  </dependency>
+</dependencies>
+----
+*2)* Add the proper schema location into the `<module>` root element.
+[source,xml,linenums]
+----
+<module name="Hello Smart Connector" prefix="module-hello" minMuleVersion="4.0.0-BETA-SNAPSHOT"
+    ...
+    xmlns:httpn="http://www.mulesoft.org/schema/mule/http"
+    xmlns:oauth="http://www.mulesoft.org/schema/mule/oauth"
+    xsi:schemaLocation=" ...
+ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+ http://www.mulesoft.org/schema/mule/oauth http://www.mulesoft.org/schema/mule/oauth/current/mule-oauth.xsd">
+ ...
+  <!-- use of the HTTP and OAuth connector -->
+</module>
+----
+
+== Smart Connectors' Catalog
+The provided types for either a `<property>`/`<parameter>` are just some primitive types: *string*, *boolean*, *datetime*, *date*, *integer*, *time*.
+
+There are other scenarios where it is possible to define types much more complex types than those, to which we provide a way to inject a custom catalog with predefined types. To do so, we will create a file `hello-smart-connector/smart-connector/src/main/resources/module-Hello-catalog.xml` with the following content:
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<types:mule xmlns="http://www.mulesoft.org/schema/mule/core"  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:types="http://www.mulesoft.org/schema/mule/types">
+    <types:catalog>
+        <types:type name="PersonXsdType" location="./person-schema.xsd" element="{http://uri}Person"/>
+        <types:type name="PersonJsonType" location="./person-schema.json"/>
+    </types:catalog>
+</types:mule>
+----
+Under `hello-smart-connector/smart-connector/src/main/resources/` we will also create two more files. The `hello-smart-connector/smart-connector/src/main/resources/person-schema.xsd` (same name defined in the catalog) with the following content:
+[source,xml,linenums]
+----
+<xs:schema targetNamespace="http://uri" attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Person">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element type="xs:string" name="name"/>
+        <xs:element type="xs:string" name="lastName"/>
+        <xs:element type="xs:integer" name="age"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
+----
+The `hello-smart-connector/smart-connector/src/main/resources/person-schema.json` (same name defined in the catalog) with the following content:
+[source,json,linenums]
+----
+{
+  "type": "object",
+  "properties": {
+    "age": {
+      "type": "integer"
+    },
+    "name": {
+      "type": "string"
+    },
+    "lastname": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
+----
+Once placed, we can start leveraging `type`s to the defined ones in the catalog as well as the primitive ones (*string*, *integer*, *boolean*, etc.), which in this scenario are `PersonXsdType` and `PersonJsonType` by just adding an operations such as:
+[source,xml,linenums]
+----
+<module name="Hello Smart Connector" prefix="module-hello" minMuleVersion="4.0.0-BETA-SNAPSHOT" ... >
+  ...
+  <operation name="person-xml-to-json" doc:description="Takes a Person in XML format and translates it to JSON">
+    <parameters>
+      <parameter name="content" type="PersonXsdType"/>
+    </parameters>
+    <body>
+      <ee:transform>
+        <ee:set-payload><![CDATA[
+          %dw 2.0
+          %output application/json encoding='UTF-8'
+          ---
+          {
+            "name" : parameters.content.person.name,
+            "lastname" : parameters.content.person.lastName,
+            "age" : parameters.content.person.age as Number
+          }
+          ]]></ee:set-payload>
+      </ee:transform>
+    </body>
+    <output type="PersonJsonType"/>
+  </operation>
+  <operation name="person-json-to-xml" doc:description="Takes a Person in JSON format and translates it to XML">
+    <parameters>
+      <parameter name="content" type="PersonJsonType"/>
+    </parameters>
+    <body>
+      <ee:transform>
+        <ee:set-payload><![CDATA[
+          %dw 2.0
+          %output application/xml
+          ---
+          person : parameters.content
+          ]]></ee:set-payload>
+      </ee:transform>
+    </body>
+    <output type="PersonXsdType"/>
+    </operation>
+<module/>
+----
+Notice that to use DataWeave we would also need to add an extra dependency to our Smart Connector, so that when reading the `<ee:transform ..>` the mandatory schema (`mule-ee.xsd`) can be found:
+[source,xml,linenums]
+----
+<dependency>
+    <groupId>com.mulesoft.mule.runtime.modules</groupId>
+    <artifactId>mule-module-spring-config-ee</artifactId>
+    <version>${mule.version}</version>
+    <scope>provided</scope>
+</dependency>
+----
+To use the above operations, we would need to properly feed the values and execute them as follow:
+[source,xml,linenums]
+----
+<mule ...>
+  <flow name="person-xml-2-json-flow">
+    <!-- create a XML Person and store it in the payload -->
+    <ee:transform>
+      <ee:set-payload><![CDATA[
+        %dw 2.0
+        %output application/xml
+        ---
+        person : {
+          name : "Lautaro",
+          lastName: "Fernandez",
+          age : 54
+        }
+        ]]></ee:set-payload>
+    </ee:transform>
+    <!-- call the operation -->
+    <module-hello:person-xml-to-json content="#[payload]"/>
+    <!-- at this point, the payload is a JSON Person -->
+  </flow>
+
+  <flow name="person-json-2-xml-flow">
+    <!-- create a JSON Person and store it in the payload -->
+    <ee:transform>
+      <ee:set-payload><![CDATA[
+        %dw 2.0
+        %output application/json
+        ---
+        {
+          name : "Lautaro",
+          lastName: "Fernandez",
+          age : 54
+        }
+        ]]></ee:set-payload>
+    </ee:transform>
+    <!-- call the operation -->
+    <module-hello:person-json-to-xml content="#[payload]"/>
+    <!-- at this point, the payload is a XML Person -->
+  </flow>
+</mule>
+----
+It might be common that for parameterizing values that are not primitive types, the defined `<operation>` declare them as `role="CONTENT"` so that it won't be mandatory to use an extra processor in the `<flow>` to call the operation. Taking the `person-xml-to-json` operation, we will add the extra attribute to the `content` parameter:
+[source,xml,linenums]
+----
+<module name="Hello Smart Connector" prefix="module-hello" minMuleVersion="4.0.0-BETA-SNAPSHOT" ... >
+  ...
+  <operation name="person-xml-to-json" doc:description="Takes a Person in XML format and translates it to JSON">
+    <parameters>
+      <parameter name="content" type="PersonXsdType" role="CONTENT"/>
+    </parameters>
+    <body>
+      <ee:transform>
+        <ee:set-payload><![CDATA[
+          %dw 2.0
+          %output application/json encoding='UTF-8'
+          ---
+          {
+            "name" : parameters.content.person.name,
+            "lastname" : parameters.content.person.lastName,
+            "age" : parameters.content.person.age as Number
+          }
+          ]]></ee:set-payload>
+      </ee:transform>
+    </body>
+    <output type="PersonJsonType"/>
+  </operation>
+  ...
+<module/>
+----
+To use the above operations, we would need to properly feed the values and execute them as follow:
+[source,xml,linenums]
+----
+<mule ...>
+  <flow name="person-xml-2-json-using-content-flow">
+    <!-- call the operation -->
+    <module-hello:person-xml-to-json>
+      </module-hello:content><![CDATA[
+        %dw 2.0
+        %output application/xml
+        ---
+        person : {
+          name : "Lautaro",
+          lastName: "Fernandez",
+          age : 54
+        }]]>
+      </module-hello:content>
+    </module-hello:person-xml-to-json>
+    <!-- at this point, the payload is a JSON Person -->
+  </flow>
+  ..
+</mule>
+----
+
+== Smart Connectors' Working Samples
+In https://github.com/mulesoft-labs/smart-connectors-integration-tests there are more samples with different types of Smart Connectors (depending on DataWeave, HTTP Connector, File Connector, Validation Module, etc.) with some Mule Applications that depend on them:
+
+* *smart-connectors/smart-connector-using-core*: depends on just core components, e.g.: `mule:set-payload`
+* *smart-connectors/smart-connector-using-custom-types-json*: depends on JSON types
+* *smart-connectors/smart-connector-using-custom-types-xsd*: depends on XML types
+* *smart-connectors/smart-connector-using-dw*: depends on DataWeave, , e.g.: `ee:transform`
+* *smart-connectors/smart-connector-using-file*: depends on File Connector, , e.g.: `file:list`
+* *smart-connectors/smart-connector-using-http*: depends on HTTP Connector, , e.g.: `http:requester`
+* *smart-connectors/smart-connector-using-smart-connector*: depends on another Smart Connector
+* *smart-connectors/smart-connector-using-validation*: depends on Validation Module, e.g.: `validation:is-email`
 
 
+== Smart Connector Mule BETA limitations
+The following issues/limitations will be fixed for Mule runtime GA:
 
+* A Smart Connector that depends on other Smart Connector won't be properly rendered in the UI (neither Studio or Flow Designer), although it will work in the runtime (can be used with XML editing of the Mule Application).
+* Custom types will only work for XML and JSON schemas (RAML types will be for Mule runtime GA).
+* There's no support for test connection
+* UI Creation support: Studio doesn't support creation of Smart Connectors right now, but properly displays them as any other connector.
+
+== Smart Connector limitations
+The following items are limitations that might be supported in a future, but they are not planned:
+
+* Support inbound operations. Smart Connectors will only provide outbound operations, not sources (aka:`<scheduler>`), neither routers.
+* Operations will not support recursive calls.
 
 == See Also
+???
