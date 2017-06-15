@@ -2,26 +2,26 @@
 :keywords:
 
 == About Smart Connectors
-A Smart Connector is a framework that enables the development of MuleSoft Anypoint Connector entirely in Mule DSL, taking all the advantages of an experienced Mule runtime user to quickly allowing the reuse of a connector.
+A Smart Connector is a framework that enables the development of MuleSoft Anypoint Connector entirely in Mule DSL, taking all the advantages of an experienced Mule developers to quickly allowing the reuse of a connector.
 
-Even for novice Mule runtime users will be simple, as there are just a few constraints around a Smart Connector such as the `<module>`, `<operation>s`, or `<parameter>s`. There is a short snippet below that defines a single operation in the `Math Smart Connector`:
+Even for novice Mule runtime users will be simple, as there are just a few syntactic idoms around a Smart Connector such as the `<module>`, `<operation>s`, or `<parameter>s`. There is a short snippet below that defines a single operation in the `Math Smart Connector`:
 [source,xml,linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
-<module name="Math Smart Connector" minMuleVersion="4.0.0" ...>
-  <operation name="random" doc:description="Returns a random number">
+<module name="Hello Smart Connector" minMuleVersion="4.0.0" ...>
+  <operation name="say-hello" doc:description="Greets you!">
     <body>
-      <mule:set-payload value="#[random()]"/>
+      <mule:set-payload value="Hello World!"/>
     </body>
-    <output type="integer"/>
+    <output type="string"/>
   </operation>
 </module>
 ----
-Its usage in a Mule `<flow>` element will be the same as any other connector, executing the flow `"random-flow"` will return the random value (result of executing the expression `#[random()]`):
+Its usage in a Mule `<flow>` element will be the same as any other connector, executing the flow `"random-flow"` will put the `"Hello World!"` value (result of executing the operation `<hello-smart-connector:say-hello>`) into the payload:
 [source,xml,linenums]
 ----
 <flow name="random-flow">
-  <math-smart-connector:random>
+  <hello-smart-connector:say-hello>
 </module>
 ----
 A great advantage of building through Smart Connectors is its debugging capabilities, once created, a connector can be easily debuggable by any user as its internals are composed of either already known message processors (e.g.: `mule:set-payload`, `http:requester`, `mule:choice`, etc.) or unknown (e.g.: `sfdc:create`).
@@ -34,9 +34,9 @@ The structure of a Smart Connector is composed by three distinctive and key elem
 === Operation
 An `<operation>`, similarly to a function, is a prescriptive way of defining a set of input parameters and a single output. Any given operation will have three well defined blocks: *input parameters*, *body* and *output*, similar to a function with the following conditions.
 
-* *Input parameters*: define a set of values to be entered when calling the operation. Keep in mind that these parameters are the only data the message processors within the `<body>` scope will be able to read.
+* *Input parameters*: declares a set of types to be entered when calling the operation. Keep in mind that these parameters are the only data the message processors within the `<body>` scope will be able to read.
 * *Body*: a chain of message processors (e.g.: `mule:set-payload`, `http:requester`, `mule:choice`, etc.) to be executed.
-* *Output*: define the expected outcome of the body’s chain execution. Notice that the outcome of an operation is what was left behind as the payload in the current event.
+* *Output*: declares the result of the `<body>` execution. Notice that the outcome of an operation is what was left behind as the payload in the current event.
 
 Lets create a Smart Connector with a single operation that does the sum of two numbers
 [source,xml,linenums]
@@ -133,8 +133,8 @@ As a sample, lets imagine we create a Smart Connector that hits link:https://dev
       <httpn:request config-ref="github-httpreq-config" path="user" method="GET"/>
     </body>
     <output type="string" doc:description="User information if logged properly."/>
-    </operation>
-  </module>
+  </operation>
+</module>
 ----
 To properly consume the previous Smart Connector, we would need something like the following in a Mule Application:
 [source,xml,linenums]
@@ -218,7 +218,7 @@ The `<module>` element is the root element of the Smart Connector, which helds t
 |category
 |optional
 |COMMUNITY
-|There are different types of connectors in the platform. *COMMUNITY* does not requires an Enterprise Mule runtime to work with; *SELECT* requires an Enterprise Mule runtime to work with; *PREMIUM* requires an Enterprise Mule runtime to work with and also a plugin entitlement to work; *CERTIFIED* MuleSoft Certifierd connector and requires an Enterprise Mule runtime to work with 
+|There are different types of connectors in the platform. *COMMUNITY* does not requires an Enterprise Mule runtime to work with; *SELECT* requires an Enterprise Mule runtime to work with; *PREMIUM* requires an Enterprise Mule runtime to work with and also a plugin entitlement to work; *CERTIFIED* MuleSoft Certifierd connector and requires an Enterprise Mule runtime to work with
 
 |vendor
 |optional
@@ -238,13 +238,91 @@ The `<module>` element is the root element of the Smart Connector, which helds t
 |namespace
 |optional
 |NA
-|Expected namespace of the module to look for when generating the schemas. If left empty it will default to http://www.mulesoft.org/schema/mule/[prefix], where [prefix] is the attribute prefix attribute value.
+|Expected namespace of the module to look for when generating the schemas. If left empty it will default to http://www.mulesoft.org/schema/mule/<prefix>, where `<prefix>` is the attribute prefix attribute value.
 
 |doc:description
 |optional
 |NA
 |Documentation of the current `<parameter>`
 |===
+
+The way of importing the Smart Connector schema in a Mule Application is by using the `namespace` attribute, as the XML schemas are dynamically generated. Lets see how `namespace`, `prefix`, and `name` attributes work for the following Smart Connector.
+
+==== First scenario: Smart Connector defines `namespace`
+The following Smart Connector will have the `namespace="http://www.mulesoft.org/schema/a/different/path/mule/module-simple"`, that means that the Mule Application must have the a schema location pointing at a reference that starts with the following `http://www.mulesoft.org/schema/a/different/path/mule/module-simple/`
+[source,xml,linenums]
+----
+<module name="hello with spaces" minMuleVersion="4.0.0"
+      prefix="hello-prefix"
+      namespace="http://www.mulesoft.org/schema/a/different/path/mule/hello"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation=" ... ">
+  <operation name="an-operation" />
+</module>
+----
+The usage in a Mule Application will be:
+[source,xml,linenums]
+----
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:hello-prefix="http://www.mulesoft.org/schema/a/different/path/mule/hello"
+      xsi:schemaLocation="
+      http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+      http://www.mulesoft.org/schema/a/different/path/mule/hello http://www.mulesoft.org/schema/a/different/path/mule/hello/it-does-not-matter-what-we-add-after-the-previous-slash">
+
+    <flow name="some-flow">
+        <hello-prefix:an-operation/>
+    </flow>
+----
+==== Second scenario: Smart Connector defines `prefix` (no `namespace`)
+The following Smart Connector will have the `prefix="hello-prefix"`, which means that the `namespace` attribute will be dynamically generated to the value of `http://www.mulesoft.org/schema/mule/hello-prefix/current/mule-hello-prefix.xsd` which means that the Mule Application must have the a schema location pointing at a reference that matches to that value
+[source,xml,linenums]
+----
+<module name="hello with spaces" minMuleVersion="4.0.0"
+      prefix="hello-prefix"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation=" ... ">
+  <operation name="an-operation" />
+</module>
+----
+The usage in a Mule Application will be:
+[source,xml,linenums]
+----
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:hello-prefix="http://www.mulesoft.org/schema/mule/hello-prefix"
+      xsi:schemaLocation="
+      http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+      http://www.mulesoft.org/schema/mule/hello-prefix http://www.mulesoft.org/schema/mule/hello-prefix/current/mule-hello-prefix.xsd">
+
+    <flow name="some-flow">
+        <hello-prefix:an-operation/>
+    </flow>
+----
+==== Third scenario: Smart Connector defines `name` (no `namespace` neither `prefix`)
+The following Smart Connector will have just the `name="hello with spaces"`, which means that the `prefix` value will be dynamically generated from the `name`, ended up in `hello-with-spaces`, to which will create a `namespace` dynamic value of `http://www.mulesoft.org/schema/mule/hello-with-spaces/current/mule-hello-with-spaces.xsd` which means that the Mule Application must have the a schema location pointing at a reference that matches to that value
+[source,xml,linenums]
+----
+<module name="hello with spaces" minMuleVersion="4.0.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation=" ... ">
+  <operation name="an-operation" />
+</module>
+----
+The usage in a Mule Application will be:
+[source,xml,linenums]
+----
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:hello-with-spaces="http://www.mulesoft.org/schema/mule/hello-with-spaces"
+      xsi:schemaLocation="
+      http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+      http://www.mulesoft.org/schema/mule/hello-with-spaces http://www.mulesoft.org/schema/mule/hello-with-spaces/current/mule-hello-with-spaces.xsd">
+
+    <flow name="some-flow">
+        <hello-with-spaces:an-operation/>
+    </flow>
+----
 
 == Create a Smart Connector Project
 In order to be able to create a Smart Connector, you need to have Maven previously installed.
@@ -267,18 +345,18 @@ The structure will be something like the following:
 hello-smart-connector
 ├── pom.xml
 ├── smart-connector
-│   ├── pom.xml
-│   └── src
-│       └── main
-│           └── resources
-│               └── module-Hello.xml // <1>
+│   ├── pom.xml
+│   └── src
+│       └── main
+│           └── resources
+│               └── module-Hello.xml // <1>
 └── smart-connector-it
     ├── mule-application.json
     ├── pom.xml
     └── src
         ├── main
-        │   └── mule
-        │       └── mule-config.xml
+        │   └── mule
+        │       └── mule-config.xml
         └── test
             └── munit
                 └── assertion-munit-test.xml // <2>
@@ -581,6 +659,7 @@ The following issues/limitations will be fixed for Mule runtime GA:
 * Custom types will only work for XML and JSON schemas (RAML types will be for Mule runtime GA).
 * There's no support for test connection
 * UI Creation support: Studio doesn't support creation of Smart Connectors right now, but properly displays them as any other connector.
+* Type support will be improved, where *string*, *boolean*, *datetime*, *date*, *integer*, *time* will be dropped to support the link:https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md#raml-data-types[RAML Types], which contains the current Smart Connectors support for primitive types and many others (e.g.: float, double, number, object, array, etc.)
 
 == Smart Connector limitations
 The following items are limitations that might be supported in a future, but they are not planned:
