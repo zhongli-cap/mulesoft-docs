@@ -1,47 +1,38 @@
-= DataWeave Value Types
+= DataWeave value types
 :keywords: studio, anypoint, esb, transform, transformer, format, aggregate, rename, split, filter convert, xml, json, csv, pojo, java object, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping
 
-image:dw-logo.png[dw]
 
 The link:/mule-user-guide/v/4.0/dataweave[DataWeave] language functions essentially as a template engine that describes an output structure through the use of elements that may be of various different types.
 
-This document covers the different types of objects you can use to construct your output.
-
-
-
-
-
 == Array
-*Type* => 'Array'
 
-Arrays are represented as a sequences of *value* expressions.
+An array is a sequence of elements.
 
-[source,DataWeave]
---------------------------------------------------------------------
-[ 1, 2 + 2, 3 * 3, $x ]
---------------------------------------------------------------------
-
-*Array Literal*
+.Example
 [source,DataWeave,linenums]
 ----
 %dw 2.0
-%output application/json
+output application/json
+var x = "words"
 ---
-[ "My", "three", "words" ]
+[ "My", "three", x ]
 ----
+
 
 === Conditional Elements
 
-Arrays can define conditional *values* based on a condition.
-Wrap the value expression between parentheses and use the *when* keyword with the condition.
+Arrays can define elements that appear or don't, based on a condition.
+
+Conditional elements have the form `(value) if condition`
+
 
 .Transform
 [source,DataWeave,linenums]
 ----
 %dw 2.0
-%output application/json
+output application/json
 ---
-[(1) when true, (2) when false]
+[(1) if true, (2) if false]
 ----
 
 .Output
@@ -52,29 +43,30 @@ Wrap the value expression between parentheses and use the *when* keyword with th
 
 == Object
 
-*Type* => 'Object'
-
-Objects are represented as a collection of *key*: *value* pairs.
-
-. Object: { 'Key' : Value }
-. Key : 'Qualified Name' 'Attributes'
-. Qualified Name: 'namespace prefix#name' where the 'namespace prefix#' part is optional
-. Name: String that represents the name.
-. Attributes: @('Qualified Name'= *value*,...)
-
-[TIP]
-Strings must be double quoted to be recognized as strings.
-
-=== Single Value Objects
-
-If an Object has only one key:value pair, the enclosing curly brackets { } are not required:
+An object is a sequence of `key:value` pairs.
 
 .Example
 
 [source,DataWeave,linenums]
 ---------------------------------------------------------
 %dw 2.0
-%output application/xml
+output application/json
+---
+{
+  name: "Annie"
+}
+---------------------------------------------------------
+
+=== Single Value Objects
+
+If an Object has only one `key:value` pair, the enclosing curly brackets { } are not required:
+
+.Example
+
+[source,DataWeave,linenums]
+---------------------------------------------------------
+%dw 2.0
+output application/json
 ---
 name: "Annie"
 ---------------------------------------------------------
@@ -82,20 +74,20 @@ name: "Annie"
 === Conditional Elements
 
 Objects can define conditional *key*: *value* pairs based on a conditional expression.
-Wrap the key:value expression between parentheses and use the *when* keyword with the condition.
+Conditional elements have the form `(key:value) if condition`
 
 [source,DataWeave,linenums]
 ---------------------------------------------------------
 %dw 2.0
-%output application/xml
+output application/xml
 ---
 file: {
   name: "transform",
-  (extension: "zip") when payload.fileSystem?
+  (extension: "zip") if payload.fileSystem?
 }
 ---------------------------------------------------------
 
-This example outputs an additional field called "extension" only when the fileSystem property is present in payload (this field may contain any value, not just "true").
+This example outputs an additional field called "extension" only when the fileSystem property is present in payload (this field may contain any value, not just `true`).
 
 [source,xml,linenums]
 --------------------------------------------------------
@@ -116,19 +108,49 @@ If absent:
 </file>
 --------------------------------------------------------
 
+=== Dynamic Keys
+
+In order to specify a key via an expression, the expression should be wrapped in parentheses.
+
+.Transform
+[source,DataWeave,linenums]
+----
+%dw 2.0
+output application/json
+var dynamicKey = "language"
+---
+{
+  (dynamicKey): "Data Weave"
+}
+----
+
+.Output
+[source,json,linenums]
+----
+{
+  "language": "Data Weave"
+}
+----
+
 === Dynamic Elements
 
-Dynamic elements allow you to add the result of an expression as key:value pairs of an object.
+Dynamic elements allow you to add the result of an expression as `key:value` pairs of an object. That expression must be either an `object` or an `array of objects`.
 
 .Transform
 [source,DataWeave,linenums]
 --------------------------------------------------------
 %dw 2.0
-%output application/json
+output application/json
+var x = [
+  {b: "b"},
+  {c: "c", d: "d"}
+],
+var y = {e: "e"}
 ---
 {
   a: "a",
-  (["b","c","d"] map {'$': $})
+  (x),
+  (y)
 }
 --------------------------------------------------------
 
@@ -139,42 +161,30 @@ Dynamic elements allow you to add the result of an expression as key:value pairs
   "a": "a",
   "b": "b",
   "c": "c",
-  "d": "d"
+  "d": "d",
+  "e": "e"
 }
 --------------------------------------------------------
-=== Dynamic keys
 
-In order to specify a key via an expression, the expression should be wrapped in parentheses.
 
-.Transform
-[source,DataWeave,linenums]
-----
-%dw 2.0
-%output application/json
----
-{name: 'Data Weave'} mapObject {(upper($$ as String)) : $}
-----
-
-.Output
-[source,json,linenums]
-----
-{
-  "NAME": "Data Weave"
-}
-----
 
 === Conditional Attributes
 
-Attributes can be conditional based on a given condition.
-Wrap the key:value expression in parentheses and use the *when* keyword with the condition.
+Attributes can define elements that appear or don't, based on a condition.
+Conditional elements have the form `(key:value) if condition`
 
 .Transform
 [source,DataWeave,linenums]
 ----
 %dw 2.0
-%output application/xml
+output application/xml
 ---
-name @((company: "Acme") when false, (transform: "Anything") when true): "DataWeave"
+{
+  name @(
+    (company: "Acme") if false,
+    (transform: "Anything") if true
+  ): "DataWeave"
+}
 ----
 
 .Output
@@ -186,7 +196,7 @@ name @((company: "Acme") when false, (transform: "Anything") when true): "DataWe
 
 === Dynamic Attributes
 
-Dynamic attributes allow you to add the result of an expression as key:value pairs of the attributes set.
+Dynamic attributes allow you to add the result of an expression as `key:value` pairs of the attributes set.
 
 .Input
 [source,json,linenums]
@@ -201,7 +211,7 @@ Dynamic attributes allow you to add the result of an expression as key:value pai
 [source,dataweave,linenums]
 ----
 %dw 2.0
-%output application/xml
+output application/xml
 ---
 transformation @((payload)): "Transform from anything to anything"
 ----
@@ -213,10 +223,7 @@ transformation @((payload)): "Transform from anything to anything"
 <transformation company="Mule" product="DataWeave">Transform from anything to anything</transformation>
 ----
 
-
 == String
-
-*Type* => 'String'
 
 A string can be defined by the use of double quotes or single quotes.
 
@@ -228,7 +235,7 @@ A string can be defined by the use of double quotes or single quotes.
 }
 --------------------------------------------------------
 
-=== String interpolation
+=== String Interpolation
 
 String interpolation allows you to embed variables or expressions directly in a string.
 
@@ -236,8 +243,8 @@ String interpolation allows you to embed variables or expressions directly in a 
 [source,DataWeave, linenums]
 --------------------------------------------------------
 %dw 2.0
-%output application/json
-%var name = "Shoki"
+output application/json
+var name = "Shoki"
 ---
 {
     Greeting: "Hi, my name is $name",
@@ -256,28 +263,24 @@ String interpolation allows you to embed variables or expressions directly in a 
 
 == Number
 
-*Type* => 'Number'
-
 There is only one number type that supports both floating point and integer numbers.
 There is no loss of precision in any operation, the engine always stores the data in the most performant way that doesn't compromise precision.
 
 == Boolean
 
-*Type* => 'Boolean'
-
-A boolean is defined by the keywords 'true' and 'false'.
+A boolean is defined by the keywords `true` and `false`.
 
 
 == Dates
 
-Dates in DataWeave follow the link:https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html[ISO-8601 standard] and are defined between '|' characters.
+Dates in DataWeave follow the link:https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html[ISO-8601 standard] and literals are defined between '|' characters.
 
-The date system supports:
+The language has the following native date types:
 
 * DateTime
-* Local DateTime
+* LocalDateTime
 * Time
-* Local Time
+* LocalTime
 * Period
 * TimeZone
 * Date
@@ -285,149 +288,101 @@ The date system supports:
 
 === Date
 
-*Type* => 'Date'
-
-Represented as 'Year'-'Month'-'Date'
+Specified as `|YYYY-MM-dd|`
 
 The type *Date* has no time component at all (not even midnight).
 
 
-.Transform
+.Example
 [source,DataWeave, linenums]
 -----------------------------------------------------------------
-%dw 2.0
-%output application/json
----
-c: |2003-10-01|
+|2003-10-01|
 -----------------------------------------------------------------
-
-.Output
-[source,json,linenums]
------------------------------------------------------------------
-{
-  "c": "2003-10-01"
-}
------------------------------------------------------------------
-
 
 === Time
 
-*Type* => 'Time'
+Specified as `|HH:mm:ss.SSS|`
 
-Represented as 'Hour':'Minutes':'Seconds'.'Milliseconds'
 
-.Transform
+.Example
 [source,DataWeave, linenums]
 -----------------------------------------------------------------
-%dw 2.0
-%output application/json
----
-c: |23:59:56|
+|23:59:56|
 -----------------------------------------------------------------
 
-.Output
-[source,json,linenums]
------------------------------------------------------------------
-{
-  "c": "23:59:56"
-}
------------------------------------------------------------------
 
 === TimeZone
 
-*Type* => 'TimeZone'
-
-Timezones must include a + or a - to be defined as such. |03:00| is a time, |+03:00| is a timezone.
+TimeZones must include a + or a - to be defined as such. |03:00| is a time, |+03:00| is a timezone.
 
 
-.Transform
+.Example
 [source,DataWeave, linenums]
 -----------------------------------------------------------------
-%dw 2.0
-%output application/json
----
-c: |-08:00|
+|-08:00|
 -----------------------------------------------------------------
 
-.Output
-[source,json,linenums]
------------------------------------------------------------------
-{
-  "c": "-08:00"
-}
------------------------------------------------------------------
 
 === DateTime
 
-*Type* => 'Datetime'
+DateTime is the conjunction of 'Date' + 'Time' + 'TimeZone'.
 
-Date time is the conjunction of 'Date' + 'Time' + 'TimeZone'.
-
-.Transform
+.Example
 [source,DataWeave, linenums]
 -----------------------------------------------------------------
-%dw 2.0
-%output application/json
----
-a: |2003-10-01T23:57:59-03:00|
+|2003-10-01T23:57:59-03:00|
 -----------------------------------------------------------------
 
-.Output
-[source,json,linenums]
------------------------------------------------------------------
-{
-  "a": "2003-10-01T23:57:59-03:00"
-}
------------------------------------------------------------------
+=== LocalDateTime
 
-=== Local Date Time
+LocalDateTime is the conjunction of 'LocalDate' + 'Time'.
 
-*Type* => 'Localdatetime'
-
-Local date time is the conjunction of 'Date' + 'Time'.
-
-.Transform
+.Example
 [source,DataWeave, linenums]
 -----------------------------------------------------------------
-%dw 2.0
-%output application/json
----
-a: |2003-10-01T23:57:59|
------------------------------------------------------------------
-
-.Output
-[source,json,linenums]
------------------------------------------------------------------
-{
-  "a": "2003-10-01T23:57:59"
-}
+|2003-10-01T23:57:59|
 -----------------------------------------------------------------
 
 === Period
 
-*Type* => 'Period'
+Periods have the form:
 
-Specifies a period of time. Examples |PT9M| => 9 minutes , |P1Y| => 1 Year
+- `P[n]Y[n]M[n]DT[n]H[n]M[n]S`
+- `P<date>T<time>`
+
+Where the [n] is replaced by the value for each of the date and time elements that follow the [n].
+
+`P` is the duration designator placed at the start of the duration representation.
+
+- `Y` is the year designator (e.g. `|P1Y|`)
+- `M` is the month designator (e.g. `|P1M|`)
+- `D` is the day designator (e.g. `|P1D|`)
+
+`T` is the time designator that precedes the time components of the representation.
+
+- `H` is the hour designator (e.g. `|PT1H|`)
+- `M` is the minute designator (e.g. `|PT1M|`)
+- `S` is the second designator (e.g. `|PT1S|`)
 
 .Transform
 [source,DataWeave, linenums]
 ----------------------------------------------------------------
 %dw 2.0
-%output application/json
+output application/json
 ---
-a: |23:59:56| + |PT9M|
+a: |20:00:00| + |PT1M1S|
 ----------------------------------------------------------------
 
 .Output
 [source,json,linenums]
 ----------------------------------------------------------------
 {
-  "a": "00:08:56"
+  "a": "20:01:01"
 }
 ----------------------------------------------------------------
 
 
-=== Date decomposition
+=== Date Decomposition
 
 In order to access the different parts of the date, special selectors must be used.
 
@@ -435,20 +390,22 @@ In order to access the different parts of the date, special selectors must be us
 [source,DataWeave, linenums]
 -----------------------------------------------------------------
 %dw 2.0
-%output application/json
+output application/json
+var myDate = |2003-10-01T23:57:59.700-03:00|
 ---
 {
-  day: |2003-10-01T23:57:59Z|.day,
-  month: |2003-10-01T23:57:59Z|.month,
-  year: |2003-10-01T23:57:59Z|.year,
-  hour: |2003-10-01T23:57:59Z|.hour,
-  minutes: |2003-10-01T23:57:59Z|.minutes,
-  seconds: |2003-10-01T23:57:59Z|.seconds,
-  offsetSeconds: |2003-10-01T23:57:59-03:00|.offsetSeconds,
-  nanoseconds: |23:57:59.700|.nanoseconds,
-  milliseconds: |23:57:59.700|.milliseconds,
-  dayOfWeek: |2003-10-01T23:57:59Z|.dayOfWeek,
-  dayOfYear: |2003-10-01T23:57:59Z|.dayOfYear
+  year: myDate.year,
+  month: myDate.month,
+  day: myDate.day,
+  hour: myDate.hour,
+  minutes: myDate.minutes,
+  seconds: myDate.seconds,
+  milliseconds: myDate.milliseconds,
+  nanoseconds: myDate.nanoseconds,
+  quarter: myDate.quarter,
+  dayOfWeek: myDate.dayOfWeek,
+  dayOfYear: myDate.dayOfYear,
+  offsetSeconds: myDate.offsetSeconds
 }
 -----------------------------------------------------------------
 
@@ -456,17 +413,18 @@ In order to access the different parts of the date, special selectors must be us
 [source,json,linenums]
 -----------------------------------------------------------------
 {
-  "day": 1,
-  "month": 10,
   "year": 2003,
+  "month": 10,
+  "day": 1,
   "hour": 23,
   "minutes": 57,
   "seconds": 59,
-  "offsetSeconds": -10800,
-  "nanoseconds": 700000000,
   "milliseconds": 700,
+  "nanoseconds": 700000000,
+  "quarter": 4,
   "dayOfWeek": 3,
-  "dayOfYear": 274
+  "dayOfYear": 274,
+  "offsetSeconds": -10800
 }
 -----------------------------------------------------------------
 
@@ -478,16 +436,16 @@ You can specify a date to be in any format you prefer through using *as* in the 
 [source,DataWeave, linenums]
 ----------------------------------------------------------------
 %dw 2.0
-%output application/json
+output application/json
 ---
-formatedDate: |2003-10-01T23:57:59| as String {format: "YYYY-MM-dd"}
+formattedDate: |2003-10-01T23:57:59| as String {format: "YYYY-MM-dd"}
 ----------------------------------------------------------------
 
 .Output
 [source,json,linenums]
 -----------------------------------------------------------------
 {
-  "formatedDate": "2003-10-01"
+  "formattedDate": "2003-10-01"
 }
 -----------------------------------------------------------------
 
@@ -497,12 +455,12 @@ If you are doing multiple similar conversions in your transform, you might want 
 [source,DataWeave, linenums]
 ----------------------------------------------------------------
 %dw 2.0
-%output application/json
-%type Mydate = String { format: "YYYY/MM/dd" }
+output application/json
+type Mydate = String { format: "YYYY/MM/dd" }
 ---
 {
-  formatedDate1: |2003-10-01T23:57:59| as Mydate,
-  formatedDate2: |2015-07-06T08:53:15| as Mydate
+  formattedDate1: |2003-10-01T23:57:59| as Mydate,
+  formattedDate2: |2015-07-06T08:53:15| as Mydate
 }
 ----------------------------------------------------------------
 
@@ -511,24 +469,20 @@ If you are doing multiple similar conversions in your transform, you might want 
 [source,json,linenums]
 -----------------------------------------------------------------
 {
-  "formatedDate1": "2003/10/01",
-  "formatedDate2": "2015/07/06"
+  "formattedDate1": "2003/10/01",
+  "formattedDate2": "2015/07/06"
 }
 -----------------------------------------------------------------
 
 [NOTE]
 Type names are case-sensitive.
 
-== Regular Expression
+== Regex
 
-*Type* => 'Regex'
-
-Regular Expressions are defined between /. For example /(\d+)/ for represents multiple numerical digits from 0-9.
+Regular Expressions are defined between `/`. For example `/\d+/` represents multiple numerical digits from 0-9.
 These may be used as arguments in certain operations that act upon strings, like Matches or Replace, or on operations that act upon objects and arrays, such as filters.
 
-== Iterators
-
-*Type* => 'Iterator'
+== Iterator
 
 This type is based in the link:https://docs.oracle.com/javase/8/docs/api/java/util/Iterator.html[iterator Java class], that iterates through arrays. The iterator contains a collection, and includes methods to iterate through and filter it.
 
@@ -546,7 +500,7 @@ It must always be used with the `class` property, specifying the full java class
 [source,DataWeave, linenums]
 ----
 %dw 2.0
-%output application/java
+output application/java
 ---
 "Male" as Enum {class: "com.acme.GenderEnum"}
 ----
@@ -561,7 +515,7 @@ It can be used to tell the writer to wrap the content inside CDATA or to check i
 [source,DataWeave, linenums]
 ----------------------------------------------------------------------
 %dw 2.0
-%output application/xml
+output application/xml
 ---
 {
 users:
@@ -589,15 +543,15 @@ age : 31 as CData
 
 You can define your own custom types in the header of your transform, then in the body you can define an element as being of that type.
 
-To do so, the directive must be structured as following: `%type name = java definition`
+To do so, the directive must be structured as following: `type name = java definition`
 
 For example:
 
 [source,DataWeave,linenums]
 ----
 %dw 2.0
-%type Currency = Number { format: "##"}
-%type User = Object { class: “my.company.User”}
+type Currency = Number { format: "##"}
+type User = Object { class: "my.company.User"}
 ----
 
 [TIP]
@@ -612,10 +566,10 @@ To then assign an element as being of the custom type you defined, use the opera
 [source,DataWeave,linenums]
 ----
 %dw 2.0
-%type Currency = Number { format: "##"}
-%type User = Object { class: “my.company.User”}
+type Currency = Number { format: "##"}
+type User = Object { class: "my.company.User"}
 ---
-customer:payload.user as User
+customer: payload.user as User
 ----
 
 
@@ -643,8 +597,8 @@ The metadata 'format' key is used for formatting numbers and dates.
 [source,DataWeave, linenums]
 -----------------------------------------------------------------------
 %dw 2.0
-%output application/json
-%type Currency = Number { format: "##"}
+output application/json
+type Currency = Number { format: "##"}
 ---
 books: payload.items.*item map
     book:
@@ -676,26 +630,36 @@ In Anypoint Studio, you can define several more values, like separators, quote c
 
 == Functions and Lambdas
 
-*type* -> Function
-
-In DataWeave, function and lambdas (anonymous functions) are first-class citizen and they can be used inside operators such as a map, mapObject, etc, and can even be assigned to a variable.
+In DataWeave, function and lambdas (anonymous functions) are first-class citizens and they can be passed as values or be assigned to variables.
 When using lambdas within the body of a DataWeave file in conjunction with an operator such as link:/mule-user-guide/v/4.0/dataweave-core-functions#map[map operator], its attributes can either be explicitly named or left anonymous, in which case they can be referenced as $, $$, etc.
 
 
+=== Declaring a Function
 
-=== Assign to a var
+You can declare functions in the Header and these can be invoked at any point in the Body, you can also declare functions anywhere in the body. You refer to them using the form *functionName()* passing an expression in between the parentheses for each necessary argument. Each expression between the parentheses is evaluated and the result is passed as an argument used in the execution of the function body.
 
-You can define a function as a variable with a link:/mule-user-guide/v/4.0/dataweave-language-introduction#define-constant-directive[constant directive] through '%var'
+.Input
+[source, json,linenums]
+----
+{
+  "field1": "Annie",
+  "field2": "Point",
+  "field3": "Stuff"
+}
+----
 
-.Transport
+.Transform
 [source,DataWeave, linenums]
 ----
 %dw 2.0
-%output application/json
-%var toUser = (user) -> {firstName: user.givenName, lastName: user.sn}
+output application/json
+fun toUser(obj) = {
+  firstName: obj.field1,
+  lastName: obj.field2
+}
 ---
 {
-  "user" : toUser({ givenName : "Annie", sn : "Point" })
+  "user" : toUser(payload)
 }
 ----
 
@@ -710,7 +674,47 @@ You can define a function as a variable with a link:/mule-user-guide/v/4.0/dataw
 }
 ----
 
-=== Named attributes with an Operator
+=== Assigning a Lambda to a Var
+
+You can define a function as a variable with a link:/mule-user-guide/v/4.0/dataweave-language-introduction#define-constant-directive[constant directive] through 'var'
+
+.Input
+[source,json, linenums]
+----
+{
+  "field1": "Annie",
+  "field2": "Point",
+  "field3": "Stuff"
+}
+----
+
+.Transform
+[source,DataWeave, linenums]
+----
+%dw 2.0
+output application/json
+var toUser = (obj) -> {
+  firstName: user.field1,
+  lastName: user.field2
+}
+---
+{
+  "user" : toUser(payload)
+}
+----
+
+.Output
+[source, json,linenums]
+----
+{
+  "user": {
+    "firstName": "Annie",
+    "lastName": "Point"
+  }
+}
+----
+
+=== Named Parameters in a Lambda
 
 This example uses a lambda with an attribute that's explicitly named as 'name'.
 
@@ -718,9 +722,10 @@ This example uses a lambda with an attribute that's explicitly named as 'name'.
 [source,DataWeave, linenums]
 ---------------------------------------------------------------------
 %dw 2.0
-%output application/json
+output application/json
+var names = ["john", "peter", "matt"]
 ---
-users: ["john", "peter", "matt"] map ((name) ->  upper name)
+users: names map ((name) -> upper name)
 ---------------------------------------------------------------------
 
 .Transform
@@ -731,7 +736,7 @@ users: ["john", "peter", "matt"] map ((name) ->  upper name)
 }
 ---------------------------------------------------------------------
 
-=== Anonymous attributes with an Operator
+=== Anonymous Parameters in a Lambda
 
 This example uses a lambda with an attribute that's not explicitly named, and so is referred to by default as '$'.
 
@@ -739,9 +744,10 @@ This example uses a lambda with an attribute that's not explicitly named, and so
 [source,DataWeave, linenums]
 ---------------------------------------------------------------------
 %dw 2.0
-%output application/json
+output application/json
+var names = ["john", "peter", "matt"]
 ---
-users: ["john", "peter", "matt"] map  upper $
+users: names map upper $
 ---------------------------------------------------------------------
 
 .Output
@@ -753,207 +759,6 @@ users: ["john", "peter", "matt"] map  upper $
 ---------------------------------------------------------------------
 
 
-=== Declare using function directive
-
-You can declare functions in the Header and these can be invoked at any point in the Body, you can also declare functions anywhere in the body. You refer to them using the form *function-name()* passing an expression in between the parentheses for each necessary argument. Each expression between the parentheses is evaluated and the result is passed as an argument used in the execution of the function body.
-
-.Transform
-[source,DataWeave, linenums]
-----
-%dw 2.0
-%output application/json
-%function toUser(user){firstName: user.givenName, lastName: user.sn}
----
-{
-  "user" : toUser({ givenName : "Annie", sn : "Point" })
-}
-----
-
-.Output
-[source, json,linenums]
-----
-{
-  "user": {
-    "firstName": "Annie",
-    "lastName": "Point"
-  }
-}
-----
-
-
-
-
-== Operators Sorted by Type
-
-Below is an index that includes all of the different operators in DataWeave, sorted by the types of the parameters it accepts.
-Each operator displays what type is accepted on each of its arguments, not all arguments are required.
-
-[TIP]
-When you provide an operator with properties that don't match the expected types, DataWeave automatically <<Type Coercion Table, attempts to coerce>> the provided property to the required type.
-
-=== Operations Performed on any Type
-
-[%header,cols="2*"]
-|===
-| Operator| Accepted types for each argument
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#typeOf[typeOf] |('Any')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#as-(type-coercion)[as] |('Any', 'Type')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#push[+] |('Any', 'Array')
-|===
-
-
-=== Operations Performed on 'Number'
-
-[%header,cols="2*"]
-|===
-| Operator| Accepted types for each argument
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#sum[+] |('Number', 'Number')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#minus[-] |('Number', 'Number')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#multiply[*] |('Number', 'Number')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#division[/] |('Number', 'Number')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#round[round] |('Number')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#sqrt[sqrt] |('Number')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#pow[pow] |('Number', 'Number')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#ceil[ceil] |('Number')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#floor[floor] |('Number')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#abs[abs] |('Number')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#mod[mod] |('Number', 'Number')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#ordinalize[ordinalize] |('Number')
-|===
-
-
-=== Operations Performed on 'Array'
-
-[%header,cols="2*"]
-|===
-| Operator| Accepted types for each argument
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#min[min] |('Array')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#max[max] |('Array')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#sizeof[sizeOf] |('Array')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#sum[sum] |('Array')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#flatten[flatten] |('Array')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#orderby[orderBy] |('Array', 'Function')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#reduce[reduce] |('Array', 'Function')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#array-push[+] |('Array', 'Any')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#array-remove[-] |('Array', 'Any')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#array-remove-all[--] |('Array', 'Array')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#map[map] |('Array', 'Function')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#avg[avg] |('Array')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#filter[filter] |('Array', 'Function')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#contains[contains] |('Array', 'Any')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#distinctby[distinctBy] |('Array', 'Function')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#joinby[joinBy] |('Array', 'String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#using-oncat-on-an-array[++] |('Array', 'Array')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#groupby[groupBy] |('Array', 'Function')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#ziparrays[zip] |('Array', 'Array')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#unziparray[unzip] |('Array')
-|===
-
-=== Operations Performed on 'String'
-
-[%header,cols="2*"]
-|===
-| Operator| Accepted types for each argument
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#trim[trim] |('String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#using-concat-on-a-string[++] |('String', 'String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#sizof[sizeOf] |('String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#capitalize[capitalize] |('String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#lower[lower] |('String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#upper[upper] |('String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#camelize[camelize] |('String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#dasherize[dasherize] |('String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#underscore[underscore] |('String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#singularize[singularize] |('String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#pluralize[pluralize] |('String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#split-by[splitBy ] |('String', 'String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#split-by[splitBy] |('String', 'Regex')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#find[find] |('String', 'Regex')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#find[find] |('String', 'String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#replace[replace] |('String', 'Regex', 'Function')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#startswith[startsWith] |('String', 'String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#endswith[endsWith] |('String', 'String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#match[match] |('String', 'Regex')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#matches[matches] |('String', 'Regex')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#scan[scan] |('String', 'Regex')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#contains[contains] |('String', 'String')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#contains[contains] |('String', 'Regex')
-|===
-
-=== Operations Performed on 'Object'
-
-[%header,cols="2*"]
-|===
-| Operator| Accepted types for each argument
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#sizeof[sizeOf] |('Object')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#orderby[orderBy] |('Object', 'Function')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#using-map-on-an-object[map] |('Object', 'Function')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#map-object[mapObject] |('Object', 'Function')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#using-oncat-on-an-object[++] |('Object', 'Object')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#using-remove-on-an-object[-] |('Object', 'Name')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#remove-by-matching-key-and-value[--] |('Object', 'Object')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#pluck[pluck] |('Object', 'Function')
-|===
-
-
-
-=== Operations Performed on 'Datetime'
-
-[%header,cols="2*"]
-|===
-| Operator| Accepted types for each argument
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#shift-time-zone[>>] |('Datetime', 'Timezone')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#adding-a-period-of-time[+] |('Datetime', 'Period')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#subtracting-a-period-of-time[-] |('Datetime', 'Period')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#subtracting-two-dates[-] |('Datetime', 'Datetime')
-|===
-
-=== Operations Performed on 'Date'
-
-[%header,cols="2*"]
-|===
-| Operator| Accepted types for each argument
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#subtracting-two-dates[-] |('Date', 'Date')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#append-time[++] |('Date', 'Localtime')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#append-time[++] |('Date', 'Time')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#append-time-zone[++] |('Date', 'Timezone')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#adding-a-period-of-time[+] |('Date', 'Period')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#adding-a-period-of-time[-] |('Date', 'Period')
-|===
-
-=== Operations Performed on 'Time'
-
-[%header,cols="2*"]
-|===
-| Operator| Accepted types for each argument
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#subtracting-two-dates[-] | ('#Time', 'Time')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#append-time[++] | ('#Time', 'Date')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#adding-a-period-of-time[+] | ('Time', 'Period')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#adding-a-period-of-time[-] | ('Time', 'Period')
-|===
-
-
-=== Operations Performed on 'Localtime'
-
-[%header,cols="2*"]
-|===
-| Operator| Accepted types for each argument
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#subtracting-two-dates[-] |('Localtime', 'Localtime')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#append-time[++] |('Localtime', 'Date')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#append-time-zone[++] |('Localtime', 'Timezone')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#adding-a-period-of-time[+] |('Localtime', 'Period')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#adding-a-period-of-time[-] |('Localtime', 'Period')
-|===
-
-=== Operations Performed on 'Localdatetime'
-
-[%header,cols="2*"]
-|===
-| Operator| Accepted types for each argument
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#subtracting-two-dates[-] |('Localdatetime', 'Localdatetime')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#append-time-zone[++] |('Localdatetime', 'Timezone')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#adding-a-period-of-time[+] |('Localdatetime', 'Period')
-| link:/mule-user-guide/v/4.0/dataweave-core-functions#adding-a-period-of-time[-] |('Localdatetime', 'Period')
-|===
 
 
 == Type Coercion Table
@@ -965,52 +770,51 @@ This table shows the possible combinations and the properties from the schema th
 When you <<DataWeave Operators Sorted by Type, provide an operator>> with properties that don't match the expected types, DataWeave automatically attempts to coerce the provided property to the required type.
 
 |====
-|Source                          |Target                  | Property
-|Object                         |Array                  |   (1)
+|Source                         |Target                 | Property
 |Range                          |Array                  |
 |Number                         |Binary                 |
 |String                         |Binary                 |
 |String                         |Boolean                |
-|Number                         |Datetime               | unit
-|Localdatetime                  |Datetime               |
-|String                         |Datetime               | format / locale
-|Datetime                       |Localdate              |
-|Localdatetime                  |Localdate              |
-|String                         |Localdate              | format / locale
-|Datetime                       |Localdatetime          |
-|String                         |Localdatetime          | format / locale
-|Datetime                       |Localtime              |
-|Localdatetime                  |Localtime              |
-|Time                           |Localtime              |
-|String                         |Localtime              | format / locale
-|Datetime                       |Number                 | unit
+|Number                         |DateTime               | unit
+|LocalDateTime                  |DateTime               |
+|String                         |DateTime               | format / locale
+|DateTime                       |LocalDate              |
+|LocalDateTime                  |LocalDate              |
+|String                         |LocalDate              | format / locale
+|DateTime                       |LocalDateTime          |
+|String                         |LocalDateTime          | format / locale
+|DateTime                       |LocalTime              |
+|LocalDateTime                  |LocalTime              |
+|Time                           |LocalTime              |
+|String                         |LocalTime              | format / locale
+|DateTime                       |Number                 | unit
 |String                         |Number                 | format / locale
-|Array                          |Object                 |
 |String                         |Period                 |
 |String                         |Regex                  |
-|Datetime                       |String                 | format / locale
-|Localdatetime                  |String                 | format / locale
-|Localtime                      |String                 | format / locale
-|Localdate                      |String                 | format / locale
-|Timetype                       |String                 | format / locale
+|DateTime                       |String                 | format / locale
+|LocalDateTime                  |String                 | format / locale
+|LocalTime                      |String                 | format / locale
+|LocalDate                      |String                 | format / locale
+|Time                           |String                 | format / locale
 |Period                         |String                 |
-|Timezone                       |String                 |
+|TimeZone                       |String                 |
 |Number                         |String                 | format / locale
 |Boolean                        |String                 |
 |Range                          |String                 | (2)
 |Type                           |String                 |
-|Datetime                       |Time                   |
-|Localdatetime                  |Time                   |
-|Localtime                      |Time                   |
+|DateTime                       |Time                   |
+|LocalDateTime                  |Time                   |
+|LocalTime                      |Time                   |
 |String                         |Time                   | format
-|Datetime                       |Timezone               |
-|Time                           |Timezone               |
-|String                         |Timezone               |
+|DateTime                       |TimeZone               |
+|Time                           |TimeZone               |
+|String                         |TimeZone               |
 |====
 
 
-(1) Returns and array with all the values of the object.
-(2) Returns a string with all the values of the range using "," as the separator
+<1> Returns an array with all the values of the object.
+<2> Returns a string with all the values of the range using "," as the separator
+
 
 == See Also
 
