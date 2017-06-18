@@ -1,20 +1,14 @@
-= To Create a Load Balancer
+= To Configure a Load Balancer for Anypoint Platform Private Cloud Edition
 
 [WARNING]
 This product was previously named Anypoint Platform On-Premises Edition. Beginning with the 1.5.1 release, it is named Anypoint Platform Private Cloud Edition.
 
-Anypoint Platform Private Cloud Edition should be run in production on more than one server, you must provide your own load balancer to enable this. A load balancer is necessary to distribute traffic between these, and to restrict open ports to just the necessary ones. You can use any standard tool for creating this load balancer, like NGINX.
+Anypoint Platform Private Cloud Edition must be run in production environment with multiple servers. To distribute traffic amonng servers and to restrict access to specifi ports, you must install and configure a load balancer.
 
 [NOTE]
-Even if you plan to deploy the platform to a single server, a load balancer is strongly recommended.
+In a single server development environment, MuleSoft recommends using a load balancer.
 
-////
-(diagrama de lucidchart) ???
-////
-
-You can configure this load balancer with any strategy you want, but a *round robin* strategy is most often the ideal.
-
-This load balancer should be reachable through an IP address that is accessible by all machines in your network.
+You can configure your load balancer to use any method for distributing client requests, but in most contexts a round robin strategy is ideal. This load balancer should be reachable through an IP address that is accessible to all machines in your network.
 
 Your load balancer must route the following TCP ports:
 
@@ -29,39 +23,30 @@ Your load balancer must route the following TCP ports:
 |===
 
 
-In every case, your load balancer must listen on the *Load Balancer Port* and redirect incoming requests to the *Instance Port*. Your installation of Anypoint Platform includes an internal NGINX server that listens on each of the *Instance Ports* and then performs the action listed in the *Internal Usage* column of the above table.
+In each case, your load balancer must listen on the Load Balancer Port and redirect incoming requests to the Instance Port. Your  Anypoint Platform installation includes an internal NGINX server that listens on each of the configured instance ports, then performs the action listed in the Internal Usage column.
 
-Additionally, your load balancer should poll the address `HTTPS:10250/healthz` to run a *health check* on your platform servers and confirm that they are accessible.
-
-[TIP]
-If you're not sure how to make a load balancer, see link:/anypoint-private-cloud/v/1.5/creating-load-balancer-onprem[creating a load balancer] for instructions on how to create a basic NGINX load balancer for Anypoint Platform Private Cloud Edition.
+Your load balancer should poll the address `HTTPS:10250/healthz` to run a health check on your platform servers and confirm that they are accessible.
 
 
 [NOTE]
-To configure SSL credentials, you don't need to set them up in your load balancer. You can configure them via the Anypoint Platform UI, see <<SSL Certificate>>.
+You do not need to configure SSL credentials in your load balancer. You can configure them using Anypoint Runtime Manager.
 
-== Creating a Load Balancer for Private Cloud Edition
-:keywords:anypoint platform, on premises
+== To Configure a Load Balancer
 
-This document walks you through the steps of creating a NGINX load balancer to handling  traffic to the nodes where you have installed the link:/anypoint-private-cloud/v/1.5/[Anypoint Platform Private Cloud Edition]. 
-
-You must manually create this load balancer as part of the link:/anypoint-private-cloud/v/1.5/install-installer[installation procedure]. You can create this load balancer with a tool other than NGINX.
-
-
-. Enable stream block in your `/etc/nginx/nginx.conf` file, by referencing all the config from `/etc/nginx/stream.d/*`. You can achieve that by adding the following:
-
-[souce, json, linenums]
+1. Enable stream block in your `/etc/nginx/nginx.conf` file, by referencing all the config from `/etc/nginx/stream.d/*`. You can achieve that by adding the following:
++
+[source, json, linenums]
 ----
 stream {
    include /etc/nginx/stream.d/*.conf;
 }
 ----
 
-. Delete the `default.conf` file from `/etc/nginx/conf.d`
-. Create a folder named `/etc/nginx/stream.d` and in it create a file named `onprem.conf`
-. Paste the following content in `onprem.conf`
-
-[souce, json, linenums]
+1. Delete the `default.conf` file from `/etc/nginx/conf.d`
+1. Create a folder named `/etc/nginx/stream.d` and in it create a file named `onprem.conf`
+1. Paste the following content in `onprem.conf`
++
+[source, json, linenums]
 ----
 server {
    listen 80;
@@ -88,30 +73,20 @@ server {
    proxy_pass 0.0.0.0:30083;
 }
 ----
-
 +
-[NOTE]
-====
-If you're installing the platform on an AWS, you need to enable the default ports on SELinux before starting the NGINX. Run the following commands one by one:
 
+1. Enable the default ports on SELinux before starting the NGINX. Run the following commands one by one:
++
 ----
 `semanage port -a -t http_port_t  -p tcp 8889`
 `semanage port -a -t http_port_t  -p tcp 9500`
 `semanage port -a -t http_port_t  -p tcp 9501`
 ----
-====
 
-. Start NGINX
-`service nginx restart`
-
+1. Start NGINX:
 +
-[NOTE]
-====
-If you're installing the platform on an AWS, you must also run the following command:
-
 ----
-`/usr/sbin/setsebool httpd_can_network_connect true`
+service nginx restart
 ----
-====
 
 

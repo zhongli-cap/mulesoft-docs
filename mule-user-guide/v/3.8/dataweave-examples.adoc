@@ -671,11 +671,11 @@ The example goes through the whole set of elements in the input using  a link:/m
 %dw 1.0
 %output application/json
 ---
-payload map {
-($ mapObject {
-    (emptySeats: $) when $$ as :string == 'availableSeats',
-    (airline: $) when $$ as :string == 'airlineName',
-    (($$):$) when ($$ as :string !='availableSeats') and ($$ as :string != 'airlineName')
+payload.flights map (flight) -> {
+(flight mapObject (value, key) -> {
+    (emptySeats: value) when key as :string == 'availableSeats',
+    (airline: value) when key as :string == 'airlineName',
+    ((key):value) when (key as :string !='availableSeats') and (key as :string != 'airlineName')
   })
 }
 ----
@@ -688,15 +688,25 @@ payload map {
 [source, json, linenums]
 ----
 {
-"flight":{
+  "flights":[
+  {
   "availableSeats":45,
   "airlineName":"Ryan Air",
   "aircraftBrand":"Boeing",
   "aircraftType":"737",
-  "departureDate":"12/14/2015",
+  "departureDate":"12/14/2017",
   "origin":"BCN",
   "destination":"FCO"
-  }
+  },
+  {
+  "availableSeats":15,
+  "airlineName":"Ryan Air",
+  "aircraftBrand":"Boeing",
+  "aircraftType":"747",
+  "departureDate":"08/03/2017",
+  "origin":"FCO",
+  "destination":"DFW"
+  }]
 }
 ----
 
@@ -713,9 +723,18 @@ payload map {
     "airline": "Ryan Air",
     "aircraftBrand": "Boeing",
     "aircraftType": "737",
-    "departureDate": "12/14/2015",
+    "departureDate": "12/14/2017",
     "origin": "BCN",
     "destination": "FCO"
+  },
+  {
+    "emptySeats": 15,
+    "airline": "Ryan Air",
+    "aircraftBrand": "Boeing",
+    "aircraftType": "747",
+    "departureDate": "08/03/2017",
+    "origin": "FCO",
+    "destination": "DFW"
   }
 ]
 ----
@@ -1570,24 +1589,21 @@ In case you have empty fields that don't hold any values within, you might find 
 %dw 1.0
 %output application/xml inlineCloseOn="empty"
 ---
-{
-  payload: payload
-}
----
+payload
 
-removeAttribute(payload, "password")
+
 ----
 
 [tabs]
 ------
 [tab,title="Input: JSON"]
 ....
-{
-  "parentElement":{
+{ "customer":{
 
-    "emptyElement1":{},
-    "emptyElement2":{},
-    "emptyElement13":{}
+    "userName": "John Doe",
+    "password":{},
+    "status":"active",
+    "lastLogin":{}
   }
 }
 ----
@@ -1599,14 +1615,13 @@ removeAttribute(payload, "password")
 .Output
 [source,xml,linenums]
 ----
-<?xml version='1.0' encoding='US-ASCII'?>
-<payload>
-  <parentElement>
-    <emptyElement1/>
-    <emptyElement2/>
-    <emptyElement13/>
-  </parentElement>
-</payload>
+<?xml version='1.0' encoding='UTF-8'?>
+<customer>
+  <userName>John Doe</userName>
+  <password/>
+  <status>active</status>
+  <lastLogin/>
+</customer>
 ----
 ....
 ------
@@ -2438,7 +2453,7 @@ mapKeys(payload, ((key) ->(lower key)))
 ....
 .Output
 [source,xml,linenums]
----------------------------------------------------------
+----
 <?xml version='1.0' encoding='US-ASCII'?>
 <catalog>
   <cd>
@@ -2559,7 +2574,7 @@ payload.sfdc_users.*sfdc_user map ((user) -> applyMapping(user, mapping))
 ------
 
 
-=== Conditional list reduction via a function
+== Conditional list reduction via a function
 
 When presented with nested lists of data, you often need to `flatten` the data for a simplified output, extracting only the values required. Here you have a set of JSON data that returns a nested set of `interests` for a user and within are further nested sets. Certain values from the nested sets `tags` and `contenttypes` are needed to be extracted, with a conditional check to ensure `contenttypes` is present.
 

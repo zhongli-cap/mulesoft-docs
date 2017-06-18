@@ -1,83 +1,52 @@
-= Manage an API
-:keywords: api, sla, policy, raml, portal, manage
+= To Apply a Policy and SLA Tiers
 
-Managing an API involves a number of tasks, including the set up of SLA tiers, applying an SLA-based policy, and link:/api-manager/using-api-alerts[setting API alerts]. As an API Versions Owner, you typically add policies and link:/api-manager/defining-sla-tiers[SLA tiers] to the API that you deploy by proxy. The policies combined with an SLA definition restricts access to the API from applications registered by tier to make API calls. In the first part of this tutorial, you create two tiers of access for developers who want to call the API:
+In this procedure you set up SLA tiers and apply a policy. If you just want to apply a policy, start at step 5. 
 
-*  A tier that accepts anyone who wants to access the API, but limits this person's application to three requests per minute, and rejects additional requests.
-* A tier for a premium access level that accepts up to five requests per minute and requires API Versions Owner approval of the developer who wants to access the API.
+In this procedure, you limit access to one API resource. Access to other resources are unlimited. You configure and apply the rate limiting SLA-based policy the resource. You create the following tiers of access that limit apps calling the API to 3 or 5 requests, depending on the SLA level of the app. 
 
-API Manager sends an email for granting access to you when someone signs up for premium access.
+* A tier that limits the requests to three per minute. No approval required.
+* A tier that limits requests to five per minute and requires API Versions Owner approval of the app that wants to access the API.
 
-In the second part of this tutorial, you apply link:/api-manager/rate-limiting-and-throttling-sla-based-policies[SLA-based policies] to handle requests that exceed SLA limits that you added.
+Because the rate limiting policy is client ID-based, you also set up the client ID and secret as query parameters. 
 
-* Throttling - SLA-based
-+
-Stores excessive requests in a queue for processing later.
-* Rate Limiting - SLA-based
-+
-Discards excessive requests.
+When an app attempts to consume the protected resource, the policy is enforced. The request needs to include the expected user name/password. Repeated calls within SLA limits from the app to the API succeed; others fail.
 
-This tutorial uses features that might not be visible or accessible to you, depending on link:/release-notes/api-manager-release-notes#april-2016-release[entitlements you purchased].
-
-== Adding an SLA Tier
-
-To add SLA tiers:
-
-. On the link:/api-manager/tutorial-set-up-and-deploy-an-api-proxy#navigate-to-the-api-version-details-page[API version details page], click the *SLA Tiers* tab.
+. In API Manager, in API Administration, click an API version link.
+. On the API version details page, in Status, click Configure Endpoint, and check that Type is RAML.
 +
-image::walkthrough-manage-afcf8.png[walkthrough-manage-afcf8]
+A RAML-based API is required for applying a policy to a resource.
++ 
+. Choose the SLA Tiers, and click Add SLA Tier. Set up one limit on the tier as follows:
 +
-The *Add SLA tier* dialog appears.
+* Name: Free
+* Approval: Automatic
+* Limits
+** # of Reqs: 3
+** Time Period: 1
+** Time Unit: Minute
 +
-. Click *Add SLA Tier*.
+. Click Add SLA Tier again, and set up one limit on the tier as follows:
 +
-. Fill in the fields as follows:
+* Name: Premium
+* Approval: Manual
+* Limits
+** # of Reqs: 5
+** Time Period: 1
+** Time Unit: Minute
 +
-* *Name*: Free
-* *Approval*: Automatic
-* *Limits*
-** *# of Reqs*: 3
-** *Time Period*: 1
-** *Time Unit*: Minute
+. Choose Policies.
 +
-. Click *Add*.
+. Click Apply New Policy, and in Select Policy, select Rate Limiting - SLA-based policy, and click Configure.
+. Configure the policy on the `/users` resource of the API.
+* In Method & Resource Conditions, select Apply Configurations to Specific Methods & Resources.
+* In Methods, select GET and in URI template regex.
+* In URI Template Regex, enter `/users` to apply throttling only to the `/users` resource
+* Click Apply.
 +
-. On the API version details page, click *Add SLA Tier* again, and fill in the fields as follows:
+image:rlp-conditions.png[rlp-conditions]
 +
-* *Name*: Premium
-* *Approval*: Manual
-* *Limits*
-** *# of Reqs*: 5
-** *Time Period*: 1
-** *Time Unit*: Minute
-
-To apply policies:
-
-. link:/api-manager/tutorial-set-up-and-deploy-an-api-proxy[Set up and deploy an API proxy].
-+
-. On the API version details page of the deployed API, click the *Policies* tab.
-+
-The list of available policies appears.
-+
-. Click `>` to get the status and description of a policy.
-+
-image::walkthrough-manage-0994c.png[walkthrough-manage-0994c,height=453,width=800]
-+
-. Click *Apply* for the Throttling - SLA-based policy.
-+
-The *Apply "Throttling - SLA based" policy* dialog appears.
-+
-image::walkthrough-manage-e6710.png[walkthrough-manage-e6710,height=505,width=478]
-+
-. Accept the defaults, click *Apply*.
-+
-. Click *Apply* for the Rate limiting - SLA-based policy.
-+
-The *Apply "Rate limited - SLA based" policy* dialog appears.
-+
-. Accept the defaults, click *Apply*.
-. On the list of available policies, click the *Raml snippet* for either of the policies you applied.
-. Follow instructions to add traits to RAML for enforcing the policies: Open API Designer and edit the RAML as follows:
+. On the API version details page, click Raml Snippet for Rate Limiting - SLA based.
+. Add traits to RAML for enforcing the policies. Open API Designer and edit the RAML:
 +
 * Add a section called `traits:` at the root level to define query parameters:
 +
@@ -96,14 +65,15 @@ traits:
 +
 [source,yaml,linenums]
 ----
-/products:
+/users:
   get:
     is: [client-id-required]
-    description: Gets a list of all the inventory products.
+    description: Gets a list of JSONPlaceholder users.
 ----
 
-== Next
+== See Also
 
-* link:/api-manager/tutorial-create-an-api-portal[Publish an API Portal] so users can find your API, read its documentation, and request access to it.
-* link:/analytics/api-consumer-analytics[Monitor SLA performance] to ensure that your APIs are performing in line with the SLA tier approved for an API.
-* link:/api-manager/using-api-alerts[Set API alerts] to notify you when an API request violates a policy or SLA.
+* link:/api-manager/resource-level-policies-about[About Resource Level Policies]
+* link:/api-manager/rate-limiting-and-throttling-sla-based-policies[SLA-based policies]
+* link:/api-manager/tutorial-set-up-and-deploy-an-api-proxy[API version details page]
+

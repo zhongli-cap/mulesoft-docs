@@ -23,9 +23,10 @@ CloudHub provides a load balancing service for all integrations, you can use the
 
 This service does round robin load distribution across workers, allowing workers to scale linearly as they receive more requests as well as providing transparent switchover when an application is upgraded (see zero downtime upgrades for more information).
 
-Each application deployed on CloudHub has a *CNAME* record that refers to the load balancer - example: `myapp.cloudhub.io`. Mule applications deployed on CloudHub must listen on `0.0.0.0` and ports assigned by CloudHub for HTTP and HTTPS. The load balancer then forwards requests from port 80 and 443 (SSL) to these ports on the Mule worker. Forwarded traffic is still HTTP & HTTPS respectively, this means that you can't listen for HTTPS on `${http.port}` nor for plain HTTP on `${https.port}`.
+Each application deployed on CloudHub has a CNAME record that refers to the load balancer - example: `myapp.cloudhub.io`. Mule applications deployed on CloudHub must listen on `0.0.0.0` and ports assigned by CloudHub for HTTP and HTTPS. The load balancer then forwards requests from port 80 and 443 (SSL) to these ports on the Mule worker. Forwarded traffic is still HTTP & HTTPS, this means that you can't listen for HTTPS on `${http.port}` nor for plain HTTP on `${https.port}`. +
+These ports must be referenced using the reserved properties `${http.port}` and `${https.port}` respectively, so CloudHub services can then dynamically allocate a port at deployment time. +
 
-These ports can be referenced via the expressions `${http.port}` and `${https.port}`, respectively. Here is an example of a Mule configuration that utilizes this to expose an HTTPS endpoint:
+Here is an example of a Mule configuration that utilizes this to expose an HTTPS endpoint:
 
 [source,xml]
 ----
@@ -38,7 +39,8 @@ These ports can be referenced via the expressions `${http.port}` and `${https.p
 
 You may also refer to this knowledge-base article: link:https://support.mulesoft.com/s/article/Sample-App-Configuring-HTTPS-endpoint-for-deployment-in-Cloudhub[Sample App: Configuring HTTPS endpoint for deployment in CloudHub]
 
-*Important*: On the Mule worker, the CloudHub load balancer proxies port :80 to :8081 for HTTP and proxies port :443 to :8082 for HTTPS. The `http.port` value must be set to port 8081 for HTTP, and the `https.port` value must be set to port 8082 for HTTPS. No other port numbers are supported.
+*Important*: On the Mule worker, the CloudHub load balancer proxies port :80 to :8081 for HTTP and proxies port :443 to :8082 for HTTPS. +
+The `http.port` property is automatically set to port 8081 for HTTP, and `https.port` is set to port 8082 for HTTPS. If other values for http.port and https.port are specified in the mule-app.properties file, these are overwritten at deployment time.
 
 [NOTE]
 --
@@ -105,7 +107,7 @@ Deploying to a region also affects your internal and external worker DNS address
 
 The only two ports exposed externally are `${http.port}` and `${https.port}` (by default `8081` and `8082` respectively). If you wish to access other ports, you can do so through the *Anypoint Virtual Private Cloud (VPC)* offering.
 
-If you wish to expose HTTP services only inside a VPC, these services can be exposed on ports `${http.private.port'}` `${https.private.port'}` (`8091` and `8092` respectively), which are open by default on the internal network. In this case, these services are not accessible on the public IPs or the load-balancer, ensuring that they can be accessed securely.
+If you wish to expose HTTP services only inside a VPC, these services can be exposed on ports `${http.private.port}` `${https.private.port}` (`8091` and `8092` respectively), which are open by default on the internal network. In this case, these services are not accessible on the public IPs or the load-balancer, ensuring that they can be accessed securely.
 
 Additional ports can be opened inside the VPC, for example, for JMX based monitoring. In order  to do so, refer to the Firewall rules section in out link:/runtime-manager/virtual-private-cloud#firewall-rules[VPC documentation].
 
@@ -121,17 +123,20 @@ By configuring your own link:/runtime-manager/virtual-private-cloud[VPC] you can
 
 == Avoiding Public Discoverability for Applications on CloudHub
 
-If you have a link:/runtime-manager/virtual-private-cloud[Virtual Private Cloud] and a link:/runtime-manager/cloudhub-dedicated-load-balancer[Cloudhub Dedicated Load Balancer for VPCs], you can prevent your applications hosted in CloudHub from being publicly accessible:
+If you have a link:/runtime-manager/virtual-private-cloud[Virtual Private Cloud] and a link:/runtime-manager/cloudhub-dedicated-load-balancer[Cloudhub Dedicated Load Balancer], you can prevent your applications hosted in CloudHub from being publicly accessible:
 
 . Remove the link:/runtime-manager/virtual-private-cloud#firewall-rules[VPC firewall rule] for ports 8081 and 8082 using:
-.. The *Firwall Rules* tab in your VPC management center:
+.. The *Firewall Rules* tab in your VPC management center:
 ... Remove both rules with *source* `Anywhere (0.0.0.0/0)` and ports 8081 and 8082.
 .. The Anypoint CLI
 ... Run the link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-firewall-rules-remove[cloudhub vpc firewall-rules remove] command with the index `1` and `3`
 . Create a link:/runtime-manager/cloudhub-dedicated-load-balancer#whitelists[whitelist in your dedicated load balancer] with the IPs you want to authorize.
 .. You can only do this using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-whitelist-add[cloudhub load-balancer whitelist add] command from the CLI.
 
+*Important:* If you don't have any link:/runtime-manager/cloudhub-dedicated-load-balancer[Cloudhub Dedicated Load Balancer], performing the first step will be sufficient to ensure that applications deployed in your VPCs will not be publicly accessible.
+
 == See Also
 
+* link:/runtime-manager/developing-applications-for-cloudhub#providing-an-external-http-https-port[Providing an External HTTP/HTTPS Port when deploying to CloudHub]
 * link:/runtime-manager/cloudhub-architecture[CloudHub architecture]
 * link:/runtime-manager/virtual-private-cloud[Virtual Private Cloud]

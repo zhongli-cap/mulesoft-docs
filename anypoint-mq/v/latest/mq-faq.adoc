@@ -1,4 +1,4 @@
-= Anypoint MQ FAQ
+= FAQ: Anypoint MQ
 :keywords: mq, faq, questions, answers
 
 This document lists frequently asked questions about link:/anypoint-mq[Anypoint MQ].
@@ -14,7 +14,7 @@ After you obtain an Enterprise subscription and contacted your MuleSoft represen
 
 == FAQ: How does MQ encrypt messages?
 
-If you choose to link:/anypoint-mq/mq-queues-and-exchanges#create-a-queue[encrypt messages], Anypoint MQ provides 
+If you choose to link:/anypoint-mq/mq-queues#create-a-queue[encrypt messages], Anypoint MQ provides 
 password-based encryption using PBE with MD5 and Triple DES, and with a 168-bit key.
 
 == FAQ: Why can't I see FIFO Queue in the plus button?
@@ -36,6 +36,11 @@ by a queue, but not deleted, that is, a message awaiting ACK or NACK, or a messa
 messages; however the number of in flight messages is limited. The maximum duration for any message, either in
 flight or not is 2 weeks, after which Anypoint MQ deletes the message.
 
+== FAQ: Can I consume MQ messages in batches?
+
+Yes, the REST API supports the `batchSize` query parameter which lets you retrieve up to 10 messages in a single call (default value). The maximum number that can be retrieved are 10 messages in a single call, you can configure a lower value with the Prefetch Config parameter in the Anypoint MQ Connector
+as described in link:/anypoint-mq/mq-studio#studio-prefetch-tab[Studio Prefetch Tab]. Note the number of messages retrieved by the connector can be less that the amount configured. A number higher that 10 can be configured but it will be overriden.
+
 == FAQ: Can I use Anypoint MQ on premises?
 
 You can publish a message from an on-premises system to Anypoint MQ and have another on-premises subscriber pull messages off of Anypoint MQ.
@@ -44,16 +49,6 @@ Currently Anypoint MQ cannot be deployed on-premises. If you need a messaging so
 == FAQ: How can non-Mule applications interface with Anypoint MQ?
 
 If you have non-Mule applications, you can use our link:/anypoint-mq/mq-apis[MQ REST API] to send and receive messages.
-
-== FAQ: If a data center fails, what happens to in-flight messages?
-
-There are multiple data centers in a region which again have multiple availability zones. One availability zone going down does not affect Anypoint MQ services. If the whole region goes down, only a service in that region can be affected.
-
-See also: <<How many in flight messages can I have per queue?>>
-
-== FAQ: If an availability zone fails, what's the client impact?
-
-Anypoint MQ provides persistent data storage across multiple data centers in a region, ensuring that it can handle data center outages and provide full disaster recovery in case of an availability zone going down.
 
 == FAQ: What is the throughput capacity of Anypoint MQ?
 
@@ -64,9 +59,42 @@ Anypoint MQ is horizontally scalable and we can support higher throughputs as ne
 Anypoint MQ provides long polling. You can do a REST request and ask the server
 to keep the TCP socket open for up to 20 seconds to fulfill your request if there are not enough messages.
 
+== FAQ: How can I process messages one by one?
+
+To process messages one by one, set the Anypoint MQ connector to the consume operation, which retrieves a
+message from the queue, or receives null if a message is not available. In addition, use a synchronous flow 
+with a poll scope to fire the process regularly. More than one in-flight message can occur if the process 
+time between `anypoint-mq:consume` and `anypoint-mq:ack` is not lower than the *Default Lock TTL* for the queue, 
+and if you don't create exception options and NACK the message accordingly.
+
+Example:
+
+[source,xml,linenums]
+----
+<flow name="testanypointmq1by1Flow2" processingstrategy="synchronous">
+    <poll doc:name="Poll">
+        <logger doc:name="Logger" level="INFO" message="Pooling fired"></logger>
+    </poll>
+    <anypoint-mq:consume config-ref="Anypoint_MQ_Configuration" destination="queuename" doc:name="Anypoint MQ"/>
+    <logger doc:name="Logger" level="INFO" message="Processing message received. #[payload]"/>
+    <anypoint-mq:ack config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ"/>
+    <logger doc:name="Logger" level="INFO" message="Message processed."/>
+</flow>
+----
+
 == FAQ: Add MQ connector support to Mule shared resources?
 
-At the moment, the only officially supported connectors and transports for shared resources are: HTTP/HTTPS, VM, JMS, JMS Caching Connection Factory, Database, WMQ, JBoss Transaction Manager, and Bitronix Transaction Manager.
+The only officially supported connectors and transports for shared resources are: HTTP/HTTPS, VM, JMS, JMS Caching Connection Factory, Database, WMQ, JBoss Transaction Manager, and Bitronix Transaction Manager.
+
+== FAQ: If a data center fails, what happens to in-flight messages?
+
+There are multiple data centers in a region which again have multiple availability zones. One availability zone going down does not affect Anypoint MQ services. If the whole region goes down, only a service in that region can be affected.
+
+See also: <<How many in flight messages can I have per queue?>>
+
+== FAQ: If an availability zone fails, what's the client impact?
+
+Anypoint MQ provides persistent data storage across multiple data centers in a region, ensuring that it can handle data center outages and provide full disaster recovery in case of an availability zone going down.
 
 == FAQ: Can I use a retry strategy with the MQ connector?
 
@@ -131,4 +159,7 @@ image:mq-delete-exchange.png[mq-delete-exchange]
 +
 . Click *Delete Exchange*.
 
+== See Also
+
+* link:/anypoint-mq/[Anypoint MQ]
 
