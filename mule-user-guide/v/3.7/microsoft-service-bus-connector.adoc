@@ -3,6 +3,8 @@
 
 *_Select_*
 
+*Latest version: 1.3.1*
+
 The ServiceBus connector enables message integration with Windows Service Bus on premises and Azure Service Bus on the cloud. The connector supports communication with queues, topics and event hubs through AMQP 1.0. In addition, dynamic discovery and provisioning of Service Bus objects is possible using the built-in management API.
 
 *Release Notes:* link:/release-notes/microsoft-service-bus-connector-release-notes[Microsoft Service Bus Connector Release Notes]
@@ -83,10 +85,11 @@ image:ServiceBusAzure.png[Azure Service Bus configuration]
 |Field |Description
 |*Name* |Enter a name for the global element.
 |*Service Namespace* |Enter the name of the service namespace to address Service Bus resources within your application.
-|*Shared Access Key Name* |Enter the name of access key configured on the namespace.
+|*Shared Access Key Name* |Enter the name of access key configured on the namespace. Any access key created at a lower level (i.e. Topic level Shared Key) will not work with this option, unless you disable connectivity test at startup. See below *Skip Connectivity Test* option.
 |*Shared Access Key* |Enter the 256-bit primary key.
-|*Enable DataSense* |If you intend to employ the Microsoft Service Bus connector in conjunction with an link:/anypoint-studio/v/5/datamapper-user-guide-and-reference[Anypoint DataMapper] to map and transform data, you can make use of Anypoint Studio's
-link:/anypoint-studio/v/5/datasense[DataSense] functionality. You can enable DataSense as part of configuring the global element.
+|*Skip Connectivity Test* |In case you have limited access to Azure Service Bus resources and you want to skip the connectivity test performed at startup (as this works at the root level of your namespace) you need to set this setting to true. For example, you might need to receive or send on a specific queue or topic and your *Shared Access Key* has a security policy that allows to perform limited set of operations only on the specific target resource.
+|*Enable DataSense* |If you intend to employ the Microsoft Service Bus connector in conjunction with an link:/anypoint-studio/v/6/datamapper-user-guide-and-reference[Anypoint DataMapper] to map and transform data, you can make use of Anypoint Studio's
+link:/anypoint-studio/v/6/datasense[DataSense] functionality. You can enable DataSense as part of configuring the global element.
 |===
 +
 . Windows Service bus:
@@ -104,8 +107,9 @@ image:ServiceBusWindowsGen.png[Windows Service Bus configuration]
 |*Fully* *Qualified Domain Name* |Enter the fully qualified domain name of your Windows Service Bus server
 |*Port* |Enter the server port number.
 |*Disable SSL Certificate Validation* |If you are using a self-signed SSL certificate, select this check box.
-|*Enable DataSense* |If you intend to employ the Microsoft Service Bus connector in conjunction with an link:/anypoint-studio/v/5/datamapper-user-guide-and-reference[Anypoint DataMapper] to map and transform data, you can make use of Anypoint Studio's
-link:/anypoint-studio/v/5/datasense[DataSense] functionality. You can enable DataSense as part of configuring the global element.
+|*Skip connectivity test* |In case you have limited access to Windows Service Bus resources and you want to skip the connectivity test performed at startup you need to set this setting to true.
+|*Enable DataSense* |If you intend to employ the Microsoft Service Bus connector in conjunction with an link:/anypoint-studio/v/6/datamapper-user-guide-and-reference[Anypoint DataMapper] to map and transform data, you can make use of Anypoint Studio's
+link:/anypoint-studio/v/6/datasense[DataSense] functionality. You can enable DataSense as part of configuring the global element.
 |===
 +
 . Configure the required parameters as shown below:
@@ -140,6 +144,28 @@ You are now ready to run the project! First, you can test run the application fr
 false,"requiresSession":false,"deadLetteringOnMessageExpiration":false,"enableBatchedOperations":true,"defaultMessageTimeToLive":
 "P10675199DT2H48M5.4775807S","duplicateDetectionHistoryTimeWindow":"PT10M","maxDeliveryCount":10}}]
 ----
+== Synchronous and asynchronous behavior
+
+The connector behaves differently depending what flow processing strategy is used.
+
+- For the sync scenario, the connector will acknowledge a message only when the flow finishes with success.
+In case of an error, the message is not acknowledged, and will be consumed until success.
+- For the async scenario, the message is never auto-acknowledged by the connector sources, so it will be re-consumed no matter if the flow fails or is successful.
+In order for the message to be acknowledged, the *Acknowledge Message* processor must be used in the flow. This processor receives an *AmpqMessage* as input and acknowledges it.
+So, to be acknowledged, the *AmpqMessage* received from the source must be given as input to an "Acknowledge Message" processor to be acknowledged.
+- Below is an example of an asynchronous flow that uses the *Acknowledge Message* processor.
+
+[source, xml, linenums]
+----
+<flow name="example-servicebusFlow" processingStrategy="queued-asynchronous">
+        <microsoftservicebus:topic-receive config-ref="Microsoft_Service_Bus__Azure_Service_Bus" sourceTopic="test_topic" subscription="HighPriority" doc:name="Microsoft Service Bus (Streaming)"/>
+        <set-variable variableName="test" value="#[payload]" doc:name="Variable"/>
+        <microsoftservicebus:acknowledge-message config-ref="Microsoft_Service_Bus__Azure_Service_Bus" amqpMessage-ref="#[flowVars.test]" doc:name="Ack Processor"/>
+</flow>
+----
+
+In this example, the *AmqpMessage* is saved in a flow variable called "test" that is passed as input to the *Acknowledge Message* processor.
+
 
 == Service Bus Authentication
 
@@ -157,6 +183,57 @@ To enable the SSL checks, the certificate must be imported following these steps
 . Enter the following command: *bin\keytool.exe –list –keystore lib\security\cacerts*
 . Import the autogenerated Service Bus certificate by running the following command:  *bin\keytool.exe –importcert –alias AppServerGeneratedSBCA –file %temp%\AutoGeneratedCA.cer –keystore lib\security\cacerts –v*
 . You are prompted for the password (the default is “changeit”).  If you do not know the password, you cannot perform the import.  When the tool asks you whether to trust the certificate, enter *Y* (Yes).
+
+=== SAS Based Authentication
+
+In addition to the connection schemes that require a username and password, the connector provides a connection in which authentication is SAS based (only for Azure) which allows you to set the authentication token for the Service Bus Service without requiring the username and password for it.
+
+As the SAS token schema is URI based (that is, you can assign different authorization access to your resources based on their URIs) the connection supports multiple ways of providing the authentication tokens needed. The most trivial and simple case is when you have a single profile that authorizes accesses to all your resources by using an specific root URI which is the base endpoint that your service expose. If you need to provide different access tokens on different resources, then you can use a setting that allows you to configure a list of them according to the resources the connector will need to access during its running time.
+
+Last but not least, and extending the mechanisms described above to provide the authentication token, there is another mechanism that allows you to implement a custom token provider to allow the connector requests for security tokens when needed. It is your responsibility to solve each request and to return a fresh token every time the connector asks for one. As the token has an expiration time within it, this mechanism allows the connector to re-authenticate with the target resource once the token has expired (this is not allowed with the previous mechanisms described above where the tokens are fixed at configuration time before the flow runs).
+
+The following are the available settings for the `Shared Access Signature` connection:
+
+*Service Namespace*: The namespace for the Azure Service Bus Service within your subscription.
+
+*Shared Access Signature*: (Optional) The unique security token when you set up just one security profile to access all your service resources. In this case when the token has expired, the connector cannot reconnect automatically and you will need to stop running the flow in order to update this configuration setting with a new token.
+
+Within the advanced section you can find:
+
+*SAS Tokens List*: (Optional) The list of security tokens the connector will need to access different URIs when the security profiles for each one of them are different. In this case when any of the tokens has expired the connector cannot reconnect to the URI linked to that token and you will need to stop running the flow in order to update this configuration setting with a new set of tokens.
+
+*SAS Tokens Provider*: (Optional) An Spring bean reference implementing the `org.mule.modules.microsoftservicebus.connection.providers.SharedAccessSignatureProvider` interface. If you set an instance of a token provider here, it is your responsibility to provide a fresh token for each URI the connector requires access to (according to your security profiles). In this case each time a token has expired the connector will request for a new one, which will be provided by your implementation, and reconnection to the target URI will be done seamlessly. In order to provide a reference to your own implementation as a Spring bean, refer to the following link:/mule-user-guide/v/3.8/using-spring-beans-as-flow-components[documentation].
+
+*Max Connections*: (Optional) Maximum number of connections to keep in pool in order to be reused by producer. If set to "-1" it will create a new connection everytime.
+
+NOTE: At least one of the optional settings shown above must be provided.
+
+In all cases, the token format you should provide is a `string` that must comply with the following pattern:
+
+[source]
+----
+SharedAccessSignature sr=[resource_uri]&sig=[signature]&se=[ttl]&skn=[profile]
+----
+
+the `sr` parameter value can start with `https` or `amqps` protocol depending on the operation you will perform on the target resource.
+
+As example:
+[source]
+----
+SharedAccessSignature sr=amqps%3a%2f%2fmynamespace.servicebus.windows.net%2fMyQueue&sig=pSrfJn5uRTiepgOTjBpjcf2gw%2bG34S1MYdCfkQkTC8A%3d&se=101&skn=OperationalPolicyKey`
+----
+
+==== Performance Considerations
+
+The Claims Based Security mechanism required to authenticate to Azure Service Bus using a SAS token involves exchanging messages with a special node. The latest impacts on connector's performance as tokens are exchanged per request in order to achieve connection security setup using targeted tokens (related to the resource being accessed). This has been optimized, starting from version 1.2, to impact performance as low as possible. Anyway, if your scenario requires sending several messages with high throughput it is recommended the connection strategy that requires setting the username and password. This is the simpler way to authenticate to Azure Service Bus with the connector while achieving better throughput, though it requires to write the password for the `shared access key name` you are using.
+
+NOTE: As said before, if you are experiencing performance issues when using the SAS strategy we recommend you updating to version 1.2 or higher. The optimized mechanism has lower performance impact on receiving & sending operations as the AMQP container and cache (respectively) keep the connection alive and token exchange messages occur only when setting up the connection and/or in case of token expiration.
+
+==== Using restricted access policies
+
+In cases where you have restrict access to your resources, having a security policy with permissions just at resource level, the connector cannot perform the `connectivity test` when it is starting up as this targets the root level of your namespace which might be forbidden due to the customized policy applied to the `shared access key`. For these scenarios, you need to skip the connectivity test with the configuration option available to this purpose, otherwise connetor's startup will fail.
+
+
 
 == Connector Operations
 
