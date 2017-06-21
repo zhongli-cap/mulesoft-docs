@@ -28,7 +28,7 @@ Mule throws a messaging error whenever an exception is thrown within a flow. +
 These errors are handled by the error handler scope.
 
 When a Mule Event being processed through a Mule flow raises an error, normal flow execution stops and the process is transferred to the message processor sequence within the error handler scope. +
-Inside the error handler scope you can incorporate various On Error scopes designed to match error types and expressions.  Within each on error scope that you configure,  you can incorporate any number of event processors to handle the error precisely as you wish.
+Inside the error handler scope you can incorporate various On Error scopes designed to match error types and expressions.  Within each on error scope that you configure, you can define an error path incorporating any number of event processors to handle the error precisely as you wish.
 
 The diagram below illustrates what happens when an event processor raises an error.
 
@@ -47,16 +47,26 @@ Mule supports three types of On Error Scopes. Each scope defines a different beh
 | If an error occurs within the Try scope, any other components in the scope are skipped, and execution continues immediately after the scope ends. +
 If a transaction is being handled, it’s committed.
 
+image:about-try-scope-46faf.png[]
+
 | On Error Propagate
 | If an error occurs within the Try scope, the execution of the entire flow breaks. If the failing Try scope is nested within another Try scope, execution is continued outside the parent scope. +
 If a transaction is being handled, it’s rolled back.
 
+image:about-try-scope-33c5d.png[]
 // COMBAK: On-Error retry not availabel for Beta
 // | On Error Retry
 // | If an error occurs within the Try scope, the entire scope is attempted again. +
 // There can only be one On Error Retry scope in each Error Handler.
-
 |===
+
+Each On Error Scope can be set up to be triggered by a different set of error types. Both in Studio and Design Center, you can pick from a list of errors that could be raised by the components you placed inside the scope.
+
+You can also set up a path to be triggered by type *All*, referring to all error types that aren't used by other paths. Note that conditions are evaluated in order, so for other paths to be evaluated, the *All* path must always be the last.
+
+As an alternative to mapping a path to a set of error types, you can map it to a freely defined condition. For example, you can map a path to a condition like this:
+
+`when error.cause.message.contains(“fatal”)`
 
 Each flow can contain only one error handler, however this error handler can contain as many On Error scopes as you see necessary. Except for On Error Retry scope, only one of these is allowed per Error Handler block.
 
@@ -64,6 +74,14 @@ Each flow can contain only one error handler, however this error handler can con
 // == Reconnection Strategies
 //
 // Reconnection strategy behavior resembles that of error handling, but provides instructions specifically for reconnection attempts.
+
+Within your flow, you can group a set of event processors that may throw an error inside a Try Scope. The Try Scope allows you enclose various event processors in your flow and assign it an Error Handler scope in case that operation may fail. +
+You can also configure the operation inside the Try Scope to be processed as a transaction.
+
+== Custom Error Types
+
+Each event processor allows you to map standard error types to a custom error type. When using multiple Try scopes, you can use these custom error types to differentiate similar errors that may occur in different parts of the flow. For example, if your flow has two HTTP Request connectors that reach out to different REST services, a connectivity error on either produces the same error message. By wrapping each in a different Try scope and setting custom error types, you can differentiate them.
+
 
 == See Also
 
