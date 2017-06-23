@@ -7,11 +7,9 @@ toc::[]
 
 // For Anypoint Studio, Design Center: FTP connector
 
-This example reads a JSON file from an FTP server, then writes a subset of that JSON content to a new file on the FTP server. The example uses DataWeave to map fields from the source file to fields in the destination file.
+This example reads a JSON file from an FTP server, then writes a subset of that JSON content to a new file on the FTP server. It uses DataWeave to map fields from the source file to fields in the destination file and to provide a name for the file that includes a timestamp.
 
-. Provide a Scheduler trigger for your flow.
-+
-You do not need to change any settings.
+. Provide a Scheduler trigger for your flow with a Fixed Frequency of 1 per second (where Frequency = 1 and Time Unit = Seconds).
 +
 . Set up a Read operation for the FTP connector:
 .. Set up or select a configuration for the FTP connector.
@@ -66,14 +64,23 @@ Assume that the JSON content has several records that look something like this:
 ----
 +
 . After the Read operation, configure a Write operation for the FTP connector:
-.. Continue to use the same FTP configuration that you used for the Read operation.
-.. In the Write operation, provide a Path to a new JSON file.
+.. Continue to use the same FTP connection configuration that you used for the Read operation.
+.. Provide a Path to a new JSON file.
 +
-Example: `/partial_record.json`
+Example: `#['partial_record_' ++ now() ++ '.json']`
++
+Note that the file name here includes a timestamp (for example, `partial_record_2017-06-23T06:38:27.232Z.json`) that is built from a `now()` operation in a DataWeave expression. The timestamp provides a unique name for each file that the Write operation creates.
 +
 .. Delete the value `payload` from the Content field.
-. Use the next set of steps on the Write operation to provide a mapping between JSON input and output examples.
-.. From the Input tab in the Write operation, Add and Save a custom JSON data type example with a name such as `My JSON Input` that looks like this:
++
+In subsequent steps, you will populate this field with a DataWeave expression that maps JSON content from your input file to a new output format.
++
+. Set the Write Mode to Create New, and enable the Lock.
++
+Each time the Scheduler triggers the flow, the Write operation will create a new file.
++
+. Follow the next set of steps on the Write operation to provide a mapping between JSON input and output examples:
+.. After clicking Map and then clicking the Sample Data tab at the bottom of the Content mapping window, add a JSON sample that looks like this:
 +
 ----
 [
@@ -98,7 +105,38 @@ Example: `/partial_record.json`
 ]
 ----
 +
-.. From the Output tab in the Write operation, Add and Save a custom JSON data type example with a name such as `My JSON Output` that provides a subset of the full input example:
+.. At the bottom of the Input column in the Content mapping window, click the Custom Data Type icon:
++
+icon: image:icon_custom_data_type.png[Customize Data Type icon]
++
+.. Provide a JSON data type example with a name such as `My JSON Input`:
++
+----
+[
+  {
+    "id": 1,
+    "name": "Leanne Graham",
+    "username": "Bret",
+    "email": "Sincere@april.biz",
+    "address": {
+      "street": "Kulas Light",
+      "suite": "Apt. 556",
+      "city": "Gwenborough",
+      "zipcode": "92998-3874",
+      "geo": {
+        "lat": "-37.3159",
+        "lng": "81.1496"
+      }
+    },
+    "phone": "1-770-736-8031 x56442",
+    "website": "hildegard.org"
+  }
+]
+----
++
+Be sure to Apply Changes to save your data type.
++
+.. At the bottom of the Output column in the Content mapping window, click the Custom Data Type icon for the output, and provide a JSON data type example with a name such as `My JSON Output`:
 +
 ----
 [
@@ -111,20 +149,16 @@ Example: `/partial_record.json`
   }
 ]
 ----
-.. From the Configuration tab in the Write operation, click Map and connect the Input fields to the Output fields.
 +
-Ignore all Input fields that do not have corresponding Output fields.
+Notice that this output example provides a subset of the full input example. Be sure to Apply Changes.
 +
-[cols="1,10"]
-|===
-| image:icon_custom_data_type.png[Customize Data Type button]
-| Customize Data Type button - If the Output column lacks your custom data type example, you can load it through this button (located at lower-left corner of the Output column).
-|===
+.. In the Content mapping window, connect the Input fields to the Output fields.
 +
-The mapping will look like this when you are done:
+Ignore all Input fields that do not have corresponding Output fields. The mapping will look like this when you are done:
 +
 image:ftp_read_map.png[FTP Read Operation Mapping]
-.. From the Source tab at the bottom of the Content window, make sure your source looks like this:
++
+.. From the Source tab at the bottom of the Content mapping window, make sure your source looks like this:
 +
 ----
 %dw 2.0
@@ -141,18 +175,28 @@ image:ftp_read_map.png[FTP Read Operation Mapping]
 ----
 +
 Note that you can change `(value0, index0)` to `(value0)` because the `index0` key is not needed for the transformation.
-.. Close the Content window.
 +
-In the Write operation, the Content should match the content in the Source tab.
+The source populates the Content field in the Configuration tab.
 +
-. Add a Logger to the end of your flow.
+. Add a Logger to the end of your flow with a Message that matches your data mapping:
 +
-Message setting: `payload`
-+
+----
+(payload map (value0) -> {
+    "id": value0.id,
+    "name": value0.name,
+    "username": value0.username,
+    "email": value0.email,
+    "website": value0.website
+  })
+----
 . Sync your application.
-. [Optional] Use a locally hosted FTP client, such a FileZilla, to see the new JSON file (here, `partial_record.json`) on your FTP server.
+. Once your application is running, check the Logs for the mapped content that prints each time the Scheduler triggers the flow.
 +
-It should look something like this:
+In the Logs, file content appears as INFO on a single line.
++
+[Optional] You can use a locally hosted FTP client, such a FileZilla, to see the new JSON files that the Write operation creates on your FTP server.
++
+The content looks like this:
 +
 ----
 [
