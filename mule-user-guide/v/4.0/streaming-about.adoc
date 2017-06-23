@@ -1,0 +1,39 @@
+= About Streaming in Mule 4.0
+
+In Mule 4.0 Stream refers to a conceptual stream of data, regardless of the type of the stream or the data it carries. +
+Streams in Mule 4.0 allow concurrent random access, meaning that any number of concurrent threads can safely access different positions of the stream.
+
+Every component in Mule 4.0 that returns an InputStream or a Streamable collection allows you to configure different streaming consumption strategies.
+//All these strategies will adhere to the same interface. Such interface will allow to know which feature set supports like if it allows to consume an stream/collection twice or not.
+
+== Streaming Strategies
+
+=== Repeatable in Memory Stream
+
+This configuration uses an in-memory buffer to provide repeatable access to any input stream. It uses a buffer with an initial buffer size, which can be
+expanded up to a configurable threshold. +
+This is the most performant way of providing repeatable access, as long as the size of all the concurrent stream contents fits into memory.
+
+=== File Stored Input Stream
+
+This strategy uses a temporal file to provide repeatable access to any input stream. +
+It initially uses a buffer of a fixed size. When the buffer overflows, a temporary file is used to store the contents and support the repeatable random access.
+
+// COMBAK: Confirm.
+//This is the default behavior.
+
+[CAUTION]
+This option is only available on Mule EE
+
+=== Non Repeatable Stream
+
+This strategy allows users to read an input stream only once. This strategy does not allow to seek randomly in the input stream so it's not be suitable for scenarios in which the stream needs to be consumed more than once (e.g: logger + dw or two transformations over the same auto paged output).
+
+Since the Stream is not readable twice, having this kind of configuration let flows fail if there’s a component in the configuration that is trying to access a big input stream before the actual streaming component is executed. +
+This implementation grants optimum performance for users that may need to move data from one system to another. +
+
+Using this configuration means that the raw InputStream is used and the rules of the underlying stream apply.
+
+== See Also
+
+* link:/mule-user-guide/v/4.0/streaming-strategies-reference[Streaming Strategies Reference]
