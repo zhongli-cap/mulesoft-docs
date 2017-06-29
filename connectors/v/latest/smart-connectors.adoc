@@ -5,9 +5,9 @@
 
 == About Smart Connectors
 
-A Smart Connector is a framework for creating Connectors that can then be used as part of a Mule application. It allows you to do so entirely in Mule DSL, taking advantage of knowledge that Mule developers already have.
+A Smart Connector is a component that can be used in Mule applications that is custom created via a specific framework. This framework allows you to create components entirely by using other existing Mule components.
 
-Even for novice Mule runtime users will be simple, as there are just a few syntactic idoms around a Smart Connector such as the `<module>`, `<operation>s`, or `<parameter>s`. Below is a short snippet that defines a single operation in the `Math Smart Connector`:
+Creating a Smart Connector should feel familiar to someone with experience creating Mule applications. The framework adds just a few syntactic idioms around Smart Connectors, such as `<module>`, `<operation>s`, and `<parameter>s`. Below is a short snippet that defines a single operation in the `Math Smart Connector`:
 
 [source,xml,linenums]
 ----
@@ -22,28 +22,43 @@ Even for novice Mule runtime users will be simple, as there are just a few synta
 </module>
 ----
 
-Its usage in a Mule `<flow>` element will be the same as any other connector, executing the flow `"random-flow"` will put the `"Hello World!"` value (result of executing the operation `<hello-smart-connector:say-hello>`) into the payload:
+The usage of this component in a Mule `<flow>` element is the same as that of any other connector. In the example below, executing the flow `"random-flow"` sets the payload to `"Hello World!"`, as defined in the operation `<hello-smart-connector:say-hello>`.
+
 [source,xml,linenums]
 ----
 <flow name="random-flow">
   <hello-smart-connector:say-hello>
 </module>
 ----
-A great advantage of building through Smart Connectors is its debugging capabilities, once created, a connector can be easily debuggable by any user as its internals are composed of either already known message processors (e.g.: `mule:set-payload`, `http:requester`, `mule:choice`, etc.) or unknown (e.g.: `sfdc:create`).
 
-It is also worth of mentioning that a Smart Connector is strongly typed, which means every defined parameter for every operation is statically known, for both input and outputs.
+When debugging a smart connector, the reuse of existing components greatly reduces the difficulty of finding where an error is.
+
+It's also worth mentioning that Smart Connectors are strongly typed. This means that every defined parameter for every operation is statically known, for both the input and output.
 
 == Basics of a Smart Connectors
-The structure of a Smart Connector is composed by three distinctive and key elements that will delineate both behavior and contract of it: *operations*, *properties + global elements* and *module*.
+
+The structure of a Smart Connector is composed of three key elements that delineate both its behavior and contract:
+
+////
+its contract?  there must be a better way to say this
+////
+
+
+* *operations*
+* *properties + global elements*
+* *module*.
+
 
 === Operation
-An `<operation>`, similarly to a function, is a prescriptive way of defining a set of input parameters and a single output. Any given operation will have three well defined blocks: *input parameters*, *body* and *output*, similar to a function with the following conditions.
 
-* *Input parameters*: declares a set of types to be entered when calling the operation. Keep in mind that these parameters are the only data the message processors within the `<body>` scope will be able to read.
-* *Body*: a chain of message processors (e.g.: `mule:set-payload`, `http:requester`, `mule:choice`, etc.) to be executed.
-* *Output*: declares the result of the `<body>` execution. Notice that the outcome of an operation is what was left behind as the payload in the current event.
+An `<operation>`, similar to a function, is a prescriptive way of defining a set of input parameters and a single output.  Like a function, it has *input parameters*, *body* and *output*, which are defined through these blocks:
 
-Lets create a Smart Connector with a single operation that does the sum of two numbers
+* *Input parameters*: declares a set of types to be entered when calling the operation. Keep in mind that these parameters are the only data that the message processors in the `<body>` scope have access to.
+* *Body*: defines a chain of components to be executed (e.g.: `mule:set-payload`, `http:requester`, `mule:choice`, etc.).
+* *Output*: defines the output of your smart connector. This is the payload of the event after being processed by the `<body>`.
+
+The following Smart Connector has a single operation that does the sum of two numbers:
+
 [source,xml,linenums]
 ----
 <module name="Math Smart Connector"...>
@@ -60,7 +75,9 @@ Lets create a Smart Connector with a single operation that does the sum of two n
   </operation>
 </module>
 ----
-To invoke this from a Mule Application, we would need to do the following:
+
+To invoke this smart connector from a Mule Application, use it in a flow:
+
 [source,xml,linenums]
 ----
 <flow name="mule-flow">
@@ -69,7 +86,7 @@ To invoke this from a Mule Application, we would need to do the following:
 </flow>
 ----
 
-*<parameter> attributes*
+.Attributes of *<parameter>*
 |===
 |name | use | default value | description
 
@@ -81,17 +98,17 @@ To invoke this from a Mule Application, we would need to do the following:
 |defaultValue
 |optional
 |NA
-|If used, when invoking the current `<operation>` without any value for this `<parameter>`, it will take the default value.
+|If used, when invoking the current `<operation>` without any value for this `<parameter>`, it takes the default value.
 
 |use
 |required
 |AUTO
-| Set of defined uses for a given property/parameter. *REQUIRED* implies the property/parameter must be present. It can not be *REQUIRED* if the parameter/property has a defaultValue; *OPTIONAL* implies the property/parameter could be absent; *AUTO* will default at runtime to *REQUIRED* if defaultValue is absent, otherwise it will be marked as *OPTIONAL*.
+| Set of defined uses for a given property/parameter. *REQUIRED* implies the property/parameter must be present. It cannot be *REQUIRED* if the parameter/property has a defaultValue; *OPTIONAL* implies the property/parameter could be absent; *AUTO* defaults at runtime to *REQUIRED* if defaultValue is absent, otherwise it's marked as *OPTIONAL*.
 
 |type
 |required
 |NA
-|Defines the type of the `<parameter>` by using any primitive type such as *string*, *boolean*, *datetime*, *date*, *integer*, *time*, or it can also rely on any type defined in the catalog.
+|Defines the type of the `<parameter>`. Use any primitive type such as *string*, *boolean*, *datetime*, *date*, *integer*, *time*, or it can also rely on any type defined in the catalog.
 
 |password
 |optional
@@ -101,7 +118,7 @@ To invoke this from a Mule Application, we would need to do the following:
 |role
 |required
 |BEHAVIOUR
-|Set of defined roles for a given parameter that modifies the generated XSD for the current `<parameter>`. *BEHAVIOUR* will render an attribute; *CONTENT* implies support for DataWeave in place as a child element; *PRIMARY* works similarly to *CONTENT* although it also implies it will map to the payload by default.
+|Set of defined roles for a given parameter that modifies the generated XSD for the current `<parameter>`. *BEHAVIOUR* renders an attribute; *CONTENT* implies support for DataWeave in place as a child element; *PRIMARY* works similarly to *CONTENT* although it also implies it maps to the payload by default.
 
 |doc:description
 |optional
@@ -109,7 +126,17 @@ To invoke this from a Mule Application, we would need to do the following:
 |Documentation of the current `<parameter>`
 |===
 
-Finally, the attribute `type=".."` of the `<output>` element is allowed to use `void` as a valid value, which will make the `<operation>` call not modify the event *despite* of putting values in the payload as described above.
+
+.Attributes of *<output>*
+|===
+|name | use | default value | description
+|type
+|required
+|
+| The type of the output data. It can be set to `void`, which prevents the `<operation>` call from modifying the Mule event, even if its behavior includes modifying the payload.
+
+|===
+
 
 === Properties + Global elements
 There will be cases where several operations will need to handle state between them, which is the case of a connector that handles session to an external API. A configuration of a Smart Connector is composed by two well defined elements: *properties* and *global elements*.
