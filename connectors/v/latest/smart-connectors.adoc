@@ -37,21 +37,17 @@ It's also worth mentioning that Smart Connectors are strongly typed. This means 
 
 == Basics of a Smart Connectors
 
-The structure of a Smart Connector is composed of three key elements that delineate both its behavior and contract:
-
-////
-its contract?  there must be a better way to say this
-////
+The structure of a Smart Connector is composed of three key elements that delineate both its behavior and how the runtime interacts with it:
 
 
 * *operations*
-* *properties + global elements*
-* *module*.
+* *properties*
+* *module*
 
 
 === Operation
 
-An `<operation>`, similar to a function, is a prescriptive way of defining a set of input parameters and a single output.  Like a function, it has *input parameters*, *body* and *output*, which are defined through these blocks:
+An `<operation>`, similar to a function, is a prescriptive way of defining a set of input parameters and a single output. Like a function, it has *input parameters*, *body* and *output*, which are defined through these blocks:
 
 * *Input parameters*: declares a set of types to be entered when calling the operation. Keep in mind that these parameters are the only data that the message processors in the `<body>` scope have access to.
 * *Body*: defines a chain of components to be executed (e.g.: `mule:set-payload`, `http:requester`, `mule:choice`, etc.).
@@ -138,13 +134,30 @@ To invoke this smart connector from a Mule Application, use it in a flow:
 |===
 
 
-=== Properties + Global elements
-There will be cases where several operations will need to handle state between them, which is the case of a connector that handles session to an external API. A configuration of a Smart Connector is composed by two well defined elements: *properties* and *global elements*.
+=== Properties
 
-* *Properties*: similarly to the `<parameter>` exposed by operations, they are usually simple types to initialize elements of the Smart Connector or have default values for every operation.
-* *Global Elements*: Mule link:https://docs.mulesoft.com/mule-user-guide/v/3.7/global-elements[Global elements], such as `<http:requester-config ../>`, to delegate connectivity to, allowing the use of any other connector in a Smart Connector.
+////
+should we call them global properties?
+////
 
-The intention behind using a parametrization by properties is to expose just the right amount of values for a given Smart Connector, not "confusing" the consumer of it by setting lots of properties.
+A <property> is a field meant to be defined by the user of the Smart Connector, that configures it globally for the entire Muel project it's being used in.
+
+These are similar to the parameters exposed by operations, but they act at a level that affects all instances of this smart connector in their project, instead of a specific operation. Just like the parameters in operations, properties are usually simple types and have default values.
+
+////
+  they are usually simple types to initialize elements of the Smart Connector or have default values for every operation.
+
+^ is this all well represented above?
+////
+
+[TIP]
+For the sake of the users of your smart connector, you should expose just the necessary properties that they might want to edit and nothing else, to avoid confusing them.
+
+
+
+
+
+
 As a sample, lets imagine we create a Smart Connector that hits link:https://developer.github.com/v3/users/#get-the-authenticated-user[GitHub API V3] to retrieve an authenticated user:
 [source,xml,linenums]
 ----
@@ -235,8 +248,17 @@ In this sample we are seeing how a `<property>` can be used in a global element 
 |Documentation of the current `<parameter>`
 |===
 
+
+
+* *Global Elements*: Mule link:https://docs.mulesoft.com/mule-user-guide/v/3.7/global-elements[Global elements], such as `<http:requester-config ../>`, to delegate connectivity to, allowing the use of any other connector in a Smart Connector.
+
+There will be cases where several operations will need to handle state between them, which is the case of a connector that handles session to an external API.
+
+
+
 === Module
-The `<module>` element is the root element of the Smart Connector, which helds the responsibility of assembling the previous concepts in a single package.
+
+The `<module>` element is the root element of the Smart Connector, which holds the responsibility of assembling properties and operations into a single package.
 
 *<module> attributes*
 |===
@@ -317,7 +339,8 @@ The way of importing the Smart Connector schema in a Mule Application is by usin
 |`namespace=http://www.mulesoft.org/schema/mule/hello-with-spaces/current/mule-hello-with-spaces.xsd`
 |===
 
-The following Smart Connector will have just the `name="hello with spaces"`, which means that the `prefix` value will be dynamically generated from the `name`, ended up in `hello-with-spaces`, to which will create a dynamic `namespace` with the value of `http://www.mulesoft.org/schema/mule/hello-with-spaces/current/mule-hello-with-spaces.xsd` which means the Mule Application must have the a schema location pointing at a reference that matches to that value
+The following module only has a `name` attribute `name="hello with spaces"`. This means that its `prefix` is dynamically generated as `hello-with-spaces`, and its `namespace` is dynamically generated as `http://www.mulesoft.org/schema/mule/hello-with-spaces/current/mule-hello-with-spaces.xsd`. This means the Mule Application must have the a schema location pointing at a reference that matches that value.
+
 [source,xml,linenums]
 ----
 <module name="hello with spaces" minMuleVersion="4.0.0"
@@ -326,7 +349,9 @@ The following Smart Connector will have just the `name="hello with spaces"`, whi
   <operation name="an-operation" />
 </module>
 ----
-The usage in a Mule Application will be:
+
+This component can be used in a Mule application as in the example below.
+
 [source,xml,linenums]
 ----
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
