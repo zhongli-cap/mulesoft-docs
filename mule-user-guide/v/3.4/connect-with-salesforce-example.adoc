@@ -6,7 +6,7 @@ This application uses pre-packaged tools to intelligently connect with Salesforc
 
 ==== Connect with Salesforce
 
-image:csv_to_sfdc2.png[csv_to_sfdc2]At times, you may find that you need to connect one or more of your organization's on-premise systems with a SaaS such as Salesforce. Ideally, these independent systems would talk to each other and share data to enable automation of end-to-end business processes. Use Mule applications to facilitate communication between your on-prem system(s) and Salesforce. (Though this use case does not extend as far, you can also use Mule to facilitate communication between SaaS providers.)
+At times, you may need to connect one or more of your organization's on-premise systems with a SaaS such as Salesforce. Ideally, these independent systems would talk to each other and share data to enable automation of end-to-end business processes. Use Mule applications to facilitate communication between your on-prem system(s) and Salesforce. (Though this use case does not extend as far, you can also use Mule to facilitate communication between SaaS providers.)
 
 == Assumptions
 
@@ -25,7 +25,6 @@ image::contacts-to-SFDC.png[contacts-to-SFDC]
 
 Complete the following procedure to create, then run this example in your own instance of Mule Studio. Skip ahead to the <<How it Works>> if you prefer to simply examine this example via screenshots and code snippets.
 
-[WARNING]
 To witness end-to-end functionality, you must have an active Salesforce account into which you don't mind inserting three sample contacts. After this application automatically uploads these contacts, you can manually delete them in your Salesforce account.
 
 . *Create* the example application in Mule Studio. _Do not run the application._
@@ -36,23 +35,17 @@ To witness end-to-end functionality, you must have an active Salesforce account 
 . In your SaaS Integration application in Mule Studio, click the *Global Elements* tab. 
 . Double-click the Salesforce global element to open its *Global Element Properties* panel. In the *Security Token* field, paste the new Salesforce token you copied from the email. Alternatively, configure the global element in the XML Editor.
 +
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
 image::global_initial.png[global_initial]
-....
-[tab,title="Studio XML Editor"]
-....
++
+Alternatively, in the Studio XML Editor:
++
 [source, xml, linenums]
 ----
 <sfdc:config name="Salesforce" username="testsfdc@mulesoft.com" password="password"  doc:name="Salesforce" securityToken="bgfsG5688kroeemIHMnYJ">
         <sfdc:connection-pooling-profile initialisationPolicy="INITIALISE_ONE" exhaustedAction="WHEN_EXHAUSTED_GROW"/>
     </sfdc:config>
 ----
-....
-------
-
++
 . Change the contents of the *Username* and *Password* fields to your account-specific values, then click *OK* to save your changes.
 . Back in the connector's Properties Editor, set the *Operation* to 'Create' and the *sObject Type* to 'Contact'.
 . In the *Package Explorer*, right-click the SaaS Integration project name, then select *Run As* > *Mule Application*. Studio runs the application on the embedded server.  
@@ -67,7 +60,7 @@ image::global_initial.png[global_initial]
 . Stop the Mule application by clicking the square, red terminate button in the *Console*.
 . Delete the three sample contacts from your Salesforce account.
 
-== How it Works
+== How it Works (Studio Visual Editor)
 
 Using a single flow with three elements, this application accepts CSV files which contain contact information, then uploads the contacts to Salesforce. 
 
@@ -77,12 +70,8 @@ While the application's functionality is relatively straightforward, the beauty 
 
 . Set a File endpoint into your application, completing the simple configuration to enable it poll a specific folder for input files.
 +
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
 image::file_Endpoint_studio.png[file_Endpoint_studio]
-
++
 [cols="2*"]
 |===
 |*Field* |*Value*
@@ -91,53 +80,12 @@ image::file_Endpoint_studio.png[file_Endpoint_studio]
 |Move to Directory |`src/test/resources/output`
 |Polling Frequency |`10000`
 |===
-....
-[tab,title="Studio XML Editor"]
-....
-[source, xml, linenums]
-----
-<file:inbound-endpoint path="src/test/resources/input" moveToDirectory="src/test/resources/output" pollingFrequency="10000" responseTimeout="10000" doc:name="File Input"/>
-----
-
-[cols="2*"]
-|===
-|*Attribute* |*Value*
-|path |`src/test/resources/input`
-|moveToDirectory |`src/test/resources/output`
-|pollingFrequency |`10000`
-|doc:name |`File Input`
-|===
-....
-------
-
++
 . Next, add a Salesforce Connector to the flow. At this point, you can configure the connector with your Salesforce account-specific details and test the connection to Salesforce. Not only does the embedded Mule DataSense functionality confirm that you have a clear channel for communication, it gathers metadata about Salesforce objects and the type of data it accepts. (The value of this metadata becomes apparent with the introduction of a DataMapper into the flow further in this procedure.)
 +
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
 .. Modify the display name for the connector, if you wish, then click the *plus sign* next to the *Config Reference* drop-down to create a new *Global Element*.
 .. Select the *Salesforce* global element, then click *OK*.
 .. Enter values in the U *sername*, P *assword* and *Security token* fields, then click *OK*. (See the Set Up section above for details on how to acquire the security token.) Notice that Studio automatically enables DataSense in the global element.
-+
-image::/docs/download/attachments/95393757/global_salesforce.png?version=1&modificationDate=1374599130837[image]
-....
-[tab,title="Studio XML Editor"]
-....
-[source, xml, linenums]
-----
-<sfdc:config name="Salesforce" username="testsfdc@mulesoft.com" password="password"  doc:name="Salesforce" securityToken="bgfsG5688kroeemIHMnYJ">
- 
-        <sfdc:connection-pooling-profile initialisationPolicy="INITIALISE_ONE" exhaustedAction="WHEN_EXHAUSTED_GROW"/>
- 
-    </sfdc:config>
-<flow>
-...
-</flow>
-----
-....
-------
-
 . When you click OK, Mule tests the connection to Salesforce (see image below). With a valid username, password and security token, the connection test results in success and Mule saves your global element configurations. If any of the values are invalid, the connection test results in failure, and Mule does not save the global element, prompting you to correct the invalid configurations.
 +
 image::getting_metadata.png[getting_metadata]
@@ -165,14 +113,35 @@ image::dataMapper.png[dataMapper]
 +
 image::sfdc_contact_list.png[sfdc_contact_list]
 +
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
 image::flow_contacts_to_sfdc.png[flow_contacts_to_sfdc]
-....
-[tab,title="Studio XML Editor"]
-....
+
+== How it Works (Studio XML Editor)
+
+[source, xml, linenums]
+----
+<file:inbound-endpoint path="src/test/resources/input" moveToDirectory="src/test/resources/output" pollingFrequency="10000" responseTimeout="10000" doc:name="File Input"/>
+----
+
+Attributes and values are:
+
+* path: `src/test/resources/input`
+* moveToDirectory: `src/test/resources/output`
+* pollingFrequency:`10000`
+* doc:name: `File Input`
+
+
+[source, xml, linenums]
+----
+<sfdc:config name="Salesforce" username="testsfdc@mulesoft.com" password="password"  doc:name="Salesforce" securityToken="bgfsG5688kroeemIHMnYJ">
+ 
+        <sfdc:connection-pooling-profile initialisationPolicy="INITIALISE_ONE" exhaustedAction="WHEN_EXHAUSTED_GROW"/>
+ 
+    </sfdc:config>
+<flow>
+...
+</flow>
+----
+
 [source, xml, linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
@@ -215,8 +184,6 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
  
 </mule> 
 ----
-....
-------
 
 == Documentation
 
@@ -226,10 +193,10 @@ Studio includes a feature that enables you to easily export all the documentatio
 * The XML configuration which corresponds to each flow in your application
 * The text you entered in the Documentation tab of any building block in your flow
 
-Follow link:/docs/display/34X/Importing+and+Exporting+in+Studio#ImportingandExportinginStudio-ExportingStudioDocumentation[the procedure] to export auto-generated Studio documentation.
-
 == See Also
 
-* Learn more about link:/mule-user-guide/v/3.4/testing-connections[Connection Testing] and link:/mule-user-guide/v/3.4/mule-datasense[Mule DataSense].
-* Learn more about link:/anypoint-studio/v/6/datamapper-user-guide-and-reference[Anypoint DataMapper].
-* Examine other http://www.mulesoft.org/documentation/display/33X/Mule+Examples[Mule application examples], particularly the link:/mule-user-guide/v/3.4/legacy-modernization-example[Legacy Modernization] and link:/mule-user-guide/v/3.4/xml-only-soap-web-service-example[XML-only SOAP Web Service] examples which also use DataMapper.
+* link:/mule-user-guide/v/3.4/testing-connections[Connection Testing]
+* link:/mule-user-guide/v/3.4/mule-datasense[Mule DataSense].
+* link:/anypoint-studio/v/6/datamapper-user-guide-and-reference[Anypoint DataMapper].
+* link:/mule-user-guide/v/3.4/legacy-modernization-example[Legacy Modernization]
+* link:/mule-user-guide/v/3.4/xml-only-soap-web-service-example[XML-only SOAP Web Service]
