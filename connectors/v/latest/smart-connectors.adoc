@@ -5,9 +5,9 @@
 
 == About Smart Connectors
 
-A Smart Connector is a component that can be used in Mule applications that is custom created via a specific framework. This framework allows you to create components entirely by using other existing Mule components.
+A Smart Connector is a component that can be used in Mule applications that's been custom created via a specific framework. This framework allows you to create components entirely by using other existing Mule components.
 
-Creating a Smart Connector should feel familiar to someone with experience creating Mule applications. The framework adds just a few syntactic idioms around Smart Connectors, such as `<module>`, `<operation>s`, and `<parameter>s`. Below is a short snippet that defines a single operation in the `Math Smart Connector`:
+Creating a Smart Connector should feel familiar to someone with experience creating Mule applications. The framework adds just a few syntactic idioms to enclose the main parts of Smart Connectors, such as `<module>`, `<operation>s`, and `<parameter>s`. Below is a short snippet that defines a single operation in the `Math Smart Connector`:
 
 [source,xml,linenums]
 ----
@@ -22,7 +22,7 @@ Creating a Smart Connector should feel familiar to someone with experience creat
 </module>
 ----
 
-The usage of this component in a Mule `<flow>` element is the same as that of any other connector. In the example below, executing the flow `"random-flow"` sets the payload to `"Hello World!"`, as defined in the operation `<hello-smart-connector:say-hello>`.
+The usage of this component in a Mule flow is the same as that of any other connector. In the example below, executing the flow `"random-flow"` sets the payload to `"Hello World!"`, as defined in the operation `<hello-smart-connector:say-hello>`.
 
 [source,xml,linenums]
 ----
@@ -40,20 +40,23 @@ It's also worth mentioning that Smart Connectors are strongly typed. This means 
 The structure of a Smart Connector is composed of three key elements that delineate both its behavior and how the runtime interacts with it:
 
 
-* *operations*
-* *properties*
-* *module*
+* *Operations*
+* *Properties*
+* The enclosing *Module*
 
 
 === Operation
 
-An `<operation>`, similar to a function, is a prescriptive way of defining a set of input parameters and a single output. Like a function, it has *input parameters*, *body* and *output*, which are defined through these blocks:
+An `<operation>`, similar to a function, is a prescriptive way of defining a set of input parameters and a single output. Like a function, it has *input parameters*, it performs actions (described in the *body*) and has a single *output*. Unlike a function, the behavior of an operation could vary if it stores values or references external sources.
 
-* *Input parameters*: declares a set of types to be entered when calling the operation. Keep in mind that these parameters are the only data that the message processors in the `<body>` scope have access to.
-* *Body*: defines a chain of components to be executed (e.g.: `mule:set-payload`, `http:requester`, `mule:choice`, etc.).
-* *Output*: defines the output of your smart connector. This is the payload of the event after being processed by the `<body>`.
 
-The following Smart Connector has a single operation that does the sum of two numbers:
+* *Input parameters*: declares a set of types to be entered when calling the operation.
++
+Keep in mind that these parameters are the only data that the message processors in the `<body>` scope have access to.
+* *Body*: defines a chain of components to be executed just like in a flow.
+* *Output*: declares the output of your smart connector. This is the payload of the event after being processed by the `<body>`.
+
+The following Smart Connector takes two numbers as parameters and has a single operation that sums them together:
 
 [source,xml,linenums]
 ----
@@ -83,8 +86,9 @@ To invoke this smart connector from a Mule Application, use it in a flow:
 ----
 
 .Attributes of *<parameter>*
+[%header,cols="20,20,30,70a"]
 |===
-|name | use | default value | description
+|Name | Use | Default Value | Description
 
 |name
 |required
@@ -99,7 +103,11 @@ To invoke this smart connector from a Mule Application, use it in a flow:
 |use
 |required
 |AUTO
-| Set of defined uses for a given property/parameter. *REQUIRED* implies the property/parameter must be present. It cannot be *REQUIRED* if the parameter/property has a defaultValue; *OPTIONAL* implies the property/parameter could be absent; *AUTO* defaults at runtime to *REQUIRED* if defaultValue is absent, otherwise it's marked as *OPTIONAL*.
+| Possible values:
+
+* *REQUIRED* parameter must be present. It cannot be *REQUIRED* if the parameter has a defaultValue
+* *OPTIONAL* parameter could be absent
+* *AUTO* defaults at runtime to *REQUIRED* if defaultValue is absent, otherwise marks it as *OPTIONAL*.
 
 |type
 |required
@@ -114,7 +122,11 @@ To invoke this smart connector from a Mule Application, use it in a flow:
 |role
 |required
 |BEHAVIOUR
-|Set of defined roles for a given parameter that modifies the generated XSD for the current `<parameter>`. *BEHAVIOUR* renders an attribute; *CONTENT* implies support for DataWeave in place as a child element; *PRIMARY* works similarly to *CONTENT* although it also implies it maps to the payload by default.
+|Set of defined roles for a given parameter that modifies the generated XSD for the current `<parameter>`.
+
+* *BEHAVIOUR* renders an attribute.
+* *CONTENT* implies support for DataWeave in place as a child element.
+* *PRIMARY* works similarly to *CONTENT* but maps to the payload by default.
 
 |doc:description
 |optional
@@ -124,8 +136,9 @@ To invoke this smart connector from a Mule Application, use it in a flow:
 
 
 .Attributes of *<output>*
+[%header,cols="20,20,30,70a"]
 |===
-|name | use | default value | description
+|Name | Use | Default Value | Description
 |type
 |required
 |
@@ -140,9 +153,9 @@ To invoke this smart connector from a Mule Application, use it in a flow:
 should we call them global properties?
 ////
 
-A <property> is a field meant to be defined by the user of the Smart Connector, that configures it globally for the entire Muel project it's being used in.
+A <property> is a field meant to be defined by the user of the Smart Connector, that configures it globally for the entire Mule project it's being used in.
 
-These are similar to the parameters exposed by operations, but they act at a level that affects all instances of this smart connector in their project, instead of a specific operation. Just like the parameters in operations, properties are usually simple types and have default values.
+These are similar to the parameters exposed by operations, but they act at a level that affects all instances of this smart connector in the project, instead of just a specific operation. Like the parameters in operations, properties are usually simple types and have default values.
 
 ////
   they are usually simple types to initialize elements of the Smart Connector or have default values for every operation.
@@ -151,14 +164,11 @@ These are similar to the parameters exposed by operations, but they act at a lev
 ////
 
 [TIP]
-For the sake of the users of your smart connector, you should expose just the necessary properties that they might want to edit and nothing else, to avoid confusing them.
+For the sake of the users of your smart connector, you should expose just the necessary properties that they might want to edit and nothing else. Don't confuse your users by exposing internal values they can't or shouldn't change.
 
 
+The following Smart Connector sends requests to link:https://developer.github.com/v3/users/#get-the-authenticated-user[GitHub API V3] to retrieve an authenticated user:
 
-
-
-
-As a sample, lets imagine we create a Smart Connector that hits link:https://developer.github.com/v3/users/#get-the-authenticated-user[GitHub API V3] to retrieve an authenticated user:
 [source,xml,linenums]
 ----
 <module name="Github" minMuleVersion="4.0.0" ...>
@@ -181,7 +191,15 @@ As a sample, lets imagine we create a Smart Connector that hits link:https://dev
   </operation>
 </module>
 ----
-To properly consume the previous Smart Connector, we would need something like the following in a Mule Application:
+
+This sample makes use of a `<property>` that is referenced twice in the module where it's defined:
+
+* In a global element (as the value for `http:requester-config`)
+* In an operation (as the value for `config-ref`)
+
+
+The mule application below makes use of this Smart Connector:
+
 [source,xml,linenums]
 ----
 <mule ...>
@@ -191,7 +209,9 @@ To properly consume the previous Smart Connector, we would need something like t
   </flow>
 </mule>
 ----
-Every execution of the `"test-github-flow"` will return, if provided with the correct credentials, the GitHub information of the authenticated user:
+
+Every execution of the `"test-github-flow"` returns the GitHub information of the authenticated user:
+
 [source,json,linenums]
 ----
 {
@@ -203,7 +223,9 @@ Every execution of the `"test-github-flow"` will return, if provided with the co
   ...
 }
 ----
-Or the error response from GitHub:
+
+If the right credentials aren't provided, it returns this error response from GitHub:
+
 [source,json,linenums]
 ----
 {
@@ -211,11 +233,11 @@ Or the error response from GitHub:
   "documentation_url": "https://developer.github.com/v3"
 }
 ----
-In this sample we are seeing how a `<property>` can be used in a global element as the `http:requester-config`, but it is also accessible from any `<operation>` within the `<module>` its defined.
 
 *<property> attributes*
+[%header,cols="20,20,30,70a"]
 |===
-|name | use | default value | description
+|Name | Use | Default Value | Description
 
 |name
 |required
@@ -225,12 +247,16 @@ In this sample we are seeing how a `<property>` can be used in a global element 
 |defaultValue
 |optional
 |NA
-|If used, when invoking the current `<module>` without any value for this `<property>`, it will take the default value.
+|If used, when invoking the current `<module>` without any value for this `<property>`, takes the default value.
 
 |use
 |required
 |AUTO
-| Set of defined uses for a given property/parameter. *REQUIRED* implies the property/parameter must be present. It can not be *REQUIRED* if the parameter/property has a defaultValue; *OPTIONAL* implies the property/parameter could be absent; *AUTO* will default at runtime to *REQUIRED* if defaultValue is absent, otherwise it will be marked as *OPTIONAL*.
+| Possible values:
+
+* *REQUIRED* property must be present. It cannot be *REQUIRED* if the property has a defaultValue
+* *OPTIONAL* property could be absent
+* *AUTO* defaults at runtime to *REQUIRED* if defaultValue is absent, otherwise marks it as *OPTIONAL*.
 
 |type
 |required
@@ -240,7 +266,7 @@ In this sample we are seeing how a `<property>` can be used in a global element 
 |password
 |optional
 |false
-|Marks the `<parameter>` with `\****` in the UI.
+|Hides the value of the parameter in the UI when typing it (using `\****`).
 
 |doc:description
 |optional
@@ -250,19 +276,25 @@ In this sample we are seeing how a `<property>` can be used in a global element 
 
 
 
+
+
+
+
+
+
+
 * *Global Elements*: Mule link:https://docs.mulesoft.com/mule-user-guide/v/3.7/global-elements[Global elements], such as `<http:requester-config ../>`, to delegate connectivity to, allowing the use of any other connector in a Smart Connector.
 
-There will be cases where several operations will need to handle state between them, which is the case of a connector that handles session to an external API.
-
-
+There are cases where several operations need to handle a single state between them. This is the case of a connector that handles session to an external API.
 
 === Module
 
 The `<module>` element is the root element of the Smart Connector, which holds the responsibility of assembling properties and operations into a single package.
 
 *<module> attributes*
+[%header,cols="20,20,30,70a"]
 |===
-|name | use | default value | description
+|Name | Use | Default Value | Description
 
 |name
 |required
