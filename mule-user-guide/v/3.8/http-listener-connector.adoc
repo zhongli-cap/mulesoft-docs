@@ -1,104 +1,22 @@
-= HTTP Listener Connector
+= About the HTTP Listener Configuration
 :keywords: anypoint studio, esb, connectors, http, https, http headers, query parameters, rest, raml
 
-== Introduction
-
-The HTTP Listener Connector provides the most practical way to *listen for HTTP requests*.
-
-The connector can be configured to accept any request, or to accept only those requests addressed to a specific URI. You can choose what methods the connector accepts: GET, POST, etc.
-
-The *request body* is passed on to the next element of the Mule flow as the _message payload_ of a Mule Message, while headers, query parameters, URI parameters and other elements of the HTTP Request are passed on as _inbound properties_. These properties are accessible within a Mule message from your Mule application.
+You can configure the HTTP connector to accept any request, or to accept only those requests addressed to a specific URI. You can choose what methods the connector accepts, such as GET or POST. The request body is passed on to the next element of the Mule flow as the _message payload_ of a Mule message, while headers, query parameters, URI parameters and other elements of the HTTP Request are passed on as attributes. These properties are accessible within a Mule message from your Mule application.
 
 This connector can also use HTTPS protocol and encrypt your communications via TLS.
 
-The connector can also be configured to provide response codes and clarifications, both for success and error outcomes, allowing you to present different error messages depending on the case.
+You can configure response codes and clarifications for success and error outcomes to present different error messages depending on the case.
 
-In Studio, to instantiate the connector as an HTTP Listener Connector (and not an link:/mule-user-guide/v/3.8/http-request-connector[HTTP Request Connector]), you must place it into the _Source_ section of a flow.
+== Setting the Host Option
 
+To listen on a specific port for every network interface on the server, you set host to `0.0.0.0`. The app listens for requests on the following interfaces:
 
-== Minimum Configuration
+* `http://localhost:8081/mybasepath`
+* `http://127.0.0.2:8081/mybasepath`
 
-Simply configure the connector to listen for incoming HTTP requests that can be expected to reach a given HTTP address. The following example shows the minimum configuration required for this connector:
+To deploy a project to CloudHub, set host = `0.0.0.0`. 
 
-
-In the connector component on your flow, the only required fields are the *Path* (the https://url.spec.whatwg.org/#syntax-url-path-absolute[path-absolute URL] defining the resource location), which by default is `/`, and a configuration reference to a global element, containing the necessary parameters *Host* and *Port*.
-
-image:http-listener-connector-95329.png[basic+listener+1]
-
-== Global Element
-
-As with most connectors in Studio, much of the configuration is encapsulated in a globally accessible object called a "global element" that can then be referenced by as many instances of the connector as you desire. In this case the global element defines a server connection to a particular network interface and port and handles incoming requests from it.
-
-[NOTE]
-The use of global elements is especially useful when having multiple connectors that must use the same settings, as the server connection must only be defined once.
-
-=== Configuring a Global Element for the Connector
-
-In the global element, the only required fields are *Host* and *Port*, both of which have default values assigned to them:
-
-image:http-listener-connector-fab30.png[showing add global element]
-
-[NOTE]
-To listen on a specific port for every network interface on the server, you can use the host to `0.0.0.0`. If you set it to `localhost` then you are only able to listen for incoming requests generated inside the server.
-
-[source,xml,linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-
-<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
-    <http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" basePath="+http://www.example.com/test+" doc:name="HTTP Listener Configuration"/>
-
-    <flow name="http-listenerFlow">
-        <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
-    </flow>
-</mule>
-----
-
-=== Minimum Configuration for the Connector Global Element
-
-As with most connectors in Studio, much of the configuration is encapsulated in a separate reusable object that sits outside the flow and can then be referenced by as many instances of the connector as you like. This element defines a server connection to a particular network interface and port and handles incoming requests from it.
-
-In the global element, you need to provide a *Host* and a *Port*.
-
-[NOTE]
-To listen on an specific port for every network interface in the server, you can use the host to `0.0.0.0`. If you set it to `localhost` then you can only listen for incoming requests generated inside the server.
-
-=== Minimum Configuration for the Connector Instance
-
-After you have defined the HTTP Listener Connector configuration via creation of a global element, to actually handle an HTTP request you need to configure some basic settings in the connector _instance_ in your flow. The HTTP listener instance is labeled with `<http:listener>`. In the connector properties tab that appears when you select the connector in Studio, provide a *Path*.
-
-And don't forget to reference your global element for the HTTP listener.
-
-The configuration performs a GET request to `http://localhost:8081`
-
-=== Full XML Code
-
-[source, xml, linenums]
-----
-<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-    xmlns:spring="http://www.springframework.org/schema/beans"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
-     
-    <http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" doc:name="HTTP Listener Configuration"/>
-   
-   <flow name="basic_flow">
-        <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-        <logger message="#[payload]"/>
-    </flow>
-     
-</mule>
-----
-
+Using `localhost` listens for incoming requests generated inside the server. If you deploy the app locally, using `localhost` rather than leaving the default `0.0.0.0` to listen to all addresses is recommended for security.
 
 == Routing Incoming Requests to Different Listeners
 
@@ -106,12 +24,10 @@ You probably want to expose several different flows in your application, the bes
 
 === Global Routing Configuration
 
-In the connector configuration global element, you can set the *Host*, *Port* and *Base Path* properties to only process requests at a specific address.
-
-By default, the connector configuration has its host set to `0.0.0.0`, this address is in fact a shortcut to simultaneously listen on all active IP addresses, (including `localhost`). In order to deploy a project to link:/runtime-manager/cloudhub[CloudHub], you must set the hosts of all the HTTP connectors to `0.0.0.0`. Otherwise, your application runs into conflicts with the inner workings of CloudHub.
+In the connector configuration global element, set the *Host*, *Port* and *Base Path* properties to only process requests at a specific address.
 
 [WARNING]
-Keep in mind that if you're deploying on premises, because of security concerns, it's always advisable to set a specific host, such as `localhost` rather than leaving the default `0.0.0.0` to listen to all addresses.
+Keep in mind that 
 
 . Create a flow with an HTTP Listener Connector, set its *Path* to `/`
 . Create a Global Element for the Connector, set the *Host* to `0.0.0.0`, leave the *Port* as the default `8081` and set the *Base Path* to `mybasepath` +
