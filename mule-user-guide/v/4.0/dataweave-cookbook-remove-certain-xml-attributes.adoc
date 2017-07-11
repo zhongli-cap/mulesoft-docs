@@ -12,7 +12,7 @@ This example uses:
 
 * `mapObject` to go through each element.
 * `@` to refer to the attributes in an XML element.
-* `when` and `otherwise` to conditionally only list XML attributes when they are present, and also to only recursively call the function when a child element is an object.
+* `if` and `else` to conditionally only list XML attributes when they are present, and also to only recursively call the function when a child element is an object.
 * `is` to check if each child is of type `Object` .
 * `-` to remove an element from the list of XML attributes.
 * `inlineCloseOn="empty"` on the output directive, so that the output XML displays self-closing tags when there are no values.
@@ -24,16 +24,21 @@ This example uses:
 [source,dataweave, linenums]
 ----
 %dw 2.0
+input payload application/json
 output application/xml inlineCloseOn="empty"
 var removeAttribute = (element,attrName) ->
-element mapObject (value, key) -> {
-  (key) @(
-      ((key.@ - attrName) when key.@?
-      otherwise {} )
-  ) :
-  removeAttribute(value, attrName) when value is Object
-  otherwise value
-}
+  element mapObject (value, key) -> {
+    (key) @(
+        (
+          if (key.@?)
+            (key.@ - attrName)
+          else {}
+        )
+    ) :
+    if (value is Object)
+      removeAttribute(value, attrName)
+    else value
+  }
 ---
 removeAttribute(payload, "password")
 ----
@@ -63,6 +68,8 @@ removeAttribute(payload, "password")
 * link:/mule-user-guide/v/4.0/dataweave-cookbook-output-self-closing-xml-tags[Outputting self-closing XML tags]
 
 * link:/mule-user-guide/v/4.0/dataweave-cookbook-insert-attribute[Inserting an Attribute into an XML Tag]
+
+* link:/mule-user-guide/v/4.0/dataweave-cookbook-include-xml-namespaces[Include XML Namespaces]
 
 * link:/mule-user-guide/v/4.0/dataweave-cookbook-exclude-field[Excluding Fields from the Output]
 
