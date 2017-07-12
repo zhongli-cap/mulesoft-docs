@@ -1,256 +1,71 @@
 = HTTP Request Configuration Reference
 :keywords: anypoint studio, esb, connectors, http, https, http headers, query parameters, rest, raml
 
-The HTTP connector is frequently configured to consume an external web service. When sending HTTP requests, you can choose what method to use (GET, POST, etc) and may include a body, headers, attachments, query parameters, form parameters and URI parameters. The response is then received by the connector and is passed on to the next element in your flow.
+A typical use of the HTTP connector request operation is to consume an external web service using the GET method. After sending the request, the connector receives the response and passes it to the next element in the flow. You can configure the following types of authentication:
 
-This connector can also implement HTTPS protocol and encrypt your communications via link:/mule-user-guide/v/3.8/tls-configuration[TLS], it can also implement link:/mule-user-guide/v/3.8/authentication-in-http-requests[authentication] via basic authentication, OAuth, NTLM or digest.
+* Basic
+* OAuth
+* NT LAN Manager (NTLM)
+* Digest
 
-
-upport for HTTP request Server Name Indication (SNI), which is handled in the HTTP connector's backend.
-
-=== Minimum Configuration
-
-
-In the connector instance, provide a *Path* and a *Method*:
-
-image:http-request-connector-59e01.png[]
-
-Additionally, you must reference a global element, explained below.
-
-==== Creating a Global Element
-
-Like with most connectors in Studio, a lot of the configuration is encapsulated in a separate reusable object that can then be referenced by as many instances of the connector as you like.
-
-[NOTE]
---
-Having global elements becomes especially useful when having multiple connectors that must use the same settings, in order to avoid repeating the same configuration in every request. In Studio you can also reference a RAML file in this element, which then provides metadata that makes the rest of the configuration easier.
---
-
-image:connector-configuration.png[where to add global element]
-
-==== Minimum Configuration for the Global Element
-
-At the very least, you need to provide a *host* and a *port*
-
-image:http-request-connector-d6ec4.png[global element for http request]
-
-The above configuration performs a GET request to `+http://www.example.com/test+`.
-....
-[tab,title="XML Editor"]
-....
-Example global element representation, referenced in the connector instance, inside the Mule flow.
+The required minimum setting for the request operation is a host URI, which can include a path. GET is the default method. The following example shows a minimal configuration in XML:
 
 [source, xml, linenums]
 ----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081"/>
- 
-<flow name="example1">
-    ...
-    <http:request config-ref="HTTP_Request_Configuration" path="test" method="POST"/>
-</flow>
+<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="8f2d4125-129d-4f8b-9ead-4af16034b359" >
+	<http:request-connection host="http://jsonplaceholder.typicode.com/users" />
+</http:request-config>
+...
+<http:request config-ref="HTTP_Request_configuration" method="GET" path="/" doc:name="Request" doc:id="df8c288e-1fc1-456f-b188-14a1fbf609ae" />
 ----
 
-==== Minimum Configuration for the Global Element
-
-Like with most connectors in Studio, a lot of the configuration is encapsulated in a separate reusable object that sits outside the flow and can then be referenced by as many instances of the connector as you like. This element defines a server connection to a particular network interface and port and handles outbound requests to it and their responses. At the very least, you need to provide a *Host* and a *Port* in your global element.
-
-==== Minimum Configuration for the Connector Instance
-
-After you have defined the request-config, to actually send an HTTP request you need to configure a flow with an `<http:request>` element. In the connector instance, provide a *Path* and a *Method*, as well as a reference to a global element
-
-*The above configuration performs a GET request to +http://www.example.com/test+.*
-....
-------
-
-=== HTTP Connector Basic Configuration
-
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-You need to provide a *path* and *method* for your requests, as well as reference a *Connector Configuration* global element. Note that the path field doesn't define the full path, but rather the subpath, within the host and after the optional base path that can be specified in the Connector Configuration global element.
-
-You can also add as many parameters as you want, which can be headers, query parameters or URI parameters.
-
-image:http-request-connector-73236.png[Path and Method Params]
-
-[%header,cols="2*"]
-|===
-|Property |Description
-|Display Name |The name of the element in the flow.
-|Request Config |A reference to the Global Element. This field is required.
-|Path |The path where the request is sent (without including the optional *base path*) configured in the global element.
-|Method |The type of HTTP request to send (GET, POST, DELETE, etc.). Optional, the default is GET.
-|Parameters a|
-You can include additional parameters to the request, such as headers and query params by clicking the green plus sign at the top. +
-
-If the global element references a RAML file, the relevant parameters display according to the selected resource and method.
-|===
-
-[TIP]
-If you've referenced a RAML file in the global element, both the Path and Method fields present you with a drop-down list of available options, based on what the RAML describes. Note that you're also always free to write your own values in these fields.
-
-=== Global Element Basic Configuration
-
-image:http-request-connector-a5650.png[]
-
-[%header%autowidth.spread]
-|===
-|Property |Description
-| Name |The name that the configuration element is referenced from instances of the connector.
-|Protocol |Choose between HTTP and HTTPS
-|Host |The host to send requests to. This field is required.
-|Port |The port to send requests to. This field is required.
-|Base Path |A base path within the host. Instances of the connector can then specify a subpath within this path.
-|RAML Location |Your connector can point to a RAML file, which makes it a lot easier to configure as Studio proactively offers intelligent suggestions based in the metadata defined in the RAML file.  You can reference a RAML file on your local disk, one on an external URI, or you can pick one of the available ones in the Exchange by clicking *Search RAML in Exchange*.
-|Enable Datasense |The *Enable DataSense* checkbox allows Studio to use link:/anypoint-studio/v/6/datasense[DataSense] to expose metadata from the RAML file and interact with it on other elements in Studio.
-|===
-
-[TIP]
-If you complete the RAML Location field first, all other fields automatically populate based on what's specified in the RAML.
-
-[WARNING]
-====
-The metadata from the RAML is obtained every time you open your project in Studio and then kept in cache until you close and reopen the project.
-
-If the RAML file is modified, you can refresh the cache of it by clicking the button *Reload RAML*.
-
-The metadata exposed by the connector to your flow may not be updated right away. In such a case, click the *Refresh Metadata* button in the metadata explorer.
-====
-....
-[tab,title="XML Editor"]
-....
-=== HTTP Connector Basic Configuration
-
-You need to provide a *path* and *method* for your requests, as well as reference a *Connector Configuration* global element. Note that the path field doesn't define the full path, but rather the subpath, within the host and after the optional base path that can be specified in the Connector Configuration global element.
-
-As child elements of this connector, you can add as many parameters as you want, which may be headers, query parameters or URI parameters.
-
-[source, xml, linenums]
-----
-<http:request config-ref="HTTP_Request_Configuration" path="test" method="POST" doc:name="HTTP"/>
-----
-
-[%header%autowidth.spread]
-|===
-|Property |Description
-|`doc:name` |The name of the element in the flow in Studio.
-|`config-ref` |A reference to a reusable Global Element that contains several configuration parameters. This property is required.
-|`path` |The path where the request is sent (without including the *base path*) configured in the global element.
-|`method` |The type of HTTP request to send (GET, POST, DELETE, etc.). Optional, the default is GET.
-|===
-
-By default, GET, HEAD and OPTIONS methods do not send the payload in the request (the body of the HTTP request is empty). The rest of the methods send the message payload as the body of your request.
-
-=== Global Element Basic Configuration
-
-Every HTTP Connector must reference a global configuration element that sits outside any flow in your project. This element encapsulates much of the common configuration parameters that can be reused by other connectors in your project and can be referenced by multiple instances of the connector. At the very least, you need to provide a *host* and a *port*:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP Request Configuration"/>
-----
-
-[%header,cols="34,33,33"]
-|===
-|Property |Description |XML Sample
-|`name` |Name of the Global Element, used to reference inside connector instance. a|`name="HTTP_Request_Configuration"`
-|`protocol` |Choose between HTTP and HTTPS |`protocol="HTTPS"`
-|`host` |Host to be used by all request elements that reference this config. a|`host="example.com"`
-|`port` |Port to be used by all request elements that reference this config. a|`port="8081"`
-|`basePath` |The path to which requests are sent. You can then specify subfolders below this path within the connector instance. a|
-`basePath="/api/v2"`
-|===
-
-[%autowidth.spread]
-|===
-|*Child Element* |*Description* |*XML Sample*
-|RAML Location |If you have access to a RAML file describing the API you're connecting to, indicate its location here. |`<http:raml-api-configuration location="t-shirt.raml"/>`
-|===
-
-The above configuration performs a GET request to `+http://www.example.com/test+`.
-
-Below are two connectors sharing the same connector configuration:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="80" basePath="/api/v2" />
- 
-<flow name="test_flow">
-    ...
-    <http:request config-ref="HTTP_Request_Configuration" path="customer" method="GET" />
-    ...
-    <http:request config-ref="HTTP_Request_Configuration" path="item" method="POST" />
-    ...
-</flow>
-----
-
-The first connector in the example sends a GET request to `+http://www.example.com/api/v2/customer+`. The second connector sends a POST request to `+http://www.example.com/api/v2/item+`.
-....
-------
+By default, GET and OPTIONS methods do not send the payload in the request. The body of the HTTP request is empty. The other methods send the message payload as the body of your request.
 
 == Mapping Between Mule Messages and HTTP Requests
 
-When an HTTP Request Connector is executed, the Mule message that reaches it is transformed to generate an HTTP Request. Below is an explanation of how each part of the Mule message contributes to generate an HTTP request.
+An app generates a Mule message when executing an HTTP Request operation. 
 
 === HTTP Request Body
 
-The Mule message payload is converted into a byte array and sent as the HTTP Request's body. This behavior is carried out always, except in the following scenarios:
+The connector sends the Mule message payload as the HTTP request body except under the following conditions:
 
-* The Mule message's Payload is a Map of keys and values
-* The Message has outbound attachments
+* The payload consists of a map of keys and values
+* The message has outbound attachments
 
-=== Generate the Request Body with Content-Type:application/x-form-urlencoded
+=== Payload Consisting of a Map
 
-Whenever the message payload is a Map, the connector automatically generates an HTTP request with the header `Content-Type:application/x-www-form-urlencoded`. The keys and values of the map in the payload are converted into *form parameter* keys and values in the body of the HTTP request.
+When the message payload is a map, the connector generates an HTTP request with the header Content-Type:application/x-www-form-urlencoded. The keys and values of the map in the payload are converted into form parameter keys and values in the body of the HTTP request.
 
-=== Generate the Request Body with Content-Type: multipart/form-data
+=== Message Having Outbound Attachments
 
-Whenever the message contains outbound attachments, the connector automatically generates an HTTP Request with the header `Content-Type:multipart/form-data`. The payload of the Mule message is ignored, and instead each attachment in the message is converted into a part of the HTTP Request body. If you want to create a different multipart request, then the Content-Type header can be set with a different value by adding <<Adding Custom Parameters>>.
+When the message contains outbound attachments, the connector generates an HTTP Request with the header Content-Type:multipart/form-data. The payload of the Mule message is ignored. Each attachment in the message is converted into a part of the HTTP Request body. If you want to create a different multipart request, set the Content-Type header to a different value by adding custom parameters.
 
 === HTTP Headers
 
-If there are any *outbound properties* in the Mule message that arrives to the HTTP Request Connector, these are automatically added as HTTP request headers. It’s also possible to add headers explicitly through the HTTP Request Connector's configuration. See documentation below.
+Outbound attributes in the Mule message, if there are any, are added as HTTP request headers to the request. You can also add headers explicitly during connector configuration. 
 
-[NOTE]
---
-By default, the Grizzly libraries used by the HTTP connector limit the HTTP request header section size (request line + headers) to below 8192 bytes. While it is recommended that you keep your HTTP request header section below this limit, you can override this limit by setting `mule.http.headerSectionSize` to a larger value (in bytes). You can set this JVM parameter in the wrapper.conf file, or you can pass it in from the command line when you start the Mule runtime.
+By default, the HTTP connector limits the HTTP request header section size (request line + headers) to 8191 bytes maximum. To increase the number of bytes in the allowed header section, set `mule.http.headerSectionSize` in the wrapper.conf file or on the command line when you start Mule runtime as follows:
 
-For example, to set the HTTP header section size to 16,000 bytes, you could start the Mule runtime with the command `./mule -M-Dmule.http.headerSectionSize=16000`.
---
+`./mule -M-Dmule.http.headerSectionSize=16000`
+
 
 == Adding Custom Parameters
 
-The HTTP Request connector allows you to include the following types of parameters:
+In addition to the body of the request, you can configure the following things in the request:
 
-* query params
-* a map of multiple query params
-* URI params
-* a map of multiple URI params
-* headers
-* a map of multiple headers
+* Headers
+* Query parameters
+* URI parameters
 
-Additionally, you can also send form parameters with your request, included in the Mule message payload. You can also include attachments in your request by adding an Attachment building block to your flow.
+You can configure a map of multiple headers or parameters.
 
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-[TIP]
-Remember that when using Studio, if the API you want to reach has a *RAML* file, referencing this RAML file in the global element exposes the API's metadata, and Studio proactively displays all the available properties for each operation in the API.
+You can also include form parameters in the payload to send with the request. To add an attachment to a request, add a building block to the flow.
 
 === Query Parameters
 
-By clicking the *Add Parameter* button you can add parameters to your request. If you leave the default *query-param* as the type of parameter, you can add new query parameters and assign names and values to them.
+In General > Request, click *Query Parameters*, and + to add a parameter to a request. Type a name and value enclosed in quotation marks for the parameter or use a DataWeave expression to define the name and value.
 
-image:http-request-connector-a59db.png[adding parameters in http general tab]
-
-The above configuration performs a GET request to `+http://www.example.com/test?k1=v1&k2=v2+`.
-
-[TIP]
-Both the name and value fields allow the use of MEL expressions.
-
-If query parameters should be set dynamically (for example, while at design time you don't know how many query parameters are needed in the request), then you can change the parameter type to *query-params*, which accepts an array, and you can assign it a MEL expression that returns a map of parameters:
+You can set query parametersdynamically (for example, while at design time you don't know how many query parameters are needed in the request), then you can change the parameter type to *query-params*, which accepts an array, and you can assign it a MEL expression that returns a map of parameters:
 
 image:http-request-connector-da83e.png[query_params_2]
 
