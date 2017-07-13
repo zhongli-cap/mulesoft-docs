@@ -63,710 +63,141 @@ You can also include form parameters in the payload to send with the request. To
 
 === Query Parameters
 
-In General > Request, click *Query Parameters*, and + to add a parameter to a request. Type a name and value enclosed in quotation marks for the parameter or use a DataWeave expression to define the name and value.
-
-If at design time, you don't know how many query parameters a request might need, use DataWeave and a map variable to dynamically assign parameters to the request.
-
-For example, you first create a variable named `customMap`. If you assign that variable a value through the following MEL expression:
-
-`#[{'k1':'v1', 'k2':'v2'}]`
-
-It  generates the same request than the previous example, a GET request to `+http://www.example.com/test?k1=v1&k2=v2+`
-
-The `query-param` and `query-params` elements can be combined inside a single connector. The parameters resolve for each request (evaluating all the MEL expressions in the context of the current message), and in the order they are specified inside the request builder. This allows to override parameters if necessary. If the same parameter is defined more than once, the latest value is used.
+In General > Request, click *Query Parameters*, and + to add a parameter to a request. Type a name and value for the parameter or use a DataWeave expression to define the name and value.
 
 === URI Parameters
 
-When parameters should be part of the path, placeholders can be added to the "path" attribute with a name for each of them, and then they must be referenced by a `uri-parameter`:
+You configure a URI parameter when you want to use a placeholder in the URI, such as `/customer/{customerId}` that starts your app.
 
-image:http-request-connector-0ac45.png[placeholder added to path]
+To configure a URI parameter, for example, do the following things:
 
-If you first type the placeholder into the "path" field, Studio automatically adds the corresponding `uri-param` below in the parameters section, saving you some of the hassle.
+* In General, type the placeholder enclosed in curly brackets in Path.  
+* Select URI Parameters, click +, and enter a name and value. For example, enter *customerId* and *20* as the name and value.
 
-This performs a GET request to +http://www.example.com/customer/20+.
+image::http-mule4-uriparams.png[customerId 20]
 
-[TIP]
-Both the name and value fields allow the use of MEL expressions.
+Alternatively, you can use DataWeave expressions in the name and value fields.
 
-=== Dynamically Setting URI Parameters
-
-If URI parameters should be set dynamically they can be set through a MEL expression that returns a map of parameters to set:
-
-image:http-request-connector-a7f0c.png[params set dynam]
-
-[IMPORTANT]
-If any additional `uri-param` parameters are added automatically while you type the value in the path field, delete these, as they are addressed by the dynamic `uri-params` field.
-
-For this example you need to link:/mule-user-guide/v/3.8/variable-transformer-reference[create a variable] named `customMap`. If you set that variable to the MEL expression `#[{'p1':'v1', 'p2':'v2'}]`, it generates a GET request to +http://www.example.com/test/v1/v2+.
-
-Just as with query parameters, the `uri-param` and `uri-params` elements can be combined inside the connector. They are resolved for each request (evaluating all the MEL expressions in the context of the current message), and in the order they are specified inside the request builder. This allows you to override parameters, if necessary. If the same parameter is defined more than once, the latest value is used.
-
-[INFO]
-In every case, all the placeholders used in the path to reference URI parameters should match the names of the URI parameters inside the request builder (after all MEL expressions were evaluated).
+When the app runs, you can perform a GET request by going to `+http://www.example.com/customer/20+`.
 
 === Headers
 
-You can add HTTP headers to the request just as easily as query parameters:
+Select Headers to add headers to the request. For example, add header names HeaderName1 and HeaderName2. Add header values HeaderValue1 and HeaderValue2. You can use DataWeave expressions, referencing headers as `attributes.headers`.
 
-image:http-request-connector-b1186.png[set header params]
+=== Dynamic Parameters and Headers.
 
-This performs a GET request to `+http://www.example.com/test+`, adding the following headers:
+If at design time, you don't know how many query parameters or headers a request might need, use DataWeave and a variable map to dynamically assign parameters or headers to the request.
 
-[source,code]
-----
-HeaderName1: HeaderValue1
-HeaderName2: HeaderValue2
-----
+For example, you first create a variable named `customMap`. Next, you assign the variable a map of values using DataWeave:
 
-[TIP]
-Both the name and value fields allow the use of MEL expressions.
+`{customMap:attributes.queryParams}`
 
-This is exactly equivalent to setting outbound properties in the Mule message through properties transformers. Outbound properties map as HTTP headers in the request. Thus, you could achieve the same by adding two properties transformers before the HTTP Request connector, one for each of the new headers that need to be set:
+To set URI parameters dynamically, use a DataWeave expression that returns a map of the parameters. For example:
 
-image:http-request-connector-1a527.png[property transformers for same effect]
+* Set Path to `/test/{p1}/{p2}`
+* URI Parameter names: p1 and p2
+* URI Parameter value: `{customMap:attributes.uriParams}` and `{customMap:attributes.uriParams}`
 
-In both cases, the headers of the response map as inbound properties of the Mule message after the response is processed.
-
-=== Dynamically Setting Headers
-
-If headers must be set dynamically (for example, you don't know at design time how many extra headers are needed in the request), they can be set through a MEL expression that returns a map of headers:
-
-image:http-request-connector-b459c.png[Dynamically Setting Headers]
-
-For the above example to work, you first need to generate a variable called `customMap`. If you set that variable to the following MEL expression:
-
-[source,code]
-----
-#[{'TestHeader':'TestValue'}]
-----
-
-It generates a GET request to +http://www.example.com/test+, adding the following header:
-
-[source,code]
-----
-TestHeader: TestValue
-----
-
-Just as with query parameters, the header and headers elements can be combined in the connector. They resolve for each request (evaluating all the MEL expressions in the context of the current message), and in the order they are specified inside the request builder. This allows to override parameters if necessary. If the same parameter is defined more than once, the latest value are used.
+The connector resolves parameters for each request, evaluating DataWeave expressions in the context of the current message, in the order specified in the request. If the same parameter is defined more than once, the latest value is used.
 
 === Sending Form Parameters in a POST Request
 
-In order to send parameters in a POST request, the payload of the Mule message should be a map with the names and the values of the parameters to send. Hence, one way of sending form parameters in your request is adding a *Set Payload* element before the HTTP Request connector to set the payload of your message to the form parameters to send:
+To send parameters in a POST request:
 
-image:http-request-connector-d03c0.png[set_payload]
+* In General > Request, select the POST method.
+* In Body, construct the payload of the Mule message as a map with the names and the values of the parameters to send. For example:
++
+`{payload.'key1'='value1', payload.'key2'='value2'}`
 
-For example, if you use the *Set Payload* element to set your payload:
-
-`#[{'key1':'value1', 'key2':'value2'}]`
-
-A POST request is sent to `+http://www.example.com/test+`, with `Content-Type: application/x-www-form-urlencoded`, and the body is "`key1=value1&key2=value2`"; just as if a browser would have sent a request after the user submitted a form with these two values.
-....
-[tab,title="XML Editor"]
-....
-=== Query Parameters
-
-You can add query parameters by using the `request-builder` element inside the request:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test_flow">
-    <http:request config-ref="HTTP_Request_Configuration" path="test" method="GET">
-        <http:request-builder>
-            <http:query-param paramName="k1" value="v1" />
-            <http:query-param paramName="k2" value="v2" />
-        </http:request-builder>
-    </http:request>
-</flow>
-----
-
-This performs a GET request to `+http://www.example.com/test?k1=v1&k2=v2+`.
-
-[TIP]
-Both the name and value fields allow the use of MEL expressions.
-
-=== Dynamically Setting Query Parameters
-
-If query parameters should be set dynamically (for example, you don't know at design time how many query parameters are needed in the request), they can be set through a MEL expression that returns a map of parameters:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test_flow">
-    <set-variable variableName="customMap" value="#[{'k1':'v1', 'k2':'v2'}]" />
-    <http:request config-ref="HTTP_Request_Configuration" path="test" method="GET">
-        <http:request-builder>
-            <http:query-params expression="##[flowVars.customMap]" />
-        </http:request-builder>
-    </http:request>
-</flow>
-----
-
-This example generates the same request as the previous one, a GET request to `+http://www.example.com/test?k1=v1&k2=v2+`.
-
-The `query-param` and `query-params` elements can be combined inside the request builder. The parameters resolve for each request (evaluating all the MEL expressions in the context of the current message), and in the order they are specified inside the request builder. This allows you to override parameters, if necessary. If the same parameter is defined more than once, the latest values is used.
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test_flow">
-    <set-variable variableName="customMap" value="#[{'k2':'new', 'k3':'v3'}]" />
- 
-    <http:request config-ref="HTTP_Request_Configuration" path="test" method="GET">
-        <http:request-builder>
-            <http:query-param paramName="k1" value="v1" />
-            <http:query-param paramName="k2" value="v2" />
-            <http:query-params expression="#[flowVars.customMap]" />
-        </http:request-builder>
-    </http:request>
- 
-</flow>
-----
-
-In this example, the parameter k2 defined in the map overrides the k2 query-param defined earlier. The result willbe a GET request to +http://www.example.com/test?k1=v1&k2=new&k3=v3+.
-
-=== URI Parameters
-
-When parameters should be part of the path, placeholders can be added in the path attribute with a name for each of them, and then they must be referenced from the request builder to provide the values, using the `uri-param` element:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test_flow">
-    <http:request config-ref="HTTP_Request_Configuration"  path="/customer/{customerId}" method="GET"> 
-        <http:request-builder>
-            <http:uri-param paramName="customerId" value="20" />
-        </http:request-builder>
-    </http:request>
- 
-</flow>
-----
-
-This performs a GET request to +http://www.example.com/customer/20+.
-
-[TIP]
-Both the name and value fields allow the use of MEL expressions.
-
-=== Dynamically Setting URI Parameters
-
-If URI parameters should be set dynamically, they can be set through a MEL expression that returns a map of parameters to set:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test_flow">
-    <set-variable variableName="customMap" value="#[{'p1':'v1', 'p2':'v2'}]" />
- 
-    <http:request config-ref="HTTP_Request_Configuration"  path="test/{p1}/{p2}" method="GET"> 
-        <http:request-builder>
-            <http:uri-params expression="#[flowVars.customMap]" />
-        </http:request-builder>
-    </http:request>
-</flow>
-----
-
-This example generates a GET request to `+http://www.example.com/test/v1/v2+`.
-
-Just as with query parameters, the `uri-param` and `uri-params` elements can be combined inside the request builder. They resolve for each request (evaluating all the MEL expressions in the context of the current message), and in the order they are specified inside the request builder. This allows to override parameters if necessary. If the same parameter is defined more than once, the latest value are used.
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test_flow">
-    <set-variable variableName="customMap" value="#[{'p1':'new'}]" />
- 
-    <http:request config-ref="HTTP_Request_Configuration"  path="test/{p1}/{p2}" method="GET">
-        <http:request-builder>
-            <http:query-param paramName="p1" value="v1" />
-            <http:query-param paramName="p2" value="v2" />
-            <http:query-params expression="#[flowVars.customMap]" />
-        </http:request-builder>
-    </http:request>
-</flow>
-----
-
-In this example, the parameter p1 defined in the map overrides the p1 uri-param defined earlier. The result is a GET request to +http://www.example.com/test?p1=new&p2=v2+.
-
-[WARNING]
-In every case, all the placeholders used in the path to reference URI parameters should match the names of the URI parameters inside the request builder (after all MEL expressions were evaluated).
-
-=== Headers
-
-HTTP headers can be added to the request by using the "header" element inside the request-builder:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test_flow">
-    <http:request config-ref="HTTP_Request_Configuration" path="test" method="GET">
-        <http:request-builder>
-            <http:header headerName="HeaderName1" value="HeaderValue1" />
-            <http:header headerName="HeaderName2" value="HeaderValue2" />
-        </http:request-builder>
-    </http:request>
-</flow>
-----
-
-This performs a GET request to +http://www.example.com/test+, adding the following headers: +
- `HeaderName1: HeaderValue1` +
- `HeaderName2: HeaderValue2`
-
-[TIP]
-Both the name and value fields allow the use of MEL expressions.
-
-Another way of sending headers is by setting outbound properties in the Mule message (current behavior of the HTTP transport). Outbound properties map as HTTP headers in the request. Thus, the following example is equivalent to the previous one:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test_flow">
-    <set-property propertyName="HeaderName1" value="HeaderValue1" />
-    <set-property propertyName="HeaderName2" value="HeaderValue2" />
- 
-    <http:request config-ref="HTTP_Request_Configuration" path="test" method="GET"/>
-</flow>
-----
-
-In both cases, the headers of the response map as inbound properties of the Mule message after the response is processed.
-
-=== Dynamically Setting Headers
-
-If headers must be set dynamically (for example, you don't know at design time how many extra headers are needed in the request), they can be set through a MEL expression that returns a map of headers:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test_flow">
-    <set-variable variableName="customMap" value="#[{'TestHeader':'TestValue'}]" />
- 
-    <http:request config-ref="HTTP_Request_Configuration" path="test" method="GET">
-        <http:request-builder>
-            <http:headers expression="#[flowVars.customMap]" />
-        </http:request-builder>
-    </http:request>
-</flow>
-----
-
-This example generates a GET request to +http://www.example.com/test+, adding the following header: +
-
-[source,code]
-----
-TestHeader: TestValue
-----
-
-Just as with query parameters, the `<http:header>` and `<http:headers>` elements can be combined inside the request builder (`<http:request-builder>`). They resolve for each request (evaluating all the MEL expressions in the context of the current message), and in the order they are specified inside the request builder. This allows you to override parameters if necessary. If the same parameter is defined more than once, the latest value is used.
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test_flow">
-    <set-variable variableName="customMap"
-      value="#[{'TestHeader2':'TestValueNew', 'TestHeader3':'TestValue3'}]" />
- 
-    <http:request config-ref="HTTP_Request_Configuration" path="test" method="GET">
-        <http:request-builder>
-            <http:header paramName="TestHeader1" paramValue="TestValue1" />
-            <http:header paramName="TestHeader2" paramValue="TestValue2" />
-            <http:headers expression="#[flowVars.customMap]" />
-        </http:request-builder>
-    </http:request>
-</flow>
-----
-
-In this example, the header TestHeader2 defined in the map overrides the one defined earlier in the request builder. The result willbe a GET request to +http://www.example.com/test+ with the following headers: +
-TestHeader1: TestValue1 +
-TestHeader2: TestValueNew +
-TestHeader3: TestValue3
-
-=== Sending Form Parameters in a POST Request
-
-In order to send parameters in a POST request, the payload of the Mule message should be a Map with the names and the values of the parameters to send. Hence, one way of sending form parameters in your request is adding a Set Payload element before the HTTP Request Connector to make the payload of your message equal to the form parameters you must send:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test_flow">
-    <set-payload value="#[{'key1':'value1', 'key2':'value2'}]" />
-     
-    <http:request config-ref="HTTP_Request_Configuration" path="test" method="POST"/>
-</flow>
-----
-
-In this example, a POST request is sent to +http://www.example.com/test+, with `Content-Type: application/x-www-form-urlencoded`, and the body is `"key1=value1&key2=value2"`; just as if a browser had sent a request after the user submitted a form with these two values.
-....
-------
+A POST request is sent to the host location you specify with `Content-Type: application/x-www-form-urlencoded`, and the body is "`key1=value1&key2=value2`".
 
 == Mapping Between HTTP Responses and Mule Messages
 
-An HTTP response is mapped to the Mule message in exactly the same way that the HTTP request is mapped to a Mule message in the HTTP Listener Connector, except that the following elements don't apply to HTTP responses:
+An HTTP response is mapped to the Mule message similar to the way that the HTTP request is mapped to a Mule message. The following elements don't apply to HTTP responses:
 
 * Query parameters
 * URI parameters
-* All inbound properties related to the HTTP request URI +
+* All inbound properties related to the HTTP request URI
 
-In addition, the HTTP Request Connector adds the following inbound properties to the Mule message when receiving a response: +
+In addition, the HTTP request operation adds the following attributes to the Mule message when receiving a response: +
 
-* `http.status`: Status code of the HTTP response
-* `http.reason`: Reason phrase of the HTTP response
+* `attributes.statusCode`: Status code of the HTTP response
+* `attributes.reasonPhrasae`: Reason phrase of the HTTP response
 
 === Disabling HTTP Response Body Parsing
 
-As with the HTTP Listener Connector, when HTTP responses have a content type of `application/x-www-form-urlencoded` or `multipart/form-data`, the HTTP Request Connector automatically carries out a parsing of the message. If you wish, you can disable this parsing functionality bydoing the following: +
-
-* *XML Editor*: set the `parseResponse` attribute to false
-* *Studio UI*: Untick the *Parse Response* checkbox in the Advanced tab of the HTTP Request Connector
-
+By default, the request operation does not parse the message. In General > Response, you can manage parsing by selecting to parse, not to parse, or to execute an expression.
 
 == Round-Robin Requests
 
-Since Mule 3.8, the _HTTP request connector_ connects to its configured hosts using *Round Robin DNS*. Mule Runtime resolves all IP addresses associated to the specified host and distributes the requests across all returned IPs improving load balancing for the host.
+The request operation connects to configured hosts using round robin DNS. Mule Runtime resolves all IP addresses associated to the specified host and distributes the requests across all returned IPs improving load balancing for the host.
 
-When connecting to resources that require authentication, the external service needs to replicate session information between all the IP addresses under the service's host. Otherwise, your requests might get rejected with `unauthorized` messages.
+When connecting to resources that require authentication, the external service needs to replicate session information between IP addresses under the host of your service. Otherwise, your requests might get rejected for being unauthorized.
 
-When your external resource does not handle _sticky sessions_ you need to add the service's hostname to the `mule.http.disableRoundRobin` system property when starting the Mule Runtime:
+When your external resource does not handle _sticky sessions_ you need to add the service host name to the `mule.http.disableRoundRobin` system property when starting the Mule Runtime:
 
 [source,Command,linenums]
 ----
 ./mule -M-Dmule.http.disableRoundRobin=serverhostname.com
 ----
 
-This causes the _HTTP request connector_ to not use DNS round robin when connecting to configured host in the system property.
-
-[TIP]
-`mule.http.disableRoundRobin` system property is available since Mule 3.8.4. Make sure you are up to date with the latest udpate site.
+When configured in this way, the request does not use round robin DNS round robin when connecting to configured host.
 
 == HTTP Response Validation
 
 When the HTTP Request Connector receives an HTTP response, it validates the response through its status code. By default, it throws an error when the status code is higher or equal to 400. This means that if the server returns a 404 (Resource Not Found) or a 500 (Internal Server Error) the HTTP Request Connector fails and the exception strategy of the flow it is called from is triggered.
 
-You can change the set of valid HTTP response codes by setting one of the following two behaviors:
+You can change the set of valid HTTP response codes by configuring General > Response > Response Validator. 
 
+* *None: * No validation occurs.
+* *Expression: * Validation occurs per the DataWeave expression you construct.
 * *Success Status Code Validator: * All the status codes defined within this element are considered valid; the request throws an exception for any other status code.
 * *Failure* *Status Code Validator: * All the status codes defined within this element are considered invalid and an exception is thrown; the request is considered valid with any other status code.   
 
 To set a list of status codes accepted as successful responses, do the following:
 
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
+. In General > Response > Response Validator, select Success Status Code Validator.
+. In *Values*, enter the list of accepted status codes, separated by commas: *200,201*.
 
-. Select the *advanced tab* of the HTTP Request Connector
-. Select the *Success Status Code Validator* radio button
-. Fill in the *Values* field below with `200,201`
-....
-[tab,title="XML Editor"]
-....
-For example:
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
-  
-<flow name="test_flow">
- 
-    ...
- 
-    <http:request config-ref="HTTP_Request_Configuration"  path="/" method="GET"> 
-         <http:success-status-code-validator values="200,201"/>
-    </http:request>
-</flow>
-----
-....
-------
+If the HTTP response has any other status value, it's considered a failure and raises an exception.
 
-=== Full XML Code
-
-[source, xml, linenums]
-----
-<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-    xmlns:spring="http://www.springframework.org/schema/beans"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
-     
-     <http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" doc:name="HTTP Listener Configuration"/>
-    <http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
-  
-    <flow name="test_flow">
-        <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-        <http:request config-ref="HTTP_Request_Configuration"  path="/" method="GET">
-            <http:success-status-code-validator values="200,201"/>
-        </http:request>
-</flow>
- 
-</mule>
-----
-
-In the example above, the  list of accepted status codes is defined separated by commas, so only 200 and 201 are considered valid responses. If the HTTP response has any other status value, it's considered a failure and raises an exception.
-
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-. Select the *advanced tab* of the HTTP Request Connector
-. Select the *Failure Status Code Validator* radio button
-. Fill in the *Values* field below with `500..599 `
-....
-[tab,title="XML Editor"]
-....
-For example:
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
-  
-<flow name="test_flow">
- 
-    ...
- 
-    <http:request config-ref="HTTP_Request_Configuration"  path="/" method="GET"> 
-         <http:failure-status-code-validator values="500..599"/>
-    </http:request>
-</flow>
-----
-....
-------
-
-=== Full XML Code
-
-[source, xml, linenums]
-----
-<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-    xmlns:spring="http://www.springframework.org/schema/beans"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
-     
-     <http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" doc:name="HTTP Listener Configuration"/>
-    <http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
-  
-    <flow name="test_flow">
-        <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-        <http:request config-ref="HTTP_Request_Configuration"  path="/" method="GET"> 
-            <http:failure-status-code-validator values="500..599"/>
-        </http:request>
-    </flow>
- 
-</mule>
-----
-
-A range of failure status codes is defined by using two dots *..*, so in the example above, any value between 500 and 599 is considered a failure and  raises an exception. If the HTTP response has any other status value, it's considered a success.
-
-== Changing the Default Behavior for When to Add a Body to the Request
-
-By default, the methods GET, HEAD and OPTIONS sends HTTP requests with an empty body, and the payload of the Mule message won't be used at all. The rest of the methods sends the message payload as the body of the request. If you need to change this default behavior, you can specify the `sendBodyMode` attribute in the request, with one of the following possible values:
-
-* AUTO (default): The behavior depends on the method. Body is not sent for GET, OPTIONS and HEAD, and it is sent otherwise.
-* ALWAYS: The body is always sent.
-* NEVER: The body is never sent.
-
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-For example, GET requests usually do not contain a body, but some APIs require them to have one. In those cases, enter the *Advanced* settings panel and set the *Send Body* field to *ALWAYS*.
-....
-[tab,title="XML Editor"]
-....
-For example, GET requests usually do not contain a body, but some APIs require them to have one. In those cases, the `sendBodyMode` attribute should be specified to force this behavior:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test_flow">
-    ...
-    <set-payload value="Hello world" />
-    <http:request config-ref="HTTP_Request_Configuration" path="test" method="GET" sendBodyMode="ALWAYS"  />
-</flow>
-----
-
-This sends a GET request to +http://www.example.com/test+ with "Hello world" as the body.
-....
-------
+A range of failure status codes is defined by two dots *..*. Any value between 500 and 599 is considered a failure and raises an exception. If the HTTP response has any other status value, it's considered a success.
 
 == Configuring Source and Target
 
-By default, the body of your request is taken from the `\#[payload]` of the incoming Mule message and the response is sent onwards as the `#[payload]` of the output Mule message, you can change this default behavior through the `source` and `target` attributes.
-
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-[%header,cols="2*"]
-|===
-|Attribute |Description
-|*source* |Where to take the body of the request from. By default, this is `#[payload]`
-|*target* a|
-Where to place response body. Default: `#[payload]`
-
-Use this attribute to specify an alternate place other than payload for the output data, such as a variable or property.
-
-|===
-
-For example:
-
-image:http-request-connector-3ed25.png[overriding default behavior by settings source and target]
-
-This takes the body of the request from an inbound property named "foo", and places the response of the request in an outbound attachment named "bar".
-....
-[tab,title="XML Editor"]
-....
-[%header,cols="2*"]
-|===
-|Attribute |Description
-|*source* |Where to take the body of the request from. Default: `#[payload]`
-|*target* a|
-Where to place response body. Default: `#[payload]`
-
-Use this attribute to specify an alternate place other than payload for the output data, such as a variable or property.
-|===
-
-For example:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test">
-    ...
-    <http:request config-ref="HTTP_Request_Configuration" path="test" method="GET"  source="#[message.inboundProperties.foo]" target="#[message.outboundAttachments.bar]" />
-</flow>
-----
-
-This takes the body of the request from an inbound property named "foo", and places the response of the request in an outbound attachment named "bar".
-....
-------
-
+By default, the body of a request is taken from the `\#[payload]` of the incoming Mule message and the response is sent onwards as the `#[payload]` of the output Mule message. You can change this default behavior through the General > Request > Body and General > Output > Target Variable attributes.Use this attribute to specify a place other than payload for the output data, such as a variable.
 
 == Configuring Streaming
 
-By default, if the type of the payload is a stream, streaming is used to send the request. You can change this default behavior by setting the attribute `requestStreamingMode`, which allows the following values:
+By default, if the type of the payload is a stream, streaming is used to send the request. You can change this default behavior. Select General > Request > Request Streaming with one of the following values:
 
 * *AUTO* (default): The behavior depends on the payload type: if the payload is an InputStream, then streaming is enabled; otherwise it is disabled.
 * *ALWAYS*: Always enable streaming regardless of the payload type.
 * *NEVER*: Never stream, even if the payload is a stream.
 
-When streaming, the request does not contain the `Content-Length` header. Instead, it contains the `Transfer-Encoding` header: it sends the body in chunks until the stream is fully consumed.
+When streaming, the request does not contain the `Content-Length` header. It contains the `Transfer-Encoding` header and sends the body in chunks until the stream is fully consumed.
 
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-For example, if your input is a file inbound endpoint that set a stream as the payload of the Mule message but you want to disable streaming, enter the *Advanced* settings panel and set the *Enable Streaming* field to *NEVER*.
-....
-[tab,title="XML Editor"]
-....
-The following example makes a POST request to `+http://www.example.com/test+`, reading a file from the "input" directory, and sending its content as the body of the request. In this case, streaming are used because the file inbound endpoint sets a stream as the payload of the Mule message that is generated. The generated HTTP request is sent using `Transfer-Encoding: chunked`.
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test">
-    <file:inbound-endpoint path="input" responseTimeout="10000" />
-    <http:request config-ref="HTTP_Request_Configuration"   path="test" method="POST" />
-</flow>
-----
-
-For streaming to be disabled in this case, we need to explicitly set `requestStreamingMode` equal to `"NEVER"`:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test">
-    <file:inbound-endpoint path="input" responseTimeout="10000" />
-     <http:request config-ref="HTTP_Request_Configuration"   path="test" method="POST" requestStreamingMode="NEVER"/>
-</flow>
-----
-
-In this case, the request is not streamed.
-....
-------
 
 == Sending Multipart Requests
 
 To send a multipart request (for example to upload a file in a POST request), outbound attachments should be set in the Mule message. When the message has attachments, a multipart request is sent where each part is an attachment. In this case the payload is ignored.
 
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
 You can use Attachment transformers to add attachments to your message:
 
 image:http-request-connector-99015.png[use attachment transformers]
 
 This sends a POST request with `ContentType: multipart/form-data` and with two parts: one with the first attachment, the other with the second.
-....
-[tab,title="XML Editor"]
-....
-For example:
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test_flow">
-    <set-attachment attachmentName="key1" value="value1" contentType="text/plain" />
-    <set-attachment attachmentName="key2" value="value2" contentType="text/plain" />
-    <http:request path="test" method="POST" config-ref="HTTP_Request_Configuration" />
-</flow>
-----
 
-This sends a POST request to +http://www.example.com/test+, with `ContentType: text/plain` and with two parts: one with name key1 and content value1, and the other  with name key2 and content value2.
-....
-------
-
-[NOTE]
---
 If the response is a multipart response, then the parts map as inbound attachments in the Mule message, and the payload is null.
---
+
 == HTTPS Protocol Configuration
 
 You can send your requests through HTTPS protocol by simply setting the protocol attribute to HTTPS . This makes the HTTP Request Connector use the default JVM values for the HTTPS connection, which  likely already includes a trust store with certificates for all the major certifying authorities.
 
-See link:/mule-user-guide/v/3.8/tls-configuration[TLS Configuration] for more details.
-
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
 In the connector's Global Configuration Element, on the *General* tab, select the *HTTPS* radio button to select the Protocol.
-....
-[tab,title="XML Editor"]
-....
-For example:
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" protocol="HTTPS" doc:name="HTTP_Request_Configuration"/>
- 
-<flow name="test_flow">
-    ...
-    <http:request path="test" method="POST"  config-ref="HTTP_Request_Configuration" />
-</flow>
-----
-This sends a POST request to +http://www.example.com/test+, encrypted with the default JVM certificates.
-....
-------
 
 If you want to use a different set of HTTPS certificates, you can customize them by setting the link:/mule-user-guide/v/3.8/tls-configuration[TLS configuration] in the HTTP Request Connector's global configuration element. You can also create a separate TLS global element and reference it through your HTTP Connector. +
 
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
 . In the connector's Global Configuration Element, in the *General* tab, select the *HTTPS* radio button to select the Protocol.
 . Select the *TLS/SSL tab*
 . Either:
@@ -874,7 +305,4 @@ For example:
 
 == See Also
 
-* link:/mule-user-guide/v/3.8/authentication-in-http-requests[Authentication in HTTP Requests]
-* link:/mule-user-guide/v/3.8/http-listener-connector[HTTP Listener Connector]
-* See a link:/mule-user-guide/v/3.8/http-connector-reference[full reference] of the available XML configurable options in this connector
-* Consult a reference to the deprecated predecessor of this element, the HTTP endpoint link:/mule-user-guide/v/3.8/http-request-connector[HTTP Transport Reference]
+
