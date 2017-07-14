@@ -1,83 +1,88 @@
 = HTTP Listener Configuration Reference
 :keywords: anypoint studio, esb, connectors, http, https, http headers, query parameters, rest, raml
 
-You can configure the HTTP connector listen operation to accept any request, or to accept only those requests addressed to a specific URI. You can choose what methods the connector accepts, such as GET or POST. The request body is passed on to the next element of the Mule flow as the _message payload_ of a Mule message, while headers, query parameters, URI parameters and other elements of the HTTP Request are passed on as attributes. These properties are accessible within a Mule message from your Mule application. You can configure response codes and clarifications for success and error outcomes to present different error messages depending on the case.
-
 The required minimum settings for the listen operation are:
 
 * Host
 * Port
 * Path
 
-[source, xml, linenums]
-----
-<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="36152b98-c071-480f-bc8a-7d2503684640" >
-	<http:listener-connection host="0.0.0.0" port="8081" />
-</http:listener-config>
-...
-<http:listener config-ref="HTTP_Listener_config" path="/" doc:name="Listener" doc:id="b4714567-1edb-4338-acbd-50881aff59d9" />
-...
-----
+You can choose what methods the connector accepts, such as GET or POST. Provide a comma-separated list of the methods that the connector allows in Advanced > Allowed Methods. The default blank list allows all methods. The connector routes incoming requests based on the URL that requests the app. 
 
-== Setting the Host Option
+You can configure the HTTP connector listen operation to accept any request, or to accept only those requests addressed to a specific URI. You set the Path to limit the requests.
 
-To listen on a specific port for every network interface on the server, you set host to `0.0.0.0`. The app listens for requests on the following interfaces:
+The connector passes the request body to the next element of the Mule flow as the message payload of a Mule message. Headers, query parameters, and URI parameters are passed as attributes. You can access these properties from your Mule application using DataWeave. 
+
+In response to the request that the listen operation receives, you can configure response codes and clarifications for success and error outcomes to present different error messages depending on the outcome.
+
+== Setting the Host
+
+To deploy a project to CloudHub, setting Host = *0.0.0.0* is required. 
+
+When you depoly an app locally, set Host = *localhost* for security. Using localhost listens for incoming requests generated inside the server, so the app is not vulnerable to external threats.
+
+Setinng Host to `0.0.0.0` sets up connector to listens on all interface of including the following examples:
 
 * `http://localhost:8081/mybasepath`
 * `http://127.0.0.2:8081/mybasepath`
+*  ...
 
-To deploy a project to CloudHub, set host = `0.0.0.0`. 
-
-Using `localhost` listens for incoming requests generated inside the server. If you deploy the app locally, using `localhost` rather than leaving the default `0.0.0.0` to listen to all addresses is recommended for security.
-
-
-== Setting the Path Option
-
-You can use the wildcard asterisk (*) in Path as follows:
-
-* To listen for incoming requests to a path within the specified base path by using a wildcard at the end of a path. 
-* To listen for all requests for a resource in a URI by using a wildcard in the middle of a path.
+== Setting the Path
 
 If a request matches the path of multiple listeners, the listener having the most specific path has precedence, regardless of the order in which the connectors are defined. Only one connector handles each request. 
-For example, given two listeners, one Path = `account/(...)` and the other Path = `account/(...)/main-contact`, the latter receives the request when you enter the following URL in the browser: `account/mulesoft/main-contact`.
+For example, given the following listener configurations, the second one receives the request when you use this URL: `account/mulesoft/main-contact`
 
-=== Wildcard at the End
+* Path = `account/(...)` 
+* Path = `account/(...)/main-contact`
 
-You specify a partial path that ends in `/*`, pointing to any path that begins as defined but that could also be extended. For example, the Path settings for the HTTP listener in flows are set as follows:
+=== Wildcard in Path
 
-* Flow A: `/regions/*/customers` 
-* Flow B: `/regions/us/prospects`
+In the Path setting, you can use the wildcard asterisk (*) as follows:
 
-A request to `/regions/us/customers` fails. The request is routed to flow B, which does not support the path to _customers_. 
+* To listen for incoming requests to a path within the specified base path. Use a wildcard at the end of a path. 
+* To listen for all requests for a resource in a URI. Use a wildcard in the middle of a path.
 
-=== Wildcard in the Middle
+You can specify a partial path that ends with an asterisk, for example: `/somepath/*`. Any request succeeds that has a URL consisting of the prefix to the asterisk (`/somepath`). 
 
-You specify a wildcard in the middle of a path, for example `account/\*/main-contact`. The HTTP Listener receives every HTTP request having a URI that starts with `/account/` and ends with `/main-contact`; the segment inbetween could be anything. It accepts any of the following:
+Put a wildcard at the end of a path to prevent unexpected results when specific paths configured in other flows override the wildcard path. For example, the Path settings for the HTTP listener in flows are set as follows:
 
-* `http://localhost:8081/account/mulesoft/main-contact`
-* `http://localhost:8081/account/foo/main-contact`
+* Path configured in Flow A: `/regions/*/customers` 
+* Path configured in Flow B: `/regions/us/prospects`
+
+A request to `/regions/us/customers` fails and is routed to flow B. 
+
+Put a wildcard in the middle of a path when you want a request to succeed that has a URL consisting of the prefix and suffix to the asterisk. For example, Path = `account/\*/main-contact`. The HTTP connector listens for every HTTP request having a URI that starts with `/account/` and ends with `/main-contact`; the segment in the middle can vary. Requests succeed from the following URLs:
+
+* `+http://localhost:8081/account/mulesoft/main-contact+`
+* `+http://localhost:8081/account/foo/main-contact+`
 
 === Using a Placeholder in a URI
 
-If you work with RAML APIs, you are probably familiar with placeholders. You can define a path that uses a placeholder in curly braces: `{accountId}` for example, `account/{accountId}/main-contact`. The connector maps the accountId to a URI parameter attribute in the flow. 
+You can define a path that uses a placeholder in curly braces: `{accountId}` for example, `account/{accountId}/main-contact`. The connector maps the accountId to a URI parameter attribute in the flow. 
 
-Upon receiving the sample request `http://localhost:8081/account/mulesoft/main-contact`, the URI parameter is mapped into the Mule Message that holds the key `accountId` = `mulesoft`:
+For example, a request to `+http://localhost:8081/account/mulesoft/main-contact+` maps the URI parameter to the Mule Message that holds the key `accountId` = `mulesoft`:
 
-== Setting HTTP Methods
+== Connector Mapping of Received Data
 
-You provide a comma-separated list of the methods that the connector allows in Advanced > Allowed Methods. The default blank list allows all methods. By configuring allowed methods, you can route incoming requests based on the method that you specify in the client when you send the request to the app. 
+The data received by the connector during the listen operation is mapped as follows:
 
-== The Request Body
+* The body of a request is not a form.
++
+Maps to Mule message payload.
++
+* The body of a request is a form (header = `Content-Type: application/x-www-form-urlencoded`)
++
+Maps key-value pairs in the form to the Mule message payload, consisting of a key-value map.
++
+* The body of a request is a multi-part form (header = `multipart/form-data`).
++
+Maps to a key-value that the connector attaches to the Mule message.
 
-The HTTP request body is transformed by the connector into the payload of a Mule Message. The payload type is always `InputStream`, unless the *Content-Type* header of the request is either `application/x-www-form-urlencoded` or `multipart/form-data`. In both cases, Mule parses the request to generate a Mule Message.
+=== Example of Receiving a Form
 
-== Using a Form
+The following example shows the mapping by the HTTP listener operation when an HTML form is received.
 
-Posting a web page consisting of an HTML form generates an HTTP request with the header `Content-Type: application/x-www-form-urlencoded`. The form fields are key-value pairs encoded in the request body. The HTTP Connector takes the request body, automatically parses its content into a key-value map, and sets it as the Mule message payload.
-
-If the request to post a form involves uploading a file, you set the Content-Type to `multipart/form-data`. When the listener hears the request, the the connector attaches the request to the Mule message, automatically parses the content, and creates a key-value map in the attachment.
-
-For example, the following HTML form is submitted:
+The body of a request is the following HTML form:
 
 [source, xml, linenums]
 ----
@@ -93,7 +98,7 @@ For example, the following HTML form is submitted:
 </form>
 ----
 
-The following HTTP request is originated by the form:
+The request headers are:
 
 [source, code, linenums]
 ----
@@ -119,105 +124,45 @@ blue
  --AaB03x
 ----
 
-You access the form values using #[attributes.headers['content-type']]. The message payload null. As the content of each form field is not of a simple type, these are represented as data handlers. Internally, each Data Handler contains a data source with the field content.  
+== Using DataWeave to Access the Form Data
 
-Once data is put in the Mule message, you can access it elsewhere in the flow.  
+You access the form values using expressions that resemble these:
 
-*   You can access the content of the `name` field through the expression  `#[payload.‘name’.dataSource.content]`
-* You can access the Content-Disposition header of the `name` field through the expression `#[message.payload.‘name’.dataSource.getHeader(‘Content-Disposition’)]` 
+* Access the content of the `name` field
++
+`#[payload.name]`
++
+* Access the headers
++
+`#[attributes.headers['content-type']` 
 
-== Disabling HTTP Request Body Parsing
+The message payload is null. For more information, see "About HTTP Responses to Requests."
 
-When the content type of the request is `application/x-www-form-urlencoded` or `multipart/form-data`, then the HTTP Listener automatically performs a message parsing. Disable parsing in HTTP Listener Config > Advanced. On the XML editor you can set the *parseRequest* attribute to *"false"*.
-
-[source, xml, linenums]
-----
-<http:listener config-ref="HTTP_Listener_Configuration" path="/" parseRequest="false"/>
-----
-
-== HTTP Headers
-
-HTTP Headers are converted by the HTTP Connector into attributes in the Mule Message.
-
-Below is an HTTP Request that contains a headers:
-
-[source, code, linenums]
-----
-GET /account HTTP/1.1
-Host: www.mulesoft.org
-Server: Mule/4.0
-----
-
-The HTTP Request is transformed into a Mule Message with the following attributes:
-
-[source, code, linenums]
-----
-Host = www.mulesoft.org
-Server = Mule/4.0
-----
-
-In your Mule flow, you can access these headers using the following expressions:
-
-[source, code, linenums]
-----
-#[message.attributes.’Host’]  
- #[message.attributes.’Server’]
-----
+When the content type of the request is `application/x-www-form-urlencoded` or `multipart/form-data`, the HTTP Listener automatically performs a message parsing. To disable parsing, set the option in HTTP Listener Config > Advanced, or in XML, set the *parseRequest* attribute to *"false"*.
 
 == HTTP Custom Properties Request Line
 
-Besides headers and a body, an HTTP request is also composed of a request line. The HTTP request line is the content on the first line of the HTTP Request, it mainly contains the URI that is typed into the address bar when requesting content via a browser. For example:
+Besides headers and a body, an HTTP request is also composed of a request line. The HTTP request line is the content on the first line of the HTTP Request that includes the URI from the address bar of the client request. For example:
 
 `POST /mydomain/login/?user=aaron&age=32 HTTP/1.1`  +
 
 This content is transformed into the following attributes in the Mule Message: 
 
-image:request-mule-msg-map.png[Map of HTTP Response to Mule Message]
-
 Property names are defined as follows:
 
-* *http.method* 
+* `#[attributes.method]` 
 +
 The HTTP Request method
 +
-* *http.request.uri*
+* `[#attributes.listenerPath]`
 +
-The entire HTTP Request Line URI: /`mydomain/login/?user=aaron&age=32`
+The path: `/mydomain/login/`
 +
-* *http.version*
+* `#[payload.name]` and `#[payload.age]
 +
-The HTTP protocol version, for example HTTP/1.1
-+
-* *http.request.path*
-+
-The HTTP Request Line, minus query parameters. For example, `/mydomain/login`.
-+
-* *http.query.string*
-+
-The query string from the URI, without parsing. For example, `user=aaron&age=32`.
-+
-* *http.query.params*
-+
-A Map with all the query parameters from the URI, parsed and URL decoded. For example, `user=aaron` and `age=32.
-+
-* *http.uri.params*
-+
+The query string from the URI, without parsing. For example, `name=aaron&age=32`.
+
 When the HTTP Listener has URI parameter placeholders in its path, this Map is created with the holder name as key and the value is extracted from the request path. For example, `domain=mydomain`. The Listener path must be defined as `{domain}/login`
-+
-* *http.listener.path*
-+
-Value of the path attribute of the HTTP Listener that accepted the request. In case the global element had a base path configured, it is also included. For example, / `mydomain/login` /
-+
-* *http.scheme*
-+
-The HTTP protocol scheme. HTTPS if the listener-config associated has TLS configuration.
-+
-* *http.remote.address*
-+
-The HTTP Request called remote address 
-+
-* *http.client.cert*
-The client certificate when using 2-way authentication.
 
 == Generating the HTTP Response
 
@@ -249,7 +194,7 @@ You can customize the connector response to requests and dynamically. For exampl
 
 You can define the status code and reason phrase in the HTTP headers `http.status` and `http.reason`. You can add headers to your response by creating corresponding attributes. The attributes are transformed into HTTP headers by the HTTP listener when the flow executes. Alternatively, in Status Code and Reason Phrase of the connector configuration, you can set up these values. You can set up different headers separately for the event of a successful flow execution and in case of a failure.
 
-== Connection Attributes Configuration
+== Configuring Connection Attributes
 
 You can customize HTTP incoming connections by setting the maximum time a connection can be idle and enabling or disabling persistent HTTP connections. In the global configuration element, check Use Persistent Connection to define whether multiple requests are handled by a single connection or not. By default, multiple requests are handled by a single connection (true).
 
