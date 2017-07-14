@@ -134,7 +134,7 @@ The request operation connects to configured hosts using round robin DNS. Mule R
 
 When connecting to resources that require authentication, the external service needs to replicate session information between IP addresses under the host of your service. Otherwise, your requests might get rejected for being unauthorized.
 
-When your external resource does not handle _sticky sessions_ you need to add the service host name to the `mule.http.disableRoundRobin` system property when starting the Mule Runtime:
+When your external resource does not handle sticky sessions you need to add the service host name to the `mule.http.disableRoundRobin` system property when starting the Mule Runtime:
 
 [source,Command,linenums]
 ----
@@ -145,7 +145,7 @@ When configured in this way, the request does not use round robin DNS round robi
 
 == HTTP Response Validation
 
-When the HTTP Request Connector receives an HTTP response, it validates the response through its status code. By default, it throws an error when the status code is higher or equal to 400. This means that if the server returns a 404 (Resource Not Found) or a 500 (Internal Server Error) the HTTP Request Connector fails and the exception strategy of the flow it is called from is triggered.
+When the HTTP request operation receives an HTTP response, it validates the response through its status code. By default, it throws an error when the status code is higher or equal to 400. This means that if the server returns a 404 (Resource Not Found) or a 500 (Internal Server Error) a failure occurs and the exception strategy is triggered.
 
 You can change the set of valid HTTP response codes by configuring General > Response > Response Validator. 
 
@@ -154,10 +154,7 @@ You can change the set of valid HTTP response codes by configuring General > Res
 * *Success Status Code Validator: * All the status codes defined within this element are considered valid; the request throws an exception for any other status code.
 * *Failure* *Status Code Validator: * All the status codes defined within this element are considered invalid and an exception is thrown; the request is considered valid with any other status code.   
 
-To set a list of status codes accepted as successful responses, do the following:
-
-. In General > Response > Response Validator, select Success Status Code Validator.
-. In *Values*, enter the list of accepted status codes, separated by commas: *200,201*.
+To set a list of status codes accepted as successful responses, in General > Response > Response Validator, select Success Status Code Validator. In *Values*, enter the list of accepted status codes, separated by commas: *200,201*.
 
 If the HTTP response has any other status value, it's considered a failure and raises an exception.
 
@@ -165,7 +162,7 @@ A range of failure status codes is defined by two dots *..*. Any value between 5
 
 == Configuring Source and Target
 
-By default, the body of a request is taken from the `\#[payload]` of the incoming Mule message and the response is sent onwards as the `#[payload]` of the output Mule message. You can change this default behavior through the General > Request > Body and General > Output > Target Variable attributes.Use this attribute to specify a place other than payload for the output data, such as a variable.
+By default, the body of a request is taken from the `\#[payload]` of the incoming Mule message and the response is sent onwards as the `#[payload]` of the output Mule message. You can change this default behavior through the General > Request > Body and General > Output > Target Variable attributes. Use this attribute to specify a location other than payload for the output data, such as a variable.
 
 == Configuring Streaming
 
@@ -177,131 +174,14 @@ By default, if the type of the payload is a stream, streaming is used to send t
 
 When streaming, the request does not contain the `Content-Length` header. It contains the `Transfer-Encoding` header and sends the body in chunks until the stream is fully consumed.
 
-
 == Sending Multipart Requests
 
 To send a multipart request (for example to upload a file in a POST request), outbound attachments should be set in the Mule message. When the message has attachments, a multipart request is sent where each part is an attachment. In this case the payload is ignored.
 
-You can use Attachment transformers to add attachments to your message:
+You can use Attachment transformers to add attachments to your message. This sends a POST request with `ContentType: multipart/form-data` and with two parts: one with the first attachment, the other with the second.
 
-image:http-request-connector-99015.png[use attachment transformers]
+If the response is a multipart response, the parts are mapped as inbound attachments in the Mule message, and the payload is null.
 
-This sends a POST request with `ContentType: multipart/form-data` and with two parts: one with the first attachment, the other with the second.
-
-If the response is a multipart response, then the parts map as inbound attachments in the Mule message, and the payload is null.
-
-== HTTPS Protocol Configuration
-
-You can send your requests through HTTPS protocol by simply setting the protocol attribute to HTTPS . This makes the HTTP Request Connector use the default JVM values for the HTTPS connection, which  likely already includes a trust store with certificates for all the major certifying authorities.
-
-In the connector's Global Configuration Element, on the *General* tab, select the *HTTPS* radio button to select the Protocol.
-
-If you want to use a different set of HTTPS certificates, you can customize them by setting the link:/mule-user-guide/v/3.8/tls-configuration[TLS configuration] in the HTTP Request Connector's global configuration element. You can also create a separate TLS global element and reference it through your HTTP Connector. +
-
-. In the connector's Global Configuration Element, in the *General* tab, select the *HTTPS* radio button to select the Protocol.
-. Select the *TLS/SSL tab*
-. Either:
-
-** Select the *Use TLS Config* option and provide your credentials in the available fields.
-** Or select the *Use Global TLS Config* option, then select an existing configuration or create a new one by clicking the green plus sign next to the selection box.
-
-[NOTE]
---
-If you need to temporarily disable certificate validations, you can select the _Insecure_ option. This causes your Mule application to accept all certificates from an SSL endpoint without validating them in the flow.
-
-Remember to un-check it back when you finally deploy your application.
---
-
-....
-[tab,title="XML Editor"]
-....
-You can add your link:/mule-user-guide/v/3.8/tls-configuration[TLS] credentials as a child element of the `http:request-config` element:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" protocol="HTTPS" doc:name="HTTP_Request_Configuration"/>
-        <tls:context>
-            <tls:trust-store path="your_truststore_path" password="your_truststore_password"/>
-            <tls:key-store path="your_keystore_path" password="your_keystore_path" keyPassword="your_keystore_keypass"/>
-        </tls:context>
-</http:request-config>
- 
-<flow name="test_flow">
-    ...
-    <http:request path="test" method="POST"  config-ref="HTTP_Request_Configuration" />
-</flow>
-----
-
-The above example sends a POST request to +http://www.example.com/test+, encrypted with the provided HTTPS settings.
-
-You can also add your link:/mule-user-guide/v/3.8/tls-configuration[TLS] credentials in a separate construct, outside your `http:request-config` element. In that case, you must name your `tls:context` and add a `tlsContext-ref` attribute in your `http:request-config`.
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" tlsContext-ref="My-TLS_Context" protocol="HTTPS" doc:name="HTTP_Request_Configuration"/>
-         
-<tls:context name="My-TLS_Context" doc:name="My-TLS_Context">
-        <tls:trust-store path="your_truststore_path" password="your_truststore_password"/>
-        <tls:key-store path="your_keystore_path" password="your_keystore_path" keyPassword="your_keystore_keypass"/>
-</tls:context>
- 
-<flow name="test_flow">
-    ...
-    <http:request path="test" method="POST"  config-ref="HTTP_Request_Configuration" />
-</flow>
-----
-
-[NOTE]
---
-If you need to temporarily disable certificate validations, you can set `<tls:trust-store insecure="true"/>` inside the `<tls:context>` tag. This causes your Mule application to accept all certificates from an SSL endpoint without validating them in the flow.
-
-Remember to set this value to _false_ before deploying your application, or simply remove the tag, since false is its default value.
---
-....
-------
-
-== Other Attributes
-
-Other attributes in this connector allow you to set up more advanced functionality: response timeout, if redirects aree followed and if responses are parsed.
-
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
-These attributes are available in the *Advanced* tab in the connectors properties editor.
-
-[%header,cols="2*"]
-|===
-|Attribute |Description
-|Response Timeout |Specifies the time in milliseconds after which, if no response is received, the request is no longer attempted.
-|Parse Response |If true, it parses the response if you receive multipart responses. If set to false, no parsing is done and the raw contents of the response are placed in the payload. By default it's set to true.
-|Follow Redirects |Defines whether redirects are followed or not. This is set to true by default
-|Use Cookies | When checked, gathers cookies from each response it receives and then send them on subsequent requests.
-|===
-....
-[tab,title="XML Editor"]
-....
-[%header,cols="2*"]
-|===
-|Attribute |Description
-|responseTimeout |Specifies the time in milliseconds after which, if no response is received, the request is no longer  attempted.
-|parseResponse |If true, it parses the response if you receive multipart responses. If set to false, no parsing is done and the raw contents of the response are placed in the payload. This is set to true by default.
-|followRedirects |Defines whether redirects are followed or not. This is set to true by default.
-|enableCookies |When set to `true`, this attribute gathers cookies from each response it receives, and then send them on subsequent requests.
-|===
-
-For example:
-
-[source, xml, linenums]
-----
-<http:request-config name="HTTP_Request_Configuration" host="example.com" port="8081" doc:name="HTTP_Request_Configuration"/>
-  
-<flow name="test_flow">        ...
-     <http:request config-ref="HTTP_Request_Configuration" path="test" method="GET" followRedirects="true" parseResponse="false" enableCookies="true" responseTimeout="10000" />
-</flow>
-----
-....
-------
 
 == See Also
 
