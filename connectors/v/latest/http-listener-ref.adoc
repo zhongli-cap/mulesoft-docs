@@ -1,0 +1,208 @@
+= HTTP Listener Configuration Reference
+:keywords: anypoint studio, esb, connectors, http, https, http headers, query parameters, rest, raml
+
+The required minimum settings for the listen operation are:
+
+* Host
+* Port
+* Path
+
+You can choose what methods the connector accepts, such as GET or POST. Provide a comma-separated list of the methods that the connector allows in Advanced > Allowed Methods. The default blank list allows all methods. The connector routes incoming requests based on the URL that requests the app. 
+
+You can configure the HTTP connector listen operation to accept any request, or to accept only those requests addressed to a specific URI. You set the Path to limit the requests.
+
+The connector passes the request body to the next element of the Mule flow as the message payload of a Mule message. Headers, query parameters, and URI parameters are passed as attributes. You can access these properties from your Mule application using DataWeave. 
+
+In response to the request that the listen operation receives, you can configure response codes and clarifications for success and error outcomes to present different error messages depending on the outcome.
+
+== Setting the Host
+
+To deploy a project to CloudHub, setting Host = *0.0.0.0* is required. 
+
+When you depoly an app locally, set Host = *localhost* for security. Using localhost listens for incoming requests generated inside the server, so the app is not vulnerable to external threats.
+
+Setinng Host to `0.0.0.0` sets up connector to listens on all interface of including the following examples:
+
+* `http://localhost:8081/mybasepath`
+* `http://127.0.0.2:8081/mybasepath`
+*  ...
+
+== Setting the Path
+
+If a request matches the path of multiple listeners, the listener having the most specific path has precedence, regardless of the order in which the connectors are defined. Only one connector handles each request. 
+For example, given the following listener configurations, the second one receives the request when you use this URL: `account/mulesoft/main-contact`
+
+* Path = `account/(...)` 
+* Path = `account/(...)/main-contact`
+
+=== Wildcard in Path
+
+In the Path setting, you can use the wildcard asterisk (*) as follows:
+
+* To listen for incoming requests to a path within the specified base path. Use a wildcard at the end of a path. 
+* To listen for all requests for a resource in a URI. Use a wildcard in the middle of a path.
+
+You can specify a partial path that ends with an asterisk, for example: `/somepath/*`. Any request succeeds that has a URL consisting of the prefix to the asterisk (`/somepath`). 
+
+Put a wildcard at the end of a path to prevent unexpected results when specific paths configured in other flows override the wildcard path. For example, the Path settings for the HTTP listener in flows are set as follows:
+
+* Path configured in Flow A: `/regions/*/customers` 
+* Path configured in Flow B: `/regions/us/prospects`
+
+A request to `/regions/us/customers` fails and is routed to flow B. 
+
+Put a wildcard in the middle of a path when you want a request to succeed that has a URL consisting of the prefix and suffix to the asterisk. For example, Path = `account/\*/main-contact`. The HTTP connector listens for every HTTP request having a URI that starts with `/account/` and ends with `/main-contact`; the segment in the middle can vary. Requests succeed from the following URLs:
+
+* `+http://localhost:8081/account/mulesoft/main-contact+`
+* `+http://localhost:8081/account/foo/main-contact+`
+
+=== Using a Placeholder in a URI
+
+You can define a path that uses a placeholder in curly braces: `{accountId}` for example, `account/{accountId}/main-contact`. The connector maps the accountId to a URI parameter attribute in the flow. 
+
+For example, a request to `+http://localhost:8081/account/mulesoft/main-contact+` maps the URI parameter to the Mule Message that holds the key `accountId` = `mulesoft`:
+
+== Connector Mapping of Received Data
+
+The data received by the connector during the listen operation is mapped as follows:
+
+* The body of a request is not a form.
++
+Maps to Mule message payload.
++
+* The body of a request is a form (header = `Content-Type: application/x-www-form-urlencoded`)
++
+Maps key-value pairs in the form to the Mule message payload, consisting of a key-value map.
++
+* The body of a request is a multi-part form (header = `multipart/form-data`).
++
+Maps to a key-value that the connector attaches to the Mule message.
+
+=== Example of Receiving a Form
+
+The following example shows the mapping by the HTTP listener operation when an HTML form is received.
+
+The body of a request is the following HTML form:
+
+[source, xml, linenums]
+----
+<form action="http://server.com/cgi/handle" 
+        enctype="multipart/form-data" 
+        method="post"> 
+ 
+    What is your name? <INPUT type="text" name="name"><BR> 
+    What is your quest? <INPUT type="file" name="quest"><BR> 
+    What is your favorite color? <INPUT type="text" name="color"><BR> 
+    <INPUT type="submit" value="Send"> <INPUT type="reset"> 
+ 
+</form>
+----
+
+The request headers are:
+
+[source, code, linenums]
+----
+POST /accounts HTTP/1.1
+Host: localhost:8081
+Cache-Control: no-cache
+User-Agent: Mule/4.0
+Content-Type: multipart/form-data; boundary=AaB03x 
+  
+ --AaB03x
+Content-Disposition: form-data; name="name"
+ 
+MuleSoft
+ --AaB03x
+Content-Disposition: form-data; name="quest"; filename="myquest.png"
+Content-Type: image/png
+ 
+ 
+ --AaB03x
+Content-Disposition: form-data; name="color"
+ 
+blue
+ --AaB03x
+----
+
+== Using DataWeave to Access the Form Data
+
+You access the form values using expressions that resemble these:
+
+* Access the content of the `name` field
++
+`#[payload.name]`
++
+* Access the headers
++
+`#[attributes.headers['content-type']` 
+
+The message payload is null. For more information, see "About HTTP Responses to Requests."
+
+When the content type of the request is `application/x-www-form-urlencoded` or `multipart/form-data`, the HTTP Listener automatically performs a message parsing. To disable parsing, set the option in HTTP Listener Config > Advanced, or in XML, set the *parseRequest* attribute to *"false"*.
+
+== HTTP Custom Properties Request Line
+
+Besides headers and a body, an HTTP request is also composed of a request line. The HTTP request line is the content on the first line of the HTTP Request that includes the URI from the address bar of the client request. For example:
+
+`POST /mydomain/login/?user=aaron&age=32 HTTP/1.1`  +
+
+This content is transformed into the following attributes in the Mule Message: 
+
+Property names are defined as follows:
+
+* `#[attributes.method]` 
++
+The HTTP Request method
++
+* `[#attributes.listenerPath]`
++
+The path: `/mydomain/login/`
++
+* `#[payload.name]` and `#[payload.age]
++
+The query string from the URI, without parsing. For example, `name=aaron&age=32`.
+
+When the HTTP Listener has URI parameter placeholders in its path, this Map is created with the holder name as key and the value is extracted from the request path. For example, `domain=mydomain`. The Listener path must be defined as `{domain}/login`
+
+== Generating the HTTP Response
+
+After request processing, the message is returned to the HTTP connector to provide a response. You can customize the response body, attachment, headers, and status.
+
+=== HTTP Response Body
+
+The HTTP Response body is generated from payload of the Mule Message after executing the flow unless the payload is a Map or there are attachments in the message.
+
+When the payload is a *Map*, the HTTP Connector generates an `application/x-www-form-urlencoded` response body and adds the header `Content-Type: application/x-www-form-urlencoded`.
+
+When the Mule message that reaches the end of the flow contains outbound attachments, the HTTP Connector creates a `multipart/form-data` HTTP response body. A multipart response is mapped as a Mule message with null payload and input attachments with each part.
+
+=== HTTP Response Headers
+
+The response message sent by the HTTP Listener Connector can include HTTP headers. 
+
+==== HTTP Response Headers from Output Attributes
+
+In Headers, enter an expression to include information in the response, for example: `#[attributes.server.dateTime]`. Attributes included in the Mule Message are transformed into an HTTP response header at the end of the flow unless the attribute has one of the following names:
+
+* Connection
+* Host
+* Transfer-Encoding
+
+=== HTTP Response Status Code and Reason Phrase
+
+You can customize the connector response to requests and dynamically. For example, you can set different error status code numbers depending on the exception raised. Each error handler method can set the value of a variable to its HTTP status.
+
+You can define the status code and reason phrase in the HTTP headers `http.status` and `http.reason`. You can add headers to your response by creating corresponding attributes. The attributes are transformed into HTTP headers by the HTTP listener when the flow executes. Alternatively, in Status Code and Reason Phrase of the connector configuration, you can set up these values. You can set up different headers separately for the event of a successful flow execution and in case of a failure.
+
+== Configuring Connection Attributes
+
+You can customize HTTP incoming connections by setting the maximum time a connection can be idle and enabling or disabling persistent HTTP connections. In the global configuration element, check Use Persistent Connection to define whether multiple requests are handled by a single connection or not. By default, multiple requests are handled by a single connection (true).
+
+If you use a persistent connection, you can also set up the Connection Idle Timeout. This option defines the number of milliseconds that a connection can remain idle before it is closed. The default value is 30 seconds.
+
+
+
+
+
+
+
