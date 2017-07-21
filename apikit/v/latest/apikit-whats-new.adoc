@@ -1,0 +1,73 @@
+= What's New in APIkit
+
+If you're an APIkit 3.x user, you'll notice changes and improvements in APIkit 4.x Beta:
+
+* APIkit and Mule 4.0 error handling is unified.
+* Responses consist of auto-generated Dataweave code. (Enterprise Edition)
+* APIkit is an Eclipse plugin. MuleSoft can now release APIkit independently from Studio and Mule, and installation of fixes is straightforward. 
+* APIkit Console is no longer embedded in Studio. API Console is browser-based and has an improved UI. You can change APIkit Console URL. 
+* The apikit:config properties are different. New properties are:
+** outboundHeadersMapName
++
+Supports sending custom headers with the response.
++
+** httpStatusVarName
++
+You can store the HTTP status code in a variable
+
+== Unified Error Handling
+
+APIkit 4.0 replaces exception strategy and error mapping with the Mule 4 error handler, which uses `on-error-propagate` types that catch errors and return error messages:
+
+[source,xml,linenums]
+----
+<apikit:router config-ref="api-config" />
+<error-handler>
+    <on-error-propagate type="APIKIT:BAD_REQUEST">
+        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+            </ee:message>
+            <ee:variables>
+                <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+    </on-error-propagate>
+----
+
+== Changing the APIkit Console URL
+
+In the api-console flow, you can modify the http:listener path property to change the URL from the default `+http://0.0.0.0:8081/console/+`.
+
+[source,xml,linenums]
+----
+<flow name="api-console">
+        <http:listener config-ref="api-httpListenerConfig" path="/console/*">
+            ...
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="api-config" />
+----
+
+== Execution of Requirements after Router Attributes
+
+TBD
+
+For example, you can add logs or trace flows.
+
+== Adding a Header to a Response
+
+Put the header you want to add inside a map as shown in the following example:
+
+TBD
+
+APIkit uses DataWeave ...
+
+
+
+== See Also
+
+* link:/mule-user-guide/v/4.0/error-handling
