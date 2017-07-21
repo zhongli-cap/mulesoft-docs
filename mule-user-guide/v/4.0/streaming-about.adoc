@@ -1,10 +1,10 @@
 = About Streaming in Mule 4.0
 
-Traditionally, when a component reads a stream of data, that stream cannot be either processed, nor accessed concurrently by another component. +
+Traditionally, when a component reads a stream of data, that stream can't be either processed or accessed concurrently by another component. +
 This is because data streams cannot be consumed more than once and cannot be consumed at the same time.
 
 For example, if a JSON payload is transferred from an Event Source to a File connector with a write operation, the stream would be consumed by the File connector, and the payload would not be available for being processed by any other module. +
-However, Mule 4.0 handles data streaming using Repeatable Streams. As the Stream is consumed by a component, its content is saved into a temporal buffer.
+However, Mule 4.0 handles data streaming using Repeatable Streams. As the component consumes the stream, Mule saves its content into a temporary buffer.
 
 This all happens automatically, so no special configuration is needed from your end.
 
@@ -13,14 +13,32 @@ Repeatable Streams enable you to:
 * Read a stream more than once.
 * Have concurrent access to the stream.
 
-When streaming, Mule 4.0 feeds each component that receives a type of stream from the temporal buffer, making sure that each component receives the full stream, regardless of how much of the stream was already consumed by any prior component. +
+When streaming, Mule 4.0 feeds each component that receives a type of stream from the temporary buffer, making sure that each component receives the full stream, regardless of how much of the stream was already consumed by any prior component. +
 Repeatable streams also allow concurrent access, so any number of concurrent threads can safely access the streamed data.
 
-This way, a Mule 4.0 application can transfer the JSON payload from an HTTP listener, write it to a file using a File Connector, and then could use another File connector to write the JSON in another file. +
-It could also process the JSON payload through a Scatter-Gather router and allow the stream to be processed by different processor chains simultaneously.
+By default, the in-memory buffer size is 512 KB. +
+Although this size for the in-memory buffer proved to be performant for most scenarios, you can configure the buffer size to any custom value.
+
+You can configure how Mule should handle the repeatable stream using different streaming strategies:
+
+* File Stored Repeatable Stream
+:: Mule saves the stream to the in-memory buffer. When the stream exceeds the buffer size, Mule saves it to a temporary file on your disk. +
+This streaming strategy is the default configuration in Mule Runtime Enterprise Edition.
++
+[NOTE]
+This option is only available in Mule Runtime EE.
+
+* In Memory Repeatable Stream
+:: Mule saves the stream to the in-memory buffer. When the stream exceeds the buffer size, the buffer is expanded incrementing its size by a pre configured value. +
+This streaming strategy is the default configuration in Mule Runtime Community Edition.
+
+* Non Repeatable Stream
+:: This strategy disables repeatable streams, letting you handle streams without stream concurrency nor repeatability.
+
+See the topic About Streaming Strategies below for more details around performance and use cases around these strategies.
 
 Every component in Mule 4.0 that returns an InputStream or a Streamable collection supports repeatable streams.
-These components are:
+Some of these components are:
 
 * File Connector
 * FTP Connector
@@ -28,8 +46,8 @@ These components are:
 * HTTP Connector
 * Sockets
 
-By default, the in-memory buffer size is 512 KB. Although this size prove to be performant for most scenarios, the buffer size can be configured to any custom value depending on the Streaming Strategy that you chose. See the the Streaming strategies topic below for more information.
-
+This way, a Mule 4.0 application can transfer the JSON payload from an HTTP listener, write it to a file using a File Connector, and then could use another File connector to write the JSON in another file. +
+It could also process the JSON payload through a Scatter-Gather router and allow the stream to be processed by different processor chains simultaneously.
 
 == See Also
 
