@@ -64,19 +64,7 @@ For example, a request to `+http://localhost:8081/account/mulesoft/main-contact+
 
 == Connector Mapping of Received Data
 
-The data received by the connector during the listen operation is mapped as follows:
-
-* The body of a request is not a form.
-+
-Maps to Mule message payload.
-+
-* The body of a request is a form (header = `Content-Type: application/x-www-form-urlencoded`)
-+
-Maps key-value pairs in the form to the Mule message payload, consisting of a key-value map.
-+
-* The body of a request is a multi-part form (header = `multipart/form-data`).
-+
-Maps to a key-value that the connector attaches to the Mule message.
+The data received by the connector during the listen operation is always mapped as the payload of the propagated Mule Message.
 
 === Example of Receiving a Form
 
@@ -136,9 +124,7 @@ You access the form values using expressions that resemble these:
 +
 `#[attributes.headers['content-type']` 
 
-The message payload is null. For more information, see "About HTTP Responses to Requests."
-
-When the content type of the request is `application/x-www-form-urlencoded` or `multipart/form-data`, the HTTP Listener automatically performs a message parsing. To disable parsing, set the option in HTTP Listener Config > Advanced, or in XML, set the *parseRequest* attribute to *"false"*.
+For more information, see "About HTTP Responses to Requests."
 
 == HTTP Custom Properties Request Line
 
@@ -154,15 +140,19 @@ Property names are defined as follows:
 +
 The HTTP Request method
 +
-* `[#attributes.listenerPath]`
+* `#[attributes.listenerPath]`
 +
 The path: `/mydomain/login/`
 +
-* `#[payload.name]` and `#[payload.age]
+* `#[attributes.queryParams.user]` and `#[attributes.queryParams.age]`
 +
-The query string from the URI, without parsing. For example, `name=aaron&age=32`.
+The query string values from the URI, `aaron` and `32`.
++
+* `#[attributes.queryString]`
++
+The query string from the URI, without parsing, `user=aaron&age=32`.
 
-When the HTTP Listener has URI parameter placeholders in its path, this Map is created with the holder name as key and the value is extracted from the request path. For example, `domain=mydomain`. The Listener path must be defined as `{domain}/login`
+When the HTTP Listener has URI parameter placeholders in its path, a Map is created with the holder name as key and the value as extracted from the request path. For example, `domain=mydomain`. The Listener path must be defined as `{domain}/login`
 
 == Generating the HTTP Response
 
@@ -170,33 +160,21 @@ After request processing, the message is returned to the HTTP connector to provi
 
 === HTTP Response Body
 
-The HTTP Response body is generated from payload of the Mule Message after executing the flow unless the payload is a Map or there are attachments in the message.
-
-When the payload is a *Map*, the HTTP Connector generates an `application/x-www-form-urlencoded` response body and adds the header `Content-Type: application/x-www-form-urlencoded`.
-
-When the Mule message that reaches the end of the flow contains outbound attachments, the HTTP Connector creates a `multipart/form-data` HTTP response body. A multipart response is mapped as a Mule message with null payload and input attachments with each part.
+The HTTP Response body is generated from payload of the Mule Message after executing the flow unless explicitly configured. You can use a DataWeave script or expression to customise it.
 
 === HTTP Response Headers
 
-The response message sent by the HTTP Listener Connector can include HTTP headers. 
-
-==== HTTP Response Headers from Output Attributes
-
-In Headers, enter an expression to include information in the response, for example: `#[attributes.server.dateTime]`. Attributes included in the Mule Message are transformed into an HTTP response header at the end of the flow unless the attribute has one of the following names:
-
-* Connection
-* Host
-* Transfer-Encoding
+The response message sent by the HTTP Listener Connector can include HTTP headers. In Headers, enter an expression to include information in the response, for example: `#[{'Connection' : 'close' }]`. This will add a `Connection` header with `close` value to the HTTP response.
 
 === HTTP Response Status Code and Reason Phrase
 
-You can customize the connector response to requests and dynamically. For example, you can set different error status code numbers depending on the exception raised. Each error handler method can set the value of a variable to its HTTP status.
+You can customize the connector response to requests even dynamically. For example, you can set different error status code numbers depending on the error raised by having an error handler that sets the value of a variable used to define the HTTP response status code.
 
-You can define the status code and reason phrase in the HTTP headers `http.status` and `http.reason`. You can add headers to your response by creating corresponding attributes. The attributes are transformed into HTTP headers by the HTTP listener when the flow executes. Alternatively, in Status Code and Reason Phrase of the connector configuration, you can set up these values. You can set up different headers separately for the event of a successful flow execution and in case of a failure.
+You can define the status code and reason phrase in the listener, defining the ones for successful executions and the ones for failing executions.
 
 == Configuring Connection Attributes
 
-You can customize HTTP incoming connections by setting the maximum time a connection can be idle and enabling or disabling persistent HTTP connections. In the global configuration element, check Use Persistent Connection to define whether multiple requests are handled by a single connection or not. By default, multiple requests are handled by a single connection (true).
+You can customize HTTP incoming connections by setting the maximum time a connection can be idle for and enabling or disabling persistent HTTP connections. In the global configuration element, check Use Persistent Connection to define whether multiple requests are handled by a single connection or not. By default, multiple requests are handled by a single connection (true).
 
 If you use a persistent connection, you can also set up the Connection Idle Timeout. This option defines the number of milliseconds that a connection can remain idle before it is closed. The default value is 30 seconds.
 
