@@ -1,31 +1,16 @@
 = Example: To Add a Fund to the Financial Management Service
 :keywords: anypoint studio, connector, workday, wsdl
 
-This example uses the Workday connector to insert a fund to the Financial Management service.
+This example uses the Invoke operation in the Workday connector to insert a fund to the Financial Management service.
 
-. Create a Mule application in Studio 7 or Design Center.
+. Create a Mule application in Design Center or Studio 7 project.
 +
-. Add an HTTP Listener trigger to your flow.
-. Save an HTTP Listener configuration like this one for the connection:
+. Add and configure a trigger, such as the HTTP Listener or Scheduler, for your flow.
 +
-* Host `0.0.0.0`
-* Port `8081`
-+
-. In the General side-tab of the HTTP Request operation, specify the Path as `/fund`.
-. Add Workday-Invoke to your flow.
-. Configure the connection settings for the operation.
-+
-. In the General tab of the Invoke operation, and provide Web Service Configuration parameters.
+You can accept the default settings for the HTTP Listener or Scheduler and provide any required values.
+. Add a Transform component to your flow, and use the field within the Script tab to add a DataWeave transformation script.
 +
 Example:
-+
-* Service: `Financial Management`
-* Operation: `Put_Fund`
-|===
-+
-image:workday-configure-operation.png[workday-configure-operation]
-+
-. Transform the input payload, for example, by clicking the Map button in the Body field, and provide a DataWeave script such as this one:
 +
 [source,dataweave,linenums]
 ----
@@ -34,23 +19,44 @@ output application/xml
 ns ns0 urn:com.workday/bsvc
 ---
 {
-"ns0#Put_Fund_Request @(ns0#Add_Only: true , ns0#version: \"v28.0\")": {
-  "ns0#Fund_Data": {
-     "ns0#Fund_Name": "I.M.F",
-       "ns0#Fund_Type_Reference": {
-         "ns0#ID @(ns0#type: \"Fund_Type_ID\")": "FUND_TYPE-6-3"
-       }
-     }
+  ns0#Put_Fund_Request @(ns0#Add_Only: true, ns0#version: "v28.0"): {
+    ns0#Fund_Data: {
+      ns0#Fund_Name: "I.M.F",
+      ns0#Fund_Type_Reference: {
+        ns0#ID @(ns0#'type': 'Fund_Type_ID'): "FUND_TYPE-6-3"
+      }
+    }
   }
 }
 ----
 +
-Note that you can use the Transform component instead of Map.
+. Add Workday-Invoke operation after the Transform component.
+. From the Invoke operation, configure, test, and save a connection to the Workday server.
 +
-image:workday-ex-dw-transform.png[workday-example-dw-transform]
+Configuration example:
 +
+* Configuration Name: `My Workday Connection`
+* Username: `my_workday_username`
+* Password: `my_workday_password`
+* Tenant Name: `my_workday_tenant_name`
+* Host Name: Defaults to `impl-cc.workday.com`
+. Add Workday-Invoke to your flow.
+. Configure the connection settings for the operation.
++
+. In the General side-tab of the Invoke operation, and provide Web Service Configuration parameters.
++
+Example:
++
+* Service: `Financial Management`
+* Operation: `Put_Fund`
++
+. Add a Logger to the end of your flow that takes a `payload` (or `#[payload]`) as the message.
 . Deploy or Sync the app.
-. Once the status is Running, browse to your listener URL `+http://<app_url>:8081/fund+`.
+. Once the status is Running, check for the response.
++
+If you are using the HTTP Listener, you can browse to your listener URL `+http://<app_url>:8081/fund+`.
++
+If you are using the Scheduler, you can find the response in the logs.
 +
 You should receive an XML response similar to this snippet:
 +
@@ -69,10 +75,3 @@ You should receive an XML response similar to this snippet:
 link:/connectors/workday-about[About the Workday Connector]
 
 link:/connectors/workday-reference[Workday Connector Reference]
-
-////
-OLD DON'T USE -
-
-
-<?xml version='1.0' encoding='US-ASCII'?>
-////
