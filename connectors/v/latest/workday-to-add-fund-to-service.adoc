@@ -1,35 +1,16 @@
-= Example: To Add a Fund to the Financial Management Service (Design Center)
+= Example: To Add a Fund to the Financial Management Service
 :keywords: anypoint studio, connector, workday, wsdl
 
-This example uses the Workday connector in Design Center to insert a fund to the Financial Management service.
+This example uses the Invoke operation in the Workday connector to insert a fund to the Financial Management service.
 
-. Create a project in Design Center that is a Mule application.
+. Create a Mule application as a Design Center or Studio 7 Mule project.
 +
-image:workday-new-project.png[workday-new-project]
+. Add and configure a trigger, such as the HTTP Listener or Scheduler, for a flow in your app.
 +
-. Add an HTTP Listener to the flow with a Cloudhub configuration of Host `0.0.0.0` and Port `8081`.
+You can accept the default settings for the HTTP Listener or Scheduler and provide any required values.
+. Add a Transform component to your flow, and use the field within the Script tab to add a DataWeave transformation script.
 +
-image:workday-http-config.png[workday-http]
-+
-. In the General tab of the HTTP Request operation, specify the Path as `/fund`.
-+
-image:workday-http-props.png[workday-http-props]
-+
-. Add a Workday Connector to your flow, and select the Invoke operation.
-+
-image:workday-select-operation.png[workday-select-operation]
-+
-. Configure the connection settings for the operation.
-+
-. In the General tab of the Invoke operation, set Web Service Configuration parameters, for example:
-+
-* Service: `Financial Management`
-* Operation: `Put_Fund`
-|===
-+
-image:workday-configure-operation.png[workday-configure-operation]
-+
-. Set the payload by clicking the Map button of the Body field, then clicking the Source tab and configuring input parameters of the Put Fund, for example:
+Example:
 +
 [source,dataweave,linenums]
 ----
@@ -38,19 +19,42 @@ output application/xml
 ns ns0 urn:com.workday/bsvc
 ---
 {
-"ns0#Put_Fund_Request @(ns0#Add_Only: true , ns0#version: \"v28.0\")": {
-  "ns0#Fund_Data": {
-     "ns0#Fund_Name": "I.M.F",
-       "ns0#Fund_Type_Reference": {
-         "ns0#ID @(ns0#type: \"Fund_Type_ID\")": "FUND_TYPE-6-3"
-       }
-     }
+  ns0#Put_Fund_Request @(ns0#Add_Only: true, ns0#version: "v28.0"): {
+    ns0#Fund_Data: {
+      ns0#Fund_Name: "I.M.F",
+      ns0#Fund_Type_Reference: {
+        ns0#ID @(ns0#'type': 'Fund_Type_ID'): "FUND_TYPE-6-3"
+      }
+    }
   }
 }
 ----
 +
-. Sync the project.
-. Once the status is Running, use the URL `+http://<app_url>:8081/fund+` in your browser.
+. Add Workday-Invoke operation after the Transform component.
+. From the Invoke operation, configure, test, and save a connection to the Workday server.
++
+Configuration example:
++
+* Configuration Name: `My Workday Connection`
+* Username: `my_workday_username`
+* Password: `my_workday_password`
+* Tenant Name: `my_workday_tenant_name`
+* Host Name: Defaults to `impl-cc.workday.com`
++
+. In the General side-tab of the Invoke operation, provide Web Service Configuration parameters.
++
+Example:
++
+* Service: `Financial Management`
+* Operation: `Put_Fund`
++
+. Add a Logger to the end of your flow that takes a `payload` (or `#[payload]`) as the message.
+. Deploy or Sync the app.
+. Once the status is Running, check for the response.
++
+If you are using the HTTP Listener, you can browse to your listener URL, for example: `http://<app_url>:8081/fund`.
++
+If you are using the Scheduler, you can find the response in the logs.
 +
 You should receive an XML response similar to this snippet:
 +
@@ -69,3 +73,27 @@ You should receive an XML response similar to this snippet:
 link:/connectors/workday-about[About the Workday Connector]
 
 link:/connectors/workday-reference[Workday Connector Reference]
+
+////
+
+Field	Description
+Username
+Username for logging into Workday.
+Password
+Workday password for the username.
+Tenant Name
+Workday Tenant ID. It usually appends pt_1 (for example, acme_pt1).
+Host Name
+Host name a Workday Cloud Server. Default: impl-cc.workday.com.
+Transport
+
++
+Optional - Supports a user-defined HTTP request configuration for setting up a proxy connection.
+Advanced
+Optional - For adjusting the reconnection strategy and connection pooling profile.
+Configure the Workday operation.
++
+
+The Workday Connector Reference provides configuration details.
+
+////
