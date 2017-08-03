@@ -5,12 +5,14 @@
 
 == Overview
 
-The link:/mule-user-guide/v/4.0/dataweave-language-introduction[DataWeave Language] is a powerful, Mule-specific language that you can use to access, evaluate and transform the data in a Mule message. Tightly integrated to the Mule Runtime, Anypoint Studio, and Design Center, and usable from within virtually every message processor in Mule, DataWeave enables you to quickly and elegantly filter, route, or otherwise act upon the different parts of the Mule event object. It can be used lightly as an expression language to simply reference values or invoke methods, or it can also be used as a fully fledged scripting language to construct complex data transformations that include functions and recursion. DataWeave supports a variety of transformations: simple *one-to-one*, *one-to-many* or *many-to-one* mappings from an assortment of data structures, and can complete more elaborate mappings including normalization, grouping, joins, partitioning, pivoting and filtering.
+The link:/mule-user-guide/v/4.0/dataweave-language-introduction[DataWeave Language] is a powerful, Mule-specific language that you can use to access, evaluate and transform the data in a Mule message. Tightly integrated to the Mule Runtime, Anypoint Studio, and Design Center, and usable from within virtually every message processor in Mule, DataWeave enables you to quickly and elegantly filter, route, or otherwise act upon the different parts of the Mule event object. It can be used lightly as an expression language to simply reference values or invoke methods. 
+
+DataWeave can also be used as a fully fledged scripting language to construct complex data transformations that include functions and recursion. The language supports a variety of transformations: simple *one-to-one*, *one-to-many* or *many-to-one* mappings from an assortment of data structures, and can complete more elaborate mappings such as grouping, joining, partitioning, pivoting, normalizing, and filtering.
 
 
 == DataWeave Expression Essentials
 
-It's important to know that DataWeave has not always been the _de facto_ expression language Mule uses. Prior to version 4.0.0, the Mule Expression Language (MEL) was used for most needs, whilst DataWeave was reserved for only carrying out transformations.
+It's important to know that DataWeave has not always been the _de facto_ expression language Mule uses. Prior to version 4.0.0, the Mule Expression Language (MEL) was used for most needs, whilst DataWeave was reserved for only transforming data.
 
 [TIP]
 ====
@@ -21,9 +23,9 @@ If you still need to use MEL, you can include it to your projects by adding the 
 
 DataWeave expressions are written according to the following format: `#[expression]`.
 
-DataWeave expressions are deeply influenced by their context. Metadata about input and output data – its format, structure, etc – shapes the behavior of your transformation. Understanding the *Mule Event object structure* is therefore critical. If you are not already familiar with it, read about the link:/mule-user-guide/v/4.0/mule-concepts[Mule concepts].
+DataWeave expressions are deeply influenced by their context. Metadata about input and output data – its format, structure, etc – shapes the behavior of your transformation. Understanding the *Mule event object structure* is therefore critical. If you are not already familiar with the Mule Event object structure, read the link:/mule-user-guide/v/4.0/mule-concepts[Mule concepts] document.
 
-A header section allows you to specify custom properties, but this part of the expression is *optional*, as these properties default to whatever fits the contextual metadata best.
+The language allows you to specify custom properties in a header section. This part of the expression is *optional* because these properties default to whatever fits the context of the data being processed within the application.
 
 ////
 If you're already familiar with Java, learning DataWeave is not difficult. That said, it's important to comprehend some Mule-specific details _before_ you learn how to apply DataWeave expressions in your application.
@@ -46,10 +48,10 @@ Based on information that's extracted from the Mule event and environment proper
 ** `#[payload]`
 ** `#[attributes.propertyName]`
 ** `#[myVariableName]`
-** `#[sizeOf payload.shoppingCart.items]`
+** `#[sizeOf(payload.shoppingCart.items)]`
 +
 [TIP]
-For a full reference about how to extract different values with Dataweave, see link:/mule-user-guide/v/4.0/dataweave-cookbook-extract-data[DataWeave cookbook - Extract Data].
+For a full reference about how to extract different values with DataWeave, see link:/mule-user-guide/v/4.0/dataweave-cookbook-extract-data[DataWeave cookbook - Extract Data].
 
 * *Evaluate* conditions:
 ** `#[payload.age > 21]`
@@ -71,20 +73,20 @@ The example below evaluates part of the payload to forward requests to different
 
 * *Transform* the message.
 ** `#[payload: shirtSizeArray ++ "XXL" ]`
-** `#[payload.name: upper payload.name]`
+** `#[payload.name: upper(payload.name)]`
 +
-The example below cycles through an array of objects, and sets "size" to upper case in each. It then filters to only those where the "count" field is not 0.
+The example below cycles through an array of objects, upper cases the values in "size" for each object. DataWeave then filters only objects where the "count" value is greater than 0.
 +
 [source,DataWeave, linenums]
 ----
 %dw 2.0
 output application/json
 ---
-shirts: payload map {
-    size: upper $.size,
-    count: $.count
-}
-filter $.count > 0
+(payload map (value, index) -> {
+    size: upper(value.size),
+    count: value.count
+  }
+) filter $.count > 0
 ----
 
 == The Transform Component
@@ -98,13 +100,15 @@ The *Transform* component allows you to use the language to query and transform 
 
 If you are configuring a field that supports expressions and need help with syntax, you can access DataWeave suggestions by one of two methods.
 
-* Place your cursor inside the brackets in a field that has `#[]` pre-populated for you, then press Ctrl + Space Bar.
+* Place your cursor inside the brackets in a field that has `#[]` pre-populated for you, then press Ctrl + Space Bar. If you are using Design Center, you do not need to add your code between the brackets.
+
 * Enter `#[` to open a new DataWeave expression and display suggestions, as shown below.
 +
 image:auto_complete.png[auto_complete]
 +
 [NOTE]
 Note that the autocomplete functionality described here works in the *Visual Editor only*. Although Studio's XML tab does offer some autocomplete options, the suggestions there are limited by Eclipse and are not based on DataSense or DataWeave.
+
 
 == Additional Tips
 
@@ -114,7 +118,7 @@ Note that the autocomplete functionality described here works in the *Visual Ed
 ** escape quotes with &quot;      `(&quot;expression&quot;)`
 ** escape quotes with \u0027      `(\u0027expression\u0027)`
 +
-If you're writing on Studio's visual editor, Studio transforms double quotes into escaped quotes `(&quot;) `in the XML view.
+If you're coding in Studio's DataWeave visual editor, Studio transforms double quotes into escaped quotes `(&quot;) `in the XML view.
 
 
 == DataWeave Reference Material
