@@ -1,40 +1,47 @@
 = About Streaming in Mule 4.0
 
-Data streams cannot be consumed more than once and cannot be consumed at the same time. +
-For example, if a JSON payload is transferred from an Event Source to a File connector with a write operation, the stream would be consumed by the File connector, and the payload would not be available for being processed by any other module.
+Data streams cannot be consumed more than once. For example, if a JSON payload is transferred from an Event Source to a File connector with a write operation, the stream would be consumed by the File connector, and the payload would not be available for being processed by any other module.
 
 image::streaming-about-49d23.png[]
 
-In a Mule 3.x application, this flow results in the first file getting written correctly, and the second getting created with an empty content. +
-However, if this payload is transferred from an Event Source to a Logger component and later you attempt to write this payload to a file the payload would get logged and written to the file as you'd expect.
+In a Mule 3.x application, this flow results in the first file getting written correctly, and the second getting created with an empty content. After the stream was consumed by the first write operation, the second write operation received an empty stream so had no content to write to a file.
 
-image::streaming-about-bd915.png[]
+Something similar would happen when trying to log the payload before and after a DataWeave transformation. Consider this example:
 
-This happens because the logger component consumes the stream loading it into memory. By the time the message reaches the File Connector, the stream is loaded into memory. This behavior risks your app’s stability because you might run out of memory if the content is too big. +
-Trying to do the same using a scatter-gather component, this application fails because your streamed content cannot be concurrently consumed by two different threads.
+image::streaming-about-5f1b3.png[]
+
+This application would log the payload before the Transform Message processor, but would not log the resulting payload after this. +
+This is because the logger processor consumes the stream loading it into memory. By the time the stream gets to the transform message processor, the stream content is available in the memory so it is possible for the transform message processor to consume it. However, after this, the second logger processor receives an empty stream.
+
+Data Streams can't either be consumed at the same time. Consider a Mule 3.x application that uses a scatter-gather router to split a data stream and simultaneously log and write the payload to a file.
 
 image::streaming-about-6af9b.png[]
 
-Mule 4.0 handles data streaming using Repeatable Streams. As the component consumes the stream, Mule saves its content into a temporary buffer.
+This application fails because your streamed content cannot be processed by different processor chains simultaneously.
 
-This all happens automatically, so no special configuration is needed from your end.
+Mule 4.0 introduces Repeatable Streams. As a component consumes the stream, Mule saves its content into a temporary buffer. Since each component that consumes a stream expects to receive a new stream, the runtime then feeds the component from the temporary buffer, ensuring that each component receives the full stream, regardless of how much of the stream was already consumed by any prior component. +
+This all happens automatically, and requires no special configurations from your end.
 
-Repeatable Streams enable you to:
+Repeatable Streams are the default configuration for handling streams and enable you to:
 
 * Read a stream more than once.
 * Have concurrent access to the stream.
 
-When streaming, Mule 4.0 feeds each component that receives a type of stream from the temporary buffer, making sure that each component receives the full stream, regardless of how much of the stream was already consumed by any prior component. +
 Repeatable streams also allow concurrent access, so any number of concurrent threads can safely access the streamed data.
 
-// By default, the in-memory buffer size is 512 KB. Although this size for the in-memory buffer proved to be performant for most scenarios, you can configure the buffer size to any custom value.
+This saves you the trouble of finding workarounds to save the stream somewhere you could access it again.
 
-This way, a Mule 4.0 application can transfer the JSON payload from an HTTP listener, write it to a file using a File Connector, and then could use another File connector to write the JSON in another file. +
-It could also process the JSON payload through a Scatter-Gather router and allow the stream to be processed by different processor chains simultaneously.
 
-You can configure how Mule handles the repeatable stream using different streaming strategies:
+== Considerations for Performance
 
-// COMBAK: Add Examples and Add Screenshots.
+Using repeatable streams calls for some considerations around memory load. For instance, larger payloads might overflow your memory threatening your app’s stability.
+
+Repeatable Streams allow you to configure a size for your in-memory buffer, and even fail the application's execution after hitting your configured maximum threshold. +
+
+
+== Streaming Strategies
+
+You can configure how Mule handles the repeatable stream using different streaming strategies
 
 === File Stored Repeatable Stream
 
@@ -48,8 +55,9 @@ This option is only available on Mule EE
 It initially uses an in-memory buffer size of 512 KB. If the stream is larger than that, it creates a temporary file on your disk to store the contents without overflowing your memory.
 +
 When you know you need to deal with large or small files, you can change the buffer size to optimize performance. +
-Configuring a bigger buffer size increases performance by avoiding the number of times the runtime needs to write the buffer to your disk., but it also limits the number of concurrent requests your application can process. +
-The same way, configuring a smaller buffer size saves you memory load. You can even set the buffer's unit of measurement, so you don't have to go through unit conversions.
+Configuring a bigger buffer size increases performance by avoiding the number of times the runtime needs to write the buffer to your disk, but it also limits the number of concurrent requests your application can process. +
+The same way, configuring a smaller buffer size saves you memory load. +
+You can even set the buffer's unit of measurement, so you don't have to go through unit conversions.
 +
 For example, if you know that you are going to read a file that's always around 1 MB size, you can configure a 1 MB buffer:
 +
@@ -79,7 +87,7 @@ You need to run tests and find the proper buffer size configuration that fits yo
 === In Memory Repeatable Stream
 
 :: This configuration is the default for Mule Runtime Community Edition. +
-It uses a default configured buffer size of 512 KB. If the stream is larger than that, the buffer is expanded to a default increment size of 512 KB until it reaches the configured maximum buffer size. If the stream exceeds this limit, the application fails. +
+It uses a default configured buffer size of 512 KB. If the stream is larger than that, the buffer is expanded to a default increment size of 512 KB until it reaches the configured maximum buffer size. If the stream exceeds this limit, the application fails.
 +
 You can customize this behavior by setting the initial size of the buffer, the rate at which the buffer increases, the maximum buffer size, and the measurement unit. +
 For example, these settings configure an in-memory repeatable stream with a 512 KB initial size, which grows at a rate of 256 KB and allows up to 2 MB of content in memory:
@@ -114,6 +122,11 @@ For example, if you don't need to set a buffer for your stream, you can set a no
 ----
 +
 This strategy is not suitable for scenarios in which the stream needs to be consumed more than once.
+// This strategy would allow user to just read an input stream only once.
+// // It will not allow to seek randomly in the input stream so it will not be suitable for use cases in which the stream needs to be consumed more than once (e.g: logger + dw or two transformations over the same auto paged output). Users that may just move data around from one system to another would use this implementation for optimum performance.
+// //
+// Having this kind of configuration will let users flows to fail promptly if there’s a component in the configuration that is trying to access a big input stream before the actual streaming component is executed since the stream won’t be readable twice.
+
 
 Every component in Mule 4.0 that returns an InputStream or a Streamable collection supports repeatable streams.
 Some of these components are:
@@ -123,6 +136,8 @@ Some of these components are:
 * DataBase Connector
 * HTTP Connector
 * Sockets
+
+== Streaming Objects
 
 A similar scenario happens when an Anypoint Connector is configured to use auto-paging. Mule 4.0 automatically handles the paged output of the connector using Repeatable Auto Paging. +
 Mule sets a configurable in-memory buffer that by default, is configured to hold up to 500 objects. Mule measures the buffer size using instance counts. +
