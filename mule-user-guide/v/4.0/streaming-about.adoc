@@ -1,25 +1,30 @@
 = About Streaming in Mule 4.0
 
-Data streams cannot be consumed more than once. For example, if a JSON payload is transferred from an Event Source to a File connector with a write operation, the stream would be consumed by the File connector, and the payload would not be available for being processed by any other module.
+Mule 4.0 introduces a new framework to work with streamed data. To understand the changes introduced in Mule 4.0, it is necessary to know how traditional data streams are consumed:
 
+. Data streams cannot be consumed more than once.
+:: For example, consider the following flow:
+//if a JSON payload is transferred from an Event Source to a File connector with a write operation, the stream would be consumed by the File connector, and the payload would not be available for being processed by any other module.
++
 image::streaming-about-49d23.png[]
-
-In a Mule 3.x application, this flow results in the first file getting written correctly, and the second getting created with an empty content. After the stream was consumed by the first write operation, the second write operation received an empty stream so had no content to write to a file.
-
++
+In a Mule 3.x application, this flow results in the first file getting written correctly, and the second getting created with an empty content. This happens because each component that consumes a stream expects to receive a new stream. After the stream was consumed by the first write operation, the second write operation received an empty stream so had no content to write to a file.
++
 Something similar would happen when trying to log the payload before and after a DataWeave transformation. Consider this example:
-
++
 image::streaming-about-5f1b3.png[]
-
++
 This application would log the payload before the Transform Message processor, but would not log the resulting payload after this. +
 This is because the logger processor consumes the stream loading it into memory. By the time the stream gets to the transform message processor, the stream content is available in the memory so it is possible for the transform message processor to consume it. However, after this, the second logger processor receives an empty stream.
 
-Data Streams can't either be consumed at the same time. Consider a Mule 3.x application that uses a scatter-gather router to split a data stream and simultaneously log and write the payload to a file.
-
+. Data Streams can't either be consumed at the same time.
+:: Consider a Mule 3.x application that uses a scatter-gather router to split a data stream and simultaneously log and write the payload to a file.
++
 image::streaming-about-6af9b.png[]
-
++
 This application fails because your streamed content cannot be processed by different processor chains simultaneously.
 
-Mule 4.0 introduces Repeatable Streams. Since each component that consumes a stream expects to receive a new stream, as a component consumes the stream, Mule saves its content into a temporary buffer. The runtime then feeds the component from the temporary buffer, ensuring that each component receives the full stream, regardless of how much of the stream was already consumed by any prior component. +
+Mule 4.0 introduces Repeatable Streams. As a component consumes the stream, Mule saves its content into a temporary buffer. The runtime then feeds the component from the temporary buffer, ensuring that each component receives the full stream, regardless of how much of the stream was already consumed by any prior component. +
 This all happens automatically, and requires no special configurations from your end. +
 This configuration automatically fixes the first two examples outlined above.
 
