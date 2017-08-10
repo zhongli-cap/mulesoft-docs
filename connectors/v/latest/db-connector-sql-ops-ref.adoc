@@ -15,14 +15,9 @@ Other supported operations are:
 
 == Select Operation
 
-The Select operation returns one of the following types, depending on streaming:
+The database connector operations use Mule 4 streaming, taking the worry out of fetching large amounts of data that present problems in the absence of streaming.  Streaming is transparent, always enabled, and repeatable, as described in the "Database Connector Streaming Reference."
 
-* List of Map<String, Object> (no streaming)
-* Iterator
-
-If the results are streamed, the connection and its underlying resources are not released until the returned stream is fully consumed or the flow ends.
-
-The following examples shows the syntax of a select operation:
+The following example shows the syntax of a select operation:
 
 [source,xml,linenums]
 ----
@@ -98,6 +93,22 @@ This operation returns the number of affected rows. You can use $(affected), a t
 
 `<logger message="#['Deleted a total of $(affected) planets at position $(payload.id)']" />`
 
+In this example, the delete requires an input parameter `id`:
+
+[source,xml,linenums]
+----
+<db:delete configref= "dbConfig" target = "affected">
+  <db:sql>
+    DELETE FROM PLANET where POSITION = :position
+  </db:sql>
+    <db:inputparameters>
+      #[
+         {'position' : payload.id}
+       ]
+    </db:inputparameters>
+</db:delete>
+----
+
 ////
 === Hybrid Queries
 
@@ -151,6 +162,10 @@ This operation accepts input, output, and input-output parameters.
 </db:stored-procedure>
 ----
 
+The db:output-parameter in the next examples converts the output of a query from binary to a JDBC or custom type, such as JSON. For example:
+
+`<db:output-parameter paramName="myParam" type="VARCHAR"/>`
+
 *Input-output Parameters*
 
 [source,xml,linenums]
@@ -201,7 +216,8 @@ This operation supports any DDL statement you can run on the database connected 
 
 == See Also
 
+* link:/connectors/db-connector-streaming-ref[Database Connector Streaming Reference]
 * link:/connectors/database-documentation[Database Connector Technical Reference]
 * link:/connectors/db-connector-parametrized-query-ref[Parametrized Query Reference]
-* link:/connectors/connectors/db-connector-bulk-ops-ref[Bulk Operations Reference]
-* link:/connectors//connectors/db-connector-execute-script-ref[Execute Script Reference]
+* link:/connectors/db-connector-bulk-ops-ref[Bulk Operations Reference]
+* link:/connectors/db-connector-execute-script-ref[Execute Script Reference]

@@ -1,4 +1,4 @@
-= XML Reference for the Email Connector (Studio)
+= XML Examples for the Email Connector (Studio)
 :keywords: email, connector, configuration, pop3
 :toc:
 :toc-title:
@@ -6,7 +6,7 @@
 toc::[]
 
 [[short_description]]
-These examples show common email configurations.
+These examples show common Email connector configurations for XML configurations that define a Mule app.
 
 [[email_xml_configs]]
 == Email Connection Configurations
@@ -31,10 +31,17 @@ POP3S example with a TLS configuration:
 </email:pop3-config>
 ----
 
-IMAP configuration example with Eagerly Fetch Content disabled:
+IMAP configuration examples with Eagerly Fetch Content disabled:
 ----
 <email:imap-config eagerlyFetchContent="false" name="email_imap">
     <email:imap-connection host="imap.gmail.com" password="changeme" user="me@gmail.com"/>
+</email:imap-config>
+----
+
+IMAP configuration example with port 993 specified:
+----
+<email:imap-config name="imapConfig">
+   <email:imap-connection host="imap.gmail.com" port="993" password="changeme" user="me@gmail.com"/>
 </email:imap-config>
 ----
 
@@ -67,7 +74,7 @@ List operation: This example retrieves the body (`payload`) and subject (the `su
 </flow>
 ----
 
-Send operation:
+Send operation: Sends email over SMTP.
 
 ----
 <email:send config-ref="senderConfig" fromAdress=”sender.account@mulesoft.com”>
@@ -127,11 +134,106 @@ Attachments: TODO TODO You need to create a DataWeave map with the name of the a
        </email:to-addresses>
 ----
 
+== About Sending Email Over SMTP
+
+To send an email, you need an SMTP configuration element, such as this one:
+
+----
+<email:smtp-config name="senderConfig" defaultEncoding=”UTF-8”>
+   <email:smtp-connection host="127.0.0.1" port="587"/>
+</email:smtp-config>
 ----
 
-TODO TODO:
-Advanced SMTP Configuration Parameters:
+The `defaultEncoding` applies to all emails that are sent using this configuration. However, you can override this encoding with the Send operation. If `defaultEncoding` is not specified in the configuration, the app will use the default Mule Runtime encoding.
+
+A simple email looks something like this:
+
+<email:send config-ref="senderConfig" fromAdress=”sender.account@mulesoft.com”>
+  <email:to-addresses>
+    <email:to-address value="test.account@mulesoft.com"/>
+  </email:to-addresses>
+  <email:body>
+    <email:content>Email Content</email:content>
+  </email:body>
+</email:send>
+
+If you always want to send emails from the same account, you can specify a `from` address in the `smtp-config` element instead of specifying it within each operation, for example:
+
 ----
+<email:smtp-config name="senderConfigWithAddress" from=”sender.account@mulesoft.com”>
+   <email:smtp-connection host="127.0.0.1" port="587"/>
+</email:smtp-config>
+
+<email:send config-ref="senderConfigWithAddress">
+  <email:to-addresses>
+    <email:to-address value="receiverOne@mulesoft.com"/>
+    <email:to-address value="receiverTwo@mulesoft.com"/>
+  </email:to-addresses>
+  <email:body>
+    <email:content>Email Content</email:content>
+  </email:body>
+</email:send>
+----
+
+You can also override the `from` address in the SMTP configuration from a Send operation in your flow.
+
+
+=== Advanced SMTP Configuration Parameters
+
+In this example, the addresses (`to-address`, `cc-address`, `bcc-address` and `reply-to-address`) are lists of destination addresses. You can add as many as you like and leave empty any address fields you do not need hem.
+
+----
+<flow name="sendEmail">
+
+   <set-variable variableName="json" value="#[output application/json --- {key: 'value'}]" mimeType="application/json"/>
+
+   <email:send config-ref="senderConfig" subject="This is the email subject">
+       <email:to-addresses>
+           <email:to-address value="test.account@mulesoft.com"/>
+           <email:to-address value="other.test.account@mulesoft.com"/>
+       </email:to-addresses>
+
+       <email:cc-addresses>
+           <email:cc-address value="cc.account1@mulesoft.com"/>
+           <email:cc-address value="cc.account2@mulesoft.com"/>
+       </email:cc-addresses>
+
+       <email:bcc-addresses>
+           <email:bcc-address value="bcc.account1@mulesoft.com"/>
+           <email:bcc-address value="bcc.account2@mulesoft.com"/>
+           <email:bcc-address value="bcc.account3@mulesoft.com"/>
+       </email:bcc-addresses>
+
+       <email:reply-to-addresses>
+          <email:reply-to-address value="reply.to.account@mulesoft.com"/>
+       </email:reply-to-addresses>
+
+       <email:headers>
+          #[{‘My custom header’: ‘Header value’}]
+       </email:headers>
+
+       <email:body contentType="text/plain" encoding=”UTF-8” contentTransferEncoding=”7BIT”>
+          <email:content>Email Content</email:content>
+       </email:body>
+
+      <email:attachments>#[
+        {
+          'json-attachment' : json
+        }]
+      </email:attachments>
+
+   </email:send>
+</flow>
+----
+
+In the email body, `contentTransferEncoding` indicates how transferred email is encoded. For more information, see the email RFC  (link::https://www.ietf.org/rfc/rfc2045.txt[Multipurpose Internet Mail Extensions (MIME) Part One:Format of Internet Message Bodies]).
+
+Headers (`headers`): A custom set of headers that are bound with the email. This parameter must be constructed through a DataWeave expression.
+
+Attachments (`attachments`): Email attachments are bound with the email.
+
+Content Transfer Encoding (`AttachmentContentTransferEncoding`): Transfer encoding used to send the email attachments. Base64 is recommended for large payloads.
+
 
 // How do you get the ID? How/why would you ever know it?
 

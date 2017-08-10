@@ -1,27 +1,72 @@
-= Mule Runtime v4.0 Updates
+= What's New in Mule 4
 :keywords: news, updates, mule ESB, mule runtime, 4.0, Mule 4.0, Mule 4.0 for mule 3 developers, what's new Mule 4
 
-Mule 4.0 introduces significant changes from previous versions. +
-Its simplified language and reduced management complexity allows you to speed up the on ramping process and deliver applications faster.
+Mule 4's simplified language and reduced management complexity allows you to speed up the on ramping process and deliver applications faster.
 
 If you are familiar with the concepts of the previous versions of the runtime, check the sections below to learn what's changing in Mule Runtime v4.0:
 
+== Simplified Event and Message Model
 
-== Intelligent Self-Tuning Runtime
+Mule 4 includes a simplified Mule Event and Message model. In Mule 4, Flows are triggered by an Event. An Event has a Message and variables associated with it. A Message is composed of a payload and its attributes (metadata, such as files size). Variables hold arbitrary information, such as Messages, payload data, or attributes.
 
-As opposed to Mule 3.x, *Mule 4.0* is an entirely _self-tuning_ and _non-blocking_ runtime, meaning that it uses a *task-oriented* execution model allowing the user to take advantage of non-blocking IO calls and avoiding performance problems due to incorrect processing strategies configurations.
+All other concepts around the former Mule Event object have been deprecated:
 
+* There are no more _inbound_, _outbound_ or _session_ properties.
+* To send data across protocol barriers like session properties did, you must explicitly specify what parameters you want to send. For example with the HTTP request, you can specify output headers.
+* All information around the Mule event is now exposed through variables, allowing you to completely manage the Mule event.
 
-*Mule 4.0* removes complex tuning requirements to achieve optimum performance.
+The steps in the flow that handle Mule events, are now referred to as components. Components that act on a Mule Event are event processors, and every processor that defines an operation to apply to the Mule event are known as operations. Once operations execute, they replace the Message on the Event with a new one. To save the previous message, you must store it in a variable
 
-Each Mule event process can now inform the runtime if it is a CPU intensive, CPU light, or IO intensive operation. This will in turn help Mule self-tune for different workloads dynamically, removing the need for customers to manage thread pools manually.
+== DataWeave 2.0: the new Mule Expression Language
 
+In Mule 3, users had to contend with learning both the Mule Expression Language (MEL) and DataWeave. MEL forces users to convert their payloads from binary data, such as XML or JSON documents, into Java objects, so they can write expressions which access that data, for example when routing it to a specific location.
 
-== Module Consistency
+In *Mule 4*, DataWeave is now the default expression language. Combined with the built-in streaming capabilities, this simplifies many common tasks:
 
-Mule 4.0 introduces more consistency around connectors and extensions unifying everything as modules to extend the behavior inside a Mule application.
+* Events can be routed based on payload data, without first needing to convert to Java objects.
+* Binary data can easily be queried from an expression anywhere in your flow, for example, when logging.
+* Larger than memory access to data happens transparently.
 
-Both custom and core connectors are created and managed using the Mule SDK, allowing the user a unified connector/module experience.
+DataWeave 2.0 also features many improvements:
+
+* Language simplifications. Everything is now a function.
+* DataWeave scripts can now be packaged and reused, via the new imports and modules features.
+* Support for multi-line comments.
+* Support for calling static Java functions directly from DataWeave.
+
+== Streaming management
+
+// COMBAK - link to streaming section in docs
+// Current draft: https://github.com/mulesoft/mulesoft-docs/blob/streaming-patch/mule-user-guide/v/4.0/streaming-about.adoc (needs review).
+Mule 4 automatically handles data streams for users. This greatly simplifies working with data in the runtime because:
+
+* Data can be read multiple times or accessed randomly with the DataWeave expression language without side effects.
+* Data can be sent to multiple places, without the user caching that data in memory first.
+* Users can transparently access larger than memory data.
+
+== Non-Blocking, Self-Tuning Runtime
+
+Mule 4 includes a new execution engine that is based on a non-blocking runtime. This is a task-oriented execution model allowing you to take advantage of non-blocking IO calls and avoiding performance problems due to incorrect processing strategies configurations.
+
+As a result of this new engine, you no longer have to configure exchange patterns. Instead, flows always function synchronously. If you wish to achieve asynchronous type patterns such as fire and forget, you can use the <async> processor.
+
+Each Mule event processor can now inform the runtime if it is a CPU intensive, CPU light, or IO intensive operation. This helps in turn for the runtime to self-tune for different workloads dynamically, removing the need for you to manage thread pools manually. As a result, Mule 4 removes complex tuning requirements to achieve optimum performance.
+
+== Enrich Events directly from connectors/modules
+
+For any given module operation, it is now possible to define a target, which saves the result in a variable:
+
+[source,XML,linenums]
+----
+<httpn:request target="myVar" config-ref="requestConfig" method="GET" url="http://mulesoft.com"/>
+----
+
+This saves the Mule message in the myVar variable to be accessed later. This reduces flow complexity by removing the need for enricher.
+
+== Simplified Connectors and Modules Experience
+
+Mule 4 introduces more consistency around modules and connectors, creating one unified experience for how to interact with Mule components. +
+Transports have been completely replaced by Mule Modules. Modules and connectors can be created and managed using the Mule SDK, which provides a single way to extend Mule.
 
 // COMBAK: Smart connectors are not going to be available for BETA
 // Introducing Smart Connectors: Modules designed using XML to manipulate connections. +
@@ -29,86 +74,48 @@ Both custom and core connectors are created and managed using the Mule SDK, allo
 
 // REVIEW: Need confirmation about private flows going away.
 
-== Simplified Message Structure and Scopes
+== Simplified Error Handling and new Try Scope
 
-Mule 4.0 includes a simplified Mule Message composed by a payload and its metadata. +
-The Mule message is now part of an entire contextual information known as the Mule Event.
+Mule 4 includes a simplified way to manage errors. Instead of dealing with Java Exceptions directly, there is now an Error concept build directly into Mule. Furthermore, Mule Modules and Connectors declare what Errors may occur for any given operation. This makes it easy for you to discover possible errors at design time and catch them.
 
-All other concepts around the former Mule Event object have been deprecated. Meaning that there are no more _inbound_ nor _outbound_ properties, and all information around the Mule event is now exposed through variables, allowing the user to completely manage the Mule event.
+Exception strategies are replaced by error handlers allowing you to catch errors based on both type, and arbitrary expressions. +
+You can configure your error handlers to catch errors so that the flow can keep processing, or they can be re-propgated.
 
-Everything contained within a Mule application is a component. +
-Components that act on a Mule Event are event processors, and every processor that defines an operation to apply to the Mule event are known as operations.
-
-//TODO Double check this example
-
-[source,XML,linenums]
-----
-<httpn:request config-ref="requestConfig" method="#[dw:attributes.method]" path="#[dw:attributes.requestPath]" parseResponse="false">
-       <httpn:request-builder>
-           <httpn:query-params>#[dw:attributes.queryParams]</httpn:query-params>
-           <httpn:headers>#[dw:attributes.headers]</httpn:headers>
-       </httpn:request-builder>
-</httpn:request>
-----
-
-Once an operation executes, the result is a new message, replacing the message in the Mule event.
-
-It is also possible to define a _target_ to save the new Mule message in a Variable:
-
-[source,XML,linenums]
-----
-<httpn:request target="myVar" config-ref="requestConfig" method="#[dw:attributes.method]" path="#[dw:attributes.requestPath]" parseResponse="false">
-      <httpn:request-builder>
-          <httpn:query-params>#[dw:attributes.queryParams]</httpn:query-params>
-          <httpn:headers>#[dw:attributes.headers]</httpn:headers>
-      </httpn:request-builder>
-</httpn:request>
-----
-This saves the Mule message in the `myVar` variable to be accessed later.
-
-
-== New Error Handling Strategies
-
-
-Mule 4.0 moves away from the Exception scenario, and introduces a series of scopes to handle errors in your flow.
-
-//REVIEW: Present this in a better way.
-* The try scope grants you a specific error handling for the  event processors enclosed in this scope.
-* The on-error scope lets you define an error type and an expression to match it order to execute the event processors within it.
-* The error-handler scope replaces all exception strategies in Mule 3.x. This scope can contain other inner on-error scopes.
-
+There is also a new Try Scope, This allows you to catch errors in the middle of a flow, without having to create a new flow, specifically to catch that error.
 
 == Mule API
 
-Mule 4.0 includes new, well defined APIs. These make it easier to extend Mule and provide clarity to developers on what the proper extension points are.
+Mule 4 includes new, well defined APIs. These make it easier for you to extend Mule and provides clarity on what the proper extension points are.
 
 The runtime exposes 3 main APIs that allow you to build on top and extend the runtime capabilities:
 
-* Core API: Mule message
-* Extensions API: APIs which allow users to create modules, message processors, transformers, etc. which extend the runtime.
+* Core API: Mule message.
+* Extensions API: APIs which allow you to create modules, message processors, transformers, etc. to extend the runtime.
 * Tooling API: All DataSense metadata and propagation is now part of the runtime, and can be accessed as part of the tooling API, which is bundled with the Mule Agent.
 
-== Classloader Isolation
+== Improved Upgradeability with Classloader Isolation
 
-Mule 4.0 loads each Module in its own classloader, isolating the modules from internal Mule code. +
-Given that applications are no longer dependent from internal Mule changes, users are able to upgrade their runtime version without breaking compatibility with other modules.
+Mule 4 loads each Module in its own classloader, isolating the modules from internal Mule code making runtime upgrades a lot simpler by protecting you from changes by the runtime or connectors:
 
-All modules are distributed outside the runtime, meaning that Mule 4.0 does not include any _connector_ by default.
-
-== DataWeave 2.0: The Mule Expression Language
-
-[CAUTION]
-MEL is being deprecated, and Dataweave is now the default expression language within the runtime.
-
-DataWeave 2.0 improves with the following features:
-
-* Language simplifications - everything is now a function!
-* DataWeave scripts can now be packaged and reused, via the new imports and modules features. This replaces the transformers from Mule 3.x.
-
-[NOTE]
-Some operations are not available outside EE. +
-A community version of DataWeave is shipped with the Mule Kernel.
+* Connectors are now distributed outside the runtime, making it possible to:
+** Get connector enhancements and fixes without having to upgrade your runtime.
+** Upgrade your runtime version without breaking compatibility with other modules.
+* There is now a well defined Mule API, so you can be sure you're using supported APIs.
+* There is classloader isolation between your application, the runtime and connectors, so that any library changes that happen internally will not affect your app.
 
 == Compatibility Module
 
-To help you migrate to Mule 4.0, we included a Compatibility Module with a migration tool for the new semantics.
+To help you migrate to Mule 4, there is a new compatibility module which provides backward compatibility for a number of features from Mule 3, including:
+
+* Transports: HTTP, JMS, Database.
+* Mule Expression Language.
+* set-payload, set-variable, set-property, remove-property, copy-properties.
+* poll.
+
+// COMBAK link to the migration guide
+
+== See Also
+
+* link:/mule-user-guide/v/4.0/about-mule-event[About the Mule Event]
+* link:/mule-user-guide/v/4.0/about-components[About Components]
+* link:/mule-user-guide/v/4.0/try-scope-concept[About Try Scope]

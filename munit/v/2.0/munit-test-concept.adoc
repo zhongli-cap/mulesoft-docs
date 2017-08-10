@@ -1,0 +1,152 @@
+= About MUnit
+
+The MUnit Test is the basic processor of an MUnit Test Suite. It represents each test scenario you want to try.
+
+The MUnit Test is divided in three scopes:
+
+[%header,cols="20,80"]
+|===
+|Scope |Description
+| Behavior
+| The behavior scope is meant to set all the preconditions before executing the test logic. +
+Mocks and Spies should go in this section.
+
+| Execution
+| The execution scope is meant to have the testing logic which will be wait for all processes to finish before executing the next scope.
+
+| Validation
+| The validation scope is meant to have all the validations regarding the result of the execution scope. +
+Assertions and Verifications should go here.
+|===
+
+
+All these scopes are optional.
+
+[source, xml, linenums]
+----
+<munit:test name="exampleTest" description="Test to verify scenario 1">>
+     <munit:behavior>
+         <munit-tools:mock-when.../>
+     </munit:behavior>
+     <munit:execution>
+         <flow-ref name="exampleFlow"/>
+     </munit:execution>
+     <munit:validation>
+         <munit-tools:assert-that ...>
+     </munit:validation>
+ </munit:test>
+----
+
+.A Studio representation of the MUnit Test
+image::munit-test-concept-9c736.png[munit-test]
+
+In MUnit, it's mandatory that you write a description in your test. +
+Ideally, you should write a useful, representative description of the scenario you are testing. This description displays in the test console before running the test, and also in the reports. +
+The more representative the description, the easier to read and troubleshoot any failures.
+
+// COMBAK: Update properties loading this based on new specs
+// In MUnit, you can load properties from the mule­-app.properties file as well as using the context:property-placeholder to load properties from an additional file. +
+// MUnit provides several ways to override these properties when running MUnit with Anypoint Studio. Properties for the mule-app.properties file are loaded as System properties.
+
+There may be scenarios where you need to shut down a test. Whether this be because the test is failing or because it has nasty side effects. +
+The point is you shouldn't have to comment out the code.
+
+In this case, MUnit allows you to ignore a specific test.
+
+You can ignore any of your tests by adding the ignore boolean to the test definition.
+
+[source, xml, linenums]
+----
+<munit:test name="my-flow-Test"
+      ignore="true"
+      description="Test to verify scenario 1">
+</munit:test>
+----
+
+[TIP]
+Valid values for `ignore` are true and false. If the attribute is not present, the default is false.
+
+.In Anypoint Studio, you can check the Ignore Test option.
+image::munit-test-concept-de4c9.png[ignore-test]
+
+MUnit also allows you to tag your tests, so you can choose to run tests under a specific tag. For example:
+
+[source,xml,linenums]
+----
+<munit:test
+  name="exampleTest"
+  description="A test that works as an example"
+  ignore="true"
+  tags="integration,http" >
+		…
+</munit:test>
+----
+
+
+.In Anypoint Studio, you can define tags in the proper field.
+image::munit-test-concept-c2d9f.png[test-tags]
+
+Sometimes, the only thing you want to validate is that the flow or sub-flow you are testing fails and throws a specific error, which depends on the business logic being tested. In these cases, MUnit provides a simple way to validate the scenario. +
+You can add the attribute expectedErrorType and expectException, as shown below:
+
+[source, xml, linenums]
+----
+<munit:test name="MUnit-test-suite"
+  description="A test that works as an example"
+  expectedErrorType="RETRY_EXHAUSTED"
+  expectedException="java.lang.RuntimeException">
+  ...
+</munit:test>
+----
+
+The attribute expectException expects one of the following:
+
+* A literal exception class name (canonical form).
+:: When you provide a literal value, it should take the form of the canonical class name_ of the exception that is expected. In these cases, Mule always throws a `MuleMessagingException`. MUnit validates the provided classname if the underlying cause of the `MuleMessagingException` thrown is of the exact same type.
++
+[source, xml, linenums]
+----
+<munit:test name="testExceptions"
+  description="Test Exceptions"
+  expectedException="java.lang.RuntimeException">
+  ...
+</munit:test>
+----
+
+* An expression.
+:: If you choose to use expressions, Mule itself offers a collection of MEL expressions available using the compatibility module, that simplifies the validations of the exceptions thrown.
++
+[cols="30,70"]
+|===
+|Name |Description
+
+|`mel:exception.causedBy(exception_type)`
+|Evaluates if the exception was caused by an (instance of) the provided exception type.
+Example: `exception.causedBy(org.mule.example.ExceptionType)`
+
+|`mel:exception.causedExactlyBy(exception_type)`
+|Evaluates if the exception was caused by the specific exception type provided, discarding all other exception types. For example, if the provided exception type is `NullPointerException`, the expression returns true only if the test returns a NullPointerException.
+Example: `exception.causedExactlyBy(org.mule.example.ExceptionType)`
+
+|`mel:exception.causeMatches(<regex>)`
+|Checks the cause exception type name matches the provided regex. Supports any java regex plus, prefix, suffix. Example: `exception.causeMatches(org.mule.example.*)`
+
+|===
++
+[NOTE]
+--
+You can combine any expressions as a boolean expression. For example: +
+`exception.causeMatches('*') && !exception.causedBy(java.lang.ArithmeticException) &&
+!exception.causedBy(org.mule.api.registry.ResolverException)`
+--
++
+This MEL expression is meant to be used with the expressions listed above, but no verification is performed done to avoid other usages. The only contract being enforced is: The MEL expression should return a boolean value. If true, the test is successful.
++
+If the MEL expression returns something that cannot be cast to a Boolean value, the test fails. +
+
+If you define that your test expects an exception and none is thrown, the test fails immediately.
+
+
+== See Also
+
+* link:/munit/v/2.0/munit-test-reference[MUnit Test Reference]

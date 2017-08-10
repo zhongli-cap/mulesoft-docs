@@ -168,9 +168,8 @@ Valid types are:
 
 [NOTE]
 ====
-It is not necessary to declare input directives for any of the components of the Mule Message that arrive at the DataWeave transformer (payload, flow variables, and input/outbound properties) nor for any system variables.
+It is not necessary to declare input directives for any of the components of the Mule Message that arrive as inputs of the Transform component (payload, attributes and variables) nor for any system variables, as they are implicitly.
 
-You likely will not need this feature as any data arriving inside the incoming Mule message gets implicitly recognized as input based on the accompanying metadata that passes along with it through the flow components.  As a result, the data can be referenced and acted upon easily enough anywhere within the DataWeave body without a need to include them in the header.
 ====
 
 Optionally specify an input source and its input type in the following format: `<content>/<type>`.
@@ -478,10 +477,6 @@ output application/json
 ----
 
 
-[tabs]
-------
-[tab,title="Input: XML"]
-....
 .Input
 [source, xml,linenums]
 ----
@@ -491,9 +486,7 @@ output application/json
   <user>Leandro</user>
 </users>
 ----
-....
-[tab,title="Output: JSON"]
-....
+
 .Output
 [source, json,linenums]
 ----
@@ -505,14 +498,13 @@ output application/json
   ]
 }
 ----
-....
-------
+
 
 === Flow Control Expressions
 
-==== When Otherwise
+==== If Else
 
-The keyword *when* conditionally evaluates a part of your DataWeave code, depending on if an expression evaluates to true or to false. You can make a single line conditional, or enclose a whole section in curly brackets. In case the *when* expression evaluates to *false*, its corresponding part of the code is ignored, and the code that corresponds to the *otherwise* expression is executed.
+The keyword *if* evaluates an expression enclosed in parenthesis as true or to false and conditionally executes a statement. You can make a single line conditional, or enclose a whole section in curly brackets. In case the *if* expression evaluates to *false*, its corresponding part of the code is ignored, and the code that corresponds to the *else* expression is executed. Every if expression must have a matching else expression.
 
 .Transform
 [source, dataweave, linenums]
@@ -520,16 +512,12 @@ The keyword *when* conditionally evaluates a part of your DataWeave code, depend
 %dw 2.0
 output application/json
 ---
-{
+if (payload.country == "USA")
   currency: "USD"
-} when payload.country == "USA"
-otherwise
-{
-      currency: "EUR"
-}
+else currency: "EUR"
 ----
 
-You can also chain several *otherwise* expressions together, like in the example below:
+You can also chain several *else* expressions together, like in the example below:
 
 .Transform
 [source,DataWeave, linenums]
@@ -537,44 +525,17 @@ You can also chain several *otherwise* expressions together, like in the example
 %dw 2.0
 output application/json
 ---
-{
+if (payload.country =="USA")
 	currency: "USD"
-} when payload.country =="USA"
-otherwise
-{
+else if (payload.country =="UK")
 	currency: "GBP"
-} when payload.country =="UK"
-otherwise
-{
-	currency: "EUR"
-}
+else currency: "EUR"
 ----
 
 
 [TIP]
 Check the <<Precedence Table>> to see what expressions are compiled before or after this one.
 
-==== Unless Otherwise
-
-The keyword *unless* conditionally evaluates a part of your DataWeave code, depending on if an expression evaluates to true or to false. You can make a single line conditional, or enclose a whole section in curly brackets. In case the *unless* expression evaluates to *true*, its corresponding part of the code is ignored, and the code that corresponds to the *otherwise* expression is executed.
-
-.Transform
-[source, dataweave, linenums]
-----
-%dw 2.0
-output application/json
----
-{
-  currency: "EUR"
-} unless payload.country == "USA"
-otherwise
-{
-      currency: "USD"
-}
-----
-
-[TIP]
-Check the <<Precedence Table>> to see what expressions are compiled before or after this one.
 
 ==== Default
 
@@ -644,10 +605,6 @@ a: payload.string match {
 ----
 
 
-[tabs]
-------
-[tab,title="Input: JSON"]
-....
 
 .Input
 [source,json, linenums]
@@ -656,9 +613,7 @@ a: payload.string match {
   "string": "Emiliano"
 }
 ----
-....
-[tab,title="Output: JSON"]
-....
+
 .Output
 [source,json, linenums]
 ----
@@ -670,8 +625,7 @@ a: payload.string match {
   }
 }
 ----
-....
-------
+
 
 
 In this example, the first field simply matches the value in 'payload.string' and returns a boolean, the second field performs the same match, but returns an object that contains both a boolean and a reference to the validated value.
@@ -700,10 +654,7 @@ output application/json
 ----
 
 
-[tabs]
-------
-[tab,title="Input: JSON"]
-....
+
 .Input
 [source,json,linenums]
 ----
@@ -712,9 +663,7 @@ output application/json
   "number": 3.14
 }
 ----
-....
-[tab,title="Output: JSON"]
-....
+
 .Output
 [source,json, linenums]
 ----
@@ -723,8 +672,7 @@ output application/json
   "b": "higher"
 }
 ----
-....
-------
+
 
 
 In this example, the first field matches the value of 'payload.string' against two alternatives and conditionally appends a different string to it; the second field evaluates if the value in 'payload.number' is larger or smaller than 3 and returns "lower" or "higher" accordingly.
@@ -761,10 +709,7 @@ output application/json
 ----
 
 
-[tabs]
-------
-[tab,title="Input: JSON"]
-....
+
 .Input
 [source,json, linenums]
 ----
@@ -773,9 +718,7 @@ output application/json
   "b": 3.14
 }
 ----
-....
-[tab,title="Output: JSON"]
-....
+
 .Output
 [source,json, linenums]
 ----
@@ -787,8 +730,6 @@ output application/json
   }
 }
 ----
-....
-------
 
 
 
@@ -819,10 +760,7 @@ output application/json
 ----
 
 
-[tabs]
-------
-[tab,title="Input: JSON"]
-....
+
 .Input
 [source,json,linenums]
 ----
@@ -833,9 +771,7 @@ output application/json
   ]
 }
 ----
-....
-[tab,title="Output: JSON"]
-....
+
 .Output
 [source,json,linenums]
 ----
@@ -864,8 +800,7 @@ output application/json
   ]
 }
 ----
-....
-------
+
 
 
 
@@ -917,11 +852,11 @@ output application/json
 Please note that only the payload returned by the invoked flow will be assigned (i.e. all other message's properties such as flowVars and sessionVars will not be overridden when using the lookup function).
 
 [NOTE]
-The `lookup` function does not support calling link:/mule-user-guide/v/4.0/flows-and-subflows#types-of-flows[subflows].
+The `lookup` function does not support calling subflows.
 
 == Calling Global MEL Functions from DataWeave Code
 
-If you define a global link:/mule-user-guide/v/4.0/mule-expression-language-mel[Mule Expression Language] (MEL) function in your Mule project, you can then invoke it anywhere in your DataWeave code, without need for any special syntax.
+If you define a global Mule Expression Language (MEL) function in your Mule project, you can then invoke it anywhere in your DataWeave code, without need for any special syntax.
 
 To create one such global function, you must edit your Mule project's XML file and enclose any functions that you wish to define in the following set of tags, which must be placed in the global elements section, before any of the flows are defined.
 
@@ -956,7 +891,7 @@ In this space you can use any MEL expression to define custom functions, for exa
 ----
 
 
-With that in place, in the DataWeave code of your Transform Message element you can just refer to these functions. Note that the inputs and outputs of these functions can even be objects and arrays.
+With that in place, in the DataWeave code of your Transform component you can just refer to these functions. Note that the inputs and outputs of these functions can even be objects and arrays.
 
 [source, dataweave, linenums]
 ----
@@ -985,14 +920,14 @@ This table lists the order in which different DataWeave expressions are compiled
 |Operator                          |Description             | Level
 |using, all unary operators         |All link:https://en.wikipedia.org/wiki/Unary_operation[unary operators]     | 1
 |As                              |Type Coercion expression     | 2
-| * /                               |Multiplicative          | 3
+|&#42; /                               |Multiplicative          | 3
 |+ - >>                            |Additive                | 4
 |>= <= < >  is                   |Relational / Type Comparison | 5
 |!= ~= ==                          |Equality evaluators    | 6
 |link:/mule-user-guide/v/4.0/dataweave-core-functions#AND[AND]                              |Conditional And         | 7
 |link:/mule-user-guide/v/4.0/dataweave-core-functions#OR[OR]                                |Conditional OR          | 8
 |link:/mule-user-guide/v/4.0/dataweave-core-functions#default[Default], <<Pattern Matching>>, link:/mule-user-guide/v/4.0/dataweave-core-functions#matches[Matches], link:/mule-user-guide/v/4.0/dataweave-core-functions#map[Map], link:/mule-user-guide/v/4.0/dataweave-core-functions#map-object[Map Object], link:/mule-user-guide/v/4.0/dataweave-core-functions#group-by[Group By], link:/mule-user-guide/v/4.0/dataweave-core-functions#filter[Filter]             |Default Value / Pattern Matching / Binary Operators | 9
-|<<When Otherwise>>, <<Unless Otherwise>>             |Conditional Expressions | 10
+| If Else             |Conditional Expressions | 10
 |===
 
 

@@ -8,15 +8,48 @@ toc::[]
 //Anypoint Studio, Design Center: FTP connector
 
 [[short_description]]
-This reference provides XML examples of common FTP use cases.
+This reference provides the XML namespace and schema location for the FTP connector along with some common FTP use cases.
 
+When you add an FTP connector operation to a flow in Mule app, Anypoint Studio automatically populates the XML code with the connector namespace and schema location. If you are creating your XML by hand, you need to add this code yourself.
+
+* Namespace: `+http://www.mulesoft.org/schema/mule/ftp+`
+* Schema Location: `+http://www.mulesoft.org/schema/mule/ftp/current/mule-ftp.xsd+`
+
+If you are manually coding the Mule application in Studio's XML editor or another text editor, you need to define the namespace and schema location in the header of your Configuration XML, inside the `<mule>` tag like this:
+
+[source, xml,linenums]
+----
+<mule xmlns:ftp="http://www.mulesoft.org/schema/mule/ftp"
+  xmlns:http="http://www.mulesoft.org/schema/mule/http"
+  xmlns="http://www.mulesoft.org/schema/mule/core"
+  xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+  xmlns:spring="http://www.springframework.org/schema/beans"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans
+   http://www.springframework.org/schema/beans/spring-beans-current.xsd
+   http://www.mulesoft.org/schema/mule/core
+   http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+   http://www.mulesoft.org/schema/mule/http
+   http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+   http://www.mulesoft.org/schema/mule/ftp
+   http://www.mulesoft.org/schema/mule/ftp/current/mule-ftp.xsd">
+
+      <!-- put your global configuration elements and flows here -->
+
+</mule>
+----
+
+Note that Studio interprets `current` in the schema path as the current Mule version.
+
+== Configurations
 
 [[connection]]
 FTP connection example:
 
 ----
 <ftp:config name="config">
-   <ftp:connection username="anonymous" password="password" host="localhost" port="${ftpPort}" workingDir="${workingDir}"/>
+ <ftp:connection username="anonymous" password="password" host="localhost"
+  port="${ftpPort}" workingDir="${workingDir}"/>
 </ftp:config>
 ----
 
@@ -24,7 +57,8 @@ SFTP connection example:
 
 ----
 <ftp:config name="config">
-   <ftp:sftp-connection username="muletest1" password="muletest1" host="localhost" port="${SFTP_PORT}" workingDir="${workingDir}" />
+   <ftp:sftp-connection username="muletest1" password="muletest1"
+    host="localhost" port="${SFTP_PORT}" workingDir="${workingDir}" />
 </ftp:config>
 ----
 
@@ -32,109 +66,114 @@ SFTP connection through a proxy:
 
 ----
 <ftp:config name="sftp">
-   <ftp:sftp-connection username="muletest1" password="muletest1" host="127.0.0.100" port="${SFTP_PORT}" workingDir="${workingDir}">
-       <ftp:sftp-proxy-config host="localhost" port="${proxyPort}" protocol="HTTP"/>
+   <ftp:sftp-connection username="muletest1" password="muletest1"
+    host="127.0.0.100" port="${SFTP_PORT}" workingDir="${workingDir}">
+       <ftp:sftp-proxy-config host="localhost" port="${proxyPort}"
+        protocol="HTTP"/>
    </ftp:sftp-connection>
 </ftp:config>
 ----
 
 == Operations
 
-Read operation: This example reads the file at the specified path and returns a Mule message with an `InputStream` as payload and a `FileAttributes` instance as attributes. If the file does not exist, a `FTP:ILLEGAL_PATH` error will be thrown.
-
+* Read operation: This example reads the file at the specified path and returns a Mule message with an `InputStream` as payload and a `FileAttributes` instance as attributes. If the file does not exist, a `FTP:ILLEGAL_PATH` error will be thrown.
++
 ----
-<ftp:read path="#[path]" outputEncoding="UTF-8" outputMimeType="application/xml" />
+<ftp:read path="#[path]" outputEncoding="UTF-8"
+ outputMimeType="application/xml" />
 ----
-
-List operation: This example lists the contents of a folder and handle regular files and subdirectories differently.
-
++
+* List operation: This example lists the contents of a folder and handle regular files and subdirectories differently.+
++
 ----
 <flow name="list">
-	<ftp:list directoryPath="~/dropFolder" />
+  <ftp:list directoryPath="~/dropFolder" />
 
-	<foreach>
-		<choice>
-			<when expression="attributes.isDirectory()">
-				<flow-ref name="processDirectory" />
-			</when>
-			<otherwise>
-				<logger message="Found file #[attributes.path] which content is #[payload]" />
-			</otherwise>
-		</choice>
-	</foreach>
-</flow>
-----
-
-Note that the `<ftp:matcher>` element available to the List operation defines criteria for accepting or rejecting a file. This is how the matcher can be defined:
-
-----
-<ftp:matcher
-	filename-pattern="a?*.{htm,html,pdf}"
-  path-pattern="a?*.{htm,html,pdf}"
-	createdSince="2015-06-03T13:21:58+00:00"
-	createdUntil="2015-07-03T13:21:58+00:00"
-	updatedSince="2015-05-03T13:21:58+00:00"
-	updatedUntil="2015-06-03T13:21:58+00:00"
-  accessedSince="2015-06-03T13:21:58+00:00"
-  accessedUntil="2015-06-03T13:21:58+00:00"
-  directory="true|false"
-  regularFile="true|false"
-  symbolicLink="true|false"
-  minSize="0"
-  maxSize="1024" />
-----
-
-Example of top level, reusable matcher (Studio only):
-
-----
-<ftp:matcher name="smallFileMatcher" maxSize="100" />
-
-<flow name="smallFiles">
-	<ftp:list path="~/smallfiles" matcher="smallFileMatcher" />
-	..
-</flow>
-----
-
-Example of inner, not reusable, matcher
-
-----
-<flow name="smallFiles">
-	<ftp:list path="~/smallfiles" matcher="smallFileMatcher">
-    <ftp:match-with>
-      <ftp:matcher maxSize="100" />
-    </ftp:match-with>
-	</ftp:list>
-	...
-</flow>
-----
-
-Polling:  This example uses the Scheduler to check a directory regularly for new files to list. It lists the contents of a folder once per second, processes the files one by one, and then deletes each processed file.
-
-----
-<flow name="poll">
-   <scheduler>
-       <scheduling-strategy>
-           <fixed-frequency frequency="1000"/>
-       </scheduling-strategy>
-   </scheduler>
-   <ftp:list directoryPath="~/dropFolder" />
-   <foreach>
-	   <flow-ref name="processFile" />
-  	 <ftp:delete path="#[attributes.path]" />
+  <foreach>
+    <choice>
+      <when expression="attributes.isDirectory()">
+        <flow-ref name="processDirectory" />
+      </when>
+      <otherwise>
+        <logger message="Found #[attributes.path] file content: #[payload]" />
+      </otherwise>
+    </choice>
   </foreach>
 </flow>
 ----
-
-Copy:
-
++
+** The `<ftp:matcher>` element (available to the List operation) defines criteria for accepting or rejecting a file.
++
 ----
-<ftp:copy sourcePath="source.txt" targetPath="backup" overwrite="true|false" createParentDirectories="true|false" renameTo="renamed.txt"/>
+<ftp:matcher
+ filenamePattern="a?*.{htm,html,pdf}"
+ pathPattern="a?*.{htm,html,pdf}"
+ timestampSince="2015-06-03T13:21:58+00:00"
+ timestampUntil="2015-07-03T13:21:58+00:00"
+ directories="REQUIRE|EXCLUDE|INCLUDE"
+ regularFile="REQUIRE|EXCLUDE|INCLUDE"
+ minSize="0"
+ maxSize="1024" />
 ----
-
-Move:
-
++
+Note that `INCLUDE` is the default for `directories` and `regularFile`.
++
+** Example of top level, reusable matcher (Studio only):
++
 ----
-<ftp:move sourcePath="source.txt" targetPath="backup"  overwrite="true|false" createParentDirectories="true|false" renameTo="renamed.txt"/>
+<ftp:matcher name="smallFileMatcher" maxSize="100" />
++
+<flow name="smallFiles">
+ <ftp:list path="~/smallfiles" matcher="smallFileMatcher" />
+ ...
+</flow>
+----
++
+** Example of an inner, non-reusable, matcher:
++
+----
+<flow name="smallFiles">
+  <ftp:list path="~/smallfiles" matcher="smallFileMatcher">
+    <ftp:match-with>
+    <ftp:matcher maxSize="100" />
+    </ftp:match-with>
+  </ftp:list>
+  ...
+</flow>
+----
++
+* Polling:  This example uses the Scheduler to check a directory regularly for new files to list. It lists the contents of a folder once per second, processes the files one by one, and then deletes each processed file.
++
+----
+<flow name="poll">
+  <scheduler>
+    <scheduling-strategy>
+      <fixed-frequency frequency="1000"/>
+    </scheduling-strategy>
+  </scheduler>
+  <ftp:list directoryPath="~/dropFolder" />
+
+  <foreach>
+    <flow-ref name="processFile" />
+    <ftp:delete path="#[attributes.path]" />
+  </foreach>
+  
+  ...
+</flow>
+----
++
+* Copy:
++
+----
+<ftp:copy sourcePath="source.txt" targetPath="backup" overwrite="true|false"
+ createParentDirectories="true|false" renameTo="renamed.txt"/>
+----
++
+* Move:
++
+----
+<ftp:move sourcePath="source.txt" targetPath="backup"  overwrite="true|false"
+ createParentDirectories="true|false" renameTo="renamed.txt"/>
 ----
 
 [[see_also]]

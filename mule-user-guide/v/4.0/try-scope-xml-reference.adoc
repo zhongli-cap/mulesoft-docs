@@ -1,4 +1,4 @@
-= About Try Scope
+= Try Scope XML Reference
 
 A Try scope follows the structure described below.
 
@@ -6,50 +6,79 @@ A Try scope follows the structure described below.
 * A single root element `<try>`
 
 * Components that are executed under the error-handling rules defined by
-the Try scope are defined as child elements of the `try` element.
+the Try scope are defined as child elements of the `try` element. You can place one or many here.
 
 * A single `<error-handler>` element holds all error handling strategies for the scope.
 
-* In the error handler, one or serveral `on-error-continue` and `on-error-propagate` define the various strategies.
+* In the error handler, one or several `on-error-continue` and `on-error-propagate` define the various strategies. At least one of these must be present.
 
-* Components that are executed when a matching error occurs are defined as child elements of the `on-error` element.
+* Components that are executed when a matching error occurs are defined as child elements of the `on-error` element. You can place one or many here.
 
+[source,xml,linenums]
+----
+<try>
+  <!-- COMPONENTS TO TRY TO USE -->
+  <error-handler>
+    <on-error-continue>
+      <!-- COMPONENTS TO USE IN CASE OF ERROR -->
+    </on-error-continue>
+    <on-error-propagate>
+      <!-- COMPONENTS TO USE IN CASE OF ERROR -->
+    </on-error-propagate>
+  </error-handler>
+</try>
+----
 
-Each on-error element has a list of one or several error types that trigger it
-
+Each error handling strategy in a Try scope (`on-error-*`) follows a condition. This condition is typically an error type (or a list of several) which must match the current error. You can also define this condition as a freely written expression, such as `error.cause.message.contains("fatal")`.
 
 [NOTE]
-Note that conditions are evaluated in order. If a path is set to *All*, it must always be the last.
+Note that conditions are evaluated in order and only the first strategy to match is executed.
 
 
-As an alternative to mapping a path to a set of error types, you can map it to a freely defined condition. For example, you can map a path to a condition like this:
-
-`when error.cause.message.contains(“fatal”)`
 
 
-== Handling Transactions
-
-A transaction is a series of actions that should never be partially executed, errors should lead to either a rollback or a commit.
-
-The Try scope can be set to treat the components within it as a transaction. It can be configured in the following ways:
-
-* *Ignore* (default)
-+
-Actions aren't treated as a transaction, errors cause no rollbacks or commits.
-
-* *Always Begin*
-+
-A new transaction is started every time the scope is executed.
-
-* *Begin or Join*
-+
-Only relevant in cases where execution order may vary (for example due to asynchronous actions happening outside the flow). If the current processing of the flow has already begun a transaction, join it. Otherwise, begin a new one.
 
 
-== Custom Error Types
+
+Below is an example that includes two error handling strategies, each executing a logger component:
 
 
-In each Try scope, you can map standard error types to a custom error type. When using multiple Try scopes, you can use these custom error types to differentiate similar errors that may occur in different parts of the flow. For example, if your flow has two HTTP Request connectors that reach out to different REST services, a connectivity error on either produces the same error message. By wrapping each in a different Try scope and setting custom error types, you can differentiate them.
+[source,xml,linenums]
+----
+<try>
+  <http:request config-ref="HTTP-config" method="GET" path="/" />
+  <error-handler>
+    <on-error-continue enableNotifications="true" logException="true" type="CONNECTIVITY">
+      <logger level="INFO" doc:name="Logger" message="Connectivity Error"/>
+    </on-error-continue>
+    <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" type="EXPRESSION">
+      <logger level="INFO" doc:name="Logger" message="Expression error" />
+    </on-error-propagate>
+  </error-handler>
+</try>
+----
+
+== Properties of Try
+
+[%header,cols="20a,20,60a"]
+|===
+|Property | Default |Description
+|`transactionalAction` | INDIFFERENT | Defines if what's in the scope is treated as a transaction. Possible values:
+
+* INDIFFERENT : What's in the scope isn't treated as a transaction.
+
+* ALWAYS_BEGIN: A new transaction is sarted every time the scope is executed.
+
+* BEGIN_OR_JOIN: If the current processing of the flow has already begun a transaction, join it. Otherwise, begin a new one. (Only relevant when execution order may vary).
+
+|`transactionalType` | LOCAL | Defines the type of transaction to use. Possible values:
+
+* "LOCAL"
+* "MULTI"
+* "XA"
+
+|===
+
 
 
 
@@ -57,5 +86,7 @@ In each Try scope, you can map standard error types to a custom error type. When
 == See Also
 
 * link:/mule-user-guide/v/4.0/try-scope-concept[Try Scope Concept]
+
+* link:/mule-user-guide/v/4.0/error-handling[Error Handling]
 
 * link:/mule-user-guide/v/4.0/scopes-concept[About Scopes]
