@@ -1,10 +1,24 @@
 = To Pass an Input Parameter to a Stored Procedure Call
 
-Run this example to update a "bonus" field in a table where salary and bonus amounts are stored. 
+Run this example to update a "bonus" field in a table where salary and bonus amounts are stored. You can download the XML code for this example from the following location:
 
-image:database-connector-examples-8b1f9.png[flow pic stored proc]
+`+https://docs.mulesoft.com/mule-user-guide/v/3.8/_attachments/database-stored-task.txt+`
 
-. First set up another table in your MySQL database, `salary`, with the primary key as `emp_no`, with a `salary_amount` and `bonus` entry for each person.
+To use the code, modify the credentials and endpoint in the database connector global element for your MySQL instance. 
+
+. In Studio, create a new project, and drag connectors onto the canvas as follows:
++
+* Drag an HTTP connector onto the canvas and set the path to */getemps*. Accept other default options or change them to match your environment.
+* Drag a Set Payload connector onto the _process_ section of the canvas and set its message to the following expression:
++
+`#[message.inboundProperties.'http.query.params'.emp]`
++
+. Drag a database connector to the canvas and configure it to connect to a MySQL database.
+. Drag a logger onto the canvas and set the message to `#[payload]`.
++
+image::database-connector-examples-8b1f9.png[4 connectors]
++
+. On the MySQL command line or in the MySQL Admin, set up a table in the MySQL database, `salary`, with the primary key as `emp_no`, with a `salary_amount` and `bonus` entry for each person.
 +
 ----
 CREATE TABLE salary (
@@ -15,9 +29,9 @@ PRIMARY KEY (emp_no)
 );
 ----
 +
-. Perform the INSERT statements to populate the table.
+. On the mysql command line or in in the MySQL Admin, execute these INSERT statements to populate the table.
 +
-[source]
+[source,code,linenums]
 ----
 INSERT INTO salary (emp_no,salary_amount,bonus) VALUES (1011,75000,1000);
 INSERT INTO salary (emp_no,salary_amount,bonus) VALUES (1012,50000,1000);
@@ -33,7 +47,7 @@ INSERT INTO salary (emp_no,salary_amount,bonus) VALUES (1021,75000,1000);
 INSERT INTO salary (emp_no,salary_amount,bonus) VALUES (1022,75000,1000);
 ----
 +
-. Create a simple stored procedure like this one, which adds a given amount to the bonus stored in the table "salary".
+. On the MySQL command line, reate the following stored procedure to add an amount to the bonus stored in the salary table.
 +
 ----
 CREATE DEFINER=`root`@`localhost` PROCEDURE `add_bonus_by_emp_no`(IN EMP_NO integer,
@@ -45,25 +59,19 @@ WHERE salary.emp_no=EMP_NO;
 END
 ----
 +
-. One would call this example procedure to increase the employee's bonus using the employee number. The first argument is passed as an input parameter, `<db:in-param name="empno" value="#[payload]"/>`. The second argument is the amount to add to the bonus.
+You call this example procedure to increase the employee's bonus using the employee number. Pass the first argument as an input parameter, `<db:in-param name="empno" value="#[payload]"/>`. The second argument is the amount to add to the bonus.
++
+. In Studio, open the database connector configuration properties editor. In Parameterized Query, set up the stored procedure by typing:
 +
 ----
 CALL add_bonus_by_emp_no(:empno,500);
 ----
 +
-. This call is represented in the example by:
-`<db:parameterized-query><![CDATA[CALL add_bonus_by_emp_no(empno,500);]]></db:parameterized-query>`. Here is how you set up the stored procedure in Studio.
-+
 image:database-connector-examples-fe6e9.png[]
 +
-The employee ID is passed as an input parameter. It is first ingested by the application from the HTTP query parameter, when the HTTP endpoint is hit: `http://localhost:8081/getemps?emp=1065`
+. Go to `http://localhost:8081/getemps?emp=1065` in a client browser or using curl.
 +
-. Here is the full code for a simple app that calls a stored procedure using the payload as an input/"in" parameter. Make sure to modify the credentials and endpoint in the database connector global element for your MySQL instance.
-+
-[source, xml, linenums]
-----
-include::_sources/mysql-empno-in-param.xml[in param example]
-----
+The employee ID is passed as an input parameter and ingested by the application.
 
 == See Also
 
