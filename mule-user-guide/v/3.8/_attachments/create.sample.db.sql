@@ -1,6 +1,8 @@
 CREATE DATABASE company;
  
 USE company;
+
+DROP TABLE IF EXISTS `employees`;
  
 CREATE TABLE employees (
 no INT NOT NULL,
@@ -11,6 +13,8 @@ gender ENUM ('M','F') NOT NULL,
 hire_date DATE NOT NULL,
 PRIMARY KEY (no)
 );
+
+DROP TABLE IF EXISTS `roles`;
  
 CREATE TABLE roles (
 id mediumint(8) unsigned NOT NULL auto_increment,
