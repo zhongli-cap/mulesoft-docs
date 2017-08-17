@@ -6,29 +6,35 @@
 // image:logo-server-disabled.png[link="/runtime-manager/deployment-strategies", title="Anypoint Platform Private Cloud Edition"]
 // image:logo-pcf-disabled.png[link="/runtime-manager/deployment-strategies", title="Pivotal Cloud Foundry"]
 
-CloudHub supports building HTTPS/SSL based services so you can be ensured of your data confidentiality. It is very easy to configure your service to support SSL.
+CloudHub supports building HTTPS/SSL based services so you can be ensured of your data confidentiality.
 
 [NOTE]
-The configuration steps shown in this document are meant for deploying your app to CloudHub. If you instead intend to deploy your app locally, see link:/mule-user-guide/v/3.8/tls-configuration[TLS Configuration]. See link:/runtime-manager/deployment-strategies[Deployment Strategies] for a closer look at how the configuration should differ between each deployment scenario.
+--
+The configuration steps shown in this document are meant for deploying your app to CloudHub. If you instead intend to deploy your app locally, see link:/mule-user-guide/v/3.8/tls-configuration[TLS Configuration]. +
+The link:/runtime-manager/deployment-strategies[Deployment Strategies] documentation offers a closer look at how the configuration should differ between each deployment scenario.
+--
 
-This tutorial builds on existing tutorials, so to begin, build a service using the link:/getting-started/deploy-to-cloudhub[Deploy to CloudHub] tutorial.
+This tutorial builds on existing tutorials, so to begin, build a service using the link:/getting-started/deploy-to-cloudhub[Deploy to CloudHub tutorial].
 
 You can now modify your existing service to use HTTPS as detailed in the following steps.
 
-First, if you don't have a keystore for your service, generate a new keystore. You can do this using the command line and the keytool utility from the JDK.
-
+. Generate a keystore if you don't have one already.
+:: You can do this using the command line and the keytool utility from the JDK.
++
 [IMPORTANT]
+--
 To generate a self signed certificate now you must specify the hostname in your command, the property 'SAN=DNS:localhost,IP:127.0.0.1' is key in the example below
-
+--
++
 [source, code, linenums]
 ----
 keytool -genkeypair -keystore keystore.jks   -dname "CN=localhost, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown"  -keypass password  -storepass password  -keyalg RSA  -sigalg SHA1withRSA  -keysize 2048  -alias mule  -ext SAN=DNS:localhost,IP:127.0.0.1 -validity 9999
 ----
-
++
 This command creates a file named `keystore.jks`. Before proceeding, verify that this file exists and appears in the folder `src/main/resources`.
 
-Next, configure an HTTPS connector inside your Mule configuration:
-
+. Configure an HTTPS connector inside your Mule configuration:
++
 [source,xml, linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
@@ -46,15 +52,17 @@ http://www.mulesoft.org/schema/mule/https http://www.mulesoft.org/schema/mule/ht
     </http:listener-config>
 ...
 ----
++
 
-Finally, configure any host IP addresses you want to use HTTPS on with the HTTPS scheme and the *`${https.port}`* variable for the port. Make sure to include a reference to the HTTPS global connector configuration. For example:
-
+. Configure any host IP addresses you want to use HTTPS on with the HTTPS scheme and the *`${https.port}`* variable for the port.
+:: Make sure to include a reference to the HTTPS global connector configuration. For example:
++
 [source,xml, linenums]
 ----
 <http:listener config-ref="HTTPS_Listener_Configuration" path="hello" doc:name="HTTP"/>
 ----
 
-To make HTTP requests to external addresses, use an HTTP Request element instead of the listener, and set up its correspoinding congiguration element similarly with a TLS child element.
+To make HTTPS requests to external addresses, configure an HTTP Requester using your required TLS configuration:
 
 [source,xml, linenums]
 ----
@@ -70,7 +78,6 @@ To make HTTP requests to external addresses, use an HTTP Request element instead
 ...
 ----
 
-[TIP]
 These same configurations can all be easily achieved through the Anypoint Studio UI. For instructions on how that is done, and for more in depth configuration details, see the link:/mule-user-guide/v/3.8/http-connector[HTTP Connector] documentation.
 
 Your application is now ready to be deployed on CloudHub. You can access your endpoint via the normal HTTPS address, for example: `+https://yourdomain.cloudhub.io+`.
