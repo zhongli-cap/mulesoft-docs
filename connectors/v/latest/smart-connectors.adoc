@@ -128,6 +128,31 @@ To invoke this smart connector from a Mule Application, use it in a flow:
 * *CONTENT* implies support for DataWeave in place as a child element.
 * *PRIMARY* works similarly to *CONTENT* but maps to the payload by default.
 
+|summary
+|optional
+|NA
+|Adds a small tooltip to the `<parameter>`.
+
+|example
+|optional
+|NA
+|Adds a small example of the type of data this parameter should be feed with.
+
+|displayName
+|optional
+|NA
+|Provides a nicer label to the UI, by leaving this attribute empty, the default value will be the `name` attribute hypenized.
+
+|order
+|optional
+|NA
+|Defines an order in how the element should be rendered in the UI.
+
+|tab
+|optional
+|NA
+|Defines to which group (or tab) the `<parameter>` must end in the UI.
+
 |doc:description
 |optional
 |NA
@@ -140,12 +165,23 @@ To invoke this smart connector from a Mule Application, use it in a flow:
 |===
 |Name | Use | Default Value | Description
 |type
-|required
+|optional
 |
-| The type of the output data. It can be set to `void`, which prevents the `<operation>` call from modifying the Mule event, even if its behavior includes modifying the payload.
+| The type of the output payload data. It can be set to `void` by removing the element, which prevents the `<operation>` call from modifying the Mule event, even if its behavior includes modifying the payload.
 
 |===
 
+Attributes types definition are also supported by `<operation>`s, by adding an extra element `<output-attributes>` (quite similar to the `<output>` element)
+.Attributes of *<output-attributes>*
+[%header,cols="20,20,30,70a"]
+|===
+|Name | Use | Default Value | Description
+|type
+|optional
+|
+| The type of the output attributes data. It can be set to `void` by removing the element, which prevents the `<operation>` call from modifying the Mule event, even if its behavior includes modifying the payload.
+
+|===
 
 === Properties
 
@@ -268,6 +304,31 @@ If the right credentials aren't provided, it returns this error response from Gi
 |false
 |Hides the value of the parameter in the UI when typing it (using `\****`).
 
+|summary
+|optional
+|NA
+|Adds a small tooltip to the `<parameter>`.
+
+|example
+|optional
+|NA
+|Adds a small example of the type of data this parameter should be feed with.
+
+|displayName
+|optional
+|NA
+|Provides a nicer label to the UI, by leaving this attribute empty, the default value will be the `name` attribute hypenized.
+
+|order
+|optional
+|NA
+|Defines an order in how the element should be rendered in the UI.
+
+|tab
+|optional
+|NA
+|Defines to which group (or tab) the `<parameter>` must end in the UI.
+
 |doc:description
 |optional
 |NA
@@ -342,6 +403,7 @@ The way of importing the Smart Connector schema in a Mule Application is by usin
 |`namespace="http://www.mulesoft.org/schema/a/different/path/mule/hello"`
 |`namespace="http://www.mulesoft.org/schema/a/different/path/mule/hello"`
 |===
+Generated schema location is `http://www.mulesoft.org/schema/a/different/path/mule/hello/current/mule-hello-prefix.xsd`
 
 *<module> provides `name` and `prefix`*
 |===
@@ -354,8 +416,9 @@ The way of importing the Smart Connector schema in a Mule Application is by usin
 |`prefix="hello-prefix"`
 
 |NA
-|`namespace=http://www.mulesoft.org/schema/mule/hello-prefix/current/mule-hello-prefix.xsd`
+|`namespace=http://www.mulesoft.org/schema/mule/hello-prefix`
 |===
+Generated schema location is `http://www.mulesoft.org/schema/mule/hello-prefix/current/mule-hello-prefix.xsd`
 
 *<module> provides just `name`*
 |===
@@ -368,8 +431,9 @@ The way of importing the Smart Connector schema in a Mule Application is by usin
 |`prefix="hello-with-spaces"`
 
 |NA
-|`namespace=http://www.mulesoft.org/schema/mule/hello-with-spaces/current/mule-hello-with-spaces.xsd`
+|`namespace=http://www.mulesoft.org/schema/mule/hello-with-spaces`
 |===
+Generated schema location is `http://www.mulesoft.org/schema/mule/hello-with-spaces/current/mule-hello-with-spaces.xsd`
 
 The following module only has a `name` attribute `name="hello with spaces"`. This means that its `prefix` is dynamically generated as `hello-with-spaces`, and its `namespace` is dynamically generated as `http://www.mulesoft.org/schema/mule/hello-with-spaces/current/mule-hello-with-spaces.xsd`. This means the Mule Application must have the a schema location pointing at a reference that matches that value.
 
@@ -508,19 +572,192 @@ Lets say a specific connector needs the HTTP Connector and the OAuth module, the
 </module>
 ----
 
-== Smart Connectors' Catalog
-The provided types for either a `<property>`/`<parameter>` are just some primitive types: *string*, *boolean*, *datetime*, *date*, *integer*, *time*.
-
-There are other scenarios where it is possible to define types much more complex types than those, to which we provide a way to inject a custom catalog with predefined types. To do so, we will create a file `hello-smart-connector/smart-connector/src/main/resources/module-Hello-catalog.xml` with the following content:
+== Relying on operations defined in the same module 
+There will be scenarios where some operations will have repeated message processors, to which we could rely if they were encapsulated in an new operation and call it from other places.
+All the `<operation>`s defined in a `<module>` could be reused in *that same* `<module>` if they don't have cyclic dependencies.
+Lets assume there's a `<module>` that does some inserts and updates but first validates the input parameters, something like the following module:
 [source,xml,linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
-<types:mule xmlns="http://www.mulesoft.org/schema/mule/core"  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:types="http://www.mulesoft.org/schema/mule/types">
-    <types:catalog>
-        <types:type name="PersonXsdType" location="./person-schema.xsd" element="{http://uri}Person"/>
-        <types:type name="PersonJsonType" location="./person-schema.json"/>
-    </types:catalog>
-</types:mule>
+<module name="module-calling-operations-within-module" minMuleVersion="4.0.0"
+        xmlns="http://www.mulesoft.org/schema/mule/module"
+        xmlns:mule="http://www.mulesoft.org/schema/mule/core"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+           http://www.mulesoft.org/schema/mule/module http://www.mulesoft.org/schema/mule/module/current/mule-module.xsd
+           http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+
+    <operation name="validate-and-insert">
+        <parameters>
+            <parameter name="name" type="string"/>
+        </parameters>
+        <body>
+            <!-- validate the 'name' != null -->
+            <!-- validate the 'name' wasn't already added -->
+            <!-- validate the 'name' matches some criteria -->
+            <!-- validate the 'name' ... and so on -->
+            <db:insert config-ref="dbConfig..">
+                <db:sql>INSERT INTO PLANET(NAME) VALUES (:name)</db:sql>
+                <db:input-parameters>#[{ 'name' : parameters.name }]</db:input-parameters>
+            </db:insert>
+        </body>
+    </operation>
+
+    <operation name="validate-and-update">
+        <parameters>
+            <parameter name="originalName" type="string"/>
+            <parameter name="newName" type="string"/>
+        </parameters>
+        <body>
+            <!-- validate the 'newName' and 'originalName' != null -->
+            <!-- validate the 'newName' and 'originalName' wasn't already added -->
+            <!-- validate the 'newName' and 'originalName' matches some criteria -->
+            <!-- validate the 'newName' and 'originalName' ... and so on -->
+            <db:update config-ref="dbConfig..">
+                <db:sql>update PLANET set NAME= :newName where NAME=':originalName'</db:sql>
+                <db:input-parameters>#[{'originalName' : parameters.originalName, 'newName' : parameters.newName}]</db:input-parameters>
+            </db:update>
+        </body>
+    </operation>
+</module>
+----
+
+Notice how the validations are repeated among the operations `validate-and-insert` and `validate-and-update` (even also within the same `validate-and-update` but with two different parameters) are repeated. That could be improved by adding a third `validate` operation and call it from the ones already defined:
+[source,xml,linenums]
+----
+    <operation name="validate">
+        <parameters>
+            <parameter name="aParameter" type="string"/>
+        </parameters>
+        <body>
+            <!-- validate the 'aParameter' != null -->
+            <!-- validate the 'aParameter' wasn't already added -->
+            <!-- validate the 'aParameter' matches some criteria -->
+            <!-- validate the 'aParameter' ... and so on -->
+        </body>
+    </operation>
+----
+
+In order to properly consume other operations from within a `<module>` the following steps must be done:
+
+*1)* Add a XML namespace `xmlns:tns` (and a new value to the `schemaLocation`) attribute to the `<module>`, which value must map the target namespace of the current module (already explained in the *Module* section).
+*2)* Call the operations by using the `tns` prefix and following by the name of the operation. Notice that the `config-ref` should not be there, as this is a reference to the *same* module, which implies all global instances will be shared among operations.
+
+The complete module will be something like the following:
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<module name="module-calling-operations-within-module" minMuleVersion="4.0.0"
+        xmlns="http://www.mulesoft.org/schema/mule/module"
+        xmlns:mule="http://www.mulesoft.org/schema/mule/core"
+        xmlns:tns="http://www.mulesoft.org/schema/mule/module-calling-operations-within-module"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+           http://www.mulesoft.org/schema/mule/module http://www.mulesoft.org/schema/mule/module/current/mule-module.xsd
+           http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+           http://www.mulesoft.org/schema/mule/module-calling-operations-within-module http://www.mulesoft.org/schema/mule/module-calling-operations-within-module/current/mule-module-calling-operations-within-module.xsd">
+
+    <operation name="validate-and-insert">
+        <parameters>
+            <parameter name="name" type="string"/>
+        </parameters>
+        <body>
+            <tns:validate aParameter="#[parameters.name]"/>
+            <db:insert config-ref="dbConfig..">
+                <db:sql>INSERT INTO PLANET(NAME) VALUES (:name)</db:sql>
+                <db:input-parameters>#[{ 'name' : parameters.name }]</db:input-parameters>
+            </db:insert>
+        </body>
+    </operation>
+
+    <operation name="validate-and-update">
+        <parameters>
+            <parameter name="originalName" type="string"/>
+            <parameter name="newName" type="string"/>
+        </parameters>
+        <body>
+            <tns:validate aParameter="#[parameters.originalName]"/>
+            <tns:validate aParameter="#[parameters.newName]"/>
+            <db:update config-ref="dbConfig..">
+                <db:sql>update PLANET set NAME= :newName where NAME=':originalName'</db:sql>
+                <db:input-parameters>#[{'originalName' : parameters.originalName, 'newName' : parameters.newName}]</db:input-parameters>
+            </db:update>
+        </body>
+    </operation>
+
+    <operation name="validate">
+        <parameters>
+            <parameter name="aParameter" type="string"/>
+        </parameters>
+        <body>
+            <!-- validate the 'aParameter' != null -->
+            <!-- validate the 'aParameter' wasn't already added -->
+            <!-- validate the 'aParameter' matches some criteria -->
+            <!-- validate the 'aParameter' ... and so on -->
+        </body>
+    </operation>
+</module>
+----
+
+== Providing Test Connection
+When consuming a connector is really helpful to provide some feedback at design time if the attributes of a global element are feed with wrong values, such as wrong username/password, bad URLs, etc. As everything in a `<module>`, to provide test connection it will rely on the global elements that are being used, which implies that if no global element is used no test connection feature for the current module.
+Let's take a simple example of a `<module name="module-using-file">` that depends on the File connector (which provides test connection), by having the element of `file:connection` the module will pick it up, and it will default its test connectivity to the internal File configuration.
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<module name="module-using-file" minMuleVersion="4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="http://www.mulesoft.org/schema/mule/module"
+        xmlns:file="http://www.mulesoft.org/schema/mule/file"
+        xsi:schemaLocation="
+           http://www.mulesoft.org/schema/mule/module http://www.mulesoft.org/schema/mule/module/current/mule-module.xsd
+           http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+
+    <property name="workingDir" type="string"/>
+    <file:config name="fileConfig">
+        <file:connection workingDir="#[properties.workingDir]"/>
+    </file:config>
+</module>
+----
+From the UI, when doing test connection to the connector `module-using-file`, it will delegate it to the global element encapsulated by `fileConfig`.
+If two, or more, global elements are being used in a `<module>` and provide test connection, while building the connector will show an error to force the developer mark a specific global element as the one to produce the test connection with `xmlns:connection="true"`. In the following connector there are two global elements that support test connection, and because of it the first one was marked for test connectivity by adding the mentioned `xmlns:connection="true"` attribute:
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<module name="module-using-file" minMuleVersion="4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="http://www.mulesoft.org/schema/mule/module"
+        xmlns:file="http://www.mulesoft.org/schema/mule/file"
+        xsi:schemaLocation="
+           http://www.mulesoft.org/schema/mule/module http://www.mulesoft.org/schema/mule/module/current/mule-module.xsd
+           http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+
+    <property name="workingDir" type="string"/>
+
+    <!-- notice how the following global element is marked for test connection -->
+    <file:config name="fileConfig" xmlns:connection="true">
+        <file:connection workingDir="#[properties.workingDir]"/>
+    </file:config>
+
+    <file:config name="anotherFileConfig">
+        <file:connection workingDir="#[properties.workingDir]"/>
+    </file:config>
+</module>
+----
+
+== Smart Connectors' Catalog
+The provided types for either a `<property>`/`<parameter>` are just some primitive types: *string*, *boolean*, *number*, *date*, *datetime*, *localdatetime*, *time*, *localtime*, *timezone*, *binary*, *any*, *regex*.
+
+There are other scenarios where it is possible to define types much more complex structure than those, to which we provide a way to inject a custom catalog with predefined types. To do so, we will create a file `hello-smart-connector/smart-connector/src/main/resources/module-Hello-catalog.xml` with the following content:
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<catalogs xmlns="http://www.mulesoft.org/schema/mule/types" >
+    <catalog name="PersonXsdType" format="application/xml">
+        <schema format="application/xml+schema" location="./person-schema.xsd" />
+    </catalog>
+    <catalog name="PersonJsonType" format="application/json">
+        <schema format="application/json+schema" location="./person-schema.json" />
+    </catalog>
+</catalogs>
 ----
 Under `hello-smart-connector/smart-connector/src/main/resources/` we will also create two more files. The `hello-smart-connector/smart-connector/src/main/resources/person-schema.xsd` (same name defined in the catalog) with the following content:
 [source,xml,linenums]
@@ -577,7 +814,7 @@ Once placed, we can start leveraging `type`s to the defined ones in the catalog 
   ...
   <operation name="person-xml-to-json" doc:description="Takes a Person in XML format and translates it to JSON">
     <parameters>
-      <parameter name="content" type="PersonXsdType"/>
+      <parameter name="content" type="PersonXsdType::{http://uri}Person"/>
     </parameters>
     <body>
       <ee:transform>
@@ -609,11 +846,13 @@ Once placed, we can start leveraging `type`s to the defined ones in the catalog 
           ]]></ee:set-payload>
       </ee:transform>
     </body>
-    <output type="PersonXsdType"/>
+    <output type="PersonXsdType::{http://uri}Person"/>
     </operation>
 <module/>
 ----
-Notice that to use DataWeave we would also need to add an extra dependency to our Smart Connector, so that when reading the `<ee:transform ..>` the mandatory schema (`mule-ee.xsd`) can be found:
+Notice that when using the JSON schema from the catalog, the value of `type` is the name of it (`PersonJsonType`), but when using the XML schema we need to append two colons `::` to it and the qname reference to the element, which in this particular case happens to be `{http://uri}Person`, ending in `PersonXsdType::{http://uri}Person`.
+
+To use DataWeave we would also need to add an extra dependency to our Smart Connector, so that when reading the `<ee:transform ..>` the mandatory schema (`mule-ee.xsd`) can be found:
 [source,xml,linenums]
 ----
 <dependency>
@@ -673,7 +912,7 @@ It might be common that for parameterizing values that are not primitive types, 
   ...
   <operation name="person-xml-to-json" doc:description="Takes a Person in XML format and translates it to JSON">
     <parameters>
-      <parameter name="content" type="PersonXsdType" role="CONTENT"/>
+      <parameter name="content" type="PersonXsdType::{http://uri}Person" role="CONTENT"/>
     </parameters>
     <body>
       <ee:transform>
@@ -784,15 +1023,11 @@ Catalog
 [source,xml,linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
-<types:mule xmlns="http://www.mulesoft.org/schema/mule/core"
-            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-            xmlns:types="http://www.mulesoft.org/schema/mule/types">
-
-    <types:catalog>
-        <types:type name="a-custom-type" location="./a-custom-type-schema.json"/>
-    </types:catalog>
-
-</types:mule>
+<catalogs xmlns="http://www.mulesoft.org/schema/mule/types" >
+    <catalog name="a-custom-type" format="application/json">
+        <schema format="application/json+schema" location="./a-custom-type-schema.json" />
+    </catalog>
+</catalogs>
 ----
 Schema
 [source,xml,linenums]
@@ -837,7 +1072,7 @@ Location `link:https://github.com/mulesoft-labs/smart-connectors-integration-tes
 
     <operation name="operation-with-custom-types">
         <parameters>
-            <parameter name="value" type="XsdType1"/>
+            <parameter name="value" type="XsdType1::Root"/>
         </parameters>
         <body>
             <mule:set-payload value="hello world!"/>
@@ -851,15 +1086,11 @@ Catalog
 [source,xml,linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
-<types:mule xmlns="http://www.mulesoft.org/schema/mule/core"
-            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-            xmlns:types="http://www.mulesoft.org/schema/mule/types">
-
-    <types:catalog>
-        <types:type name="XsdType1" location="./type1-schema.xsd" element="Root"/>
-    </types:catalog>
-
-</types:mule>
+<catalogs xmlns="http://www.mulesoft.org/schema/mule/types" >
+    <catalog name="XsdType1" format="application/xml">
+        <schema format="application/xml+schema" location="./type1-schema.xsd" />
+    </catalog>
+</catalogs>
 ----
 Schema 1
 [source,xml,linenums]
@@ -1050,16 +1281,6 @@ Location `link:https://github.com/mulesoft-labs/smart-connectors-integration-tes
 
  </module>
 ----
-
-
-== Smart Connector Mule BETA limitations
-The following issues/limitations will be fixed for Mule runtime GA:
-
-* A Smart Connector that depends on other Smart Connector won't be properly rendered in the UI (neither Studio or Flow Designer), although it will work in the runtime (can be used with XML editing of the Mule Application).
-* Custom types will only work for XML and JSON schemas (RAML types will be for Mule runtime GA).
-* There's no support for test connection
-* UI Creation support: Studio doesn't support creation of Smart Connectors right now, but properly displays them as any other connector.
-* Type support will be improved, where *string*, *boolean*, *datetime*, *date*, *integer*, *time* will be dropped to support the link:https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md#raml-data-types[RAML Types], which contains the current Smart Connectors support for primitive types and many others (e.g.: float, double, number, object, array, etc.)
 
 == Smart Connector limitations
 The following items are limitations that might be supported in a future, but they are not planned:
