@@ -27,7 +27,7 @@ $ kubectl
 . Obtain the `anypoint-1.6.1-installer.tar.gz` archive from your customer support representative.
 
 . Determine the master node of your cluster.
-
++
 ----
 [ec2-user@ip-172-31-14-206 1.6.1]$ systemctl status | grep gravitational
            │     └─25249 grep --color=auto gravitational
@@ -39,7 +39,7 @@ $ kubectl
 
 . Upload the installer to the master node of your cluster.
 
-. Uncompress the application archive.
+. Uncompress the installer archive.
 +
 ----
 tar -xvf anypoint-1.6.0-installer.tar.gz
@@ -98,57 +98,124 @@ From the master node, run the following command:
 
 . Scale down deployments
 +
+From the master node, run the following command:
++
 ----
 ./manual_update_161.sh scale-down
 ----
 
+
 . Initiate the update operation
++
+From the master node, run the following command:
 +
 ----
 ./manual_update+_161.sh start-update
 ----
++
+The output of this command should be similar to the following:
++
+----
+./manual_update_161.sh start-update
+Initiating the update process, setting it in manual mode
+updating anypoint from 1.5.2 to 1.6.1
+update operation (3f097853-64dd-4201-973f-2bb4a686c9ee) has been started
+
+The update operation has been created in manual mode.
+----
 
 . Bootstrap the system update process
++
+From the master node, run the following command:
 +
 ----
 ./manual_update+_161.sh bootstrap-system
 ----
 
-. Update system (ON EVERY NODE)
+. Peform the system update
 +
-Must be performed on EACH node, sequentially.
+Perform the following command by logging into each node in your cluster. You must run this command sequentially on each node. Wait until this command completes before running it on the next node.
 +
 ----
 ./manual_update+_161.sh update-system
 ----
++
+The output of this command should be similar to the following:
++
+----
+Updating the Gravity/Planet system on this node
+applying {gravitational.io/gravity:1.27.0 gravitational.io/gravity:3.62.0 }
+binary package gravitational.io/gravity:3.62.0 installed in /usr/bin/gravity
+applying {anypoint-5.6.2-3nodes-for-update/planet-ip-172-31-14-206.us-east-2.compute.internal-secrets:0.0.1 anypoint-5.6.2-3nodes-for-update/planet-172.31.14.206-secrets:0.0.1504292122 }
+secrets package anypoint-5.6.2-3nodes-for-update/planet-172.31.14.206-secrets:0.0.1504292122 installed in /var/lib/gravity/secrets
+applying {anypoint-5.6.2-3nodes-for-update/planet-config-1723114206anypoint-562-3nodes-for-update:0.0.1 anypoint-5.6.2-3nodes-for-update/planet-config-1723114206anypoint-562-3nodes-for-update:0.1.61-157 }
+applying {gravitational.io/planet-master:0.1.39-138 gravitational.io/planet-master:0.1.61-157 planet-config-1723114206anypoint-562-3nodes-for-update}
+gravitational.io/planet-master:0.1.39-138 is installed as a service, uninstalling
+gravitational.io/planet-master:0.1.61-157 successfully installed
+applying {gravitational.io/teleport:1.2.0 gravitational.io/teleport:2.0.6 }
+gravitational.io/teleport:1.2.0 is installed as a service, uninstalling
+gravitational.io/teleport:2.0.6 successfully installed
+system successfully updated: changeset(id=108cfd7f-997e-4656-b425-21557c261d8a, created=2017-09-01 18:58:33.894121128 +0000 UTC, changes=update(gravitational.io/gravity:1.27.0 -> gravitational.io/gravity:3.62.0), update(anypoint-5.6.2-3nodes-for-update/planet-ip-172-31-14-206.us-east-2.compute.internal-secrets:0.0.1 -> anypoint-5.6.2-3nodes-for-update/planet-172.31.14.206-secrets:0.0.1504292122), update(anypoint-5.6.2-3nodes-for-update/planet-config-1723114206anypoint-562-3nodes-for-update:0.0.1 -> anypoint-5.6.2-3nodes-for-update/planet-config-1723114206anypoint-562-3nodes-for-update:0.1.61-157), update(gravitational.io/planet-master:0.1.39-138 -> gravitational.io/planet-master:0.1.61-157), update(gravitational.io/teleport:1.2.0 -> gravitational.io/teleport:2.0.6))
+----
 
 . Bootstrap the RBAC configuration in the cluster
++
+From the master node, run the following command:
 +
 ----
 ./manual_update+_161.sh bootstrap-rbac
 ----
 
-. From the master node, drain each of the nodes in your cluster.
+. Drain each of the nodes in your cluster.
 +
-REPEAT FOR ALL NODES, can be run from master node
+From the master node, run the following command for each node in your cluster. You must pass the IP address or DNS hostname of your node.
 +
 ----
-./manual_update+_161.sh drain=<node-name>
+./manual_update+_161.sh drain=<node-name/ip-address>
+----
++
+The ouput of this command should be similar to the following:
++
+----
+./manual_update_161.sh drain=172.31.11.215
+Draining node 172.31.11.215
+node "172.31.11.215" cordoned
+WARNING: Ignoring DaemonSet-managed pods: cassandra-p4mjy, stolon-keeper-d2get, gravity-site-tgme5, kube-dns-v18-41u28, log-forwarder-ujp6d; Deleting pods not managed by ReplicationController, ReplicaSet, Job, DaemonSet or StatefulSet: bandwagon; Deleting pods with local storage: bandwagon-mulesoft-install-35afd2-ingx2, gravity-site-tgme5, monitoring-app-install-39664d-l7xo4, pithos-app-install-95fa7b-58flh, site-app-post-install-916df9-03pol, stolon-app-install-5480c4-v6n81
+pod "exchange-api-db-migration-q8itn" evicted
+pod "site-app-post-install-916df9-03pol" evicted
+pod "pithos-app-install-95fa7b-58flh" evicted
+...
+...
+...
 ----
 
-. From the master node, make each of the nodes in your cluster schedulable.
+
+. Make each of the nodes in your cluster schedulable.
++
+From the master node, run the following command for each node in your cluster. You must pass the IP address or DNS hostname of your node.
 +
 ----
 ./manual_update+_161.sh uncordon=<node-name>
 ----
++
+The output of this command should be similar to the following:
++
+----
+./manual_update_161.sh uncordon=172.31.11.215
+Uncordoning node 172.31.11.215
+node "172.31.11.215" uncordoned
+Proceed with the next node drain or by updating application resources by running 'manual_update_161.sh update-app'
+WARNING - before proceeding, please verify that the node is fully 'uncordoned', by checking the output
+of 'kubectl get nodes' from inside Gravity and wait the node to be 'Ready' again.
+----
 
-. Initiate the application update
+. From the master node, initiate the application update
 +
 ----
 ./manual_update+_161.sh update-app
 ----
 
-. Fix ldap config directory permissions
+. If you are upgrading a one node installation, fix the LDAP config directory permissions
 +
 ----
 ./manual_update+_161.sh fix-ldap
@@ -159,6 +226,10 @@ REPEAT FOR ALL NODES, can be run from master node
 ----
 ./manual_update+_161.sh finalize-update 
 ----
+
+. Update the health check on the load balancer.
++
+You must enable port 10248 for the load balancer health check.
 
 == See Also
 
