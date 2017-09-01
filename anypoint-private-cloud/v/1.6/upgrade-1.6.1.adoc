@@ -1,0 +1,166 @@
+= To Migrate to Anypoint Platform Private Cloud Edition, Version 1.6.x
+
+[WARNING]
+During the migration process, there may be some downtime as each node is migrated.
+
+== Prerequisites
+
+Before migrating, ensure that you have performed and met the following prerequisites:
+
+* Perform a backup of your system as described in link:backup-and-disaster-recovery[About Backup and Recovery].
+
+* Ensure that your environment meets all of the system and network requirements described in link:system-requirements[About Minimum System Requirements]
+
+* Enable TCP ports `5973`, `3022`, `7373` intra-node to enable communication with the database cluster.
+
+* Ensure you have permission to run the `sudo` command on the node where you launch the migration tool.
+
+* Ensure the `kubectl` command is available in the node where you are performing the migration. To verify that `kubectl` is installed, run the following:
++
+----
+$ sudo gravity enter
+$ kubectl
+----
+
+== Performing the Upgrade
+
+. Obtain the `anypoint-1.6.1-installer.tar.gz` archive from your customer support representative.
+
+. Determine the master node of your cluster.
+
+----
+[ec2-user@ip-172-31-14-206 1.6.1]$ systemctl status | grep gravitational
+           │     └─25249 grep --color=auto gravitational
+             ├─gravity__gravitational.io__teleport__1.2.0.service
+             ├─gravity__gravitational.io__planet-master__0.1.39-138.service
+----
+
+. Use `ssh` to login to the master node of your cluster.
+
+. Upload the installer to the master node of your cluster.
+
+. Uncompress the application archive.
++
+----
+tar -xvf anypoint-1.6.0-installer.tar.gz
+----
+
+. Navigate to the `anypoint-1.6.1` directory, then run the upload script.
++
+----
+sudo ./upload
+----
++
+This command updates the platform to the current version and restarts each pod in the cluster.
++
+----
+sudo ./upload
+/etc/container-environment: line 19: --exec-opt: command not found
+gravitational.io/gravity:3.62.0 imported: gravitational.io/gravity:3.62.0 93MB
+-> update old gravity packages with the new binary
+gravitational.io/gravity:1.25.0 deleted
+gravitational.io/gravity:1.25.0 imported: gravitational.io/gravity:1.25.0 93MB
+gravitational.io/gravity:1.25.0 labels updated
+gravitational.io/gravity:1.27.0 deleted
+gravitational.io/gravity:1.27.0 imported: gravitational.io/gravity:1.27.0 93MB
+gravitational.io/gravity:1.27.0 labels updated
+-> update gravity binary on all nodes
+daemonset "gravity-binary-update" created
+configmap "gravity-binary-update" created
+-> clean up gravity binary update resources
+daemonset "gravity-binary-update" deleted
+configmap "gravity-binary-update" deleted
+-> restart gravity site pods
+pod "gravity-site-0ablz" deleted
+pod "gravity-site-3thio" deleted
+pod "gravity-site-um5ry" deleted
+-> wait until gravity site is running
+-> upload the update
+new application anypoint 1.6.1 has been uploaded
+----
++
+Depending on your network configuration, this command may take a while to complete. Wait until the command finishes before proceeding to the next step.
+
+
+. **TBD: Download the installation script and copy it to each node in your cluster.**
+
+* Download script from URL.
+* Copy script to directory on the master node where you ran ./upload.
+* Copy script to the other nodes in your installation. ()
+
+. Export RBAC bootstrap package.
++
+From the master node, run the following command:
++
+----
+./manual_update_161.sh export-rbac
+----
+
+. Scale down deployments
++
+----
+./manual_update_161.sh scale-down
+----
+
+. Initiate the update operation
++
+----
+./manual_update+_161.sh start-update
+----
+
+. Bootstrap the system update process
++
+----
+./manual_update+_161.sh bootstrap-system
+----
+
+. Update system (ON EVERY NODE)
++
+Must be performed on EACH node, sequentially.
++
+----
+./manual_update+_161.sh update-system
+----
+
+. Bootstrap the RBAC configuration in the cluster
++
+----
+./manual_update+_161.sh bootstrap-rbac
+----
+
+. From the master node, drain each of the nodes in your cluster.
++
+REPEAT FOR ALL NODES, can be run from master node
++
+----
+./manual_update+_161.sh drain=<node-name>
+----
+
+. From the master node, make each of the nodes in your cluster schedulable.
++
+----
+./manual_update+_161.sh uncordon=<node-name>
+----
+
+. Initiate the application update
++
+----
+./manual_update+_161.sh update-app
+----
+
+. Fix ldap config directory permissions
++
+----
+./manual_update+_161.sh fix-ldap
+----
+
+. Finalize and complete the update operation
++
+----
+./manual_update+_161.sh finalize-update 
+----
+
+== See Also
+
+* link:system-requirements[About Minimum System Requirements]
+* link:managing-via-the-ops-center[To Manage Anypoint Platform Private Cloud Edition Using Ops Center]
