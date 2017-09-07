@@ -1,76 +1,108 @@
-= To Define Input and Output Structure of a Transformation (Design Center)
+= Transform Reference (Design Center)
 
+To map inputs to outputs and then generate DataWeave code, you might need to provide input and output data type definitions for the Transform utility. From this information Transform can infer the structure of the data. In some cases, Transform can detect the structure of the input. In this case, the structure appears in Input after you perform a mock request: no need to define a data type. 
 
-To use the graphical view and construct mappings via drag and drop, the Transform component first needs information about what fields are available for dragging and dropping.
+If Transform cannot detect the structure of the data, you define the data type of the input or output data you expect. The definition consists of the format, such as JSON or CSV, and an example of the data.
 
-If you plan to create your transformation entirely by writing DataWeave source code, you can skip defining input and output and reference elements directly via code.
+Whether or not Transform can infer a structure is fairly predictable. For example, when the input to Transform comes from the database connector, the data structure is already defined; no need to define a data type. When the input to Transform is from the HTTP listener, the payload structure is unpredictable and you need to define a data type.
 
+== Defining Multiple Outputs
 
-== Define Data Structure on Other Components
+In Output, in Mappings you can click Output Payload > Add Transformation to add multiple transformations to the app using a single Transform utility. 
 
+== Debugging and Changing DataWeave Code
 
-. Make sure that all other elements in the flow are fully configured.
+You can preview the sample output of the DataWeave code to see if the code produces the transformation you expect. You can preview sample input data to your Transform component to see how the transformation affects it. You can also set a fixed value or function on the graphical map to enhance or adjust the code.
+
+=== Previewing the Transformation
+
+You can preview the transformation using sample input data. You don't need to run your application to preview the transformation. Sample output is updated in real time as you make changes to the sample input and the transformation. In Input, when you click Edit Sample Data image:preview-transformation-output-design-center-1a65a.png[], Preview appears.
+
+On Input, you select one of the parts of the input: Payload, Attributes, or Variable.
+Clicking the Edit Sample Data icon image:preview-transformation-output-design-center-1a65a.png[] populates the sample data.
+
+* If you defined your Data Type through a sample, these values you used in the sample data appear in the preview.
+* If you defined your Data Type through a schema or it was automatically defined, values are populated with the string `????` as a placeholder.
 +
-When all other elements are configured and you have a component that has a predicted data structure, the structure can be passed onto the Transform component.
+As you make changes in the sample data or the transformation, the output preview changes. The undetectable values (????) are replaced by sample values when the transformation works with the sample data provided.
 
-. Manually define input and output data structures if Design Center cannot predict the data structure.
-+
-For example, an HTTP Listener might receive requests containing any type of payload. If you know what this payload will look like, you can set the data type through the Input and Output tabs in the HTTP Listener dialog box.
-+
-See link:/design-center/v/1.0/to-manage-data-types[To Manage Data Types].
+If your transformer has multiple outputs, for example, to both the payload and a variable), the Preview pane displays the one corresponding to the currently selected transformation.
+
+When the output is of type POJO (Plain Old Java Object), the preview is represented in JSON format. 
+
+==== POJO Input for Previewing the Transformation
+
+When the input is of type POJO (Plain Old Java Object), you need to write samples in DataWeave format to express how data is structured, as shown in the following example:
+
+----
+[
+  {
+      message @(id: "FSD-483"): "Hello World!",
+      date: |2017-05-06|,
+      items: {
+          item1: 434,
+          item2: "344222"
+      }
+  },
+  {
+      message @(id: "DSF-829"): "This is what DataWeave format looks like.",
+      date: |2017-03-21|,
+      items: {
+          item1: 728,
+          item2: "14422"
+      }
+  }
+]
+----
+
+In Transform, in Input, you enter this code using Edit Sample Data image:preview-transformation-output-design-center-1a65a.png[]. You do _not_ use this code as the DataWeave transformation script. The sample you define works only within the Transform utility and does not affect any other part of the application. 
 
 
-== Define Data Structures in the Transform Component
+=== Setting a Fixed Value or Function
 
-. Click Set Data Type:
+You can control the transformation of particular fields by explicitly assigning a value or function to the field in the mapper.
 
-* For the input pane, highlight the payload, attributes, or a variable and click the Set Data Type icon at the bottom of the input pane.
+Double-click a field that doesn’t have any children in the output tree to add image:graphically-construct-mapping-design-center-task-8a822.png[] to the tree.
 
-* For the output pane, select the Set data type button. If the output pane has an existing data type, click the drop-down arrow at the top of the Output pane to set a new data type.
+In the text box that contains null by default, you can enter the following types of values:
 
+* A fixed text value by using " ".
 
-. Manually define the data structure by providing a sample or a schema.
+* A reference to an input field.
 
-+
-See link:https://docs.mulesoft.com/anypoint-studio/v/6/defining-metadata[Defining Metadata].
+* A statement that includes DataWeave functions.
+
+Similar to using a spreadsheet, each field can be a direct reference to another field, or can be the product of a function that involves such references.
 
 
 ////
 
-== Reader Configuration
+== Configuring the Reader to Parse Input
 
-In case your input needs to be parsed in a special way, you can set up certain properties for the reader object. Each input format has different configurable properties, or none. There are two ways to set these listed below.
+Some input formats have configurable properties. If the input needs to be parsed in a certain way, for example if you do not want to transform the header in the first line of a CSV, you can set up properties for the reader object as follows:  
 
-* Configure other components on the flow, by accessing their corresponding Metadata tab.
+* In components other than transform, define the input data type and output data type of components if necessary.
 
-* On the Transform component, right click on the root of the input pane and select *Reader Configuration*
+* In Transform, if the data type format has configurable reader properties, right click the root of the input pane and select Reader Configuration.
 +
 image:dw_reader_configuration_select.png[reader conf]
 
-+
-[NOTE]
-This option only exists if the selected data type format allows for configurable reader properties. If the payload is of type `unknown`, you must change its type first.
 
-
-For a detailed reference of what properties can be set in the Reader Configuration of each format, see the corresponding *reader properties* section:
-
-* link:https://mule4-docs.mulesoft.com/mule-user-guide/v/4.0/dataweave-formats#csv[CSV]
-
-* link:https://mule4-docs.mulesoft.com/mule-user-guide/v/4.0/dataweave-formats#xml[XML]
-
-* link:https://mule4-docs.mulesoft.com/mule-user-guide/v/4.0/dataweave-formats#flat-file[Flat File]
-
-[NOTE]
-You can also add this information through properties in the XML source of your Mule project.
+// You can also add this information through properties in the XML source of your Mule project.
 
 
 == Writer Configuration
 
-In case your output needs to be constructed in a special way, you can set up certain properties of the writer object. Each output format has different configurable properties, or none.
+If your output needs to be constructed in a special way, you can set up certain properties of the writer object. Each output format has different configurable properties, or none.
 
-These properties must be written on the `output` directive of your DataWeave code.
+These properties are written on the `output` directive of your DataWeave code.
 
-For a detailed reference of what properties can be set in the Writer Configuration of each format, see the corresponding *reader properties* section:
+
+* link:https://mule4-docs.mulesoft.com/mule-user-guide/v/4.0/dataweave-formats#csv[CSV Reader Properties]
+
+* link:https://mule4-docs.mulesoft.com/mule-user-guide/v/4.0/dataweave-formats#xml[XML Reader Properties]
+
+* link:https://mule4-docs.mulesoft.com/mule-user-guide/v/4.0/dataweave-formats#flat-file[Flat File Reader Properties]
 
 * link:https://mule4-docs.mulesoft.com/mule-user-guide/v/4.0/dataweave-formats#csv[CSV]
 
@@ -83,9 +115,6 @@ For a detailed reference of what properties can be set in the Writer Configurati
 
 == See Also
 
-* link:https://docs.mulesoft.com/anypoint-studio/v/6/workflow-create-mapping-ui-studio[Workflow: Create a Mapping]
-* link:https://docs.mulesoft.com/anypoint-studio/v/6/transform-message-component-concept-studio[About Transform Component]
-* link:/design-center/v/1.0/to-manage-data-types[To Manage Data Types]
 * link:https://mule4-docs.mulesoft.com/mule-user-guide/v/4.0/dataweave[DataWeave Language]
 * link:https://mule4-docs.mulesoft.com/mule-user-guide/v/4.0/dataweave-types[DataWeave Types]
 * link:https://mule4-docs.mulesoft.com/mule-user-guide/v/4.0/dataweave-formats[DataWeave Formats]
