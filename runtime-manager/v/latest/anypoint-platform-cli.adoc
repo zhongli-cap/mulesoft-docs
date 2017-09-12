@@ -252,11 +252,14 @@ You can pass the `--fields` option after a command to get a list of all possible
 [%header,cols="35a,65a"]
 |===
 |Command |Description
-|<<exchange asset copy>> | Copies an Exchange asset
+|<<exchange asset upload>> | Uploads an Exchange asset
+|<<exchange asset modify>> | Modifies an Exchange asset
 |<<exchange asset download>> | Downloads an Exchange asset
-|<<exchange asset upload>> | Uploads an asset to Exchange
-|<<exchange asset list>> | Lists all assets on Exchange
-|<<exchange asset delete>>  Deletes an asset from Exchange
+|<<exchange asset list>> | Lists all assets
+|<<exchange asset page download>> | Downloads an asset's description page from Exchange
+|<<exchange asset page modify>> | Changes an asset's description page from Exchange
+|<<exchange asset page upload>> | Uploads an asset's description page from Exchange
+|<<exchange asset page delete>> | Deletes an asset's description page from Exchange
 |===
 
 === Commands for Administrating your CloudHub Application
@@ -1301,118 +1304,134 @@ When the `--include-dot-files` option is used, the command uploads hidden files 
 
 Besides the `--include-dot-files`, this command takes the default `--help`, `-f`/`--fields` and `-o`/`--output` options.
 
-
-=== exchange asset copy
-
-[source,Example]
-----
-> exchange asset copy [options] <source> <target>
-----
-
-This Command copies the asset passed in `source` to the location passed in `target`. +
-Both arguments `source` and `target` are represented using the format: +
-`[organizationId/]<groupId>/<assetId>/<version>`.
-
-For example:
+=== exchange asset upload
 
 [source,Example]
 ----
-> exchange asset copy mulesoft-914/org.mulesoft/sample/1.0 mulesoft-914/com.mulesoft/sample/1.0-SNAPSHOT
+> exchange asset upload [options] <assetIdentifier> <zipfile>
 ----
 
-Copies the sample asset from th org.mulesoft group Id on the mulesoft-914 organization, to the com.mulesoft group Id on the same organization and changes its version to 1.0-SNAPSHOT. +
-If no organization Id is specified, the command defaults to the organization that the CLI is using.
+This command uploads the ZIP file passed in <zipfile> as an asset to Exchange using the Ids passed in <assetIdentifier>. +
 
-This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
+The ZIP file must include an "exchange.json" file describing the asset.
+Argument "assetIdentifier" must be formatted as: <group_id>/<asset_id>/<version>.
 
-=== exchange asset download
-
-[source,Example]
-----
-> exchange asset download [options] <directory>
-----
-
-This Command downloads an Exchange asset to the directory specified in `directory`. +
 Besides the default `--help`, `-f`/`--fields` and `-o`/`--output` options, this command also takes:
 
 [%header,cols="30a,40a,30a"]
 |===
 |Command | Description |  Example
-| --groupId | The groupId of the asset to download. .3+<.<| `exchange asset download --groupId com.mulesoft --assetId sample --version 1.0`
-| --assetId  | The assetId of the asset to download.
-| --version | The version of the asset to download.
+| --apiVersion |  Asset API version .3+<.<| `exchange asset upload --apiVersion 1.0 --name testProject --classifier mule-application`
+//_TODO: valid classifier?
+| --name       |  Asset name
+| --classifier |  Asset classifier
 |===
 
-=== exchange asset upload
+=== exchange asset modify
 
 [source,Example]
 ----
-> exchange asset upload [options] <zipfile>
+> exchange asset modify [options] <assetIdentifier>
 ----
 
-This Command uploads the ZIP packaged asset from the path passed in `zipfile`.
-
-[WARNING]
---
-The ZIP file must include an "exchange.json" file describing the asset.
---
+This command modifies the Exchange asset identified with <assetIdentifier>. +
+The "assetIdentifier" argument must be formatted as: <group_id>/<asset_id>/<version>.
 
 Besides the default `--help`, `-f`/`--fields` and `-o`/`--output` options, this command also takes:
 
 [%header,cols="30a,40a,30a"]
 |===
-|Command | Description | Example
-|--groupId <val>    | Asset group ID .6+<.<| `exchange asset upload --groupId com.mulesoft --assetId sample --version 1.0 apiVersion 1.1 --classifier connector`
-|--assetId <val>    | Asset ID
-|--version <val>    | Asset version
-|--apiVersion <val> | Asset API version
-|--name <val>       | Asset name
-|--classifier <val> | Asset classifier
+|Command | Description |  Example
+|--name | New asset name .2+<.<| `exchange asset modify --name newName --tags test,sample`
+|--tags | Comma-separated tags for the asset
 |===
 
+=== exchange asset download
+
+[source,Example]
+----
+> exchange asset download [options] <assetIdentifier> <directory>
+----
+
+This command downloads the Exchange asset identified with <assetIdentifier> to the directory passed in <directory>. +
+The "assetIdentifier" argument must be formatted as: <group_id>/<asset_id>/<version>.
+
+This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
 
 === exchange asset list
 
 [source,Example]
 ----
-> exchange asset list [options]
+> exchange asset list [options] [searchText]
 ----
 
-This Command lists all assets on your Exchange. +
-You can type the name of an asset to display information about the specified asset.
+This command lists all assets in Exchange.
+
+[TIP]
+You can specify keywords in searchText to limit results to APIs containing those specific keywords.
 
 Besides the default `--help`, `-f`/`--fields` and `-o`/`--output` options, this command also takes:
 
 [%header,cols="30a,40a,30a"]
 |===
-|Command | Description | Example
+|Command | Description |  Example
 |--limit | Number of results to retrieve | `exchange asset list --limit 2`
 |--offset | Offsets the amount of APIs passed | `exchange asset list --offset 3`
 |--sort | Sorts the results in the field name passed | `exchange asset list --sort "Latest Version"`
 |===
 
 
-=== exchange asset delete
+=== exchange asset page download
 
 [source,Example]
 ----
-> exchange asset delete [options] <name>
+> exchange asset page download [options] <assetIdentifier> <directory> [name]
+----
+//_TODO: What is [name] ??
+
+This command downloads the description page for the Exchange asset identified with <assetIdentifier> to the directory passed in <directory>.
+
+The "assetIdentifier" argument must be formatted as: <group_id>/<asset_id>/<version>.
+The description page in downloaded in Markdown format. When "name" is not specified, all pages are downloaded.
+
+This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
+
+=== exchange asset page modify
+
+[source,Example]
+----
+> exchange asset page modify [options] <assetIdentifier> <name>
 ----
 
-This Command deletes the asset specified in <name>.
+This command modifies the description page for the Exchange asset identified with <assetIdentifier>. +
+The "assetIdentifier" argument must be formatted as: <group_id>/<asset_id>/<version>.
+
+This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
+
+=== exchange asset page upload
+
+[source,Example]
+----
+> exchange asset page upload [options] <assetIdentifier> <name> <mdPath>
+----
+
+This command uploads a page description from the path passed in <mdPath> to the Exchange asset indetified with <assetIdentifier>.
+
+This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
+
+=== exchange asset page delete
+
+[source,Example]
+----
+> exchange asset page delete [options] <assetIdentifier> <name>
+----
+
+This command deletes the description page for the asset identified with <assetIdentifier>.
 
 [WARNING]
 This command does not prompt twice before deleting. If you send a delete instruction, it does not ask for confirmation.
 
-Besides the default `--help`, `-f`/`--fields` and `-o`/`--output` options, this command also takes:
-
-[%header,cols="30a,40a,30a"]
-|===
-|Command | Description | Example
-|--groupId <val>    | Asset group ID .3+<.<| `exchange asset delete --groupId com.mulesoft --assetId sample --version 1.0`
-|--assetId <val>    | Asset ID
-|--version <val>    | Asset version
-|===
+This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
 
 === runtime-mgr cloudhub-alert list
 
