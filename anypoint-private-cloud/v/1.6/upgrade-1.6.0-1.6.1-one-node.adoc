@@ -1,6 +1,6 @@
-= To Migrate Anypoint Platform Private Cloud Edition, Version 1.5.x to 1.6.1
+= To Migrate Anypoint Platform Private Cloud Edition, Version 1.6.0 to 1.6.1 (One Node)
 
-This topic describes how to migrate from Anypoint Platform Private Cloud Edition version 1.5.x to version 1.6.1. These procedures are applicable to 1, 3, and 6 node installation.
+This topic describes how to migrate a one node installation Anypoint Platform Private Cloud Edition version 1.6.0 to version 1.6.1.
 
 [WARNING]
 During the migration process, there may be some downtime as each node is migrated.
@@ -28,18 +28,9 @@ $ kubectl
 
 . Obtain the `anypoint-1.6.1-installer.tar.gz` archive from your customer success representative.
 
-. Determine the master node of your cluster.
-+
-----
-[ec2-user@ip-172-31-14-206 1.6.1]$ systemctl status | grep gravitational
-           │     └─25249 grep --color=auto gravitational
-             ├─gravity__gravitational.io__teleport__1.2.0.service
-             ├─gravity__gravitational.io__planet-master__0.1.39-138.service
-----
+. Use `ssh` to login to the node of your installation.
 
-. Use `ssh` to login to the master node of your cluster.
-
-. Upload the installer to the master node of your cluster.
+. Upload the installer to the node of your installation.
 
 . Uncompress the installer archive.
 +
@@ -55,36 +46,9 @@ cd anypoint-1.6.1
 sudo ./upload
 ----
 +
-This command uploads data to the master node and performs internal updates.
-+
-----
-sudo ./upload
-/etc/container-environment: line 19: --exec-opt: command not found
-gravitational.io/gravity:3.62.0 imported: gravitational.io/gravity:3.62.0 93MB
--> update old gravity packages with the new binary
-gravitational.io/gravity:1.25.0 deleted
-gravitational.io/gravity:1.25.0 imported: gravitational.io/gravity:1.25.0 93MB
-gravitational.io/gravity:1.25.0 labels updated
-gravitational.io/gravity:1.27.0 deleted
-gravitational.io/gravity:1.27.0 imported: gravitational.io/gravity:1.27.0 93MB
-gravitational.io/gravity:1.27.0 labels updated
--> update gravity binary on all nodes
-daemonset "gravity-binary-update" created
-configmap "gravity-binary-update" created
--> clean up gravity binary update resources
-daemonset "gravity-binary-update" deleted
-configmap "gravity-binary-update" deleted
--> restart gravity site pods
-pod "gravity-site-0ablz" deleted
-pod "gravity-site-3thio" deleted
-pod "gravity-site-um5ry" deleted
--> wait until gravity site is running
--> upload the update
-new application anypoint 1.6.1 has been uploaded
-----
-+
 Depending on your network configuration, this command may take a while to complete. Wait until the command finishes before proceeding to the next step.
 
+*Note:* If this command fails, it may be due to lack of space in your `/tmp.
 
 . Download the installation script and copy it to each node in your cluster.
 .. Download script from the following URL
@@ -93,9 +57,7 @@ Depending on your network configuration, this command may take a while to comple
 https://anypoint-anywhere.s3.amazonaws.com/1.6.1-GA/manual_update_161.sh?Signature=MGZ0d75y67RYMIpGo5B%2BAvsJSBg%3D&Expires=1535850619&AWSAccessKeyId=AKIAITTY5MSTT3INJ7XQ
 ----
 
-.. Copy the script to directory on the master node where you ran the `./upload`.
-
-.. Copy script to the other nodes in your installation.
+.. Copy the script to directory where you ran the `./upload`.
 
 . Export RBAC bootstrap package.
 +
@@ -148,24 +110,7 @@ Perform the following command by logging into each node in your cluster. You mus
 ----
 ./manual_update_161.sh update-system
 ----
-+
-The output of this command should be similar to the following:
-+
-----
-Updating the Gravity/Planet system on this node
-applying {gravitational.io/gravity:1.27.0 gravitational.io/gravity:3.62.0 }
-binary package gravitational.io/gravity:3.62.0 installed in /usr/bin/gravity
-applying {anypoint-5.6.2-3nodes-for-update/planet-ip-172-31-14-206.us-east-2.compute.internal-secrets:0.0.1 anypoint-5.6.2-3nodes-for-update/planet-172.31.14.206-secrets:0.0.1504292122 }
-secrets package anypoint-5.6.2-3nodes-for-update/planet-172.31.14.206-secrets:0.0.1504292122 installed in /var/lib/gravity/secrets
-applying {anypoint-5.6.2-3nodes-for-update/planet-config-1723114206anypoint-562-3nodes-for-update:0.0.1 anypoint-5.6.2-3nodes-for-update/planet-config-1723114206anypoint-562-3nodes-for-update:0.1.61-157 }
-applying {gravitational.io/planet-master:0.1.39-138 gravitational.io/planet-master:0.1.61-157 planet-config-1723114206anypoint-562-3nodes-for-update}
-gravitational.io/planet-master:0.1.39-138 is installed as a service, uninstalling
-gravitational.io/planet-master:0.1.61-157 successfully installed
-applying {gravitational.io/teleport:1.2.0 gravitational.io/teleport:2.0.6 }
-gravitational.io/teleport:1.2.0 is installed as a service, uninstalling
-gravitational.io/teleport:2.0.6 successfully installed
-system successfully updated: changeset(id=108cfd7f-997e-4656-b425-21557c261d8a, created=2017-09-01 18:58:33.894121128 +0000 UTC, changes=update(gravitational.io/gravity:1.27.0 -> gravitational.io/gravity:3.62.0), update(anypoint-5.6.2-3nodes-for-update/planet-ip-172-31-14-206.us-east-2.compute.internal-secrets:0.0.1 -> anypoint-5.6.2-3nodes-for-update/planet-172.31.14.206-secrets:0.0.1504292122), update(anypoint-5.6.2-3nodes-for-update/planet-config-1723114206anypoint-562-3nodes-for-update:0.0.1 -> anypoint-5.6.2-3nodes-for-update/planet-config-1723114206anypoint-562-3nodes-for-update:0.1.61-157), update(gravitational.io/planet-master:0.1.39-138 -> gravitational.io/planet-master:0.1.61-157), update(gravitational.io/teleport:1.2.0 -> gravitational.io/teleport:2.0.6))
-----
+
 
 . Bootstrap the RBAC configuration in the cluster
 +
@@ -220,28 +165,26 @@ From the master node, run the following command for each node in your cluster. Y
 ----
 ./manual_update_161.sh uncordon=<node-name>
 ----
-+
-The output of this command should be similar to the following:
-+
-----
-./manual_update_161.sh uncordon=172.31.11.215
-Uncordoning node 172.31.11.215
-node "172.31.11.215" uncordoned
-Proceed with the next node drain or by updating application resources by running 'manual_update_161.sh update-app'
-WARNING - before proceeding, please verify that the node is fully 'uncordoned', by checking the output
-of 'kubectl get nodes' from inside Gravity and wait the node to be 'Ready' again.
-----
 
-. From the master node, initiate the application update
+. Check the status of your cluster.
 +
 ----
-./manual_update_161.sh update-app
+kubectl get pods
 ----
++
+Verify that all of the pods in your cluster are running. Wait until all pods are running before continuing to the next procedure.
 
-. If you are upgrading a one node installation, fix the LDAP config directory permissions
+
+. Fix the LDAP config directory permissions
 +
 ----
 ./manual_update_161.sh fix-ldap
+----
+
+. Initiate the application update
++
+----
+./manual_update_161.sh update-app
 ----
 
 . Finalize and complete the update operation
@@ -250,13 +193,13 @@ of 'kubectl get nodes' from inside Gravity and wait the node to be 'Ready' again
 ./manual_update_161.sh finalize-update 
 ----
 
-. Update the health check on the load balancer.
+. If you are running a load balancer in your installation, update the health check on the load balancer.
 +
 You must enable port 10248 for the load balancer health check.
 
 == See Also
 
+* link:/anypoint-private-cloud/v/1.6/upgrade-1.6.1[To Migrate Anypoint Platform Private Cloud Edition, Version 1.5.x to 1.6.1]
 * link:/anypoint-private-cloud/v/1.6.1/upgrade-1.6.0-1.6.1[To Migrate Anypoint Platform Private Cloud, Version 1.6.0 to 1.6.1]
-* link:/anypoint-private-cloud/v/1.6.1/upgrade-1.6.0-1.6.1-one-node[To Migrate Anypoint Platform Private Cloud Edition, Version 1.6.0 to 1.6.1 (One Node)]
 * link:system-requirements[About Minimum System Requirements]
 * link:managing-via-the-ops-center[To Manage Anypoint Platform Private Cloud Edition Using Ops Center]
