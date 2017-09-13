@@ -1,0 +1,215 @@
+= To Query the Exchange Graph API
+:keywords: query, exchange, exchange2, graph, api, graph api
+
+The Exchange Graph API lets you search Exchange assets for a string value. You can specify what values
+to receive from each search. The Graph API requires that you obtain an access token to conduct each inquiry.
+
+
+
+== To Obtain an Access Token
+
+. Log into Anypoint Platform.
+. Obtain an access token with a curl command such as the following. You can also use Postman or another application for sending HTTP commands. 
++
+*Note:* The access token times out after approximately 5 minutes, so you may want to create a shell script to obtain the access token. The access token time to live is not set by an organization's Default Session Timeout setting. 
++
+[source,json,linenums]
+----
+curl -X POST \
+  https://anypoint.mulesoft.com/accounts/login \
+  -H 'content-type: application/json' \
+  -d '{
+  "username": "YOUR_ANYPOINT_PLATFORM_USER_NAME",
+  "password": "YOUR_ANYPOINT_PLATFORM_PASSWORD"
+}'
+----
+
+== To Run GraphiQL to Send a Query to Exchange
+
+. Open GraphiQL program by browsing to https://anypoint.mulesoft.com/graph/api/v1/graphiql[https://anypoint.mulesoft.com/graph/api/v1/graphiql]. 
+. In GraphiQL, click Query Variables at the bottom of the screen and insert the access token as:
+
+[source,json,linenums]
+----
+{
+  "accessToken": "ACCESS_TOKEN_VALUE"
+}
+----
++
+. Get a new access token if your query session exceeds 5 minutes.
+
+The GraphiQL program provides these controls:
+
+[%header%autowidth.spread]
+|===
+|Button |Name |Description
+|image:ex2-graphiql-run.png |Run |Send the query to the Exchange Graph API
+|image:ex2-graphiql-prettify.png |Prettify |Strip out comments at the top of the file and collapse the JSON
+as much as possible. This is not a toggle. If you want to see the comments again, run GraphiQL in another 
+browser or in an incognito window.
+|image:ex2-graphiql-history.png |History |List previous queuries. To dismiss the History pane, click History
+again. 
+|image:ex2-graphiql-docs.png |List a brief description about a parameter.
+|image:ex2-graphiql-query-vars.png |Query Variables |Specify the access token value and any other variables to use 
+in a query.
+|===
+
+When you 
+
+== To Search Assets for a Search Term
+
+Insert a JSON block for your query in the upper pane of GraphiQL, such as the following example that searches for 
+any asset with with the word "product" in the asset ID or description. GraphiQL searches all assets that are visible to the access token owner including MuleSoft and private Exchange assets.
+
+[source,json,linenums]
+----
+{
+  assets(
+    query: {
+      searchTerm: "product"
+    },
+    latestVersionsOnly: true
+  ) {
+    assetId,
+    description
+  }
+}
+----
+
+Output for this example is:
+
+[source,json,linenums]
+----
+{
+  "data": {
+    "assets": [
+      {
+        "assetId": "template-sfdc2sap-product-aggregation",
+        "description": "Aggregate products (materials in SAP) from Salesforce and SAP into a CSV file."
+      }
+    ]
+  }
+}
+----
+
+
+== To Limits Searches to a Private Exchange
+
+. Get the organization ID for the Private Exchange by clicking an asset in your Private Exchange.
++
+An example URL is:
++
+[source,xml]
+----
+https://anypoint.mulesoft.com/exchange/42424242-42424242/product-api/1.0.0/
+----
++
+`42424242-4424242424242` is the organization ID.
++
+. Add the organization ID using the organizationIds field in GraphiQL:
++
+[source,json,linenums]
+----
+{
+  assets(
+    query: {
+      searchTerm: "product",
+      organizationIds: "42424242-424242424242"
+    },
+    latestVersionsOnly: true
+  ) {
+    assetId,
+    description
+  }
+}
+----
++
+The output for this example is:
++
+[source,json,linenums]
+----
+{
+  "data": {
+    "assets": [
+      {
+        "assetId": "product-datatype",
+        "description": "Product Datatype Asset"
+      },
+      {
+        "assetId": "product-api",
+        "description": "Product API Asset"
+      }
+    ]
+  }
+}
+----
+
+== Reference: Query Filter Parameters
+
+You can specify filters to display additional information about each asset. 
+
+The following filters let you refine query output:
+
+[%header%autowidth.spread]
+|===
+|Parameter |Description
+|assetId |Asset ID for each asset.
+|assetLink |URL of an asset (not supported).
+|createdAt |Date and time an asset was created, for example, 2017-08-11T04:48:20.585Z.
+|createdBy { id, userName, firstName, lastName } |Display who created the asset.
+|dependencies { groupId, assetId, version, name, type } |Dependency snippet information tp specify an asset 
+in Maven, Gradle, SBT, and Ivy.
+|description |Description information in an asset.
+|files { classifier, packaging, externalLink, md5 } |File information. Classifier and packaging are not supported.
+|name |Asset name
+|numberOfRates |The number of star ratings for an asset.
+|organizationId |Organization ID for an asset.
+|productAPIVersion |Version of the Graph API (not supported).
+|rating |Star rating value for an asset.
+|related(relationshipType: OtherVersions) { groupId, assetId, version, name, type, runtimeVersion, productAPIVersion |
+|runtimeVersion |Mule Runtime version.
+|tags { value, key, mutable } |Each tag for an asset, value is the tag type or version, key is the tag name or null,
+and mutable indicates whether or not a tag name can be changed.
+|type |Lowercase values corresponding to the Exchange All Types menu: connector, template, example, rest-api, soap-api, raml-fragment, and custom.
+|version |Version for an asset.
+|groupId |Group ID for an asset.
+|===
+
+Example query:
+
+[source,json,linenums]
+----
+{
+  assets(asset: {
+    groupId: "ORGANIZTION_ID",
+    assetId: "product-api/",
+    version: "1.0.0"
+  })
+  {
+    groupId,
+    assetId,
+    version,
+    description,
+    name,
+    type,
+    tags { value, key, mutable },
+    createdBy { id, userName, firstName, lastName },
+    files { classifier, packaging, externalLink, md5 },
+    rating,
+    numberOfRates,
+    createdAt,
+    organizationId,
+    assetLink,
+    runtimeVersion,
+    productAPIVersion,
+    dependencies { groupId, assetId, version, name, type },
+    related(relationshipType: OtherVersions) { groupId, assetId, version, name, type, runtimeVersion, productAPIVersion }
+  }
+}
+----
+
+== See Also
+
+* https://www.anypoint.mulesoft.com/exchange/[Anypoint Exchange]
+* link:/anypoint-exchange/[Exchange Documentation]
+* 
