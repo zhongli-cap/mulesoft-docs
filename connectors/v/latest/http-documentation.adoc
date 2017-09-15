@@ -1,5 +1,5 @@
 :toc:               left
-:toc-title:         HTTP Connector
+:toc-title:         HTTP Module
 :toclevels:         2
 :last-update-label!:
 :docinfo:
@@ -7,16 +7,19 @@
 :icons: font
 
 
-= HTTP Connector Technical Reference
+= HTTP Module Documentation Reference
 
 +++
-Connector to handle and perform HTTP requests
+HTTP connector used to handle and perform HTTP requests.
+<p>
+This class only serves as an extension definition. It's configurations are divided on server (<http:listener-config>) and
+client (<http:requester-config>) capabilities.
 +++
 
 
 == Configurations
 ---
-[[listener-config]]
+[[listenerConfig]]
 === Listener Config
 
 +++
@@ -27,17 +30,15 @@ Configuration element for a HttpListener.
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
-|Name | String | The name of this configuration. With this name can be later referenced. | | *x*{nbsp}
-| Connection a| <<listener-config_listener, Listener>>
+|Name | String | The name for this configuration. Connectors reference the configuration with this name. | | *x*{nbsp}
+| Connection a| <<listenerConfig_listener, Listener>>
  | The connection types that can be provided to this configuration. | | *x*{nbsp}
 | Base Path a| String |  +++Base path to use for all requests that reference this config.+++ |  | {nbsp}
-| Parse Request a| Boolean |  +++By default, the request will be parsed (for example, a multi part request will be mapped as a Mule message with no payload
-and attributes with each part). If this property is set to false, no parsing will be done, and the payload will always
-contain the raw contents of the HTTP request.+++ |  +++true+++ | {nbsp}
+| Listener Interceptors a| <<CorsInterceptorWrapper>> |  |  | {nbsp}
 |======================
 
 ==== Connection Types
-[[listener-config_listener]]
+[[listenerConfig_listener]]
 ===== Listener
 
 +++
@@ -53,18 +54,14 @@ Connection provider for a HttpListener, handles the creation of HttpServer insta
 
 ** HTTP
 ** HTTPS |  +++Protocol to use for communication. Valid values are HTTP and HTTPS. Default value is HTTP. When using HTTPS the HTTP
-communication is going to be secured using TLS / SSL. If HTTPS was configured as protocol then the user needs to configure at
-least the keystore in the tls:context child element of this listener-config.+++ |  +++HTTP+++ | {nbsp}
+communication is going to be secured using TLS / SSL. If HTTPS was configured as protocol then the user needs to configure
+at least the keystore in the tls:context child element of this listener-config.+++ |  +++HTTP+++ | {nbsp}
 | Host a| String |  +++Host where the requests will be sent.+++ |  | *x*{nbsp}
 | Port a| Number |  +++Port where the requests will be received.+++ |  | *x*{nbsp}
 | Use Persistent Connections a| Boolean |  +++If false, each connection will be closed after the first request is completed.+++ |  +++true+++ | {nbsp}
 | Connection Idle Timeout a| Number |  +++The number of milliseconds that a connection can remain idle before it is closed. The value of this attribute is only used
 when persistent connections are enabled.+++ |  +++30000+++ | {nbsp}
-| Reconnection Strategy a| One of:
-
-* <<reconnect>>
-* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
-| Disable Validation a| Boolean |  +++Disables connection validation+++ |  | {nbsp}
+| Reconnection a| <<Reconnection>> |  +++When the application is deployed, a connectivity test is performed on all connectors. If set to true, deployment will fail if the test doesn't pass after exhausting the associated reconnection strategy+++ |  | {nbsp}
 |======================
 
 
@@ -72,7 +69,7 @@ when persistent connections are enabled.+++ |  +++30000+++ | {nbsp}
 * <<listener>> {nbsp}
 
 ---
-[[request-config]]
+[[requestConfig]]
 === Request Config
 
 +++
@@ -83,8 +80,8 @@ Configuration element for a HTTP requests.
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
-|Name | String | The name of this configuration. With this name can be later referenced. | | *x*{nbsp}
-| Connection a| <<request-config_request, Request>>
+|Name | String | The name for this configuration. Connectors reference the configuration with this name. | | *x*{nbsp}
+| Connection a| <<requestConfig_request, Request>>
  | The connection types that can be provided to this configuration. | | *x*{nbsp}
 | Base Path a| String |  +++Base path to use for all requests that reference this config.+++ |  +++/+++ | {nbsp}
 | Follow Redirects a| Boolean |  +++Specifies whether to follow redirects or not. Default value is true.+++ |  +++true+++ | {nbsp}
@@ -102,15 +99,12 @@ send a body).+++ |  +++AUTO+++ | {nbsp}
 the type of the payload (it will stream only for InputStream). If set to true, it will always stream. If set to false, it
 will never stream. As streaming is done the request will be sent user Transfer-Encoding: chunked.+++ |  +++AUTO+++ | {nbsp}
 | Enable Cookies a| Boolean |  +++If true, cookies received in HTTP responses will be stored, and sent in subsequent HTTP requests.+++ |  +++true+++ | {nbsp}
-| Parse Response a| Boolean |  +++By default, the response will be parsed (for example, a multipart response will be mapped as a Mule message with null payload
-and inbound attachments with each part). If this property is set to false, no parsing will be done, and the payload will
-always contain the raw contents of the HTTP response.+++ |  +++true+++ | {nbsp}
 | Response Timeout a| Number |  +++Maximum time that the request element will block the execution of the flow waiting for the HTTP response. If this value is
 not present, the default response timeout from the Mule configuration will be used.+++ |  | {nbsp}
 |======================
 
 ==== Connection Types
-[[request-config_request]]
+[[requestConfig_request]]
 ===== Request
 
 +++
@@ -149,11 +143,7 @@ unlimited.+++ |  +++-1+++ | {nbsp}
 when persistent connections are enabled.+++ |  +++30000+++ | {nbsp}
 | Response Buffer Size a| Number |  +++The space in bytes for the buffer where the HTTP response will be stored as it arrives.+++ |  +++10240+++ | {nbsp}
 | Client Socket Properties a| <<TcpClientSocketProperties>> |  |  | {nbsp}
-| Reconnection Strategy a| One of:
-
-* <<reconnect>>
-* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
-| Disable Validation a| Boolean |  +++Disables connection validation+++ |  | {nbsp}
+| Reconnection a| <<Reconnection>> |  +++When the application is deployed, a connectivity test is performed on all connectors. If set to true, deployment will fail if the test doesn't pass after exhausting the associated reconnection strategy+++ |  | {nbsp}
 |======================
 
 ==== Associated Operations
@@ -177,15 +167,9 @@ Consumes an HTTP service.
 | Name | Type | Description | Default Value | Required
 | Configuration | String | The name of the configuration to use. | | *x*{nbsp}
 | Method a| String |  +++The HTTP method for the request.+++ |  +++GET+++ | {nbsp}
-| Output Type a| Enumeration, one of:
-
-** STREAM
-** MULTIPART
-** FORM
-** ANY |  +++the expected response type (STREAM, MULTIPART, FORM or ANY)+++ |  +++STREAM+++ | {nbsp}
-| Streaming Strategy a| One of:
-
-* <<repeatable-in-memory-stream>>
+| Output Mime Type a| String |  +++The mime type of the payload that this operation outputs.+++ |  | {nbsp}
+| Output Encoding a| String |  +++The encoding of the payload that this operation outputs.+++ |  | {nbsp}
+| Streaming Strategy a| * <<repeatable-in-memory-stream>>
 * <<repeatable-file-store-stream>>
 * <<non-repeatable-stream>> |  +++Configure if repeatable streams should be used and their behaviour+++ |  | {nbsp}
 | Path a| String |  +++Path where the request will be sent.+++ |  | {nbsp}
@@ -201,7 +185,6 @@ Consumes an HTTP service.
 ** AUTO
 ** ALWAYS
 ** NEVER |  +++Defines if the request should be sent using streaming or not.+++ |  | {nbsp}
-| Parse Response a| Boolean |  +++Defines if the HTTP response should be parsed or it's raw contents should be propagated instead.+++ |  | {nbsp}
 | Response Timeout a| Number |  +++Maximum time that the request element will block the execution of the flow waiting for the HTTP response.+++ |  | {nbsp}
 | Body a| Any |  +++The body of the response message+++ |  +++#[payload]+++ | {nbsp}
 | Headers a| Object |  +++HTTP headers the message should include.+++ |  | {nbsp}
@@ -212,34 +195,92 @@ Consumes an HTTP service.
 * <<SuccessStatusCodeValidator>>
 * <<FailureStatusCodeValidator>> |  +++Configures error handling of the response.+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
+|======================
+
+==== Output
+[cols=".^50%,.^50%"]
+|======================
+| *Type* a| Binary
+| *Attributes Type* a| <<HttpResponseAttributes>>
+|======================
+
+==== For Configurations.
+* <<requestConfig>> {nbsp}
+
+==== Throws
+* HTTP:BAD_REQUEST {nbsp}
+* HTTP:INTERNAL_SERVER_ERROR {nbsp}
+* HTTP:CLIENT_SECURITY {nbsp}
+* HTTP:TOO_MANY_REQUESTS {nbsp}
+* HTTP:UNSUPPORTED_MEDIA_TYPE {nbsp}
+* HTTP:CONNECTIVITY {nbsp}
+* HTTP:NOT_ACCEPTABLE {nbsp}
+* HTTP:TIMEOUT {nbsp}
+* HTTP:UNAUTHORIZED {nbsp}
+* HTTP:METHOD_NOT_ALLOWED {nbsp}
+* HTTP:RETRY_EXHAUSTED {nbsp}
+* HTTP:FORBIDDEN {nbsp}
+* HTTP:PARSING {nbsp}
+* HTTP:SECURITY {nbsp}
+* HTTP:NOT_FOUND {nbsp}
+* HTTP:SERVICE_UNAVAILABLE {nbsp}
+
+
+[[basicSecurityFilter]]
+=== Basic Security Filter
+`<http://www.mulesoft.org/schema/mule/http:basic-security-filter>`
+
++++
+Authenticates received HTTP requests. Must be used after a listener component.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Realm a| String |  +++Authentication realm.+++ |  | *x*{nbsp}
+| Security Providers a| Array of String |  +++The delegate-security-provider to use for authenticating. Use this in case you have multiple security managers defined in
+your configuration.+++ |  | {nbsp}
+| Attributes a| <<HttpRequestAttributes>> |  +++The HttpRequestAttributes coming from an HTTP listener source to check the 'Authorization' header.+++ |  +++#[attributes]+++ | {nbsp}
+|======================
+
+
+
+==== Throws
+* HTTP:BASIC_AUTHENTICATION {nbsp}
+* MULE:SERVER_SECURITY {nbsp}
+
+
+[[loadStaticResource]]
+=== Load Static Resource
+`<http://www.mulesoft.org/schema/mule/http:load-static-resource>`
+
++++
+Serves up static content for use with HTTP, using the request path to lookup the resource.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Resource Base Path a| String |  +++The resource base from where documents are served up. For example: /Users/maxthemule/resources+++ |  | *x*{nbsp}
+| Default File a| String |  +++The default file to serve when a directory is specified. The default value is 'index.html'.+++ |  +++index.html+++ | {nbsp}
+| Attributes a| <<HttpRequestAttributes>> |  +++The HttpRequestAttributes coming from an HTTP listener source to check the required resources.+++ |  +++#[attributes]+++ | {nbsp}
+| Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
 |======================
 
 ==== Output
 [cols=".^50%,.^50%"]
 |======================
 | *Type* a| Any
-| *Attributes Type* a| <<HttpResponseAttributes>>
 |======================
 
-==== For Configurations.
-* <<request-config>> {nbsp}
 
 ==== Throws
-* HTTP:TOO_MANY_REQUESTS {nbsp}
-* HTTP:CLIENT_SECURITY {nbsp}
-* HTTP:INTERNAL_SERVER_ERROR {nbsp}
-* HTTP:TIMEOUT {nbsp}
-* HTTP:BAD_REQUEST {nbsp}
-* HTTP:CONNECTIVITY {nbsp}
-* HTTP:UNAUTHORIZED {nbsp}
-* HTTP:SERVICE_UNAVAILABLE {nbsp}
-* HTTP:NOT_ACCEPTABLE {nbsp}
-* HTTP:RETRY_EXHAUSTED {nbsp}
-* HTTP:FORBIDDEN {nbsp}
-* HTTP:METHOD_NOT_ALLOWED {nbsp}
-* HTTP:SECURITY {nbsp}
-* HTTP:UNSUPPORTED_MEDIA_TYPE {nbsp}
-* HTTP:PARSING {nbsp}
 * HTTP:NOT_FOUND {nbsp}
 
 
@@ -267,18 +308,13 @@ Represents a listener for HTTP requests.
 ** NEVER |  +++Defines if the response should be sent using streaming or not. If this attribute is not present, the behavior will depend on
 the type of the payload (it will stream only for InputStream). If set to true, it will always stream. If set to false, it
 will never stream. As streaming is done the response will be sent user Transfer-Encoding: chunked.+++ |  +++AUTO+++ | {nbsp}
+| Output Mime Type a| String |  +++The mime type of the payload that this operation outputs.+++ |  | {nbsp}
+| Output Encoding a| String |  +++The encoding of the payload that this operation outputs.+++ |  | {nbsp}
 | Redelivery Policy a| <<RedeliveryPolicy>> |  +++Defines a policy for processing the redelivery of the same message+++ |  | {nbsp}
-| Streaming Strategy a| One of:
-
-* <<repeatable-in-memory-stream>>
+| Streaming Strategy a| * <<repeatable-in-memory-stream>>
 * <<repeatable-file-store-stream>>
 * <<non-repeatable-stream>> |  +++Configure if repeatable streams should be used and their behaviour+++ |  | {nbsp}
-| Parse Request a| Boolean |  +++By default, the request will be parsed (for example, a multi part request will be mapped as a Mule message with null payload
-and inbound attachments with each part). If this property is set to false, no parsing will be done, and the payload will
-always contain the raw contents of the HTTP request.+++ |  | {nbsp}
-| Reconnection Strategy a| One of:
-
-* <<reconnect>>
+| Reconnection Strategy a| * <<reconnect>>
 * <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 | Body a| Any |  |  +++#[payload]+++ | {nbsp}
 | Headers a| Object |  |  | {nbsp}
@@ -289,18 +325,13 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 ==== Output
 [cols=".^50%,.^50%"]
 |======================
-| *Type* a| Any
+| *Type* a| Binary
 | *Attributes Type* a| <<HttpRequestAttributes>>
 |======================
 
 ==== For Configurations.
-* <<listener-config>> {nbsp}
+* <<listenerConfig>> {nbsp}
 
-==== Throws
-* MULE:SOURCE_RESPONSE_SEND {nbsp}
-* MULE:SOURCE_ERROR_RESPONSE_SEND {nbsp}
-* MULE:SOURCE_ERROR_RESPONSE_GENERATE {nbsp}
-* MULE:SOURCE_RESPONSE_GENERATE {nbsp}
 
 
 == Types
@@ -315,7 +346,7 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 | Trust Store a| <<TrustStore>> | 
 | Key Store a| <<KeyStore>> | 
 |======================
-    
+
 [[TrustStore]]
 === Trust Store
 
@@ -324,16 +355,11 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 | Field | Type | Default Value
 | Path a| String | 
 | Password a| String | 
-| Type a| * Enumeration, one of:
-
-** jks
-** jceks
-** pkcs12
-* String | 
+| Type a| String | 
 | Algorithm a| String | 
 | Insecure a| Boolean | 
 |======================
-    
+
 [[KeyStore]]
 === Key Store
 
@@ -341,18 +367,24 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 |======================
 | Field | Type | Default Value
 | Path a| String | 
-| Type a| * Enumeration, one of:
-
-** jks
-** jceks
-** pkcs12
-* String | 
+| Type a| String | 
 | Alias a| String | 
 | Key Password a| String | 
 | Password a| String | 
 | Algorithm a| String | 
 |======================
-    
+
+[[Reconnection]]
+=== Reconnection
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Fails Deployment a| Boolean | 
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> | 
+|======================
+
 [[reconnect]]
 === Reconnect
 
@@ -361,9 +393,8 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 | Field | Type | Default Value
 | Frequency a| Number | 
 | Count a| Number | 
-| Blocking a| Boolean | 
 |======================
-    
+
 [[reconnect-forever]]
 === Reconnect Forever
 
@@ -372,7 +403,29 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 | Field | Type | Default Value
 | Frequency a| Number | 
 |======================
-    
+
+[[CorsInterceptorWrapper]]
+=== Cors Interceptor Wrapper
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Cors Interceptor a| <<CorsListenerInterceptor>> | 
+|======================
+
+[[CorsListenerInterceptor]]
+=== Cors Listener Interceptor
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Allow Credentials a| Boolean | false
+| Origins a| Array of One of:
+
+* <<public-resource>>
+* <<origin>> | 
+|======================
+
 [[HttpRequestAttributes]]
 === Http Request Attributes
 
@@ -393,7 +446,7 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 | Uri Params a| Object | 
 | Version a| String | 
 |======================
-    
+
 [[RedeliveryPolicy]]
 === Redelivery Policy
 
@@ -404,9 +457,9 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 | Use Secure Hash a| Boolean | 
 | Message Digest Algorithm a| String | 
 | Id Expression a| String | 
-| Object Store Ref a| String | 
+| Object Store a| <<ObjectStore>> | 
 |======================
-    
+
 [[repeatable-in-memory-stream]]
 === Repeatable In Memory Stream
 
@@ -423,7 +476,7 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 ** MB
 ** GB | 
 |======================
-    
+
 [[repeatable-file-store-stream]]
 === Repeatable File Store Stream
 
@@ -438,7 +491,7 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 ** MB
 ** GB | 
 |======================
-    
+
 [[TcpClientSocketProperties]]
 === Tcp Client Socket Properties
 
@@ -455,7 +508,7 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 | Client Timeout a| Number | 
 | Reuse Address a| Boolean | true
 |======================
-    
+
 [[HttpResponseAttributes]]
 === Http Response Attributes
 
@@ -466,18 +519,18 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 | Reason Phrase a| String | 
 | Status Code a| Number | 
 |======================
-    
+
 [[BasicAuthentication]]
 === Basic Authentication
 
 [cols=".^30%,.^40%,.^30%", options="header"]
 |======================
 | Field | Type | Default Value
-| Preemptive a| Boolean | true
 | Username a| String | 
 | Password a| String | 
+| Preemptive a| Boolean | true
 |======================
-    
+
 [[DigestAuthentication]]
 === Digest Authentication
 
@@ -486,8 +539,9 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 | Field | Type | Default Value
 | Username a| String | 
 | Password a| String | 
+| Preemptive a| Boolean | true
 |======================
-    
+
 [[NtlmAuthentication]]
 === Ntlm Authentication
 
@@ -498,8 +552,9 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 | Workstation a| String | 
 | Username a| String | 
 | Password a| String | 
+| Preemptive a| Boolean | true
 |======================
-    
+
 [[proxy]]
 === Proxy
 
@@ -510,8 +565,9 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 | Port a| Number | 
 | Username a| String | 
 | Password a| String | 
+| Non Proxy Hosts a| String | 
 |======================
-    
+
 [[ntlm-proxy]]
 === Ntlm Proxy
 
@@ -523,8 +579,9 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 | Port a| Number | 
 | Username a| String | 
 | Password a| String | 
+| Non Proxy Hosts a| String | 
 |======================
-    
+
 [[SuccessStatusCodeValidator]]
 === Success Status Code Validator
 
@@ -533,7 +590,7 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 | Field | Type | Default Value
 | Values a| String | 
 |======================
-    
+
 [[FailureStatusCodeValidator]]
 === Failure Status Code Validator
 
@@ -542,6 +599,35 @@ always contain the raw contents of the HTTP request.+++ |  | {nbsp}
 | Field | Type | Default Value
 | Values a| String | 
 |======================
-    
 
+[[origin]]
+=== Origin
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Url a| String | 
+| Access Control Max Age a| Number | 
+| Allowed Methods a| Array of <<Method>> | 
+| Allowed Headers a| Array of <<Header>> | 
+| Expose Headers a| Array of <<Header>> | 
+|======================
+
+[[Method]]
+=== Method
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Method Name a| String | 
+|======================
+
+[[Header]]
+=== Header
+
+[cols=".^30%,.^40%,.^30%", options="header"]
+|======================
+| Field | Type | Default Value
+| Header Name a| String | 
+|======================
 

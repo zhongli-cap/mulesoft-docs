@@ -9,6 +9,12 @@
 
 = JMS Connector Documentation Reference
 
++++
+<code>JmsConnector</code> is a JMS 1.0.2b, 1.1 and 2.0 compliant MuleSoft Extension,
+used to consume and produce JMS Messages.
+The Extension supports all JMS functionality including topics and queues,
+durable subscribers, acknowledgement modes and local transactions.
++++
 
 
 == Configurations
@@ -17,24 +23,24 @@
 === Config
 
 +++
-Base configuration for JmsExtension
+Base configuration for JmsConnector
 +++
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
-|Name | String | The name of this configuration. With this name can be later referenced. | | *x*{nbsp}
-| Encoding a| String |  +++The encoding of the Message body to consume if the message doesn't communicate it+++ |  | {nbsp}
-| Content Type a| String |  +++The default content type of the Message body to consume if the message doesn't communicate it+++ |  +++*/*+++ | {nbsp}
+|Name | String | The name for this configuration. Connectors reference the configuration with this name. | | *x*{nbsp}
+| Encoding a| String |  +++The default encoding of the Message body to be used if the message doesn't communicate it+++ |  | {nbsp}
+| Content Type a| String |  +++The default contentType of the Message body to be used if the message doesn't communicate it+++ |  +++*/*+++ | {nbsp}
 | Ack Mode a| Enumeration, one of:
 
-** NONE
+** IMMEDIATE
 ** AUTO
 ** MANUAL
 ** DUPS_OK |  +++The ConsumerAckMode to use when consuming a Message
 Can be overridden at the message source level.
-This attribute has to be NONE if transactionType is LOCAL or MULTI+++ |  +++AUTO+++ | {nbsp}
+This attribute has to be IMMEDIATE if transactionType is LOCAL or MULTI+++ |  +++AUTO+++ | {nbsp}
 | Consumer Type a| One of:
 
 * <<queue-consumer>>
@@ -120,9 +126,8 @@ and headers as Result#getAttributes
 * <<topic-consumer>> |  +++the type of the MessageConsumer that is required for the given destination, along with any+++ |  | {nbsp}
 | Ack Mode a| Enumeration, one of:
 
-** AUTO
-** MANUAL
-** DUPS_OK |  +++the ConsumerAckMode that will be configured over the Message and Session+++ |  | {nbsp}
+** IMMEDIATE
+** MANUAL |  +++the ConsumerAckMode that will be configured over the Message and Session+++ |  | {nbsp}
 | Selector a| String |  +++a custom JMS selector for filtering the messages+++ |  | {nbsp}
 | Content Type a| String |  +++the Message's content content type+++ |  | {nbsp}
 | Encoding a| String |  +++the Message's content encoding+++ |  | {nbsp}
@@ -142,6 +147,9 @@ and headers as Result#getAttributes
 ** JOIN_IF_POSSIBLE
 ** NOT_SUPPORTED |  +++The type of joining action that operations can take regarding transactions.+++ |  +++JOIN_IF_POSSIBLE+++ | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -155,12 +163,13 @@ and headers as Result#getAttributes
 * <<config>> {nbsp}
 
 ==== Throws
-* JMS:CONNECTIVITY {nbsp}
-* JMS:DESTINATION_NOT_FOUND {nbsp}
-* JMS:CONSUMING {nbsp}
-* JMS:ACK {nbsp}
-* JMS:RETRY_EXHAUSTED {nbsp}
 * JMS:TIMEOUT {nbsp}
+* JMS:CONNECTIVITY {nbsp}
+* JMS:CONSUMING {nbsp}
+* JMS:SECURITY {nbsp}
+* JMS:RETRY_EXHAUSTED {nbsp}
+* JMS:DESTINATION_NOT_FOUND {nbsp}
+* JMS:ACK {nbsp}
 
 
 [[publish]]
@@ -221,6 +230,8 @@ this Message should be replied to+++ |  | {nbsp}
 ** MINUTES
 ** HOURS
 ** DAYS |  +++Time unit to be used in the deliveryDelay configurations+++ |  | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 
@@ -228,11 +239,12 @@ this Message should be replied to+++ |  | {nbsp}
 * <<config>> {nbsp}
 
 ==== Throws
-* JMS:CONNECTIVITY {nbsp}
 * JMS:PUBLISHING {nbsp}
-* JMS:DESTINATION_NOT_FOUND {nbsp}
+* JMS:CONNECTIVITY {nbsp}
+* JMS:SECURITY {nbsp}
 * JMS:ILLEGAL_BODY {nbsp}
 * JMS:RETRY_EXHAUSTED {nbsp}
+* JMS:DESTINATION_NOT_FOUND {nbsp}
 
 
 [[publishConsume]]
@@ -288,9 +300,8 @@ this Message should be replied to+++ |  | {nbsp}
 ** DAYS |  +++Time unit to be used in the deliveryDelay configurations+++ |  | {nbsp}
 | Ack Mode a| Enumeration, one of:
 
-** AUTO
-** MANUAL
-** DUPS_OK |  +++The Session ACK mode to use when consuming the message+++ |  | {nbsp}
+** IMMEDIATE
+** MANUAL |  +++The Session ACK mode to use when consuming the message+++ |  | {nbsp}
 | Maximum Wait a| Number |  +++Maximum time to wait for a message to arrive before timeout+++ |  +++10000+++ | {nbsp}
 | Maximum Wait Unit a| Enumeration, one of:
 
@@ -304,6 +315,9 @@ this Message should be replied to+++ |  | {nbsp}
 | Content Type a| String |  +++The content type of the message body to be consumed+++ |  | {nbsp}
 | Encoding a| String |  +++The encoding of the message body to be consumed+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -317,14 +331,63 @@ this Message should be replied to+++ |  | {nbsp}
 * <<config>> {nbsp}
 
 ==== Throws
-* JMS:CONNECTIVITY {nbsp}
 * JMS:PUBLISHING {nbsp}
-* JMS:DESTINATION_NOT_FOUND {nbsp}
-* JMS:CONSUMING {nbsp}
-* JMS:ILLEGAL_BODY {nbsp}
-* JMS:ACK {nbsp}
-* JMS:RETRY_EXHAUSTED {nbsp}
 * JMS:TIMEOUT {nbsp}
+* JMS:CONNECTIVITY {nbsp}
+* JMS:CONSUMING {nbsp}
+* JMS:SECURITY {nbsp}
+* JMS:ILLEGAL_BODY {nbsp}
+* JMS:RETRY_EXHAUSTED {nbsp}
+* JMS:DESTINATION_NOT_FOUND {nbsp}
+* JMS:ACK {nbsp}
+
+
+[[ack]]
+=== Ack
+`<http://www.mulesoft.org/schema/mule/jms:ack>`
+
++++
+Allows the user to perform an ACK when the AckMode#MANUAL mode is elected while consuming the Message.
+As per JMS Spec, performing an ACK over a single Message automatically works as an ACK for all the Messages
+produced in the same JmsSession.
+to a session of the current connection
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Ack Id a| String |  +++The AckId of the Message to ACK+++ |  | *x*{nbsp}
+|======================
+
+
+
+==== Throws
+* JMS:ACK {nbsp}
+
+
+[[recoverSession]]
+=== Recover Session
+`<http://www.mulesoft.org/schema/mule/jms:recover-session>`
+
++++
+Allows the user to perform a session recover when the AckMode#MANUAL mode is elected while consuming the
+Message.
+As per JMS Spec, performing a session recover automatically will redeliver all the consumed messages that had not being
+acknowledged before this recover.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Ack Id a| String |  +++The AckId of the Message Session to recover+++ |  | *x*{nbsp}
+|======================
+
+
+
+==== Throws
+* JMS:SESSION_RECOVER {nbsp}
 
 
 == Sources
@@ -350,7 +413,7 @@ for incoming Messages
 * <<topic-consumer>> |  +++The Type of the Consumer that should be used for the provided destination+++ |  | {nbsp}
 | Ack Mode a| Enumeration, one of:
 
-** NONE
+** IMMEDIATE
 ** AUTO
 ** MANUAL
 ** DUPS_OK |  +++The Session ACK mode to use when consuming a message+++ |  | {nbsp}
@@ -362,6 +425,10 @@ for incoming Messages
 
 ** ALWAYS_BEGIN
 ** NONE |  +++The type of beginning action that sources can take regarding transactions.+++ |  +++NONE+++ | {nbsp}
+| Transaction Type a| Enumeration, one of:
+
+** LOCAL
+** XA |  +++The type of transaction to create. Availability will depend on the runtime version.+++ |  +++LOCAL+++ | {nbsp}
 | Redelivery Policy a| <<RedeliveryPolicy>> |  +++Defines a policy for processing the redelivery of the same message+++ |  | {nbsp}
 | Reconnection Strategy a| * <<reconnect>>
 * <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
@@ -411,11 +478,6 @@ for incoming Messages
 ==== For Configurations.
 * <<config>> {nbsp}
 
-==== Throws
-* MULE:SOURCE_RESPONSE_SEND {nbsp}
-* MULE:SOURCE_ERROR_RESPONSE_SEND {nbsp}
-* MULE:SOURCE_ERROR_RESPONSE_GENERATE {nbsp}
-* MULE:SOURCE_RESPONSE_GENERATE {nbsp}
 
 
 == Types
@@ -429,9 +491,9 @@ for incoming Messages
 | Use Secure Hash a| Boolean | 
 | Message Digest Algorithm a| String | 
 | Id Expression a| String | 
-| Object Store Ref a| String | 
+| Object Store a| <<ObjectStore>> | 
 |======================
-    
+
 [[reconnect]]
 === Reconnect
 
@@ -440,9 +502,8 @@ for incoming Messages
 | Field | Type | Default Value
 | Frequency a| Number | 
 | Count a| Number | 
-| Blocking a| Boolean | 
 |======================
-    
+
 [[reconnect-forever]]
 === Reconnect Forever
 
@@ -451,7 +512,7 @@ for incoming Messages
 | Field | Type | Default Value
 | Frequency a| Number | 
 |======================
-    
+
 [[JmsDestination]]
 === Jms Destination
 
@@ -464,7 +525,7 @@ for incoming Messages
 ** QUEUE
 ** TOPIC | QUEUE
 |======================
-    
+
 [[JmsxProperties]]
 === Jmsx Properties
 
@@ -480,31 +541,18 @@ for incoming Messages
 | Jmsx Consumer TXID a| String | 
 | Jmsx Rcv Timestamp a| Number | 
 |======================
-    
-[[PoolingProfile]]
-=== Pooling Profile
+
+[[Reconnection]]
+=== Reconnection
 
 [cols=".^30%,.^40%,.^30%", options="header"]
 |======================
 | Field | Type | Default Value
-| Max Active a| Number | 
-| Max Idle a| Number | 
-| Max Wait a| Number | 
-| Min Eviction Millis a| Number | 
-| Eviction Check Interval Millis a| Number | 
-| Exhausted Action a| Enumeration, one of:
-
-** WHEN_EXHAUSTED_GROW
-** WHEN_EXHAUSTED_WAIT
-** WHEN_EXHAUSTED_FAIL | 
-| Initialisation Policy a| Enumeration, one of:
-
-** INITIALISE_NONE
-** INITIALISE_ONE
-** INITIALISE_ALL | 
-| Disabled a| Boolean | 
+| Fails Deployment a| Boolean | 
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> | 
 |======================
-    
+
 [[ActiveMQConnectionFactoryConfiguration]]
 === Active MQ Connection Factory Configuration
 
@@ -517,7 +565,7 @@ for incoming Messages
 | Redelivery Delay a| Number | 1000
 | Max Redelivery a| Number | 0
 |======================
-    
+
 [[topic-consumer]]
 === Topic Consumer
 
@@ -529,18 +577,18 @@ for incoming Messages
 | No Local a| Boolean | false
 | Subscription Name a| String | 
 |======================
-    
+
 [[default-caching]]
 === Default Caching
 
 [cols=".^30%,.^40%,.^30%", options="header"]
 |======================
 | Field | Type | Default Value
-| Session Cache Size a| Number | 1
+| Session Cache Size a| Number | 
 | Cache Producers a| Boolean | true
 | Cache Consumers a| Boolean | true
 |======================
-    
+
 [[JndiConnectionFactory]]
 === Jndi Connection Factory
 
@@ -555,7 +603,7 @@ for incoming Messages
 ** TRY_ALWAYS | NEVER
 | Name Resolver Provider a| <<JndiNameResolverProvider>> | 
 |======================
-    
+
 [[JndiNameResolverProvider]]
 === Jndi Name Resolver Provider
 
@@ -568,7 +616,7 @@ for incoming Messages
 * <<CachedJndiNameResolver>> | 
 | Name Resolver Builder a| <<JndiNameResolverProperties>> | 
 |======================
-    
+
 [[JndiNameResolverProperties]]
 === Jndi Name Resolver Properties
 
@@ -579,7 +627,7 @@ for incoming Messages
 | Jndi Provider Url a| String | 
 | Provider Properties a| Object | 
 |======================
-    
+
 [[SimpleJndiNameResolver]]
 === Simple Jndi Name Resolver
 
@@ -591,7 +639,7 @@ for incoming Messages
 | Jndi Provider Properties a| Object | 
 | Jndi Provider Url a| String | 
 |======================
-    
+
 [[CachedJndiNameResolver]]
 === Cached Jndi Name Resolver
 
@@ -603,6 +651,4 @@ for incoming Messages
 | Jndi Provider Properties a| Object | 
 | Jndi Provider Url a| String | 
 |======================
-    
-
 

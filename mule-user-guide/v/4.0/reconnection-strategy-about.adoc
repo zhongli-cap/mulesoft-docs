@@ -1,14 +1,33 @@
 = About Reconnection Strategies
 :keywords: anypoint, studio, reconnection strategies, reconnection strategy, retry policies, retry
 
-Reconnection Strategies specify how a connector behaves when its connection fails.
+When a Mule app starts, a connectivity test runs. If the test fails, the default behavior is to log a warning message and continue with the deployment, instead of blocking it.
 
-These strategies allow you to better control the behavior of a failed connection. +
-For example, you can configure a connector to re-attempt the connection only once every 15 minutes, and to give up after 30 attempts. You can also send an automatic notification to your IT administrator whenever this reconnection strategy goes into effect. You can even define a strategy that attempts to reconnect only during business hours.
+You can set up connectors, such as FTP connectors, to attempt a specified number of reconnection  attempts, for example:
 
-By default, a reconnection strategy blocks a flow execution until it is able to connect/reconnect. +
-You can enable a non-blocking reconnection strategy so your Mule application does not wait for all endpoints to re-connect before it restarts. Furthermore, if a connection is lost, the reconnection takes place on a thread separate from the application thread. +
-Note that this behavior consumes more resources of your Mule application and might not be optimal in terms of performance.
+----
+<ftp:config name="ftp>
+  <ftp:connection host="localhost" user="me">
+    <reconnection>
+      <reconnect count="2">
+    <reconnection>
+  </ftp:connection>
+</ftp:config>
+----
+
+To force the deployment to fail when connection (and reconnection) attempts fail, you can  (`failsDeployment`) to `true`. For example, this configuration forces the deployment fails after two unsuccessful reconnection attempts.
+
+----
+<ftp:config name="ftp>
+  <ftp:connection host="localhost" user="me">
+    <reconnection failsDeployment="true">
+      <reconnect count="2">
+    <reconnection>
+  </ftp:connection>
+</ftp:config>
+----
+
+You can also configure a connector to attempt a reconnection at an interval, such as 5 attempts every 10 seconds, and to give up after 30 attempts. You can also send an automatic notification to your IT administrator whenever this reconnection strategy goes into effect.
 
 When transactions are properly configured, any message being routed by Mule at the moment a reconnection strategy goes into effect is not dropped. Instead, the transaction is rolled back and only committed once the transport successfully reconnects via the reconnection strategy.
 
