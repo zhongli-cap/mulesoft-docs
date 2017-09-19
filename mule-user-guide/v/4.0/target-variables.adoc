@@ -1,0 +1,55 @@
+= About Target Variables
+
+Non-void operations (such as the Read operation to the File connector) provide fields for storing message data in a variable that you can reference within the scope of a flow.
+
+* Target Variable: Name of your variable.
+* Target Value: Value to store if you specify a target variable name. It stores the message payload by default but can instead store the entire message (the payload and attributes) or just attributes. Note that you cannot store other variables in a target variable.
+
+Here, the payload of `readme.txt` is stored in `myVar` by default. File attributes and anything else in the message is lost.
+----
+<file:read path="readme.txt" target="myVar" /> -> T
+----
+
+Here, the entire message is stored in `myVar`:
+----
+<file:read path="readme.txt" target="myVar" targetValue="#[message]" />
+----
+
+Here, only the file size is stored in `myVar`:
+----
+<file:read path="readme.txt" target="size" targetValue="#[attributes.size]" /> ->
+----
+
+Here, is stored in `myVar`:
+<file:read path="readme.txt" target="size" targetValue="#[vars.someOtherVar]" /> -> ERROR: only payload, message and attributes keywords are available in the targetValue expression
+
+== Use Case: Using a target variable as input to an operation
+
+Assume that you want to access a customer's most recent order by its order number. You might create a target variable called `lastOrder` within one operation (such as the Retrieve operation to the Object Store connector) to capture the `payload` that contains that order number:
+
+* Target Variable: `lastOrder`
+* Target Value: `payload`
+
+Then you can use the Input Parameters of another operation (such as the Select operation to the Database connector) to input the target value, for example:
+
+* Key: `lastOrder`
+* Value: `vars.lastOrder.payload`
+
+Now an SQL query like this can use the `lastOrder` target variable to specify the order number:
+
+`SELECT * FROM ORDERS WHERE customerNumber = "353" and orderNumber > :lastOrder`
+
+== Use Case: Using a target variable to retain the payload of a bulk operation
+
+The BULK INSERT operation to the Database connector returns a success message that overrides the Database payload. You can create a target variable to prevent this override, for example:
+
+* Target Variable: `syncResult`
+* Target Value: `payload`
+
+Then you can access that payload for further operations. For example, you might create a script in the Store operation of the Object Store connector to get the highest `orderNumber` value in the payload: `max(syncResult.orderNumber)`.
+
+== See Also
+
+* link:/mule-user-guide/v/4.0/about-mule-event[About the Mule Event]
+
+* link:/mule-user-guide/v/4.0/database-sync-workflow[Workflow: Synchronize a Database]
