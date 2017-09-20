@@ -1,16 +1,16 @@
 = About Target Variables
 
-Non-void operations (such as the Read operation to the File connector) provide fields for storing message data in a variable that you can reference and use within the scope of a flow.
+Non-void operations (such as the Read operation to the File connector) can store the message data that they return in a target variable. Once defined, target variables are available for use within the flow. You define a target variable through these fields:
 
-* Target Variable: Name of your variable.
-* Target Value: Value to store in the named target variable. Stores the message payload by default but can instead store the entire message (the payload and attributes) or just attributes. Note that you cannot store other variables in a target variable.
+* Target Variable (`target`): Name of the variable in which you want to store message data.
+* Target Value (`targetValue`): Value of the data to store in the target variable. By default, the value is the message payload, but it can also store the entire message (the payload and any attributes) or just attributes. Note that you cannot store variables in a target variable.
 
-Here, the payload of `readme.txt` is stored in `myVar` by default. File attributes and anything else in the message is lost:
+For example, a Read operation with these settings stores payload of `readme.txt` in `myVar` by default:
 
 * Path: `readme.txt`
 * Target Variable: `myVar`
 +
-This is an XML example of the same settings:
+This is an XML example of the same settings in Anypoint Studio:
 +
 ----
 <file:read path="readme.txt" target="myVar" />
@@ -22,7 +22,7 @@ Here, the entire message is stored in `myVar`:
 * Target Variable: `myVar`
 * Target Value: `message`
 +
-This is an XML example of the same settings:
+This is an XML example of the same settings in Anypoint Studio:
 +
 ----
 <file:read path="readme.txt" target="myVar" targetValue="#[message]" />
@@ -34,26 +34,53 @@ Here, only the file size is stored in `myVar`:
 * Target Variable: `size`
 * Target Value: `attributes.size`
 +
-This is an XML example of the same settings:
+This is an XML example of the same settings in Anypoint Studio:
 +
 ----
 <file:read path="readme.txt" target="size" targetValue="#[attributes.size]" />
 ----
 
-== Use Case: Using a Target Variable as Input to an Operation
+== Keyword for Accessing a Target Variable
 
-Assume that you want to access a customer's most recent order by its order number. You might create a target variable called `lastOrder` within one operation (such as the Retrieve operation to the Object Store connector) to capture the `payload` that contains that order number:
+After defining a target variable, you can access and use it within the scope of a flow.
 
-* Target Variable: `lastOrder`
-* Target Value: `payload`
+* `vars`: Keyword for accessing a variable, for example, from an Input or Output parameter of an operation or through a DataWeave expression in a Mule component, such as the Logger. If the name of your target variable is `myVar`, you can access it like this: `vars.myVar`
 
-Then you can use the Input Parameters of another operation (such as the Select operation to the Database connector) to input the target value, for example:
+The scenarios describe some cases where you might use target variables.
 
-* Key: `lastOrder`
-* Value: `vars.lastOrder.payload`
+== Scenario: Setting a Target Variable from within an Operation
 
-Now an SQL query like this can use the `lastOrder` target variable to specify the order number:
+Assume that you want to log the entire message (payload and attributes) returned by a Database connector operation, such as Insert. Instead of using a Set Variable component after the operation, you can instead capture the message data by adding a target variable directly to the operation:
 
+* Target Variable for the Insert operation: `result`
+* Target Value: `message` or `#[message]`
+
+Then you might retrieve the result from the Logger like this:
+
+* Message: `'This is the resulting message: ' ++ vars.result`
+
+Assume that you want to log the name of the first entry in a customer database. You can define a target variable like this one through the Select operation of the Database connector:
+
+* Target Variable for the Select operation: `customerName`
+* Target Value: `payload[0].name` or `#[payload[0].name]`
+
+Then you might retrieve the result from the Logger like this:
+
+* Message: `'Customer name is: ' ++ vars.customerName`
+
+== Scenario: Using a Target Variable as Input to an Operation
+
+Assume that you want to access a customer's most recent order by its order number. You might create a target variable called `lastOrder` within an operation (such as the Retrieve operation to the Object Store connector) to capture the `payload` containing that order number.
+
+* Target Variable for the Retrieve operation: `lastOrder`
+
+Then you can use the Input Parameter of another operation in your flow (such as the Select operation to the Database connector) to make the target variable available for use in your query, for example:
+
+* Input Parameter definition for the Select operation:
+ ** Key: `lastOrder`
+ ** Value: `vars.lastOrder.payload`
+* Query for the Select operation that uses the `lastOrder` key to specify the order number:
++
 `SELECT * FROM ORDERS WHERE customerNumber = "353" and orderNumber > :lastOrder`
 
 ////
@@ -67,17 +94,6 @@ The BULK INSERT operation to the Database connector returns a success message th
 
 Then you can access that payload for further operations. For example, you might create a script in the Store operation of the Object Store connector to get the highest `orderNumber` value in the payload: `max(syncResult.orderNumber)`.
 ////
-
-== Use Case: Logging the Value of a Target Variable
-
-Assume that you want to log the entire message (payload and attributes) returned by a Database connector operation, such as Insert. You might add this target variable to the operation:
-
-* Target Variable: `result`
-* Target Value: `message` or `#[message]`
-
-Then you can retrieve the result from the Logger like this:
-
-* Message: `'This is the resulting message: ' ++ vars.result`
 
 == See Also
 
