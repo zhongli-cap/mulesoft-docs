@@ -2,30 +2,26 @@
 :keywords: anypoint studio, connector, endpoint, sap
 :imagesdir: ./_images
 
+https://www.mulesoft.com/legal/versioning-back-support-policy#anypoint-connectors[_Premium_]
 
-The SAP connector enables the integration of data to and from SAP NetWeaver-based and external systems.
+link:/release-notes/sap-connector-release-notes[Connector Release Notes] +
+http://mulesoft.github.io/sap-connector/[Technical Reference] +
+https://www.anypoint.mulesoft.com/exchange/?search=sap[demo applications]
 
-Read through this user guide to understand how to set up and configure a basic flow using the connector. Track feature additions, compatibility, limitations, and API version updates with each release of the connector using the link:/release-notes/sap-connector-release-notes[Connector Release Notes]. Review the connector operations and functionality using the http://mulesoft.github.io/sap-connector/[Technical Reference] along side the https://www.anypoint.mulesoft.com/exchange/?search=sap[demo applications].
+The SAP connector enables the integration of data to and from SAP NetWeaver-based and external systems. This connector provides an SAP-certified Java connector that leverages the SAP Java Connector (JCo) libraries and enables Mule applications to:
 
-MuleSoft maintains this connector under the https://www.mulesoft.com/legal/versioning-back-support-policy#anypoint-connectors[_Premium_] support policy, therefore it requires a separate license. Contact mailto:sales@mulesoft.com[MuleSoft] to evaluate or use this connector in production.
+* Execute BAPI functions over the RFC protocol, supporting the following types:
+** Synchronous RFC (sRFC)
+** Transactional RFC (tRFC)
+** Queued RFC (qRFC)
 
-Mule Runtime supports SAP integration through our Anypoint Connector for SAP, an SAP-certified Java connector that leverages the SAP Java Connector (JCo) libraries, thus allowing Mule applications to:
-
-. Execute BAPI functions over the RFC protocol, supporting the following types:
-    * Synchronous RFC (sRFC)
-    * Transactional RFC (tRFC)
-    * Queued RFC (qRFC)
-
-. Act as a JCo Server to be called as a BAPI over sRFC, tRFC and qRFC.
-
-. Send IDocs over tRFC and qRFC.
-
-. Receive IDocs over tRFC and qRFC.
-
-. Transform SAP objects (JCo Function/BAPI and IDocs) to and from XML.
+* Act as a JCo Server to be called as a BAPI over sRFC, tRFC and qRFC.
+* Send IDocs over tRFC and qRFC.
+* Receive IDocs over tRFC and qRFC.
+* Transform SAP objects (JCo Function/BAPI and IDocs) to and from XML.
 
 [[important-concepts]]
-== Important Concepts
+== Prerequisites
 
 This document assumes that you are familiar with Mule, Anypoint Connectors, and
 Anypoint Studio. This page requires basic knowledge of Mule Concepts, Elements in a Mule Flow, Global Elements.
@@ -36,6 +32,30 @@ This document also assumes you have:
 * A basic understanding of the SAP NetWeaver Platform from an administration point of view.
 * Some fundamental knowledge of the ABAP language.
 
+For hardware and software requirements, see link:/release-notes/sap-connector-release-notes[Connector Release Notes].
+
+=== Compatibility Matrix
+
+[%header%autowidth.spread]
+|===
+|Software |Version
+|SAP Connector Version |`4.0.0`
+|JCo Library Version |`3.0.12`
+|IDoc Library Version |`3.0.15`
+|===
+
+=== Dependencies
+
+[%header%autowidth.spread]
+|===
+|SAP Connector Version|Compatible Mule Version
+|`4.x`|`4.0`
+|===
+
+Stateful transactions, involving multiple outbound endpoints set the transactional scope. See link:/mule-user-guide/v/4.0-/sap-connector-advanced-features#transactions[SAP Transactions].
+
+Every SAP customer or partner has access to the https://service.sap.com/connectors[SAP Service Marketplace (SMP)]. There you can download both these files as well as the NetWeaver RFC Library and other connectors.
+
 === SAP JCo Architecture
 
 SAP JCo facilitates communication between an SAP backend system and a Java application. It allows Java programs to connect to SAP systems and invoke Remote Function Modules. It also allows parsing of IDocs (SAP Intermediate Documents), among other object types. Both inbound and outbound communications are supported.
@@ -44,44 +64,40 @@ image:sap-jco-architecture-diagram.png["scaledwidth="80%", JCo Architecture Diag
 
 .Figure 1. SAP NetWeaver and SAP JCo integration.
 
-*	Java API: handles dynamic metadata lookup and caching. It implements `JCO.Function`, which is the container for parameters and/or tables for the SAP Function Module (BAPI) in Java. Java apps are built on top of the Java API.
+*	Java API - Handles dynamic metadata lookup and caching. It implements `JCO.Function`, which is the container for parameters and/or tables for the SAP Function Module (BAPI) in Java. Java apps are built on top of the Java API.
 
-*	JNI (Java Native Interface): originally, SAP created libraries in C language to allow direct RFC calls to SAP, to manipulate with data. JCo wraps C libraries in Java to provide platform-native access into the SAP system. RFC Middleware uses RFC Library through (JNI) Layer.
+*	JNI (Java Native Interface) - Originally, SAP created libraries in C language to allow direct RFC calls to SAP, to manipulate with data. JCo wraps C libraries in Java to provide platform-native access into the SAP system. RFC Middleware uses RFC Library through (JNI) Layer.
 
-*   RFC (Remote Function Call): communication with the SAP system is performed over the RFC protocol. RFC means calling BAPI or triggering IDoc processing that runs in another system as calling program. The RFC interface enables function calls between two SAP systems or between the SAP and external system.
+*   RFC (Remote Function Call) - Communication with the SAP system is performed over the RFC protocol. RFC means calling BAPI or triggering IDoc processing that runs in another system as calling program. The RFC interface enables function calls between two SAP systems or between the SAP and external system.
 
-*	RFC Library: libraries of C language-based functions to access the SAP system. RFC library is addressed by JNI.
+*	RFC Library - Libraries of C language-based functions to access the SAP system. RFC library is addressed by JNI.
 
-* RFC Layer: SAP component that processes RFC calls.
+* RFC Layer - SAP component that processes RFC calls.
 
-*	SAP Java IDoc Class Library: provides structured, high-level interpretation and navigation of SAP IDocs in Java. It consists of the following add-on packages:
-    - SAP Java Base IDoc Class Library: a middleware-independent library that provides a set of general base classes and interfaces for middleware dependent Java IDoc Class Library implementations.
-    - SAP Java Connector IDoc Class Library: a middleware-independent library for creating, sending, and receiving IDocs.
+*	SAP Java IDoc Class Library - Provides structured, high-level interpretation and navigation of SAP IDocs in Java. It consists of the following add-on packages:
+    - SAP Java Base IDoc Class Library - A middleware-independent library that provides a set of general base classes and interfaces for middleware dependent Java IDoc Class Library implementations.
+    - SAP Java Connector IDoc Class Library - A middleware-independent library for creating, sending, and receiving IDocs.
 
-*	FM (Function Module): Function modules are procedures that are defined in the ABAP language of SAP. It allows the encapsulation and reuse of global functions in the SAP System.
+*	FM (Function Module) - Function modules are procedures that are defined in the ABAP language of SAP. It allows the encapsulation and reuse of global functions in the SAP System.
 
-*	BAPI (Business Application Programming Interface): is the Function Module that fulfills certain design criteria, such as:
+*	BAPI (Business Application Programming Interface) - The Function Module that fulfills certain design criteria, such as:
     - Implements a method of a SAP Business Object.
     - Maintains a static interface through different versions of the SAP system.
     - Is remote-enabled.
     - Runs to completion with or without user interaction.
     - Handles errors.
 
-*	IDoc (Intermediate Document): standard SAP format for electronic data interchange between SAP systems. Different messages types (such as delivery notes or purchase orders) generally correspond to different special formats, known as IDoc types. Multiple message types with related content can, however, be assigned to a single IDoc type.
+*	IDoc (Intermediate Document) - Standard SAP format for electronic data interchange between SAP systems. Different messages types (such as delivery notes or purchase orders) generally correspond to different special formats, known as IDoc types. Multiple message types with related content can, however, be assigned to a single IDoc type.
 
-*	ALE (Application Link Enabling): technology for setting up and operating distributed applications. ALE facilitates distributed, yet integrated, installation of SAP systems. This involves business-driven message exchange using consistent data across loosely linked SAP applications. Applications are integrated through synchronous and asynchronous communication, rather than by use of a central database.
+*	ALE (Application Link Enabling) - Technology for setting up and operating distributed applications. ALE facilitates distributed, yet integrated, installation of SAP systems. This involves business-driven message exchange using consistent data across loosely linked SAP applications. Applications are integrated through synchronous and asynchronous communication, rather than by use of a central database.
 
-* SAP NetWeaver: one of the main technologies and application platforms used by SAP solutions. Its main component is the SAP Web Application Server (WebAS), which provides the runtime environment for SAP applications like ERP, CRM, SCM, PLM, SRM, BI. Other components include enterprise portal, exchange infrastructure, master data management and mobile infrastructure. The SAP NetWeaver is an umbrella term for these technical components.
-
-
+* SAP NetWeaver - One of the main technologies and application platforms used by SAP solutions. Its main component is the SAP Web Application Server (WebAS), which provides the runtime environment for SAP applications like ERP, CRM, SCM, PLM, SRM, BI. Other components include enterprise portal, exchange infrastructure, master data management and mobile infrastructure. The SAP NetWeaver is an umbrella term for these technical components.
 
 [.center.text-center]
 image:sap-netweaver-application-server.png["scaledwidth="80%", Three-Layer Architecture of an SAP system]
 [.center.text-center]
 Figure 2. NetWeaver Application Server.
 
-
-[NOTE]
 The SAP connector uses the RFC protocol to connect to NetWeaver Application Servers (NWAS). http://www.cipherbsc.com/solutions/sap-erp-central-component-erp-ecc/[ECC] and https://help.sap.com/crm[CRM] run on top of NWAS, as other SAP solutions do, and hence any customer using the connector may access those systems.
 
 [.center.text-center]
@@ -89,25 +105,17 @@ image:sap-netweaver-layer-architecture-diagram.png["scaledwidth="80%", NetWeaver
 [.center.text-center]
 Figure 3. Three-Layer Architecture of an SAP System.
 
-[NOTE]
 SAP NetWeaver runs on both Java and ABAP stacks.
 
-* ABAP (Advanced Business Application Programming): This is SAP's proprietary programming language and part of the NetWeaver platform for building business applications.
+ABAP (Advanced Business Application Programming): This is SAP's proprietary programming language and part of the NetWeaver platform for building business applications.
 
-
-[[requirements]]
-== Hardware and Software Requirements
-
-For hardware and software requirements, visit the link:/release-notes/sap-connector-release-notes[Connector Release Notes].
-
-=== Requirements
+== SAP Library Requirements
 
 This connector requires the following SAP libraries:
 
 . Java Connector (JCo) library
 . IDoc library
 
-[NOTE]
 The JCo library depends on your hardware platform and operating system. Therefore, you need to download the proper version for the local drive running Anypoint Studio.
 
 Three files are required for both libraries:
@@ -123,36 +131,15 @@ Three files are required for both libraries:
     - `libsapjco3.jnilib` (Mac OS X)
     - `libsapjco3.so` (Linux)
 
-[IMPORTANT]
-Do NOT change the names of any of the SAP JCo library files from their original names, as they won’t be recognized by JCo. Since JCo 3.0.11, the JAR file cannot be renamed from `sapjco3.jar`, nor can it be repackaged. Read more about link:/mule-user-guide/v/4.0/sap-connector-troubleshooting[SAP Troubleshooting].
+*Notes:*
 
-[IMPORTANT]
-The SAP JCo libraries are OS-dependent. Therefore, make sure to download the SAP libraries that correspond to the OS and hardware architecture of the host server on which Mule runs. If you deploy to a platform different from the one used for development, you must change the native library before generating  the zip file.
+* Do NOT change the names of any of the SAP JCo library files from their original names, as they won’t be recognized by JCo. Since JCo 3.0.11, the JAR file cannot be renamed from `sapjco3.jar`, nor can it be repackaged. Read more about link:/mule-user-guide/v/4.0/sap-connector-troubleshooting[SAP Troubleshooting].
 
-=== Dependencies
+* The SAP JCo libraries are OS-dependent. Therefore, make sure to download the SAP libraries that correspond to the OS and hardware architecture of the host server on which Mule runs. If you deploy to a platform different from the one used for development, you must change the native library before generating  the zip file.
 
-[options="header, autowidth"]
-|===
-|SAP Connector Version|Compatible Mule Version
-|`4.x`|`4.0`
-
-|===
-
-[NOTE]
-Stateful transactions, involving multiple outbound endpoints, only work from Mule 3.3 and up, by setting the transactional scope. Read more about link:/mule-user-guide/v/4.0-/sap-connector-advanced-features#transactions[SAP Transactions].
-
-Every SAP customer/partner has access to the https://service.sap.com/connectors[SAP Service Marketplace (SMP)]. There you can download both these files as well as the NetWeaver RFC Library and other connectors.
-
-=== Compatibility Matrix
-
-[options="header,autowidth"]
-|===
-|SAP Connector Version |JCo Library Version |IDoc Library Version
-|`4.0.0` |`3.0.12` |`3.0.15`
-|===
 
 [[install]]
-== How to Install
+== To Install This Connector
 
 The SAP connector is bundled within Anypoint Studio and Design Center.
 
@@ -160,21 +147,15 @@ The SAP connector needs JCo libraries to operate. The current section explains h
 
 This procedure assumes that you already have a Mule runtime instance installed on your host machine. If not, follow the instructions for link:/mule-user-guide/v/4.0/downloading-and-starting-mule-esb[Downloading and Starting Mule].
 
-[NOTE]
-Throughout this document, we use `$MULE_HOME` to refer to the directory where Mule is installed.
+*Notes:*
 
-. Download the SAP JCo and IDoc libraries from the https://service.sap.com/connectors[SAP Service Marketplace (SMP)]. To do so, you need a `SAP User ID` (also called `S-User ID`).
+* This document uses `$MULE_HOME` to refer to the directory where Mule is installed.
+* Download the SAP JCo and IDoc libraries from the https://service.sap.com/connectors[SAP Service Marketplace (SMP)]. To do so, you need a `SAP User ID` (also called `S-User ID`).
 Once you have those libraries, head over to the SAP Java Connector section of the SMP. Files are available at the Tools and Services subsection of the SMP.
-+
-[NOTE]
-For further details, read the SAP Note: https://service.sap.com/sap/support/notes/1077727[SAP JCo 3.0 Release And Support Strategy].
+* For further details, read the SAP Note: https://service.sap.com/sap/support/notes/1077727[SAP JCo 3.0 Release And Support Strategy].
+* Make sure that the SAP JARs are available to your Mule application and/or Mule instance. JCo relies on a native library, which requires additional installation steps.
+* If you plan to use SAP as an Inbound Endpoint (that is, Mule is called as a BAPI or receives IDocs), you must perform additional configurations within the services file at the OS level. See link:/mule-user-guide/v/4.0/sap-connector-advanced-features#server-services-configuration[SAP JCo Server Services Configuration].
 
-. Make sure that the SAP JARs are available to your Mule application and/or Mule instance. JCo relies on a native library, which requires additional installation steps.
-
-[NOTE]
-====
-If you plan to use SAP as an Inbound Endpoint (that is, Mule is called as a BAPI or receives IDocs), you must perform additional configurations within the services file at the OS level. A detailed explanation of the requirements can be found at link:/mule-user-guide/v/4.0/sap-connector-advanced-features#server-services-configuration[SAP JCo Server Services Configuration].
-====
 
 [[upgrading]]
 === Upgrading from an Older Version
@@ -198,26 +179,15 @@ For Maven dependency management, include this XML snippet in your `pom.xml` file
 </dependency>
 ----
 
-[TIP]
-====
-Inside the `<version>` tags, put the desired version number, the word `RELEASE` for the latest release, or `SNAPSHOT` for the latest available version. The available versions are:
+Inside the `<version>` tags, put the desired version number, the word `RELEASE` for the latest release, or `SNAPSHOT` for the latest available version. The available version is 4.0.0.
 
- 4.0.0
-====
 
 [[configure]]
 == How to Configure
 
-To use the SAP connector in your Mule application, you must first configure a global SAP element.
+The SAP connector object holds the configuration properties that allow you to connect to the SAP server. When you configure SAP connector with a Global Element, all SAP endpoints use its connection parameters; otherwise each SAP endpoint uses its own connection parameters to connect to the SAP server.
 
-[NOTE]
-Read more about link:/mule-fundamentals/v/4.0/global-elements[Global Elements].
-
-=== Setting up the Global Element
-
-The SAP connector object holds the configuration properties that allow you to connect to the SAP server. When an SAP connector is defined in a Global Element, all SAP endpoints use its connection parameters; otherwise each SAP endpoint uses its own connection parameters to connect to the SAP server.
-
-To create a configuration for an SAP connector, complete the following steps:
+To create a configuration for an SAP connectors:
 
 . Go to the Connectors and Modules section, and click the plus (+) button.
 . Select SAP in `Connectors & Modules` section.
@@ -278,11 +248,11 @@ To define extended properties for the SAP connector global element, complete the
 image:sap-advanced-config.png[sap global element adv tab]
 
 [IMPORTANT]
-For this to work you must set the property name, as defined by SAP, in your configuration. Check link:/mule-user-guide/v/4.0/sap-connector-advanced-features#jco-extended-properties[SAP JCo Extended Properties] for the complete list of properties.
+For this to work, you must set the property name defined by SAP in your configuration. See link:/mule-user-guide/v/4.0/sap-connector-advanced-features#jco-extended-properties[SAP JCo Extended Properties] for the complete list of properties.
 
 ==== Connector Properties
 
-[cols="25%,10%,50%,^15%",options="header"]
+[%header%autowidth.spread]
 |===
 |Field | XML Attribute |Description |Default Value
 |Configuration Name |`name` |The reference name of the connector used internally by Mule configuration. |
@@ -303,7 +273,7 @@ For this to work you must set the property name, as defined by SAP, in your conf
 
 ==== Inbound Endpoint Properties
 
-[cols="25%,20%,50%,15%",options="header"]
+[%header%autowidth.spread]
 |===
 |Field |XML Attribute |Description |Default Value
 |Display Name |`name` |The reference name of the endpoint used internally by Mule configuration. |
@@ -327,7 +297,7 @@ For this to work you must set the property name, as defined by SAP, in your conf
 
 ==== Outbound Endpoint Properties
 
-[cols="25%,20%,50%,15%",options="header"]
+[%header%autowidth.spread]
 |===
 |Field |XML Attribute |Description |Default Value
 |Display Name |`name` |The reference name of the endpoint used internally by Mule configuration. |
@@ -347,7 +317,7 @@ For this to work you must set the property name, as defined by SAP, in your conf
 
 ==== IDoc Versions
 
-[cols="^,<",options="header, autowidth"]
+[%header%autowidth.spread]
 |===
 |Value |Description
 |`0` |`IDOC_VERSION_DEFAULT`
@@ -369,8 +339,9 @@ For BAPIs, the SAP Connector offers a proprietary format fully compatible with D
 
 A JCo Function represents a Function or BAPI and consists of the following elements:
 
-[cols="<,<",options="autowidth"]
+[%header%autowidth.spread]
 |===
+|Value |Description
 |`IMPORT` |Contains input values (arguments) when executing a BAPI/Function.
 |`EXPORT` |Contains output values after executing a BAPI/function.
 |`CHANGING` |Contains changing values that can be sent and/or received when executing BAPIs/functions.
@@ -405,8 +376,9 @@ A JCo Function represents a Function or BAPI and consists of the following eleme
 
 Each of the main records (import, export and changing) support fields, structures and/or tables:
 
-[cols="<,<",options="autowidth"]
+[%header%autowidth.spread]
 |===
+|Value |Description
 |`STRUCTURE` |Contains fields, tables and/or inner structures.
 |`TABLE` |Contains a list of rows.
 |`TABLE ROW` |Contains fields, structures and/or inner tables.
@@ -448,7 +420,7 @@ The exception element is also used when an ABAP exception needs to be returned t
 
 There are two constructors for the ABAP exception and the XML varies depending on which one you want to call:
 
- `new AbapException(String key, String message)`
+`new AbapException(String key, String message)`
 +
 [source, xml, linenums]
 ----
@@ -460,7 +432,7 @@ There are two constructors for the ABAP exception and the XML varies depending o
 </Z_BAPI_MULE_EXAMPLE>
 ----
 
- `new AbapException(String key, String messageClass, char messageType, String messageNumber, String[] messageParameters)`
+`new AbapException(String key, String messageClass, char messageType, String messageNumber, String[] messageParameters)`
 +
 [source, xml, linenums]
 ----
@@ -593,7 +565,7 @@ XML version 2.0 is the default version since SAP connector v2.1.0, and it is the
 </Z_BAPI_MULE_EXAMPLE>
 ----
 
-==== IDoc Document / Document List
+==== IDoc Document and Document List
 
 IDocs are XML documents defined by SAP. You can download their definition from your SAP server using the SAP UI.
 
@@ -652,9 +624,9 @@ IDocs are XML documents defined by SAP. You can download their definition from y
 
 Generally speaking, there are two main scenarios in which to use the SAP Connector within a Mule application:
 
- Inbound operation: the connector receives IDoc or BAPI data from a SAP system into your Mule application. To use the connector in this mode, you must place a SAP Endpoint element into your flow and configure it by setting either the type `IDoc` (to receive data in SAP IDoc format) or `Function / BAPI` (to receive data from BAPI).
+Inbound operation: the connector receives IDoc or BAPI data from a SAP system into your Mule application. To use the connector in this mode, you must place a SAP Endpoint element into your flow and configure it by setting either the type `IDoc` (to receive data in SAP IDoc format) or `Function / BAPI` (to receive data from BAPI).
 
- Outbound operation: the connector pushes data into the SAP instance by executing a BAPI or sending IDocs over RFC. To use the connector in this mode, simply place the SAP Endpoint into your flow at any position after an Inbound Endpoint.
+Outbound operation: the connector pushes data into the SAP instance by executing a BAPI or sending IDocs over RFC. To use the connector in this mode, simply place the SAP Endpoint into your flow at any position after an Inbound Endpoint.
 
 == Common Use Cases
 
