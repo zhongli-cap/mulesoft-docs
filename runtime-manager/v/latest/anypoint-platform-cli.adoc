@@ -154,6 +154,8 @@ Anypoint Platform CLI provides commands for different use case scenarios:
 
 * <<Commands For Administrating your Anypoint Platform Account>>
 * <<Commands for API Manager>>
+* <<Commands for Administrating your Design Center Applications>>
+* <<Commands for Managing Exchange Assets>>
 * <<Commands for Administrating your CloudHub Application>>
 * <<Commands for Managing your Locally Deployed Applications Managed by Runtime Manager>>
 * <<Commands for Managing Your Local PCF Deployed Applications>>
@@ -173,7 +175,8 @@ The Anypoint Platform CLI provides three default options:
 * The `--help` option displays usage information of the command.
 * The `-o` or `--output` option lets you specify the command's output to the defined format. +
 Supported values are `table`, `text`, and `json`. Defaults to `text` for non-interactive mode and `table` for interactive sessions.
-* The `-f` or `--fields` option allows you to define which fields to output.
+* The `-f` or `--fields` option allows you to define which fields to output. +
+You can pass the `--fields` option after a command to get a list of all possible fields to output.
 --
 
 === Commands For Administrating your Anypoint Platform Account
@@ -187,7 +190,7 @@ Supported values are `table`, `text`, and `json`. Defaults to `text` for non-int
 |<<account environment list>>| Lists environments
 |<<account environment create>>| Create new environment
 |<<account environment delete>>| Delete an environment
-
+|<<account environment describe>> | Shows details of an environment
 |===
 
 === Commands for API Manager
@@ -230,6 +233,33 @@ Supported values are `table`, `text`, and `json`. Defaults to `text` for non-int
 |<<api-mgr tiers edit>> | Edit SLA tier
 |<<api-mgr tiers list>> | Lists API version SLA tiers
 |<<api-mgr tiers reactivate>> | Reactivate SLA tier
+|===
+
+=== Commands for Administrating your Design Center Applications
+
+[%header,cols="35a,65a"]
+|===
+|Command |Description
+| <<designcenter project create>> | Creates a new Design Center project
+| <<designcenter project delete>> | Deletes a Design Center project
+| <<designcenter project download>> | Downloads the content of a Design Center project
+| <<designcenter project publish>> | Publishes a Design Center project to Exchange
+| <<designcenter project upload>> | Uploads the content of a project to Design Center
+|===
+
+=== Commands for Managing Exchange Assets
+
+[%header,cols="35a,65a"]
+|===
+|Command |Description
+|<<exchange asset upload>> | Uploads an Exchange asset
+|<<exchange asset modify>> | Modifies an Exchange asset
+|<<exchange asset download>> | Downloads an Exchange asset
+|<<exchange asset list>> | Lists all assets
+|<<exchange asset page download>> | Downloads an asset's description page from Exchange
+|<<exchange asset page modify>> | Changes an asset's description page from Exchange
+|<<exchange asset page upload>> | Uploads an asset's description page from Exchange
+|<<exchange asset page delete>> | Deletes an asset's description page from Exchange
 |===
 
 === Commands for Administrating your CloudHub Application
@@ -441,7 +471,8 @@ This command does not take any options, except for the default ones: `--help`, `
 > account business-group describe  [options] <name>
 ----
 
-This command displays information on the business group you pass in <name>.
+This command displays information on the business group you pass in <name>. +
+If <name> is not specified, the command describes the business group on the current session.
 
 [NOTE]
 --
@@ -471,7 +502,14 @@ This command does not take any options, except for the default ones: `--help`, `
 > account environment create [options] <name>
 ----
 This command creates a new environment using the name you set in <name>. +
-You can use the `--sandbox` option to create this environment as a sandbox or use the default `--help`, `-f`/`--fields` and `-o`/`--output`.
+Besides the default `--help`, `-f`/`--fields` and `-o`/`--output` options, this command also takes the `--type` option. Use the `--type` option to specify the environment type. +
+Supported values for environment types are:
+
+* design
+* production
+* sandbox
+
+If no type is specified, the command creates a production environment.
 
 === account environment delete
 
@@ -483,6 +521,18 @@ This command deletes the environment specified in <name> +
 
 [WARNING]
 This command does not prompt twice before deleting. If you send a delete instruction, it does not ask for confirmation.
+
+This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
+
+=== account environment delete
+
+[source,Example]
+----
+> account environment describe [options] <name>
+----
+
+This command deletes the environment specified in <name> +
+If no <name> is provided, this command returns information about the current session's environment.
 
 This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
 
@@ -599,6 +649,7 @@ Besides the default `--help`, `-f`/`--fields` and `-o`/`--output` options, this 
 [%header,cols="30a,40a,30a"]
 |===
 |Command | Description |  Example
+|--tier-requests | When passed, this command only lists applications with pending SLA tier change requests. | `api-mgr applications list --tier-requests`
 |--limit | Number of results to retrieve | `api-mgr applications list --limit 2`
 |--offset | Offsets the amount of APIs passed | `api-mgr applications list --offset 3`
 |--sort | Sorts the results in the field name passed | `api-mgr applications list --sort "Latest Version"`
@@ -755,6 +806,7 @@ Besides the default `--help`, `-f`/`--fields` and `-o`/`--output` options, this 
 | --scheme <value>           | Proxy scheme
 | --port <value>             | Proxy port
 | --path <value>             | Proxy path
+| --responseTimeout          | Response Timeout
 |===
 
 
@@ -806,18 +858,27 @@ You can use the <<api-mgr policy describe>> option to check the default field na
 
 [source,Example]
 ----
-> api-mgr policy copy [options] <source> <target>
+> api-mgr policy copy [options] <source> <target> [policyId]
 ----
 
-This command copies the policy from the API passed in `source` to the API passed in `target`. +
-Both arguments `source` and `target` are represented using the format: `<organizationName>/<apiName>/<apiVersion>`, for example:
+This command copies all policies from the API passed in `source` to the API passed in `target`. +
+Both arguments `source` and `target` are represented using the format: `<organizationName>/<apiName>/<apiVersion>`. When the "policyId" argument is provided, only the policy with that matching ID is copied. +
+For example:
 
 [source,Example]
 ----
 > api-mgr policy copy Services/api-1/1.0 Development/api-1/1.0
 ----
 
-Copies the policy of the API named `api-1` and version `1.0` from _Services_ organization to the _Development_ organization. +
+Copies the policy of the API named `api-1` and version `1.0` from _Services_ organization to the _Development_ organization.
+
+[source,Example]
+----
+> api-mgr policy copy Services/api-1/1.0 Development/api-1/1.0 ip-blacklist
+----
+
+Only copies the ip-blacklist policy.
+
 If the Anypoint Platform CLI is using the Services organization, the command can simply take the application name as a `source`:
 
 [source,Example]
@@ -970,6 +1031,8 @@ This command lists all portals associated with the API passed in `apiName`. +
 This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
 
 === api-mgr portal open
+
+This command is only available for interactive mode.
 
 [source,Example]
 ----
@@ -1139,6 +1202,237 @@ Besides the default `--help`, `-f`/`--fields` and `-o`/`--output` options, this 
 ----
 
 This command reactivates the SLA tier passed in `tierId` for the API and version passed in `apiName` and `apiVersion`. +
+This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
+
+=== designcenter project create
+
+[source,Example]
+----
+> designcenter project create [options] <name>
+----
+
+This Command creates a new Design Center project with the name specified in <name>.
+
+[IMPORTANT]
+This command does not support Mule application types.
+
+Besides the default `--help`, `-f`/`--fields` and `-o`/`--output` options, this command also takes:
+
+[%header,cols="30a,40a,30a"]
+|===
+|Command | Description |  Example
+| --type (required) | The project type. +
+This field is required.
+
+Supported values are:
+
+* raml
+* raml-fragment | `designcenter project create --type raml`
+| --fragment-type | The fragment type if the application type is a RAML fragment.
+
+This field is required if the type option was set as raml-fragment
+
+Supported fragments type are:
+
+* trait
+* resource-type
+* library
+* type
+* user-documentation | `designcenter project create --type raml-fragment --fragment-type user-documentation`
+|===
+
+=== designcenter project delete
+
+[source,Example]
+----
+> designcenter project delete [options] <name>
+----
+
+This Command deletes the Design Center project specified in `name`.
+
+[WARNING]
+This command does not prompt twice before deleting. If you send a delete instruction, it does not ask for confirmation.
+
+This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
+
+=== designcenter project download
+
+[source,Example]
+----
+> designcenter project download [options] <name> <targetDir>
+----
+
+This Command downloads the Design Center project passed in `name` to your local directory specified in `targetDir`. +
+This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
+
+=== designcenter project publish
+
+[source,Example]
+----
+> designcenter project publish [options] <projectName>
+----
+
+This Command publishes the Design Center project passed in `projectName` to Exchange. +
+Besides the default `--help`, `-f`/`--fields` and `-o`/`--output` options, this command also takes:
+
+[TIP]
+Options that are not specified are extracted from exchange.json
+
+[%header,cols="30a,40a,30a"]
+|===
+|Command | Description |  Example
+| --name | The name for the asset | `designcenter project publish --name sampleProject`
+| --main | The name of the main file name. | `designcenter project publish --main sample.xml`
+| --apiVersion | The API version if your project is an API specification project. | `designcenter project publish --main sample.raml --apiVersion 1.0`
+| --tags | Comma separated list of tags. | `designcenter project publish --tags test,sample,integration`
+| --groupId | The asset's groupId.| `designcenter project publish --groupId com.mulesoft.com`
+| --assetId  | The asset's assetId. | `designcenter project publish --assetId project`
+| --version | The asset's version. | `designcenter project publish --version 1.0`
+|===
+
+=== designcenter project upload
+
+[source,Example]
+----
+> designcenter project upload [options] <name> <projDir>
+----
+
+This Command uploads a Design Center project from your local directory passed in `projDir` and names it using the name passed in `name`.
+
+By default, this command ignores all hidden files and directories. To include hidden files and directories, use the `--include-dot-files` option. +
+When the `--include-dot-files` option is used, the command uploads hidden files and folders from your specified directory.
+
+Besides the `--include-dot-files`, this command takes the default `--help`, `-f`/`--fields` and `-o`/`--output` options.
+
+=== exchange asset upload
+
+[source,Example]
+----
+> exchange asset upload [options] <assetIdentifier> <zipfile>
+----
+
+This command uploads the ZIP file passed in <zipfile> as an asset to Exchange using the Ids passed in <assetIdentifier>. +
+
+The ZIP file must include an "exchange.json" file describing the asset.
+Argument "assetIdentifier" must be formatted as: <group_id>/<asset_id>/<version>.
+
+Besides the default `--help`, `-f`/`--fields` and `-o`/`--output` options, this command also takes:
+
+[%header,cols="30a,40a,30a"]
+|===
+|Command | Description |  Example
+| --apiVersion |  Asset API version .3+<.<| `exchange asset upload --apiVersion 1.0 --name testProject --classifier custom`
+| --name       |  Asset name
+| --classifier |  Asset classifier +
+Valid classifiers are `custom`, `oas`, and `wsdl`.
+|===
+
+=== exchange asset modify
+
+[source,Example]
+----
+> exchange asset modify [options] <assetIdentifier>
+----
+
+This command modifies the Exchange asset identified with <assetIdentifier>. +
+The "assetIdentifier" argument must be formatted as: <group_id>/<asset_id>/<version>.
+
+Besides the default `--help`, `-f`/`--fields` and `-o`/`--output` options, this command also takes:
+
+[%header,cols="30a,40a,30a"]
+|===
+|Command | Description |  Example
+|--name | New asset name .2+<.<| `exchange asset modify --name newName --tags test,sample`
+|--tags | Comma-separated tags for the asset
+|===
+
+=== exchange asset download
+
+[source,Example]
+----
+> exchange asset download [options] <assetIdentifier> <directory>
+----
+
+This command downloads the Exchange asset identified with <assetIdentifier> to the directory passed in <directory>. +
+The "assetIdentifier" argument must be formatted as: <group_id>/<asset_id>/<version>.
+
+This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
+
+=== exchange asset list
+
+[source,Example]
+----
+> exchange asset list [options] [searchText]
+----
+
+This command lists all assets in Exchange.
+
+[TIP]
+You can specify keywords in searchText to limit results to APIs containing those specific keywords.
+
+Besides the default `--help`, `-f`/`--fields` and `-o`/`--output` options, this command also takes:
+
+[%header,cols="30a,40a,30a"]
+|===
+|Command | Description |  Example
+|--limit | Number of results to retrieve | `exchange asset list --limit 2`
+|--offset | Offsets the amount of APIs passed | `exchange asset list --offset 3`
+|--sort | Sorts the results in the field name passed | `exchange asset list --sort "Latest Version"`
+|===
+
+
+=== exchange asset page download
+
+[source,Example]
+----
+> exchange asset page download [options] <assetIdentifier> <directory> [pageName]
+----
+
+This command downloads the description page specified in [pageName], for the Exchange asset identified with <assetIdentifier> to the directory passed in <directory>. +
+If [pageName] is not specified, this command downloads all pages.
+
+The "assetIdentifier" argument must be formatted as: <group_id>/<asset_id>/<version>. +
+The description page in downloaded in Markdown format. When "name" is not specified, all pages are downloaded.
+
+This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
+
+=== exchange asset page modify
+
+[source,Example]
+----
+> exchange asset page modify [options] <assetIdentifier> <pageName>
+----
+
+This command modifies the description page specified in <pageName>, for the Exchange asset identified with <assetIdentifier>. 
+
+The <assetIdentifier> argument must be formatted as: <group_id>/<asset_id>/<version>. +
+Besides the default `--help`, `-f`/`--fields` and `-o`/`--output` options, this command also takes the `--name` option to set a new asset page name.
+
+=== exchange asset page upload
+
+[source,Example]
+----
+> exchange asset page upload [options] <assetIdentifier> <pageName> <mdPath>
+----
+
+This command uploads an asset description page from the path passed in <mdPath> using the name specified in <pageName> to the Exchange asset identified with <assetIdentifier>. +
+Naming the page "home" makes the uploaded page the main description page for the Exchange asset.
+
+This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
+
+=== exchange asset page delete
+
+[source,Example]
+----
+> exchange asset page delete [options] <assetIdentifier> <pageName>
+----
+
+This command deletes the description page specified in <pageName>, for the asset identified with <assetIdentifier>. +
+If [pageName] is not specified, this command downloads all pages.
+
+[WARNING]
+This command does not prompt twice before deleting. If you send a delete instruction, it does not ask for confirmation.
+
 This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
 
 === runtime-mgr cloudhub-alert list
@@ -2416,6 +2710,9 @@ This command removes the firewall rule from the workers inside the VPC specified
 This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
 
 === use environment
+
+This command is only available for interactive mode.
+
 [source,Example]
 ----
 > use environment [options] <name>
@@ -2424,6 +2721,8 @@ This command makes active the environment specified in <name>. +
 This command does not take any options, except for the default ones: `--help`, `-f`/`--fields` and `-o`/`--output`.
 
 === use business-group
+
+This command is only available for interactive mode.
 
 [source,Example]
 ----
