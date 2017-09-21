@@ -3,9 +3,11 @@
 Non-void operations (such as the Read operation to the File connector) can store the message data that they return in a target variable. Once defined, target variables are available for use within the flow. You define a target variable through these fields:
 
 * Target Variable (`target`): Name of the variable in which you want to store message data.
-* Target Value (`targetValue`): Value of the data to store in the target variable. By default, the value is the message payload, but it can also store the entire message (the payload and any attributes) or just attributes. Note that you cannot store variables in a target variable.
+* Target Value (`targetValue`): Value of the data to store in the target variable. By default, the value is the message payload (`payload`). It can also store the entire message (using the keyword `message` for the payload and any attributes), just attributes (using the keyword `attributes`), or any supported data type, such as an object or string. However, this field does not accept the keyword `vars`, so you cannot use `vars.someOtherVar` as the value.
 
-For example, a Read operation with these settings stores payload of `readme.txt` in `myVar` by default:
+It is important to understand that setting a target variable changes the typical course of the message through the flow. Normally, an operation returns and passes on a different message than it receives. However, when you set a target variable, the _next_ component in the flow receives the _same message_ as the operation with the target variable received. For example, assume you have a flow consisting of component A, followed by component B with a target value of `myMessage`, and then component C. In this case, component C will receive the same message that B received from A. This behavior can be useful for scenarios where you want to bypass the normal message flow and perhaps do something with the value stored in the target variable at a more distant place in the flow.
+
+Here, a Read operation with these settings stores payload of `readme.txt` in `myVar` by default:
 
 * Path: `readme.txt`
 * Target Variable: `myVar`
@@ -20,7 +22,7 @@ Here, the entire message is stored in `myVar`:
 
 * Path: `readme.txt`
 * Target Variable: `myVar`
-* Target Value: `message`
+* Target Value: `message` in Design Center, `#[message]` in Anypoint Studio.
 +
 This is an XML example of the same settings in Anypoint Studio:
 +
@@ -32,7 +34,7 @@ Here, only the file size is stored in `myVar`:
 
 * Path: `readme.txt`
 * Target Variable: `size`
-* Target Value: `attributes.size`
+* Target Value: `attributes.size` in Design Center, `#[attributes.size]` in Anypoint Studio.
 +
 This is an XML example of the same settings in Anypoint Studio:
 +
@@ -53,52 +55,49 @@ The scenarios describe some cases where you might use target variables.
 Assume that you want to log the entire message (payload and attributes) returned by a Database connector operation, such as Insert. Instead of using a Set Variable component after the operation, you can instead capture the message data by adding a target variable directly to the operation:
 
 * Target Variable for the Insert operation: `result`
-* Target Value: `message` or `#[message]`
+* Target Value: `message` in Design Center, `#[message]` in Anypoint Studio.
 
 Then you might retrieve the result from the Logger like this:
 
-* Message: `'This is the resulting message: ' ++ vars.result.payload ++ vars.result.attributes`
+* Message: `[vars.result.payload ++ vars.result.attributes]`
 
 Assume that you want to log the name of the first entry in a customer database. You can define a target variable like this one through the Select operation of the Database connector:
 
 * Target Variable for the Select operation: `customerName`
-* Target Value: `payload[0].name` or `#[payload[0].name]`
+* Target Value: `payload[0].name` in Design Center, `#[payload[0].name]` in Anypoint Studio.
 
 Then you might retrieve the result from the Logger like this:
 
 * Message: `'Customer name is: ' ++ vars.customerName`
 
-== Scenario: Using a Target Variable as Input to an Operation
+== Scenario: Using the Stored Value as Input to an Operation
 
 Assume that you want to access a customer's most recent order by its order number. You might create a target variable called `lastOrder` within an operation (such as the Retrieve operation to the Object Store connector) to capture the `payload` containing that order number.
 
 * Target Variable for the Retrieve operation: `lastOrder`
 
-Then you can use the Input Parameter of another operation in your flow (such as the Select operation to the Database connector) to make the target variable available for use in your query, for example:
+Then you can use the Input Parameter of another operation in your flow (such as the Select operation to the Database connector) to make the variable available for use in your query, for example:
 
 * Input Parameter definition for the Select operation:
  ** Key: `lastOrder`
- ** Value: `vars.lastOrder`
+ ** Value: `vars.lastOrder` in Design Center, `#[vars.lastOrder]` in Anypoint Studio.
 * Query for the Select operation that uses the `lastOrder` key to specify the order number:
 +
 `SELECT * FROM ORDERS WHERE customerNumber = "353" and orderNumber > :lastOrder`
 
-////
-TODO: VERIFY THIS BEFORE PUBLISHING
-== Use Case: Using a target variable to retain the payload of a bulk operation
+== Scenarios: Bypassing the Normal Message Flow
 
-The BULK INSERT operation to the Database connector returns a success message that overrides the Database payload. You can create a target variable to prevent this override, for example:
+Assume that you want to insert a number of records into a database, then pass those same records on for further processing by the next component in your flow. Though you want to use the Bulk Insert operation to the Database connector to insert the records, the operation returns a success message. So, to pass on the records to the next component instead of passing on the returned success message, you can store success message in a target variable, for example:
 
 * Target Variable: `syncResult`
 * Target Value: `payload`
 
-Then you can access that payload for further operations. For example, you might create a script in the Store operation of the Object Store connector to get the highest `orderNumber` value in the payload: `max(syncResult.orderNumber)`.
-////
+Then the next operation in your flow can process the records that Bulk Insert received. For example, you might use a DataWeave function in the Store operation to return the highest `orderNumber` value from the record payload: `max(payload.orderNumber)`. Here, `payload` is the same payload received by Bulk Insert.
 
 == See Also
 
 * link:/mule-user-guide/v/4.0/about-mule-event[About the Mule Event]
 
-* link:/mule-user-guide/v/4.0/about-mule-event[About the Mule Event]
-
 * link:/connectors/v/latest/database-sync-workflow[Workflow: Synchronize a Database]
+
+//* link:/mule-user-guide/v/4.0/target-variable-scenarios[Target Variable Scenarios]
