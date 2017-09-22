@@ -1,52 +1,96 @@
-= To Use For Each Over a Collection (Design Center)
+= To Drill Down into JSON (Design Center)
 
-If you're sending data as a collection (a list, an array, or a map) through your flow, you can process each element in the collection separately. This is similar to using a For Each statement in most programming languages.
+This procedure describes how to use For Each to access nested JSON elements in an object. For Each iterates over and processes each element separately. For example purposes, each time the process repeats, you log the value of the element and the counter. In a real-world situation, instead of a simple log operation, you might insert each element in a database for analysis or perform other operations. 
 
-You achieve this by placing components inside a For Each scope. When a Mule message containing a collection flows through a For Each scope, it is split into a series of separate Mule messages. The elements in the scope process these separate Mule messages one at a time. Once the messages have all gone through what's in the scope, they are merged back as a collection into a single Mule message.
+To configure For Each, you use dot notation in the expression to specify the path to the JSON element of interest. For example, to apply some processing to _bs_ in the _company_ object, you set the Collection field to payload.*company.bs. The asterisk prefix accesses all members of _company_.
 
-. In Design Center add a For Each scope to your flow.
-. Keep the default settings and close the settings panel.
-+
-Default settings expect the payload to be a collection of elements. Each one of these collection elements is used separately inside the scope.
-+
-. Within the For Each scope, click on the plus sign and add one or more components.
-+
-image:for-each-task-design-center-afce9.png[]
-+
-These components receive separate elements of the collection as their input.
-
-== Going Over a Nested Collection
-
-If the collection you want to go over is nested in a data structure, you can tell the For Each scope where to find the collection to use. After the scope is done going over each element in the collection, it rebuilds the original data structure it received besides the collection it worked with.
-
-
-. Open a For Each card to edit its properties.
-. Change the Collection field to point to the collection you want to iterate over.
-+
-For example, in the object below, if you want to go over the collection nested in `field3`, you must set the Collection field to `payload.myobject.field3`.
-+
 [source,JSON,linenums]
 ----
-{
-  "myobject": {
-     "field1": "some-value",
-     "field2": 42,
-     "field3": [
-       { "element1": {"a": 1, "b":2}},
-       { "element2": {"a": 3, "b":4}},
-       { "element3": {"a": 5, "b":6}},
-       { "element4": {"a": 7, "b":8}}
-     ]
-   }
-}
+[
+  {
+    "id": 1,
+    "name": "Leanne Graham",
+    "username": "Bret",
+     ...
+      }
+    },
+    "phone": "1-770-736-8031 x56442",
+    "website": "hildegard.org",
+    "company": {
+      "name": "Romaguera-Crona",
+      "catchPhrase": "Multi-layered client-server neural-net",
+      "bs": "harness real-time e-markets"
+    }
+  },
+  ...
+  }
+]
 ----
 
+In the configuration, you use a default batch size of one because the example data you use consists of only 10 objects. If you have 200 objects and a batch size of 50, the app iterates over 50 objects at a time, returning four separate results, one for each batch.
+
+This procedure builds on the procedures to create a basic Mule app and to add an expression to make dynamic requests. After performing these procedures, you have HTTP listener and HTTP request in the Consume API flow, and you can perform the following steps to add For Each to the flow. 
+
+. Proceed to the next step if the app is running. Otherwise, click Deploy. Execute the flow as follows:
++
+* Click Copy Link.
++
+* Paste the link in a browser or client, and type */getpath?path=users* at the end.
++
+The HTTP Listener hears the request, and starts the app. The JSON Placeholder profiles of all users appear in the browser. 
++
+. In Design Center, add and configure For Each:
++
+* Click image:arrange-cards-flow-design-center-e256e.png[add For Each] after HTTP Request. 
+* Select For Each. 
+* Configure For Each as follows:
++
+** In Collection, type the expression, using dot expression, to access the list, array, or map you want to iterate over . For example, type the following expression to access the _bs_ element in _company_:
+*payload.*company.bs*
++
+** In Batch Size, accept the default 1. 
+** In Root Message Variable Name, accept the default.
+** In Counter Variable Name, change the default to drillcounter just for example purposes.
++
+image::foreach-configuration.png[]
++
+* Close For Each.
++
+. Within For Each, click image:arrange-cards-flow-design-center-e256e.png[add Logger] and select Logger. Configure Logger as follows:
++
+* In Message, click image:graphically-construct-mapping-design-center-task-8a822.png[].
+* Type the following expression:
++
+*payload ++ " count is: " ++ variables.drillcounter*
++
+* Close the Logger.
+. To the right of and outside of For Each, add another Logger. Configure Logger as follows:
++
+* In Message, click image:graphically-construct-mapping-design-center-task-8a822.png[].
+* Type the following expression:
++
+*payload*
++
+. Click Deploy, and run the app as described in step 1. Check the logs to see 10 messages, one for each iteration followed by the last message that contains the original input to the flow.
++
+----
+INFO15:34:35harness real-time e-markets count is: 1
+INFO15:34:35synergize scalable supply-chains count is: 2
+INFO15:34:35e-enable strategic applications count is: 3
+INFO15:34:35transition cutting-edge web services count is: 4
+INFO15:34:35revolutionize end-to-end systems count is: 5
+INFO15:34:35e-enable innovative applications count is: 6
+INFO15:34:35generate enterprise e-tailers count is: 7
+INFO15:34:35e-enable extensible e-tailers count is: 8
+INFO15:34:35aggregate real-time technologies count is: 9
+INFO15:34:35target end-to-end models count is: 10
+INFO15:34:35[{id=1, name=Leanne Graham, username=Bret, email=Sincere@april.biz, address={street=Kulas Light, ...
+----
 
 
 == See also
 
-* link:https://mule4-docs.mulesoft.com/mule-user-guide/v/4.0/for-each-scope-concept[For Each Scope Concept]
+* link:/design-center/v/1.0/to-create-a-new-project[To Create a Basic Mule App]
+* link:/design-center/v/1.0/design-dynamic-request-task[To Dynamically Change the URL of a Request]
 
-* link:https://mule4-docs.mulesoft.com/mule-user-guide/v/4.0/about-flows[About Flows]
 
-* link:https://mule4-docs.mulesoft.com/mule-user-guide/v/4.0/about-mule-event[About Mule Event]
