@@ -1,0 +1,68 @@
+= Example: To define a global ObjectStore
+:keywords: ObjectStore, global, define
+:toc:
+:toc-title:
+
+toc::[]
+
+= To define a new global Object Store
+
+Global object stores are defined as top level elements and are given a name through which other components can reference them. For example, let’s suppose we want to create a store for access tokens:
+
++
+---
+<os:object-store name="tokensStore"
+   entryTtl="1"
+   entryTtlUnit="HOURS"
+   maxEntries="100"
+   persistent="true"
+   expirationInterval="30"
+   expirationIntervalUnit="MINUTES" />
+---
++
+
+Here we have a store which:
+
+* Is persistent: Values are stored in disk and can survive a system restart. Setting persistent to false will result in a transient store which only stores information in memory.
+* It’s expirable: There will be an expiration thread that runs every 30 minutes and discards the elements that have exceeded their TTL or have exceeded the maxEntries limit
+* Has a 1 hour TTL: Because these tokens are highly sensitive, we don’t want to have them for more than an hour. Every entry older than that will be automatically deleted
+* It has a size limit: If the store grows to more than 100 entries, the exceeding items will be discarded when the expiration thread runs.
+
+*NOTE*: This is just an example. We don’t necessarily recommend that an ObjectStore holding access tokens should be configured like this.
+
+Now that we have our store, let’s configure the Salesforce connector to use it:
+
++
+---
+<sfdc:config-with-oauth name="salesforce-oauth"
+consumerKey="${salesforce.consumerKey}"
+consumerSecret="${salesforce.consumerSecret}">
+        <sfdc:oauth-callback-config domain="localhost" localPort="8082"
+              remotePort="8082" path="callback" connector-ref="HTTP_HTTPS" />
+        <sfdc:oauth-store-config objectStore="tokensStore" />
+</sfdc:config-with-oauth>
+---
++
+
+In the configuration above shows a Salesforce connector authentication through OAuth, and storing the tokens in the store we just created.
+
+= To define a new Private Object Store
+
+Another alternative is to define a private object store. One which is not defined as a global element and doesn’t have a referable name. For example:
+
++
+---
+<idempotent-message-validator idExpression="#[payload]" valueExpression="#[payload]">
+  <os:private-object-store
+                           entryTtl="20"
+                           entryTtlUnit="MILLISECONDS"
+                           maxEntries="20"
+                           persistent="false"
+                           expirationInterval="20"
+                           expirationIntervalUnit="MILLISECONDS"/>
+</idempotent-message-validator>
+---
++
+
+In this example, we gave the idempotent message validator a custom store which only it can access. 
+
