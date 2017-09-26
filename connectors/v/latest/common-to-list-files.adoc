@@ -1,0 +1,135 @@
+= To List Files with a Connector
+:keywords: file, ftp, connector, operation
+:toc:
+:toc-title:
+
+toc::[]
+
+For Anypoint Studio, Design Center:
+include::include_link_list.adoc[tags=file-connector]
+include::include_link_list.adoc[tags=ftp-connector]
+
+Uses the connector's *List* operation to list all files in a directory that match file properties. The operation can recurse through subdirectories.
+
+. After adding the connector to your flow, select the *List* operation. For example, you might place it inside a *Poll* or *File Listener* element.
+. Set up or select a configuration for the connector (see link:file-to-set-up-a-file-connector-config[To set up a File connector]).
+. Provide a *Directory Path* to the
+. Perform any optional tasks you need:
+  ** Check *Recursive* to include the contents of subdirectories.
+  ** Provide *File Matching Rules*. For an example, see link:common-to-match-file-properties[To Match File Properties with a Connector].
+  ** Set a *Target Variable* to store output of the operation, for example, _TODO, TODO_.
+
+[[see_also]]
+== See Also
+include::include_link_list.adoc[tags=tech-ref-ftp]
+
+////
+//List files on demand. In combination with the file matcher, this capability makes it possible to use this connector in tandem with other Mule elements such as `<poll>` or `<watermark>`. The `list` operation returns a `TreeNode`.
+
+////
+Another capability added to this connector is the ability to list files on demand. In combination with the file matcher, this capability makes it possible to use this connector in tandem with other mule elements such as the <poll> element or the <watermark> component.
+
+from reqs doc -
+_TODO: Matchers can be set locally on an operation or referenced from a global element, such as the List, but not globally and locally. NOT CLEAR if setting on watcher affects settings for operations._
+
+
+_TODO: PROVIDE AN EXAMPLE THAT USES POLLING AND ONE THAT USES THE FILE LISTENER_
+
+===== test case =====
+<file:config name="file">
+    <file:connection workingDir="${workingDir}" />
+</file:config>
+
+<file:matcher name="globalMatcher" directory="true" filenamePattern="sub*" />
+
+<flow name="list">
+    <file:list directoryPath="#[path]" recursive="#[recursive]" />
+</flow>
+
+<flow name="listWithEmbeddedPredicate">
+    <file:list directoryPath="#[path]" recursive="#[recursive]">
+        <file:match-with>
+            <file:matcher filenamePattern="*[1-2]*.html" />
+        </file:match-with>
+    </file:list>
+</flow>
+
+<flow name="listWithGlobalMatcher">
+    <file:list directoryPath="#[path]" recursive="#[recursive]" matchWith="globalMatcher"/>
+</flow>
+=====
+
+
+The syntax looks like this:
+
+
+<file:list directoryPath="~/dropfolder"
+    recursive="true|false"
+    matchWith="">
+        <file:match-with>
+    <file:matcher directory="true" />
+    </file:match-with>
+</file:list>
+
+The example above lists all the files in ~/dropfolder
+The recursive attribute specifies if the list should extend to all sub directories. This is an optional attribute which defaults to false.
+Just like with the watch element, matcher is an optional element to reference a global matcher. You can also specify it as an inner element like in the example above, but remember that you can’t do both.
+
+The output of this message will be a List<Message>. Each of the messages in the list corresponds to a file found in that directory. The message payload will be an InputStream with the file’s content and the attributes will be the corresponding FileAttributes object. If a sub-directory was found, then the payload will be null.
+
+If a sub-directory is found and recursive was set to true, then the files contained in that subdirectory will be listed immediately after the subdirectory.
+
+NOTE: Notice that there’s no autoDelete, copyTo, moveTo or any attribute of the sort. If you need that kind of logic, you’ll have to do it yourself
+NOTE 2: All of these attributes accepts expressions
+
+Navigation example
+
+<flow name="list">
+    <file:list directoryPath="~/dropFolder">
+<file:match-with>
+<file:matcher filename-pattern="*.csv" />
+</file:match-with>
+    </file:list>
+    <foreach>
+        <choice>
+            <when expression="message.attributes.isDirectory()">
+                <flow-ref name="processDirectory" />
+            </when>
+            <otherwise>
+                <logger message="Found file #[message.attributes.path] which content is #[payload]" />
+            </otherwise>
+        </choice>
+    </foreach>
+</flow>
+
+GOTCHA: Notice the payload expression. Even though List returns a list of messages, the payload is actually mapped to the actual payload of the current message. The second .payload is to access the actual InputStream that the message holds.
+
+NOTE: This approach is useful in many scenarios such as file synchronization and makes it easy to run transformations which can consider the whole tree. However, for uses cases in which you want to recursively walk a file tree this is kind of cumbersome, mainly because Mule is no friend of recursive flows and we don’t want to generate usability which requires our users to handle recursive algorithms. For such cases, look at the walk operation
+Using it with watermark
+
+<flow name="syncWithWatermark" processingStrategy="synchronous">
+    <poll>
+        <fixed-frequency-scheduler frequency="1" timeUnit="HOURS" />
+        <watermark variable="timestamp" default-expression="#[server.dateTime]"
+ selector="MAX" selector-expression="#[payload.metadata.lastModifiedTime]" />
+
+
+        <file:list basePath="~/dropfolder">
+            <file:match-with>
+<file:matcher updatedSince="#[flowVars['timestamp']]" />
+</file:match-with>
+</file:list>
+    </poll>
+
+
+    <flow-ref name="doYourSyncMagic" />
+</flow>
+
+<file:list directoryPath="~/dropfolder"
+	recursive="true|false"
+	matchWith="">
+		<file:match-with>
+	<file:matcher directory="true" />
+	</file:match-with>
+</file:list>
+////

@@ -1,0 +1,198 @@
+To Listen for File System Events
+:keywords: file, connector, matcher, directory, listener
+:toc:
+:toc-title:
+
+toc::[]
+
+Associated products: Anypoint Studio, Design Center
+
+Listens for file creation, deletion, or update events that take place within a directory or on files in its subdirectories.
+
+Applicable connectors:
+link:about-file-connector[File], link:about-ftp-connector[FTP]
+//* Reference: _ANY REFERENCE FOR THIS?_
+
+. Set up a configuration for the connector (see link:to-set-up-a-file-connector-config[To set up a file connector configuration] ).
+. Specify a *Directory* on which the listener operates. Otherwise, the listener will default to your working directory. (_QUESTION: DO YOU USE THE ENDPOINT SYNTAX DESCRIBED HERE? https://docs.mulesoft.com/mule-user-guide/v/3.8/file-transport-reference.html, e.g., file:///temp/files for Unix and file:///C:/temp/files for Windows?, and what on that page needs to be get updated. What there is out of date for 4.0? What new stuff needed?_)
+. Perform any other tasks that you need:
+  * Change triggering events for the listener, whether a file creation, deletion, or update. By default, file creation and update events are triggers.
+  * Listen recursively for events in the directory and its subdirectories. By default, recursion is disabled.
+  * Use a matcher to identify file properties that trigger the listener, such as a filename pattern, directory, or file creation date. Files that do not match are are filtered out.
+  * Set a policy for a redelivery of the same message. _WHEN TO USE?_
+  * Set a reconnection strategy, such as a number and frequency of connection attempts, to follow in case of connectivity issues,
+  * Differentiate your response depending on whether the trigger is a creation, deletion, or update event. This step uses the **Listener File Attribute**, **Event Type**.
+
+
+
+==== MY NOTES ====
+_OUTPUT of ATTRIBUTE TYPES: Listener File Attributes? creation time, directory, event type, etc.? WHAT IS THIS FOR? EXAMPLES OF USES? Creation time, Directory, EVENT TYPE, Last Access time, Last Modified time, Name, Path, Regular file?, Size, Symbolic LInk. ONLY DIFF to LOCAL FILE ATTRIBUTES is that the LISTENER File Attributes contain EVENT TYPE_
+
+===== test case =====
+From: directory-listener-config.xml
+<file:config name="file">
+    <file:connection workingDir="${workingDir}" />
+</file:config>
+
+<file:matcher name="matcher" filenamePattern="matchme.txt" />
+
+<flow name="listenWithoutMatcher">
+    <file:directory-listener directory="matcherless" recursive="true" notifyOnDelete="true" />
+    <flow-ref name="onEvent"/>
+</flow>
+
+<flow name="listenTxtOnly">
+    <file:directory-listener directory="withMatcher" recursive="true" matchWith="matcher" notifyOnDelete="true" />
+    <set-payload value="Dr. Manhattan" />
+    <flow-ref name="onEvent"/>
+</flow>
+
+<sub-flow name="onEvent">
+    <object-to-string-transformer />
+    <expression-component>mel:org.mule.extension.file.DirectoryListenerFunctionalTestCase.onMessage(message)</expression-component>
+</sub-flow>
+
+
+===Example: Differentiating action based on event type===
+You can use the event type attribute (CREATE,  UPDATE, or DELETE) to differentiate the treatment of a file. The `FileAttributes` instance contained in the created `Message` contains the triggered event type.
+
+<flow name="inbound">
+<file:directory-listener directory="~/drop-folder" />
+<choice>
+    <when expression="#[message.attributes.eventType == 'CREATE'">
+        <logger message="file created" />
+    </when>
+    <when expression="#[message.attributes.eventType == 'UPDATE'">
+        <logger message="file updated" />
+    </when>
+    <when expression="#[message.attributes.eventType == 'DELETE'">
+        <logger message="file deleted" />
+        </when>
+        <otherwise>
+            <logger message="Impossible but wanted to show the DELETED key" />
+        </otherwise>
+    </choice>
+</flow>
+: value
+
+===Example: NEED_DESCRIPTION====
+<file:directory-listener directory="~/drop-folder"
+    notifyOnCreate="true|false"
+    notifyOnUpdate="true|false"
+    notifyOnDelete="true|false"
+recursive="true|false"
+matchWith="optionallyAMatcherReference" />
+
+[[listen-on-dir]]
+=== Configure as a Directory Listener
+
+The listener responds to three types of events:
+
+* file creation
+* file update
+* file deletion
+
+Using the connector as a listener (message source) is useful in cases where a flow should respond to changes to the filesystem such as trigger files, transaction files added to a drop folder, settings files updated, directory changes, etc.
+
+[NOTE]
+It is possible to achieve the same with a `<file:list>` operation inside a poll scope, with `<watermark<`. However, this may be more resource intensive. See more in the *Notes* section.
+
+.Syntax for configuring the connector as a listener
+[source,xml,linenums]
+----
+<file:directory-listener directory="~/drop-folder"
+	notifyOnCreate="true|false"
+	notifyOnUpdate="true|false"
+	notifyOnDelete="true|false"
+recursive="true|false"
+matchWith="optionallyAMatcherReference" />
+----
+
+[NOTE]
+None of the above attributes can accept expressions.
+
+.Example for listening on a drop folder
+[source,xml,linenums]
+----
+<flow name="inbound">
+<file:directory-listener directory="~/drop-folder" />
+<logger message="['There was a ' + message.attributes.eventType + ' in file ' + message.attributes.path]" />
+</flow>
+----
+
+.Example for logging based on event type
+[source,xml,linenums]
+----
+<flow name="inbound">
+<file:directory-listener directory="~/drop-folder" />
+<choice>
+	<when expression="#[message.attributes.eventType == 'CREATE'">
+		<logger message="file created" />
+	</when>
+	<when expression="#[message.attributes.eventType == 'UPDATE'">
+		<logger message="file updated" />
+	</when>
+	<when expression="#[message.attributes.eventType == 'DELETE'">
+		<logger message="file deleted" />
+		</when>
+		<otherwise>
+			<logger message="Impossible but wanted to show the DELETED key" />
+		</otherwise>
+	</choice>
+</flow>
+
+[[poll-watermark]]
+=== Poll a Directory or File
+
+[NOTE]
+Although polling is a powerful and reliable solution, it's not an efficient one. Use the connector as a listener to leverage operating system notifications. It is much more resource efficient than using a poll scope to wrap the listener.
+
+[source,xml,linenums]
+----
+<flow name="syncWithWatermark" processingStrategy="synchronous">
+	<poll>
+		<fixed-frequency-scheduler frequency="1" timeUnit="HOURS" />
+		<watermark variable="timestamp" default-expression="#[server.dateTime]"
+ selector="MAX" selector-expression="#[payload.metadata.lastModifiedTime]" />
+		<file:list basePath="~/dropfolder">
+			<file:match-with>
+<file:matcher updatedSince="#[flowVars['timestamp']]" />
+</file:match-with>
+</file:list>
+	</poll>
+	<flow-ref name="doYourSyncMagic" />
+</flow>
+
+
+======= from feature doc =======
+NOTE: the matchWith attribute will be discussed on the next section
+NOTE 2: None of these attributes accepts expressions
+NOTE 3: When directory is not present the file:config workingDir is used
+
+The declaration above will place a file watcher on the directory of the given path (if the path doesn’t map to a directory then it will throw a ConfigurationException)
+
+The watcher will listen for three types of events:
+
+File Creation
+File update
+file deletion
+
+You can optionally disable up to two of those types of events using the optional notifyOnCreate, notifyOnUpdate or notifyOnDelete attributes. If you disable all three, then the watch is futile and a ConfigurationException will be thrown).
+
+NOTE: The above will also include directories
+
+Additionally, you can use the recursive attribute (defaults to false) to also place watchers on sub directories.
+
+Per each file system event which triggers the watcher, a MuleEvent will be sent to the owning flow.
+Payload types
+
+What is the payload when this source triggers?
+The payload will be a FileInputStream instance when the triggered event is a create or an update, but when a file is deleted as the file no longer exists anymore the MuleMessage will be carrying a NullPayload. NullPayload will also be used when the event refers to the creation of a directory. In either cases the Message will carry an specific FileAttributes instance.
+
+<flow name="inbound">
+<file:directory-listener directory="~/drop-folder" />
+<logger message="['There was a ' + message.attributes.eventType + ' in file ' + message.attributes.path]" />
+</flow>
+
+[[see_also]]
+== See Also
