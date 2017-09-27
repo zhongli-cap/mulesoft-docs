@@ -69,7 +69,6 @@ NOTE: Read more about link:/mule-user-guide/v/3.7/installing-connectors[Installi
 
 To use the LDAP connector in a Mule application, you must configure a global LDAP configuration element that can be used by as many LDAP connectors as you require for your application.
 
-NOTE: Read more about link:/mule-user-guide/v/3.7/global-elements[Global Elements].
 
 [[config-global]]
 == Setting up the Global Configuration
@@ -115,7 +114,7 @@ link:/mule-user-guide/v/3.7/deploying-to-multiple-environments[Deploying to Mult
 [source,xml,linenums]
 ----
 <mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.7.1"
+	xmlns:spring="http://www.springframework.org/schema/beans"
   xmlns:ldap="http://www.mulesoft.org/schema/mule/ldap"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
@@ -128,6 +127,7 @@ http://www.mulesoft.org/schema/mule/ldap http://www.mulesoft.org/schema/mule/lda
 ----
 +
 . Create a global element for LDAP configuration using the following global configuration code:
++
 [source,xml,linenums]
 ----
 <ldap:config name="LDAP_Configuration" authDn="${config.principal.dn}" authPassword="${config.password}" url="${config.url}" doc:name="LDAP: Configuration">
@@ -148,21 +148,21 @@ The LDAP connector is an operation-based connector, which means that when you ad
 [%header,cols="30a,70a"]
 |===
 |Operation |Description
-| *Bind* |  Authenticates against the LDAP server. This occurs automatically before each operation but can also be performed on request.
-| *Search* |  Performs an LDAP search in a base DN with a given filter.
-| *Search one* |  Performs an LDAP search that is supposed to return a unique result.
-| *Paged result search* |  Performs an LDAP search and streams result to the rest of the flow.
-| *Lookup* |  Retrieves a unique LDAP entry.
-| *Exists* |  Checks whether an LDAP entry exists in the LDAP server or not.
-| *Add* |  Creates a new LDAP entry.
-| *Add single-valued attribute* |  Adds a specific single-valued attribute to an existing LDAP entry.
 | *Add multi-valued attribute* |  Adds a specific multi-valued attribute to an existing LDAP entry.
-| *Modify* |  Updates an existing LDAP entry.
-| *Modify single-valued attribute* |  Updates specific single-valued attribute of an existing LDAP entry.
-| *Modify multi-valued attribute* |  Updates specific multi-valued attribute of an existing LDAP entry.
-| *Delete* |  Deletes an existing LDAP entry.
-| *Delete single-valued attribute* |  Deletes specific single-valued attribute to an existing LDAP entry.
+| *Add single-valued attribute* |  Adds a specific single-valued attribute to an existing LDAP entry.
+| *Add* |  Creates a new LDAP entry.
+| *Bind* |  Authenticates against the LDAP server. This occurs automatically before each operation but can also be performed on request.
 | *Delete multi-valued attribute* |  Deletes specific multi-valued attribute to an existing LDAP entry.
+| *Delete single-valued attribute* |  Deletes specific single-valued attribute to an existing LDAP entry.
+| *Delete* |  Deletes an existing LDAP entry.
+| *Exists* |  Checks whether an LDAP entry exists in the LDAP server or not.
+| *Lookup* |  Retrieves a unique LDAP entry.
+| *Modify multi-valued attribute* |  Updates specific multi-valued attribute of an existing LDAP entry.
+| *Modify single-valued attribute* |  Updates specific single-valued attribute of an existing LDAP entry.
+| *Modify* |  Updates an existing LDAP entry.
+| *Paged result search* |  Performs an LDAP search and streams result to the rest of the flow.
+| *Search one* |  Performs an LDAP search that is supposed to return a unique result.
+| *Search* |  Performs an LDAP search in a base DN with a given filter.
 |===
 
 [[use-cases-and-demos]]
@@ -348,6 +348,32 @@ return entryToAdd
 |===
 +
 . Finally drag **Set Payload** transformer to set the value to "Flow Successfully Completed".
+
+== Retrieve a Group in Active Directory With More Than 1500 Members
+
+The range parameter is mandatory in Windows Active Directory to retrieve an object with more than 1500 items. 
+
+For the LDAP connector, specify this range and the other attributes you want to retrieve. 
+
+To handle this task:
+
+* In the From Expression input, use: `#[['objectCategory','objectClass','distinguishedName','name','member;range=0-999']]` - This retrieves the listed attributes and the first 1000 values of the member attribute.
+* Using the option Create Object Manually, you should add each attribute as an entry in the collection. For the range attribute, you should specify the range in this way: `member;range=0-999`
++
+Or in the Configuration XML:
++
+[source,xml,linenums]
+----
+<ldap:lookup config-ref="LDAP" dn="DN=CN=testgroup1,OU=groups,DC=MULESUPPORT,DC=NET" doc:name="Search for users in LDAP"> 
+	<ldap:attributes> 
+		<ldap:attribute>objectCategory</ldap:attribute> 
+		<ldap:attribute>objectClass</ldap:attribute> 
+		<ldap:attribute>distinguishedName</ldap:attribute> 
+		<ldap:attribute>name</ldap:attribute> 
+		<ldap:attribute>member;range=0-999</ldap:attribute> 
+	</ldap:attributes> 
+</ldap:lookup> 
+----
 
 [[example-code]]
 === XML Editor and Use Case Code
