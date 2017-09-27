@@ -68,7 +68,7 @@ Mule supports three different types of transactions: single resource, multiple r
 ====
 *Multi-source vs. XA* +
 
-While http://stage.mulesoft.org/documentation/display/current/XA+Transactions[XA Transactions] offer similar functionality, link:/mule-user-guide/v/3.7/multiple-resource-transactions[Multiple Resource transactions] use less overhead.  XA transactions are more reliable. Both can include JDBC resources. For a discussion of different approaches – including the 1.5 phase commit concept which Multiple Resource transactions use – see the http://www.javaworld.com/javaworld/jw-01-2009/jw-01-spring-transactions.html[JavaWorld article on distributed transactions].
+While XA Transactions offer similar functionality, Multiple Resource transactions use less overhead.  XA transactions are more reliable. Both can include JDBC resources. For a discussion of different approaches – including the 1.5 phase commit concept which Multiple Resource transactions use – see the http://www.javaworld.com/javaworld/jw-01-2009/jw-01-spring-transactions.html[JavaWorld article on distributed transactions].
 ====
 
 == Assumption
@@ -119,7 +119,7 @@ image:jms_transaction.png[jms_transaction]
 | |ALWAYS_JOIN |JMS VM JDBC |When it receives a message, Mule always expects a transaction to be in progress, and always joins the transaction. If no transaction is in progress, Mule throws an exception.
 | |JOIN_IF_POSSIBLE |JMS   VM JDBC |_Default_ When it receives a message, Mule joins the current transaction if one is available. Otherwise, Mule does not begin a transaction.
 | |NOT_SUPPORTED |JMS VM JDBC |When it receives a message, this outbound connector executes _outside_ the transactional operation; the transaction continues and does not fail.
-|*Timeout* |- |JMS  VM JDBC |Insert an integer to represent the number of milliseconds (ms) that Mule allows to pass before it ends the transaction.
+|*Timeout* |- |JMS  VM JDBC |Insert an integer to represent the number of milliseconds (ms) that Mule allows to pass before it ends the transaction. *Important:* The timeout transaction is only taken into account in XA transactions. 
 |===
 
 . If applying an XA transaction type to your connector, you have the option to check the *Interact With External* box. When checked, Mule acknowledges transactions that began externally. For example, if you set the transaction Action to BEGIN_OR_JOIN, and check *Interact With External*, Mule joins any transaction that is already in progress when it receives a message, regardless of whether the transaction began outside of Mule.
@@ -155,7 +155,7 @@ Use link:/mule-user-guide/v/3.6/transactions-configuration-reference[Transaction
 | |ALWAYS_JOIN |JMS   VM JDBC |When it receives a message, Mule always expects a transaction to be in progress, and always joins the transaction. If no transaction is in progress, Mule throws an exception.
 | |JOIN_IF_POSSIBLE |JMS   VM JDBC |When it receives a message, Mule joins the current transaction if one is available. Otherwise, Mule does not begin a transaction.
 | |NOT_SUPPORTED |JMS VM JDBC |When it receives a message, this outbound connector executes _outside_ the transactional operation; the transaction continues and does not fail.
-|*timeout* |- |JMS   VM JDBC |Insert an integer to represent the number of milliseconds (ms) that Mule allows to pass before it ends the transaction.
+|*timeout* |- |JMS   VM JDBC |Insert an integer to represent the number of milliseconds (ms) that Mule allows to pass before it ends the transaction. *Important:* The timeout transaction is only taken into account in XA transactions. 
 |*interactWithExternal* |true |JMS VM JDBC
 |When set to true, Mule acknowledges transactions that began externally. For example, if you set the transaction action to BEGIN_OR_JOIN, and set interactWithExternal to true, Mule joins any transaction that is already in progress when it receives a message, regardless of whether the transaction began outside of Mule.
 |===
@@ -291,6 +291,7 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
 * If you apply an XA transaction to multiple connectors in your flow, be sure to configure the connectors to use **XA-enabled resources**.
 * If you apply an XA transaction to a JMS inbound connector in your flow, you have the option of specifying the polling frequency of the queue. Access link:/mule-user-guide/v/3.7/xa-transactions[XA Transactions] for configuration details.
 * Mule can manage** non-transactional outbound connectors.** By default, an outbound connector from a non-transactional transport ignores an active transaction rather than rejecting it. In other words, the default transactional action for such connectors is no longer `NONE`. The example code below illustrates this behavior. Mule processes messages it receives from the VM queue synchronously and transactionally. The file transport in the code example is not transactional thus, writing to the file is not part of the transaction. However, if a message throws an exception while Mule is creating the file, Mule rolls back the transaction and reprocesses the message. This example is, in effect, a multiple resource transaction.
+* The timeout transaction is only taken into account in XA transactions. 
 
 *Namespace*:
 

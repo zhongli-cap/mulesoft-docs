@@ -25,7 +25,7 @@ The link:/mule-user-guide/v/3.8/dataweave-quickstart[DataWeave Quickstart Guide]
 
 .DataWeave
 [source,DataWeave, linenums]
-----
+---
 %dw 1.0
 %output application/json
 ---
@@ -101,6 +101,7 @@ The link:/mule-user-guide/v/3.8/dataweave-quickstart[DataWeave Quickstart Guide]
 
 Follow along to see how to use the link:/mule-user-guide/v/3.8/dataweave-operators#map[`map`] operator. The `as` operator is also featured in this example. Take an XML list of books and use DataWeave to output a JSON version of the book list. It goes through each `<book>` element from the XML input, simply using the `map` operator.
 
+
 You can ensure the transformation generates the correct type for each element by using the `as` operator (used for type coercion - see an https://docs.mulesoft.com/mule-user-guide/v/3.8/dataweave-operators#coerce-to-number[`as` operator example]).
 
 [NOTE]
@@ -110,6 +111,7 @@ Since JSON cannot accept duplicate keys, elements that are duplicated in the inp
 
 .DataWeave
 [source,DataWeave,linenums]
+
 ----
 %dw 1.0
 %output application/json
@@ -124,7 +126,6 @@ items: payload.books map {
       }
 }
 ----
-
 
 [tabs]
 ------
@@ -254,6 +255,465 @@ items: payload.books map {
 ----
 ....
 ------
+
+In general, it is better to name the mapping parameters with an easier to understand context, so instead of using the automatic parameters $ and $$, it's better to name these parameters. 
+
+Here is how this map operator can be written with more descriptive mapping parameters, which are then referenced inside the map operator's mapping expression: 
+
+.DataWeave
+[source,DataWeave,linenums]
+----
+%dw 1.0
+%output application/json
+---
+items: payload.books map (nextBook, nextIndex) -> {
+      type: "book",
+      price: nextBook.price as :number,
+      properties: {
+        title: nextBook.title,
+        author: $.author,
+        year: nextBook.year as :number
+      }
+}
+----
+
+[tabs]
+------
+[tab,title="Input: JSON"]
+....
+.Input
+[source, json, linenums]
+----
+{
+    "books": [
+      {
+        "-category": "cooking",
+        "title": {
+          "-lang": "en",
+          "#text": "Everyday Italian"
+        },
+        "author": "Giada De Laurentiis",
+        "year": "2005",
+        "price": "30.00"
+      },
+      {
+        "-category": "children",
+        "title": {
+          "-lang": "en",
+          "#text": "Harry Potter"
+        },
+        "author": "J K. Rowling",
+        "year": "2005",
+        "price": "29.99"
+      },
+      {
+        "-category": "web",
+        "title": {
+          "-lang": "en",
+          "#text": "XQuery Kick Start"
+        },
+        "author": [
+          "James McGovern",
+          "Per Bothner",
+          "Kurt Cagle",
+          "James Linn",
+          "Vaidyanathan Nagarajan"
+        ],
+        "year": "2003",
+        "price": "49.99"
+      },
+      {
+        "-category": "web",
+        "-cover": "paperback",
+        "title": {
+          "-lang": "en",
+          "#text": "Learning XML"
+        },
+        "author": "Erik T. Ray",
+        "year": "2003",
+        "price": "39.95"
+      }
+    ]
+}
+----
+
+....
+[tab,title="Output: JSON"]
+....
+
+.Output
+[source, json, linenums]
+----
+{
+  "items": [
+    {
+      "type": "book",
+      "price": 30.00,
+      "properties": {
+        "title": {
+          "-lang": "en",
+          "#text": "Everyday Italian"
+        },
+        "author": "Giada De Laurentiis",
+        "year": 2005
+      }
+    },
+    {
+      "type": "book",
+      "price": 29.99,
+      "properties": {
+        "title": {
+          "-lang": "en",
+          "#text": "Harry Potter"
+        },
+        "author": "J K. Rowling",
+        "year": 2005
+      }
+    },
+    {
+      "type": "book",
+      "price": 49.99,
+      "properties": {
+        "title": {
+          "-lang": "en",
+          "#text": "XQuery Kick Start"
+        },
+        "author": [
+          "James McGovern",
+          "Per Bothner",
+          "Kurt Cagle",
+          "James Linn",
+          "Vaidyanathan Nagarajan"
+        ],
+        "year": 2003
+      }
+    },
+    {
+      "type": "book",
+      "price": 39.95,
+      "properties": {
+        "title": {
+          "-lang": "en",
+          "#text": "Learning XML"
+        },
+        "author": "Erik T. Ray",
+        "year": 2003
+      }
+    }
+  ]
+}
+----
+....
+------
+
+[NOTE] 
+Naming mapping operator parameters is also a best practice because it also helps you to next other operators inside the map operator, but still have access to these mapping parameters, such as if you are trying to join two data schema together. 
+
+
+Because you are not using the index at all in the mapping expression, the second parameter does not have to be included in the map operator: 
+
+
+.DataWeave
+[source,DataWeave,linenums]
+----
+%dw 1.0
+%output application/json
+---
+items: payload.books map (nextBook) -> {
+      type: "book",
+      price: nextBook.price as :number,
+      properties: {
+        title: nextBook.title,
+        author: $.author,
+        year: nextBook.year as :number
+      }
+}
+----
+
+[tabs]
+------
+[tab,title="Input: JSON"]
+....
+.Input
+[source, json, linenums]
+----
+{
+    "books": [
+      {
+        "-category": "cooking",
+        "title": {
+          "-lang": "en",
+          "#text": "Everyday Italian"
+        },
+        "author": "Giada De Laurentiis",
+        "year": "2005",
+        "price": "30.00"
+      },
+      {
+        "-category": "children",
+        "title": {
+          "-lang": "en",
+          "#text": "Harry Potter"
+        },
+        "author": "J K. Rowling",
+        "year": "2005",
+        "price": "29.99"
+      },
+      {
+        "-category": "web",
+        "title": {
+          "-lang": "en",
+          "#text": "XQuery Kick Start"
+        },
+        "author": [
+          "James McGovern",
+          "Per Bothner",
+          "Kurt Cagle",
+          "James Linn",
+          "Vaidyanathan Nagarajan"
+        ],
+        "year": "2003",
+        "price": "49.99"
+      },
+      {
+        "-category": "web",
+        "-cover": "paperback",
+        "title": {
+          "-lang": "en",
+          "#text": "Learning XML"
+        },
+        "author": "Erik T. Ray",
+        "year": "2003",
+        "price": "39.95"
+      }
+    ]
+}
+----
+
+....
+[tab,title="Output: JSON"]
+....
+
+.Output
+[source, json, linenums]
+----
+{
+  "items": [
+    {
+      "type": "book",
+      "price": 30.00,
+      "properties": {
+        "title": {
+          "-lang": "en",
+          "#text": "Everyday Italian"
+        },
+        "author": "Giada De Laurentiis",
+        "year": 2005
+      }
+    },
+    {
+      "type": "book",
+      "price": 29.99,
+      "properties": {
+        "title": {
+          "-lang": "en",
+          "#text": "Harry Potter"
+        },
+        "author": "J K. Rowling",
+        "year": 2005
+      }
+    },
+    {
+      "type": "book",
+      "price": 49.99,
+      "properties": {
+        "title": {
+          "-lang": "en",
+          "#text": "XQuery Kick Start"
+        },
+        "author": [
+          "James McGovern",
+          "Per Bothner",
+          "Kurt Cagle",
+          "James Linn",
+          "Vaidyanathan Nagarajan"
+        ],
+        "year": 2003
+      }
+    },
+    {
+      "type": "book",
+      "price": 39.95,
+      "properties": {
+        "title": {
+          "-lang": "en",
+          "#text": "Learning XML"
+        },
+        "author": "Erik T. Ray",
+        "year": 2003
+      }
+    }
+  ]
+}
+----
+....
+------
+
+If the mapping expression was not using object constructor curly braces { }, you would want to use evaluation parentheses to define the scope of the mapping parameters. Even with the object constructor curly braces { }, it is fine to enclose the mapping parameters and the mapping expression in a pair of evaluation parentheses ( ), such as:  
+
+
+.DataWeave
+[source,DataWeave,linenums]
+----
+%dw 1.0
+%output application/json
+---
+items: payload.books map ( (nextBook, nextIndex) -> {
+      type: "book",
+      price: nextBook.price as :number,
+      properties: {
+        title: nextBook.title,
+        author: $.author,
+        year: nextBook.year as :number
+      }
+  }
+)
+----
+[tabs]
+------
+[tab,title="Input: JSON"]
+....
+.Input
+[source, json, linenums]
+----
+{
+    "books": [
+      {
+        "-category": "cooking",
+        "title": {
+          "-lang": "en",
+          "#text": "Everyday Italian"
+        },
+        "author": "Giada De Laurentiis",
+        "year": "2005",
+        "price": "30.00"
+      },
+      {
+        "-category": "children",
+        "title": {
+          "-lang": "en",
+          "#text": "Harry Potter"
+        },
+        "author": "J K. Rowling",
+        "year": "2005",
+        "price": "29.99"
+      },
+      {
+        "-category": "web",
+        "title": {
+          "-lang": "en",
+          "#text": "XQuery Kick Start"
+        },
+        "author": [
+          "James McGovern",
+          "Per Bothner",
+          "Kurt Cagle",
+          "James Linn",
+          "Vaidyanathan Nagarajan"
+        ],
+        "year": "2003",
+        "price": "49.99"
+      },
+      {
+        "-category": "web",
+        "-cover": "paperback",
+        "title": {
+          "-lang": "en",
+          "#text": "Learning XML"
+        },
+        "author": "Erik T. Ray",
+        "year": "2003",
+        "price": "39.95"
+      }
+    ]
+}
+----
+
+....
+[tab,title="Output: JSON"]
+....
+
+.Output
+[source, json, linenums]
+----
+{
+  "items": [
+    {
+      "type": "book",
+      "price": 30.00,
+      "properties": {
+        "title": {
+          "-lang": "en",
+          "#text": "Everyday Italian"
+        },
+        "author": "Giada De Laurentiis",
+        "year": 2005
+      }
+    },
+    {
+      "type": "book",
+      "price": 29.99,
+      "properties": {
+        "title": {
+          "-lang": "en",
+          "#text": "Harry Potter"
+        },
+        "author": "J K. Rowling",
+        "year": 2005
+      }
+    },
+    {
+      "type": "book",
+      "price": 49.99,
+      "properties": {
+        "title": {
+          "-lang": "en",
+          "#text": "XQuery Kick Start"
+        },
+        "author": [
+          "James McGovern",
+          "Per Bothner",
+          "Kurt Cagle",
+          "James Linn",
+          "Vaidyanathan Nagarajan"
+        ],
+        "year": 2003
+      }
+    },
+    {
+      "type": "book",
+      "price": 39.95,
+      "properties": {
+        "title": {
+          "-lang": "en",
+          "#text": "Learning XML"
+        },
+        "author": "Erik T. Ray",
+        "year": 2003
+      }
+    }
+  ]
+}
+----
+....
+------
+
+All of these variations of the DataWeave body expression will yield the same result. 
+
+
+
+
+
 
 == Remove Fields
 
@@ -1242,7 +1702,7 @@ classrooms: payload.school.teachers groupBy $.subject mapObject ((teacherGroup, 
 
 == Multiple Inputs
 
-In this example, there are three different input JSON files, these three all arrive in one single Mule message, occupying the payload and two link:/mule-user-guide/v/3.8/dataweave-selectors#flow-variables-from-a-mule-message[flow variables]. The payload contains an array of book objects, one flow variable has a set of currency exchange rates, and the other one a query. The transform filters the first input using the conditions passed in the third input, then performs a link:/anypoint-studio/v/6/using-dataweave-in-studio#map[`map`] to deal with each remaining object separately. Within this map, it defines two variables: *it* and *props*. Through the use of @, attributes are added into the XML tags. A second map operation inside the first one calculates the price of each book for each of the currencies provided in the second input. Another map operation displays each element in the `author` array as a separate <author></author> tag.
+In this example, there are three different input JSON files, these three all arrive in one single Mule message, occupying the payload and two link:/mule-user-guide/v/3.8/dataweave-selectors#flow-variables-from-a-mule-message[flow variables]. The payload contains an array of book objects, one flow variable has a set of currency exchange rates, and the other one a query. The transform filters the first input using the conditions passed in the third input, then performs a link:/mule-user-guide/v/3.8/dataweave-operators#map[`map`] to deal with each remaining object separately. Within this map, it defines two variables: *it* and *props*. Through the use of @, attributes are added into the XML tags. A second map operation inside the first one calculates the price of each book for each of the currencies provided in the second input. Another map operation displays each element in the `author` array as a separate <author></author> tag.
 
 
 [TIP]
@@ -1366,7 +1826,7 @@ books: {
 }
 ----
 ....
-[tab,title="Output"]
+[tab,title="Output: XML"]
 ....
 
 .Output
@@ -1472,7 +1932,7 @@ The first item that makes up the payload contains an array of "price" objects, u
 ----
 
 ....
-[tab,title="Output"]
+[tab,title="Output: JSON"]
 ....
 
 .Output
@@ -1610,7 +2070,7 @@ payload
 
 
 ....
-[tab,title="Output: JSON"]
+[tab,title="Output: XML"]
 ....
 .Output
 [source,xml,linenums]
@@ -1632,7 +2092,7 @@ See more XML reader and writer properties on link:/mule-user-guide/v/3.8/datawea
 
 == Configure CSV Reader
 
-DataWeave supports CSV inputs and outputs, by configuring the reader and writer properties, you can adapt it to different conventions regarding separations, line breaks, etc. Other formats also allow for this kind of configuration. See link:/anypoint-studio/v/6/using-dataweave-in-studio#reader-configuration[Using DataWeave in Studio] to learn how you can do this easily through the UI, or look at the link:/mule-user-guide/v/3.8/dataweave-xml-reference#reader-configuration[DataWeave XML Reference] for the required XML syntax. You can also see a full reference of the reader properties available with CSV format on link:/mule-user-guide/v/3.8/dataweave-formats#csv[DataWeave formats].
+DataWeave supports CSV inputs and outputs, by configuring the reader and writer properties, you can adapt it to different conventions regarding separations, line breaks, etc. Other formats also allow for this kind of configuration. See link:/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation] for how to do this on the UI, or look at the link:/mule-user-guide/v/3.8/dataweave-xml-reference#reader-configuration[DataWeave XML Reference] for the required XML syntax. You can also see a full reference of the reader properties available with CSV format on link:/mule-user-guide/v/3.8/dataweave-formats#csv[DataWeave formats].
 
 Reader properties are set as part of the XML `dw:transform-message` component, whilst writer properties are specified in the DataWeave code itself, as part of the output directive. You can see a full reference to the writer properties available with CSV format on link:/mule-user-guide/v/3.8/dataweave-formats#writer-properties[DataWeave formats].
 
@@ -1663,7 +2123,7 @@ Note that the code above includes not just the DW transformation, but the XML of
 
 [tabs]
 ------
-[tab,title="Input: JSON"]
+[tab,title="Input: CSV"]
 ....
 
 .Input
@@ -1676,7 +2136,7 @@ Steven Wilson; 13/16 Raven st., Somewhere but not Here; 1234567
 ----
 
 ....
-[tab,title="Output: XML"]
+[tab,title="Output: CSV"]
 ....
 
 .Output
@@ -2487,7 +2947,7 @@ Based on a mapping definition, stored for instance in a DB table, you can dynami
 
 
 [NOTE]
-Note that for this example to work, on the payload input you must set the reader configuration so that the 'nullValueOn' attribute is "empty". See link:/anypoint-studio/v/6/using-dataweave-in-studio#reader-configuration[reader configuration] for instructions on how to set this.
+Note that for this example to work, on the payload input you must set the reader configuration so that the 'nullValueOn' attribute is "empty". See link:/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation].
 
 === Example Transformation
 
@@ -2694,7 +3154,7 @@ payload.results map
 == See Also
 
 * link:/mule-user-guide/v/3.8/dataweave-quickstart[DataWeave quickstart guide]
-* link:/anypoint-studio/v/6/using-dataweave-in-studio[Using DataWeave in Studio]
+* link:/anypoint-studio/v/6/transform-message-component-concept-studio[About Transform Message Component]
 * link:/mule-user-guide/v/3.8/dataweave-language-introduction[DataWeave Language Introduction]
 * link:/mule-user-guide/v/3.8/dataweave-operators[DataWeave Operators]
 * link:/mule-user-guide/v/3.8/dataweave-types[DataWeave Types]

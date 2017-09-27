@@ -20,29 +20,23 @@ The Connector Testing Framework is the default testing framework for writing con
 
 The overall approach is to decouple the test itself from where it is executed, thus enabling a developer to determine whether a test runs in different Mule versions. For instance, a connector written for Mule 3.5 can now be automatically tested in Mule releases 3.x and determine backward-compatibility and forward-compatibility issues, as well as class-loading problems.
 
-The following scheme simply illustrates how a connector test is executed. The main idea is that the test is decoupled from the Mule runtime in which it is executed. The Connector Testing Framework enables us to execute a connector operation in a remote Mule instance, either standalone or a CloudHub instance.
-
-image::ConnectorTestFramework.png[image]
+The following scheme illustrates how a connector test is executed. The main idea is that the test is decoupled from the Mule runtime in which it is executed. The Connector Testing Framework enables us to execute a connector operation in a remote Mule instance, either standalone or a CloudHub instance.
 
 == Framework Interfaces
 
-This framework provides a simple, yet complete, interface to keep a connector test simple and readable. The following class diagram illustrates the framework user interface.
+This framework provides a simple, yet complete, interface to keep a connector test simple and readable. There are three main components:
 
-image::ConnectorTestFrameworkClasses.png[image]
-
-There are three main components:
-
-. `ConnectorTestContext<T>`: Main class of the framework, providing an interface for the other two important classes: the `ConnectorDispatcher` and the Platform Manager. This class contains the following methods:
-.. `initialize(Class<T> connectorClass)`: A class method to initialize the entire framework, possible including the packaging of the connector, which might take a while to execute. It requires the class of the connector under test.
-.. `getInstance()`: A class method that returns the only instance of the connector context prior to initialization. Otherwise, it throws an exception if the framework has not been initialized.
-.. `getPlatformManager()`: Returns the only instance of the platform manager in charge of dealing with the framework life cycle.
-.. `getConnectorDispatcher()`: Returns the only instance of the connector dispatcher, which is in charge of executing the connector operations.
-. `ConnectorDispatcher<T>`: An interface enabling the execution of connector operations, including paginated and DataSense operations. It contains the following methods:
-.. `createMockup()`: Returns an instance of the connector being tested, which is the same class type as used as an argument in the initialization of the framework through  `ConnectorTestContext.initialize(connectorClass)`. Tests operations are executed through this instance, except for operations annotated with `@Paged`.
-.. `runPaginatedMethod(String methodName, Object[] args)`: Connector operations annotated with @Paged are executed through this method, which requires the operation name (camel case) and an array of arguments for that operation.
-.. `fetchMetaDataKeys()`: Returns a Result (from org.mule.commons) containing a list of `MetaDataKeys` (from `org.mule.common.metadata`) in order to test DataSense.
-.. `fetchMetaData(MetaDataKey key)`: Returns a MetaData object (from `org.mule.common.metadata`) for a particular `MetaDataKey` (from `org.mule.common.metadata`).
-. `PlatformManager`: An interface representing the underlying platform manager in charge of initializing and shutting down the framework. It exposes two operations to deal with this behavior accordingly and maintains a `PlatformState`, which can be STOPPED or STARTED.
+* `ConnectorTestContext<T>`: Main class of the framework, providing an interface for the other two important classes: the `ConnectorDispatcher` and the Platform Manager. This class contains the following methods:
+** `initialize(Class<T> connectorClass)`: A class method to initialize the entire framework, possible including the packaging of the connector, which might take a while to execute. It requires the class of the connector under test.
+** `getInstance()`: A class method that returns the only instance of the connector context prior to initialization. Otherwise, it throws an exception if the framework has not been initialized.
+** `getPlatformManager()`: Returns the only instance of the platform manager in charge of dealing with the framework life cycle.
+** `getConnectorDispatcher()`: Returns the only instance of the connector dispatcher, which is in charge of executing the connector operations.
+* `ConnectorDispatcher<T>`: An interface enabling the execution of connector operations, including paginated and DataSense operations. It contains the following methods:
+** `createMockup()`: Returns an instance of the connector being tested, which is the same class type as used as an argument in the initialization of the framework through  `ConnectorTestContext.initialize(connectorClass)`. Tests operations are executed through this instance, except for operations annotated with `@Paged`.
+** `runPaginatedMethod(String methodName, Object[] args)`: Connector operations annotated with @Paged are executed through this method, which requires the operation name (camel case) and an array of arguments for that operation.
+** `fetchMetaDataKeys()`: Returns a Result (from org.mule.commons) containing a list of `MetaDataKeys` (from `org.mule.common.metadata`) in order to test DataSense.
+** `fetchMetaData(MetaDataKey key)`: Returns a MetaData object (from `org.mule.common.metadata`) for a particular `MetaDataKey` (from `org.mule.common.metadata`).
+* `PlatformManager`: An interface representing the underlying platform manager in charge of initializing and shutting down the framework. It exposes two operations to deal with this behavior accordingly and maintains a `PlatformState`, which can be STOPPED or STARTED.
 
 The next section introduces a practical example and the correct use of these interfaces.
 

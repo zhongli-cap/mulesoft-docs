@@ -1,12 +1,8 @@
 CREATE DATABASE company;
  
-CREATE USER 'generatedata'@'localhost' IDENTIFIED BY 'generatedata';
- 
-GRANT ALL PRIVILEGES ON company.* TO generatedata@localhost IDENTIFIED BY 'generatedata';
- 
-FLUSH PRIVILEGES;
- 
 USE company;
+
+DROP TABLE IF EXISTS `employees`;
  
 CREATE TABLE employees (
 no INT NOT NULL,
@@ -17,6 +13,8 @@ gender ENUM ('M','F') NOT NULL,
 hire_date DATE NOT NULL,
 PRIMARY KEY (no)
 );
+
+DROP TABLE IF EXISTS `roles`;
  
 CREATE TABLE roles (
 id mediumint(8) unsigned NOT NULL auto_increment,
