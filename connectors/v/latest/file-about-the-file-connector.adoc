@@ -10,18 +10,6 @@ The File connector handles files and folders on a locally mounted file system. I
 * Support for locking files on the file system level.
 * File matching functionality.
 
-Here's how an example config looks like:
-[gist id=68ba248f83caedf941b945afd3f4b6a6]
-Representation
-Before we jump into the operations, let’s get a quick overview of how files are represented.
-In Mule 4 Beta, there’s a new message structure.
-
-The message consists of payload and attributes. The payload is the ferried data. In this case, the payload will always be a file’s content. Attributes are objects that contain metadata on the payload. In this case, it contains information such as the file’s name, path, size, timestamps, etc. For this connector, we will refer to these attributes as the File Attributes.
-
-For a full description of the File Attributes object, please read the documentation attached at the end of this post.
-
-The Mule Message also contains the concepts of encoding and mimeType. These are used for describing the format in which the payload is represented. These attributes will be used to describe a file’s encoding and mimeType.
-
 //_TODO: IS THIS CORRECT? Special file-like device files are not supported (for example, `/dev/null`)._
 
 This connector provides the same set of operations as the FTP connector.
@@ -93,13 +81,6 @@ Note that a lock that is distributed across a cluster can significantly slow the
 +
 For the Read operation, the lock is released automatically once the file is fully read, or the flow that locked the file ends. The Write operation releases the lock automatically once the operation is complete. If the file is locked by another operation when you try to read or write to it, the connector will throw an error to indicate that it cannot lock the file.
 
-////
-??INTERNAL INFO??
-== Laziness
-
-Both the payload `InputStream` and the `FileAttributes` POJO are as lazy as possible. If you create a message that returns an `InputStream` payload, the file handler is only opened when the stream is read. So, if many files are returned from a List operation, it is not necessary to close the ones that were not opened. Similarly, the `FileAttributes` POJO will not fetch file metadata until the first getter is invoked.
-////
-
 == See Also
 * link:/connectors/file-documentation[File Connector Technical Reference]
 * link:/connectors/file-to-set-up-a-file-connector-config[To Set Up a File Connector Configuration]
@@ -113,50 +94,3 @@ Both the payload `InputStream` and the `FileAttributes` POJO are as lazy as poss
 * link:/connectors/common-to-write-a-file[To Write to a File]
 * link:/connectors/common-about-file-attributes[About File Attributes]
 * link:/connectors/common-connection-pooling[Connection Pooling Reference]
-
-////
-IS THERE A FILE LISTENER?
-* link:#to-listen-for-file-events[Configure as a Directory Listener] for created, updated or deleted files
-////
-
-////
-_TODO, TODO_ Supporting operations:
-* _TODO:_ Obtaining the MIME type of a file when reading or listing files or obtaining resolved MIME type using `#[dataType.mimeType]`
-*  _TODO:_ Recursing through a directory and its subdirectories.
-*  _TODO:_ link:#common-to-set-file-metadata[Retrieving File Metadata]
-//MG include how to limit recursion level with walker once implemented
-////
-
-////
-TODO: READ THROUGH THE WHAT FOLLOWS TO FIND GENERAL INFO THAT SHOULD GO HERE.
-SEE WHAT OF THE REST FITS INTO OTHER FILES:
-
-* If the `directory` path does not map to a directory then you get a `ConfigurationException`.
-* You can optionally disable up to two of the types of events by setting two of `notifyOnCreate`, `notifyOnUpdate` or `notifyOnDelete` to false.
-** If you disable all three, the listener does not work and a `ConfigurationException` is thrown.
-* The listener should not be considered the recommended approach over a poll-list-watermark approach
-** The tradeoff between poll and listener performance is reliability. Since operating system events don't generally include the concept of transaction or replay, there's no way to guarantee that an event is going to be captured if failure or server crash happens.
-* Use the recursive attribute  to listen on a subdirectory (default: false).
-* payload is a `FileInputStream` instance when the triggered event type is `CREATE` or `UPDATE`,
-* when a file is deleted as the file no longer exists anymore the `MuleMessage` has a `NullPayload` and a `FileAttributes` instance.
-* when the event refers to the creation of a directory, the `MuleMessage` has a `NullPayload` and a `FileAttributes` instance.
-* the `FileAttributes` instance contained in the created Message holds the event type (`CREATE` | `UPDATE` | `DELETE`).
-*  if file is deleted, file attributes are not available.
-** Only `path` and `name` attributes are available.
-** Message attributes are an instance of `DeletedFileAttributes`.
-** If unavailable attribute requested, throws `IllegalStateException`.
-* if event references a deleted directory, then the payload is also a NullPayload
-
-==== Notes
-
-* Reads the file in a given path and returns a `MuleMessage` with an `InputStream` as the payload
-* Returns a `FileAttributes` instance as attributes.
-* By default, if the file does not exists an `IllegalArgumentException` is thrown.
-* If using "target" to load the `InputStream` make sure that the returned `InputStream` is fully consumed or eventually
-
-
-[IMPORTANT]
-The underlying file handle and file system lock (if locking was enabled) will only be released once the `InputStream` is closed.
-+
-* If not able to write the file or create directories, whether due to no write permissions, problem with the file system, etc, a `MuleRuntimeException` is thrown.
-* If the path points to a directory instead of a file, an `IllegalArgumentException` will be thrown.
