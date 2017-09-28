@@ -137,11 +137,12 @@ The IBM CTG connector supports the following two outbound operations:
 * xref:use-case-2[Invoke a Channel Program]
 * xref:use-case-3[Invoke a COMMAREA or Channel Program inside a Transactional Scope]
 * xref:use-case-4[Add Custom Metadata]
+* xref:use-case-5[Load Java Metadata]
 
-For a successful run of use cases 1 to 3, the CICS programs invoked must to be available on the target CICS system.
+To successfully run use cases 1 to 3, the invoked CICS programs must be available on the target CICS system.
 
-[use-case-1]
-=== Use Case 1: Invoke a COMMAREA Program
+[[use-case-1]]
+== Use Case 1: Invoke a COMMAREA Program
 
 This application calls EC01, a COMMAREA-based program that outputs the current datetime in a formatted EBCDIC string.
 
@@ -162,7 +163,7 @@ ctg.password=<PASSWORD>
 +
 . Drag an IBM CTG component onto the canvas and add a new Global Element to configure a standard (non-SSL) connection.
 +
-[%header%autowidth]
+[%header%autowidth.spread]
 |===
 |Parameter|Value
 |Host|`${ctg.host}`
@@ -172,29 +173,27 @@ ctg.password=<PASSWORD>
 |Password|`${ctg.password}`
 |===
 +
-*Note:* Click the Test Connection option to confirm that Mule can connect with the IBM CTG instance. If the connection is successful, click OK to save the configuration. Otherwise, review or correct any invalid parameters and test again.
+Click Test Connection to confirm that Mule can connect with the IBM CTG instance. If the connection is successful, click OK to save the configuration. Otherwise, review or correct any invalid parameters and test again.
 +
-. Double-click the IBM CTG component, select the operation Execute and configure the following parameters (values can differ depending on the current CICS installation):
+. Double-click the IBM CTG component, select the Execute operation  and configure the following parameters:
 +
-[%header%autowidth]
+[%header%autowidth.spread]
 |===
 |Parameter|Value
-|Program Name |`EC01`
-|TPN Name | `CSMI`
-|Commarea Length | `18`
-|Reply Length | `18`
-|Encoding | `IBM037`
 |Content Reference | `#[payload]`
+|Request Reference | `#[flowVars.commareaRequest]`
 |===
 +
 . Add a Transform Message between the HTTP and the IBM CTG components. The connector does not provide dynamic/static metadata but allows users to define custom types using the Metadata Type tool.
-.. Define the input metadata according to section <<Add Custom Metadata>> using the schema file `ec01-type.ffd`:
++
+.. Define the input metadata according to section xref:use-case-4[Add Custom Metadata] using the schema file `ec01-type.ffd`:
 +
 [source,code,linenums]
 ----
 form: COPYBOOK
 id: 'DFHCOMMAREA'
 values:
+
 - { name: 'LK-DATE-OUT', type: String, length: 8 }
 - { name: 'LK-SPACE-OUT', type: String, length: 1 }
 - { name: 'LK-TIME-OUT', type: String, length: 8 }
@@ -216,6 +215,26 @@ values:
 }]
 ----
 +
+.. Create a flowVar named `commareaRequest` and configure the following fields (see section xref:use-case-5[Load Java Metadata]):
++
+[source,code,linenums]
+----
+%dw 1.0
+%output application/java
+---
+{
+  commareaLength: 18,
+  encoding: "IBM037",
+  programName: "EC01",
+  replyLength: 18,
+  tpnName: "CSMI"
+} as :object {
+  class : "org.mule.modules.ibmctg.internal.model.CommareaRequest"
+}
+----
++
+See xref:use-case-5[Load Java Metadata] to obtain metadata for the CommareaRequest.
++
 . Add a Transform Message after the IBM CTG to extract the results in a JSON format.
 +
 [source,code,linenums]
@@ -224,13 +243,13 @@ values:
 %output application/json
 ---
 {
-	date: payload[0].LK-DATE-OUT,
-	time: payload[0].LK-TIME-OUT
+  date: payload[0].LK-DATE-OUT,
+  time: payload[0].LK-TIME-OUT
 }
 ----
 +
 . Add a Logger at the end of the flow.
-. Save the changes and deploy the Mule Application. Open a browser and make a request to `http://localhost:8081/test/ec01`. If the program was successfully executed, the current date and time should be returned:
+. Save the changes and deploy the Mule Application. Open a browser and make a request to `+http://localhost:8081/ec01+`. The result should be similar to:
 +
 [source,code]
 ----
@@ -240,35 +259,29 @@ values:
 }
 ----
 
-[use-case-2]
+[[use-case-2]]
 === Use Case 2: Invoke a Channel Program
 
-This application calls EC03, a channel-based program that takes an input data container and returns three containers: 
+This application calls EC03, a channel-based program that takes an input data container and returns these containers:
 
-* A data and time container. 
+* A data and time container.
 * The length of the input data and returns uses channels and containers in a CICS program.
 * An output container that contains a copy of the input data, or an error message.
 
 image:ibm-ctg-use-case-2.png[ibm-ctg-use-case-2]
 
-. Perform steps 1 to 3 from the previous example and set the HTTP path to `/test/ec03`.
-. Double-click the IBM CTG component, select the operation Execute and configure the following parameters (values might differ depending on the current CICS installation):
+. Perform steps 1 to 3 from the previous example and set the HTTP path to `/ec03`.
+. Double-click the IBM CTG component, select the operation Execute and configure the following parameters:
 +
-[%header%autowidth]
+[%header%autowidth.spread]
 |===
 |Parameter|Value
-|Program Name |`EC03`
-|TPN Name | `CSMI`
-|Channel | `testChannel`
-|Request Container | `requestContainer`
-|Response Container | `responseContainer`
-|Error Container | `errorContainer`
-|Encoding | `IBM037`
 |Content Reference | `#[payload]`
+|Request Reference | `#[flowVars.request]`
 |===
 +
 . Add a Transform Message between the HTTP and the IBM CTG components.
-.. Define the input metadata according to section <<Add Custom Metadata>> using the schema file `ec03-type.ffd`:
+.. Define the input metadata according to section xref:use-case-4[Add Custom Metadata] using the schema file `ec03-type.ffd`:
 +
 [source,code,linenums]
 ----
@@ -277,7 +290,6 @@ id: 'DFHCOMMAREA'
 values:
 - { name: 'CICS-DATE-TM', type: String, length: 8 }
 ----
-+
 .. Map the fields in the DataWeave transformer.
 +
 [source,code,linenums]
@@ -286,13 +298,33 @@ values:
 %output text/plain schemaPath = "ec03-type.ffd", segmentIdent = "DFHCOMMAREA", encoding="cp037"
 ---
 [{
-	CICS-DATE-TM: ""
+  CICS-DATE-TM: ""
 }]
 ----
 +
-. Add a Transform Messager component after the IBM CTG to convert the result into  readable format.
+.. Create a flowVar named `request` and configure the following fields (see section xref:use-case-5[Load Java Metadata]):
++
+[source,code,linenums]
+----
+%dw 1.0
+%output application/java
+---
+{
+  channel: "EC03",
+  encoding: "US-ASCII",
+  errorContainer: "OUTPUTMESSAGE",
+  programName: "EC03",
+  requestContainer: "INPUTDATA",
+  responseContainer: "CICSDATETIME",
+  tpnName: "CSMI"
+} as :object {
+  class : "org.mule.modules.ibmctg.internal.model.ChannelRequest"
+}
+----
++
+. Add a Transform Messager after the IBM CTG to convert the result into  readable format.
 . Add a Logger at the end of the flow.
-. Save the changes and deploy the Mule Application. Open a browser and make a request to `http://localhost:8081/test/ec03`. If the program was successfully executed, information should be displayed in a JSON format:
+. Save the changes and deploy the Mule Application. Open a browser and make a request to `+http://localhost:8081/ec03+`. The result should be similar to:
 +
 [source,code]
 ----
@@ -301,7 +333,7 @@ values:
 }
 ----
 
-[use-case-3]
+[[use-case-3]]
 === Use Case 3: Invoke a COMMAREA or Channel Program inside a Transactional Scope
 
 This application calls EC02, a COMMAREA-based program that returns a simple run counter.
@@ -312,28 +344,24 @@ image:ibm-ctg-use-case-3.png[ibm-ctg-use-case-3]
 . In the Global Elements tab, add a new Bitronix Transaction Manager without further configurations.
 . Drag a Transactional element next to the HTTP and configure according to the table below:
 +
-[%header%autowidth]
+[%header%autowidth.spread]
 |===
 |Parameter|Value
 |Type |`XA Transaction`
-|Action |`BEGIN_OR_JOIN`
+|Action | `BEGIN_OR_JOIN`
 |===
 +
-. Double-click the IBM CTG component, select the operation Execute using COMMAREA and configure the following parameters (values can differ depending on the current CICS installation):
+. Double-click the IBM CTG component, select the operation Execute using COMMAREA and configure the following parameters:
 +
-[%header%autowidth]
+[%header%autowidth.spread]
 |===
 |Parameter|Value
-|Program Name |`EC02`
-|TPN Name | `CSMI`
-|Commarea Length | `40`
-|Reply Length | `40`
-|Encoding | `IBM037`
 |Content Reference | `#[payload]`
+|Request Reference | `#[flowVars.request]`
 |===
 +
-. Add a Transform Message between the HTTP and the IBM CTG components. The connector does not provide dynamic/static metadata but allows users to define custom types using the Metadata Type tool.
-.. Define the input metadata according to section <<Add Custom Metadata>> using the schema file `ec02-type.ffd`:
+. Add a Transform Message between the HTTP and the IBM CTG components. The connector does not provide dynamic or static metadata but allows users to define custom types using the Metadata Type tool.
+.. Define the input metadata according to section xref:use-case-4[Add Custom Metadata] using the schema file `ec02-type.ffd`:
 +
 [source,code,linenums]
 ----
@@ -351,8 +379,26 @@ values:
 %output text/plain schemaPath = "ec02-type.ffd" , segmentIdent = "DFHCOMMAREA", encoding="cp037"
 ---
 [{
-	LK-COUNT: "000001234TH RUN OF EC02"
+  LK-COUNT: "000001234TH RUN OF EC02"
 }]
+----
++
+.. Create a flowVar named `request` and configure the following fields (see section xref:use-case-5[Load Java Metadata]):
++
+[source,code,linenums]
+----
+%dw 1.0
+%output application/java
+---
+{
+  commareaLength: 18,
+  encoding: "IBM037",
+  programName: "EC01",
+  replyLength: 18,
+  tpnName: "CSMI"
+} as :object {
+  class : "org.mule.modules.ibmctg.internal.model.CommareaRequest"
+}
 ----
 +
 . Add a Transform Message after the IBM CTG to extract the results in a JSON format.
@@ -363,13 +409,13 @@ values:
 %output application/json
 ---
 {
-	count: trim payload[0].LK-COUNT,
-	lowVal: payload[0].LK-LOWVAL
+  count: trim payload[0].LK-COUNT,
+  lowVal: payload[0].LK-LOWVAL
 }
 ----
 +
 . Add a Logger at the end of the flow.
-. Save the changes and deploy the Mule Application. Open a browser and make a request to `http://localhost:8081/test/ec02`. If the program was successfully executed, the current date time should be returned:
+. Save the changes, deploy the Mule Application. Open a browser and make a request to `+http://localhost:8081/ec02+`. The result should be similar to:
 +
 [source,code]
 ----
@@ -379,32 +425,43 @@ values:
 }
 ----
 
-[use-case-4]
+[[use-case-4]]
 === Use Case 4: Add Custom Metadata
 
-The IBM CTG connector does not provide dynamic or static metadata out-of-the-box, but allows users to define custom types using the Metadata Type tool. Follow these steps to define input and output metadata:
+The IBM CTG connector does not provide dynamic or static metadata out-of-the-box, but allows users to define custom types using the Metadata Type tool. Follow the below guide to define input and output metadata:
 
-* Place a schema file under `src/main/resources` directory, normally in `.ffd` format.
+. Place a schema file under `src/main/resources` directory, normally in `.ffd` format.
 +
-*Note:* These schema files must be supplied by the user. They can be obtained from COBOL copybooks, which are included in the CICS installation.
+These schema files must be supplied by the user. They can be obtained from COBOL copybooks, which are included in the CICS installation.
 +
-* Go to the Metadata tab of the connector operation and click the Add metadata button.
-* Select `Input:Payload` and click the Edit icon to open de Metadata Editor.
+. Go to the Metadata tab of the connector operation and click the Add metadata button.
+ Select `Input:Payload` and click the Edit icon to open de Metadata Editor.
 +
 image:ibm-ctg-use-case-4-1.png[ibm-ctg-use-case-4-1]
-+
-* Click Add to create a new type and provide and ID for it (such as, `ec01-in-type` for the program `EC01` input data).
-* Select type Copybook, then Schema and provide the location of the schema file.
-* This  populates a drop-down with a list of available data segments. Choose the one you need and click the Select button to save the configuration.
+. Click Add to create a new type and provide and ID for it (that is, `ec01-in-type` for the program `EC01` input data).
+. Select type Copybook, then Schema and provide the location of the schema file.
+. This populates a drop-down with a list of available data segments. Choose the one you need and click the Select button to save the configuration.
 +
 image:ibm-ctg-use-case-4-2.png[ibm-ctg-use-case-4-2]
-+
-* Drag a DataWeave transformer before the IBM CTG component. Metadata fields  become available to build the mapping.
+. Drag a DataWeave transformer before the IBM CTG component. Metadata fields will become available to build the mapping.
 +
 image:ibm-ctg-use-case-4-3.png[ibm-ctg-use-case-4-3]
 
-*Note:* Metadata definition is not a required step to use the IBM CTG connector but it is essential to improve the usability of the connector.  Refer to https://docs.mulesoft.com/anypoint-studio/v/6/defining-metadata[Defining Metadata] for additional information.
+Metadata definition is not a required step to use the IBM CTG connector but it is essential to improve the usability of the connector.  Refer to link:/anypoint-studio/v/6/defining-metadata[Defining Metadata] for additional information.
 
+[[use-case-5]]
+=== Use Case 5: Load Java Metadata
+
+Inside DataWeave, click Define Metadata to open the Metadata window.
+
+. Click Add and provide the an ID, such as CommareaRequest.
+. Select type Java, then Java object in the Data Structure table.
+. Search the class CommareaRequest (or the fully qualified name `org.mule.modules.ibmctg.internal.model.CommareaRequest`) and click OK.
++
+image:ibm-ctg-use-case-5.png[ibm-ctg-use-case-5]
++
+. Click the Select button to save the configuration.
+. Perform the same steps to load metadata for the `ChannelRequest` type.
 
 == Connector Performance
 
