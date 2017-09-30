@@ -10,7 +10,7 @@ Removing:
 The Mule message is the data that passes through flows inside your Mule application.
 ////
 
-A Mule message is the part of a Mule event that carries a payload and any attributes through a flow in a Mule app. Connector operations receive and return Mule messages. For example, when an HTTP Listener in a Mule app receives an HTTP request, it creates a Mule message that contains the HTTP body as the payload. The attributes of the message contain the incoming HTTP headers and all other metadata.
+A Mule message carries a payload and any attributes through a flow in a Mule app. Connector operations receive and return Mule messages. For example, when an HTTP Listener in a Mule app receives an HTTP request, it creates a Mule message that contains the HTTP body as the payload. The attributes of the message contain the incoming HTTP headers and any metadata populated by the connector.
 
 image::mule-message-structure-82af1.png[mule-message-structure-82af1]
 
@@ -18,12 +18,28 @@ image::mule-message-structure-82af1.png[mule-message-structure-82af1]
 // [NOTE]
 // Large messages or streaming messages can be processed as records in a batch job.
 
+== Message Payload
+
+The message payload is the body of a Mule message. For example, the payload contains the content of records you retrieve through the Select operation of the Database connector or the content of a file that you retrieve through a Read operation to the File or FTP connector.
+
+* `payload`: You access the payload through the keyword `payload` from a connector or component in your flow, and you can use DataWeave selectors, such as `payload.someField` to access fields within the payload.
+
+Message processors in your flow, such as the Transform component, can use DataWeave to modify the message payload that the processor outputs. These modifications include changing the set of fields to output or changing the format of the data. For example, you might change the format from XML to JSON. You might exclude a field that contains personal identifiers or private data for a customer, such as the social security or medical record number, or you might add a new field to the output.
+
+The payload doesn't necessarily stay the same as it travels through a flow. Various message processors in a Mule flow can affect the payload along the way by setting it, enriching, or transforming it into a new format. You can also extract information from a payload within a flow using a Datweave expression and storing it as a Variable.
+
+=== Setting a Message Payload
+Use a Set Payload component to completely replace the content of the message's payload. Enter a literal string or a Data Weave expression that defines the new payload that Mule should set. The following example replaces the payload with a string that reads "Hello, my friend!".
+//
+// // REVIEW: Update this set payload example using Mule 4 sytanx
+// [source, xml, linenums]
+// ----
+// include::_sources/mule-message-structure_2.xml[]
+// ----
+
 == Attributes
 
-Attributes consist of any metadata for a message that is stored in the Mule message header. Depending on the connector source or operation that requests or handles them (such as the HTTP or JMS Listener, or a Read operation to a connector), attributes can be standard HTTP headers, JMS properties, file metadata, or some other sort of metadata. In the case of HTTP, the attributes are an instance of `HttpAttributes`.
-
-In addition to accessing standard attributes defined in a specification for the protocol, such as the HTTP specification, it is also possible to create custom attributes.
-// TODO: DO WE PROVIDE AN EXAMPLE?
+Attributes contain message metadata consisting potentially both headers or properties recieved or returned by the connector as well as other meta-data populated by the connector. Exactly what meta-data is available to is dependent on the connector. 
 
 You access attributes through the keyword `attributes` of a message, such as a file you are reading or an HTTP response, when using a connector or component, such as the Logger, in your flow.
 
@@ -36,59 +52,19 @@ You access attributes through the keyword `attributes` of a message, such as a f
 
 Note that the quotation marks in `attributes."content-type"` are necessary to avoid a parsing error. The only valid identifiers for attribute names are numbers, characters, and underscores. Without the quotation marks, the name is parsed like this `attributes.content - type`.
 
-== Message Payload
+== Viewing the Mule Message
+In Studio, you can visualize the structure of a Mule Message at any given point of the flow. All you have to do is select an element in the flow and  click the DataSense icon.
 
-The message payload is the body of a Mule message. For example, the payload contains the content of records you retrieve through the Select operation of the Database connector or the content of a file that you retrieve through a Read operation to the File or FTP connector.
+image:datasenseexplorericon.png[icon]
 
-* `payload`: You access the payload through the keyword `payload` from a connector or component in your flow, and you can use DataWeave selectors, such as `payload.someField` to access fields within the payload.
+This opens the DataSense explorer, and displays both the structure of the message that enters the element, and the structure of the message that leaves it. This is useful to know the names of variables and attributes that are available at that point, as well as the payload's internal structure.
 
-Message processors in your flow, such as the Transform component, can use DataWeave to modify the message payload that the processor outputs. These modifications include changing the set of fields to output or changing the format of the data. For example, you might change the format from XML to JSON. You might exclude a field that contains personal identifiers or private data for a customer, such as the social security or medical record number, or you might add a new field to the output.
+image:metadata-explorer.png[metadata]
 
-// REVIEW: Payload (as the message) is immutable. Each processor returns a new payload.
-// The payload doesn't necessarily stay the same as it travels through a flow. Various message processors in a Mule flow can affect the payload along the way by setting it, enriching, or transforming it into a new format. You can also extract information from a payload within a flow using a MEL expression.
-
-////
-MARIANO SAYS THIS IS INCORRECT:
-Each Event Processor that receives a Mule Event, returns a new Mule Message. Meaning that each Event Processor returns a new payload.
-////
-////
-THIS SORT OF detail BELONGS WITH THE HTTP Request doc, not in conceptual material about the Mule message.
 [TIP]
-Sending a _POST_ HTTP Request with an XML file to a Mule application generates a Mule Message whose attributes are the HTTP headers, and its payload is the XML file being POSTed.
-////
+When the Mule Message relies on inbound requests, information about the initial message structure won't be known by Studio and so won't be displayed in the DataSense explorer. If you know what the structure needs to be like, you can input this information into the Metadata tab of the inbound connector. Thanks to that, the DataSense explorer infers the message structure for any of the elements that follow that input.
 
-// COMBAK: This is not available in Mozart. Review for Mule4 Beta.
-// === Setting a Message Payload
-//
-// Use a Set Payload event processor to completely replace the content of the message's payload. Enter a literal string or a Data Weave expression that defines the new payload that Mule should set. The following example replaces the payload with a string that reads "Hello, my friend!".
-//
-// // REVIEW: Update this set payload example using Mule 4 sytanx
-// [source, xml, linenums]
-// ----
-// include::_sources/mule-message-structure_2.xml[]
-// ----
-
-// COMBAK: This is not available in Mozart. Review for Mule4 Beta.
-// === Enriching a Message Payload
-//
-// In some cases, you may wish to call an external resource and use the response to enrich the message payload, rather than replace it. To do so, you can use a Message Enricher scope (or wrapper) to encapsulate one or more event processors which perform the task of fetching the information. Once obtained, Mule adds to, or enriches, the message payload with the result of the call to the resource.
-
-
-// COMBAK: Uncomment and review this when Studio is available
-// == Viewing the Mule Message
-//
-// In Studio, you can visualize the structure of a Mule Message at any given point of the flow. All you have to do is select an element in the flow and  click the DataSense icon.
-//
-// image:datasenseexplorericon.png[icon]
-//
-// This opens the DataSense explorer, and displays both the structure of the message that enters the element, and the structure of the message that leaves it. This is useful to know the names of variables and attributes that are available at that point, as well as the payload's internal structure.
-//
-// image:metadata-explorer.png[metadata]
-//
-// [TIP]
-// When the Mule Message relies on inbound requests, information about the initial message structure won't be known by Studio and so won't be displayed in the DataSense explorer. If you know what the structure needs to be like, you can input this information into the Metadata tab of the inbound connector. Thanks to that, the DataSense explorer infers the message structure for any of the elements that follow that input.
-//
-// For more information, see link:/anypoint-studio/v/6/using-the-datasense-explorer[using the DataSense Explorer]
+For more information, see link:/anypoint-studio/v/6/using-the-datasense-explorer[using the DataSense Explorer]
 
 == See Also
 
