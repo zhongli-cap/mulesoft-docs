@@ -1,20 +1,74 @@
-= Configuring Properties
+== Creating Property Placeholders for Apps and Spring Modules
+
+You can create property placeholders that get injected into the Mule App and Spring modules when deploying the app.
+
+= To Configure Mule App Properties
 :keywords: anypoint, studio, on premises, on premise, properties, system properties, property placeholders
 
-This page describes configuring properties, such as property placeholders and system properties.
+In situations such as deploying a Mule app to a new environment, it is often necessary to update configurations, such as the HTTP port, that are specific to that environment. To address this need, you can create a YAML file that defines these properties. Updates to that file inject new values into a Mule app when it deploys.
 
-== Property Placeholders
-
-You can use link:http://ant.apache.org/[Ant]-style property placeholders in your Mule  configuration. For example:
-
-[source,xml]
+The properties in the file takes this form:
 ----
-<smtp:outbound-endpoint user="${smtp.username}" password="${smtp.password}"/>
+http:
+  path: service
+  port: "10000"
 ----
 
-The values for these placeholders can be made available in a variety of ways, as described in the sections that follow.
+You must store the file in the project directory for your Mule app:
+* `/src/main/resources`
 
-== Global Properties
+You add the YAML file to your Mule app through the Global Element called Configuration Properties. The XML for it looks like this:
+
+`<configuration-properties file="myConfiguration.yaml" doc:name="Configuration properties" doc:id="872422be-3571-4a52-a383-a2b0e16859d7" />`
+
+Once the attributes are configured, you can reference them using this syntax: `${http.path}` and `${http.port}`.
+
+For example, your HTTP Listener might pass the port like this:
+`<http:listener-connection host="0.0.0.0" port="${http.port}" />`
+
+== To Set Placeholders for Spring Configurations
+
+The Spring module allows you to use any sort of Spring configurations in Mule apps, and you can use these configurations as placeholders in Spring configuration files.
+
+You can define the Spring property placeholders in a `.properties` file, for example, `spring-properties.properties`.
+
+The properties in the file takes this form:
+----
+springPropertyA=springPropertyAValue
+springPropertyB=springPropertyBValue
+----
+
+The prefix (`${`) and suffix (`}`) is fixed in Spring.
+
+You must store the file in the project directory for your Mule app:
+* `/src/main/resources`
+
+You add the `.properties` file to your Mule app through the Global Element called Configuration Properties. The XML for this element looks like this:
+
+`<configuration-properties file="spring-properties.properties" doc:name="Spring Property Placeholders" doc:id="07ee5c11-bc54-4d55-91b8-ce02f743cb7a" />`
+
+////
+Here, a Spring Framework configuration provides the location of Spring Property placeholders as `spring-properties.properties`.
+
+----
+<?xml version=“1.0” encoding=“UTF-8"?>
+<beans xmlns=“http://www.springframework.org/schema/beans”
+       xmlns:xsi=“http://www.w3.org/2001/XMLSchema-instance”
+       xsi:schemaLocation=”
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd”>
+
+  <bean class=“org.springframework.beans.factory.config.PropertyPlaceholderConfigurer”>
+        <property name=“location”>
+            <value>spring-properties.properties</value>
+        </property>
+  </bean>
+</beans>
+----
+////
+
+////
+NOT IN RC:
+== To Configure Global Properties
 
 You can use the `<global-property>` element to set a placeholder value from within your Mule configuration, such as from within another Mule configuration file. Do not use the global property syntax to reference the values from a `.properties` file. To reference properties from a file, read the section on properties files.
 
@@ -23,6 +77,7 @@ You can use the `<global-property>` element to set a placeholder value from with
 <global-property name="smtp.host" value="smtp.mail.com"/>
 <global-property name="smtp.subject" value="Subject of Email"/>
 ----
+////
 
 // == Properties Files
 //
