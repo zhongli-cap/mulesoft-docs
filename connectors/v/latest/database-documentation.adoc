@@ -20,20 +20,21 @@ Connector for connecting to relation Databases through the JDBC API
 === Config
 
 +++
-Connector for connecting to relation Databases through the JDBC API
+Default configuration
 +++
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
-|Name | String | The name of this configuration. With this name can be later referenced. | | *x*{nbsp}
+|Name | String | The name for this configuration. Connectors reference the configuration with this name. | | *x*{nbsp}
 | Connection a| * <<config_data-source, Data Source Reference Connection>> {nbsp}
 * <<config_derby, Derby Connection>> {nbsp}
 * <<config_generic, Generic Connection>> {nbsp}
 * <<config_my-sql, MySQL Connection>> {nbsp}
 * <<config_oracle, Oracle Connection>> {nbsp}
  | The connection types that can be provided to this configuration. | | *x*{nbsp}
+| Expiration Policy a| <<ExpirationPolicy>> |  +++Configures the minimum amount of time that a dynamic configuration instance can remain idle before the runtime considers it eligible for expiration. This does not mean that the platform will expire the instance at the exact moment that it becomes eligible. The runtime will actually purge the instances when it sees it fit.+++ |  | {nbsp}
 |======================
 
 ==== Connection Types
@@ -52,8 +53,7 @@ ConnectionProvider implementation which creates DB connections from a referenced
 | Column Types a| Array of <<ColumnType>> |  +++Specifies non-standard column types+++ |  | {nbsp}
 | Data Source Ref a| Any |  +++Reference to a JDBC DataSource object. This object is typically created using Spring.
 When using XA transactions, an XADataSource object must be provided.+++ |  | *x*{nbsp}
-| Reconnection Strategy a| * <<reconnect>>
-* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
+| Reconnection a| <<Reconnection>> |  +++When the application is deployed, a connectivity test is performed on all connectors. If set to true, deployment will fail if the test doesn't pass after exhausting the associated reconnection strategy+++ |  | {nbsp}
 |======================
 [[config_derby]]
 ===== Derby Connection
@@ -82,8 +82,7 @@ Creates connections to a Derby database
 'directory', 'memory', 'classpath' and 'jar'.+++ |  +++directory+++ | {nbsp}
 | Create a| Boolean |  +++Indicates if the database should be created if it this not exist.+++ |  +++false+++ | {nbsp}
 | Connection Properties a| Object |  +++Specifies a list of custom key-value connectionProperties for the config.+++ |  | {nbsp}
-| Reconnection Strategy a| * <<reconnect>>
-* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
+| Reconnection a| <<Reconnection>> |  +++When the application is deployed, a connectivity test is performed on all connectors. If set to true, deployment will fail if the test doesn't pass after exhausting the associated reconnection strategy+++ |  | {nbsp}
 |======================
 [[config_generic]]
 ===== Generic Connection
@@ -110,8 +109,7 @@ and the required JDBC Driver Class
 | Use XA Transactions a| Boolean |  +++Indicates whether or not the created datasource has to support XA transactions. Default is false.+++ |  +++false+++ | {nbsp}
 | URL a| String |  +++JDBC URL to be used to connect to the database.+++ |  | *x*{nbsp}
 | Driver Class Name a| String |  +++Fully-qualified name of the database driver class.+++ |  | *x*{nbsp}
-| Reconnection Strategy a| * <<reconnect>>
-* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
+| Reconnection a| <<Reconnection>> |  +++When the application is deployed, a connectivity test is performed on all connectors. If set to true, deployment will fail if the test doesn't pass after exhausting the associated reconnection strategy+++ |  | {nbsp}
 |======================
 [[config_my-sql]]
 ===== MySQL Connection
@@ -141,8 +139,7 @@ Creates connections to a MySQL database.
 | Password a| String |  +++The password that is used for authentication against the database+++ |  | {nbsp}
 | Database a| String |  +++The name of the database+++ |  | {nbsp}
 | Connection Properties a| Object |  +++Specifies a list of custom key-value connectionProperties for the config.+++ |  | {nbsp}
-| Reconnection Strategy a| * <<reconnect>>
-* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
+| Reconnection a| <<Reconnection>> |  +++When the application is deployed, a connectivity test is performed on all connectors. If set to true, deployment will fail if the test doesn't pass after exhausting the associated reconnection strategy+++ |  | {nbsp}
 |======================
 [[config_oracle]]
 ===== Oracle Connection
@@ -171,8 +168,7 @@ Creates connections to a Oracle database
 | User a| String |  +++The user that is used for authentication against the database+++ |  | {nbsp}
 | Password a| String |  +++The password that is used for authentication against the database+++ |  | {nbsp}
 | Instance a| String |  +++The name of the database instance+++ |  | {nbsp}
-| Reconnection Strategy a| * <<reconnect>>
-* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
+| Reconnection a| <<Reconnection>> |  +++When the application is deployed, a connectivity test is performed on all connectors. If set to true, deployment will fail if the test doesn't pass after exhausting the associated reconnection strategy+++ |  | {nbsp}
 |======================
 
 ==== Associated Operations
@@ -193,7 +189,7 @@ Creates connections to a Oracle database
 
 [[bulkDelete]]
 === Bulk Delete
-`<http://www.mulesoft.org/schema/mule/db:bulk-delete>`
+`<db:bulk-delete>`
 
 +++
 Allows executing one delete statement various times using different parameter bindings. This happens using one single
@@ -232,6 +228,9 @@ the given number. If the limit is exceeded, the excess rows are silently dropped
 | Parameter Types a| Array of <<ParameterType>> |  +++Allows to optionally specify the type of one or more of the parameters in the query. If provided, you're not even required to
 reference all of the parameters, but you cannot reference a parameter not present in the input values+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -246,11 +245,13 @@ reference all of the parameters, but you cannot reference a parameter not presen
 ==== Throws
 * DB:CONNECTIVITY {nbsp}
 * DB:RETRY_EXHAUSTED {nbsp}
+* DB:BAD_SQL_SYNTAX {nbsp}
+* DB:QUERY_EXECUTION {nbsp}
 
 
 [[bulkInsert]]
 === Bulk Insert
-`<http://www.mulesoft.org/schema/mule/db:bulk-insert>`
+`<db:bulk-insert>`
 
 +++
 Allows executing one insert statement various times using different parameter bindings. This happens using one single
@@ -289,6 +290,9 @@ the given number. If the limit is exceeded, the excess rows are silently dropped
 | Parameter Types a| Array of <<ParameterType>> |  +++Allows to optionally specify the type of one or more of the parameters in the query. If provided, you're not even required to
 reference all of the parameters, but you cannot reference a parameter not present in the input values+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -303,11 +307,13 @@ reference all of the parameters, but you cannot reference a parameter not presen
 ==== Throws
 * DB:CONNECTIVITY {nbsp}
 * DB:RETRY_EXHAUSTED {nbsp}
+* DB:BAD_SQL_SYNTAX {nbsp}
+* DB:QUERY_EXECUTION {nbsp}
 
 
 [[bulkUpdate]]
 === Bulk Update
-`<http://www.mulesoft.org/schema/mule/db:bulk-update>`
+`<db:bulk-update>`
 
 +++
 Allows executing one update statement various times using different parameter bindings. This happens using one single
@@ -346,6 +352,9 @@ the given number. If the limit is exceeded, the excess rows are silently dropped
 | Parameter Types a| Array of <<ParameterType>> |  +++Allows to optionally specify the type of one or more of the parameters in the query. If provided, you're not even required to
 reference all of the parameters, but you cannot reference a parameter not present in the input values+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -360,11 +369,13 @@ reference all of the parameters, but you cannot reference a parameter not presen
 ==== Throws
 * DB:CONNECTIVITY {nbsp}
 * DB:RETRY_EXHAUSTED {nbsp}
+* DB:BAD_SQL_SYNTAX {nbsp}
+* DB:QUERY_EXECUTION {nbsp}
 
 
 [[delete]]
 === Delete
-`<http://www.mulesoft.org/schema/mule/db:delete>`
+`<db:delete>`
 
 +++
 Deletes data in a database.
@@ -402,8 +413,11 @@ reference all of the parameters, but you cannot reference a parameter not presen
 Each parameter should
 be referenced in the sql text using a semicolon prefix (E.g: where id = :myParamName)).
 <p>
-The map's values will contain the actual assignation for each parameter.+++ |  +++#[{}]+++ | {nbsp}
+The map's values will contain the actual assignation for each parameter.+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -418,11 +432,13 @@ The map's values will contain the actual assignation for each parameter.+++ |  +
 ==== Throws
 * DB:CONNECTIVITY {nbsp}
 * DB:RETRY_EXHAUSTED {nbsp}
+* DB:BAD_SQL_SYNTAX {nbsp}
+* DB:QUERY_EXECUTION {nbsp}
 
 
 [[executeDdl]]
 === Execute DDL
-`<http://www.mulesoft.org/schema/mule/db:execute-ddl>`
+`<db:execute-ddl>`
 
 +++
 Enables execution of DDL queries against a database.
@@ -455,6 +471,9 @@ streaming is true; in that case a default value (10) is used.+++ |  | {nbsp}
 | Max Rows a| Number |  +++Sets the limit for the maximum number of rows that any ResultSet object generated by this message processor can contain for
 the given number. If the limit is exceeded, the excess rows are silently dropped.+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -469,11 +488,13 @@ the given number. If the limit is exceeded, the excess rows are silently dropped
 ==== Throws
 * DB:CONNECTIVITY {nbsp}
 * DB:RETRY_EXHAUSTED {nbsp}
+* DB:BAD_SQL_SYNTAX {nbsp}
+* DB:QUERY_EXECUTION {nbsp}
 
 
 [[executeScript]]
 === Execute Script
-`<http://www.mulesoft.org/schema/mule/db:execute-script>`
+`<db:execute-script>`
 
 +++
 Executes a SQL script in one single Database statement. The script is executed as provided by the user, without any parameter
@@ -509,6 +530,9 @@ streaming is true; in that case a default value (10) is used.+++ |  | {nbsp}
 | Max Rows a| Number |  +++Sets the limit for the maximum number of rows that any ResultSet object generated by this message processor can contain for
 the given number. If the limit is exceeded, the excess rows are silently dropped.+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -523,11 +547,13 @@ the given number. If the limit is exceeded, the excess rows are silently dropped
 ==== Throws
 * DB:CONNECTIVITY {nbsp}
 * DB:RETRY_EXHAUSTED {nbsp}
+* DB:BAD_SQL_SYNTAX {nbsp}
+* DB:QUERY_EXECUTION {nbsp}
 
 
 [[insert]]
 === Insert
-`<http://www.mulesoft.org/schema/mule/db:insert>`
+`<db:insert>`
 
 +++
 Inserts data into a Database
@@ -565,11 +591,14 @@ reference all of the parameters, but you cannot reference a parameter not presen
 Each parameter should
 be referenced in the sql text using a semicolon prefix (E.g: where id = :myParamName)).
 <p>
-The map's values will contain the actual assignation for each parameter.+++ |  +++#[{}]+++ | {nbsp}
+The map's values will contain the actual assignation for each parameter.+++ |  | {nbsp}
 | Auto Generate Keys a| Boolean |  +++Indicates when to make auto-generated keys available for retrieval.+++ |  +++false+++ | {nbsp}
 | Auto Generated Keys Column Indexes a| Array of Number |  +++List of column indexes that indicates which auto-generated keys to make available for retrieval.+++ |  | {nbsp}
 | Auto Generated Keys Column Names a| Array of String |  +++List of column names that indicates which auto-generated keys should be made available for retrieval.+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -584,11 +613,13 @@ The map's values will contain the actual assignation for each parameter.+++ |  +
 ==== Throws
 * DB:CONNECTIVITY {nbsp}
 * DB:RETRY_EXHAUSTED {nbsp}
+* DB:BAD_SQL_SYNTAX {nbsp}
+* DB:QUERY_EXECUTION {nbsp}
 
 
 [[select]]
 === Select
-`<http://www.mulesoft.org/schema/mule/db:select>`
+`<db:select>`
 
 +++
 Selects data from a database.
@@ -631,8 +662,11 @@ reference all of the parameters, but you cannot reference a parameter not presen
 Each parameter should
 be referenced in the sql text using a semicolon prefix (E.g: where id = :myParamName)).
 <p>
-The map's values will contain the actual assignation for each parameter.+++ |  +++#[{}]+++ | {nbsp}
+The map's values will contain the actual assignation for each parameter.+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -644,11 +678,14 @@ The map's values will contain the actual assignation for each parameter.+++ |  +
 ==== For Configurations.
 * <<config>> {nbsp}
 
+==== Throws
+* DB:BAD_SQL_SYNTAX {nbsp}
+* DB:QUERY_EXECUTION {nbsp}
 
 
 [[storedProcedure]]
 === Stored Procedure
-`<http://www.mulesoft.org/schema/mule/db:stored-procedure>`
+`<db:stored-procedure>`
 
 +++
 Invokes a Stored Procedure on the database.
@@ -690,7 +727,7 @@ reference all of the parameters, but you cannot reference a parameter not presen
 Each parameter should
 be referenced in the sql text using a semicolon prefix (E.g: where id = :myParamName)).
 <p>
-The map's values will contain the actual assignation for each parameter.+++ |  +++#[{}]+++ | {nbsp}
+The map's values will contain the actual assignation for each parameter.+++ |  | {nbsp}
 | Input - Output Parameters a| Object |  +++A Map which keys are the name of a parameter to be set on the JDBC prepared statement which is both input and output.
 <p>
 Each parameter should be referenced in the sql text using a semicolon prefix (E.g: where id = :myParamName)).
@@ -703,6 +740,9 @@ text using a semicolon prefix (E.g: call multiply(:value, :result))+++ |  | {nbs
 | Auto Generated Keys Column Indexes a| Array of Number |  +++List of column indexes that indicates which auto-generated keys to make available for retrieval.+++ |  | {nbsp}
 | Auto Generated Keys Column Names a| Array of String |  +++List of column names that indicates which auto-generated keys should be made available for retrieval.+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -717,11 +757,13 @@ text using a semicolon prefix (E.g: call multiply(:value, :result))+++ |  | {nbs
 ==== Throws
 * DB:CONNECTIVITY {nbsp}
 * DB:RETRY_EXHAUSTED {nbsp}
+* DB:BAD_SQL_SYNTAX {nbsp}
+* DB:QUERY_EXECUTION {nbsp}
 
 
 [[update]]
 === Update
-`<http://www.mulesoft.org/schema/mule/db:update>`
+`<db:update>`
 
 +++
 Updates data in a database.
@@ -759,11 +801,14 @@ reference all of the parameters, but you cannot reference a parameter not presen
 Each parameter should
 be referenced in the sql text using a semicolon prefix (E.g: where id = :myParamName)).
 <p>
-The map's values will contain the actual assignation for each parameter.+++ |  +++#[{}]+++ | {nbsp}
+The map's values will contain the actual assignation for each parameter.+++ |  | {nbsp}
 | Auto Generate Keys a| Boolean |  +++Indicates when to make auto-generated keys available for retrieval.+++ |  +++false+++ | {nbsp}
 | Auto Generated Keys Column Indexes a| Array of Number |  +++List of column indexes that indicates which auto-generated keys to make available for retrieval.+++ |  | {nbsp}
 | Auto Generated Keys Column Names a| Array of String |  +++List of column names that indicates which auto-generated keys should be made available for retrieval.+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -778,6 +823,8 @@ The map's values will contain the actual assignation for each parameter.+++ |  +
 ==== Throws
 * DB:CONNECTIVITY {nbsp}
 * DB:RETRY_EXHAUSTED {nbsp}
+* DB:BAD_SQL_SYNTAX {nbsp}
+* DB:QUERY_EXECUTION {nbsp}
 
 
 
@@ -785,14 +832,14 @@ The map's values will contain the actual assignation for each parameter.+++ |  +
 [[pooling-profile]]
 === Pooling Profile
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Max Pool Size a| Number | 5
-| Min Pool Size a| Number | 0
-| Acquire Increment a| Number | 1
-| Prepared Statement Cache Size a| Number | 5
-| Max Wait a| Number | 0
+| Field | Type | Description | Default Value | Required
+| Max Pool Size a| Number |  | 5 | 
+| Min Pool Size a| Number |  | 0 | 
+| Acquire Increment a| Number |  | 1 | 
+| Prepared Statement Cache Size a| Number |  | 5 | 
+| Max Wait a| Number |  | 0 | 
 | Max Wait Unit a| Enumeration, one of:
 
 ** NANOSECONDS
@@ -801,56 +848,84 @@ The map's values will contain the actual assignation for each parameter.+++ |  +
 ** SECONDS
 ** MINUTES
 ** HOURS
-** DAYS | SECONDS
+** DAYS |  | SECONDS | 
 |======================
-    
+
 [[ColumnType]]
 === Column Type
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Id a| Number | 
-| Type Name a| String | 
-| Class Name a| String | 
+| Field | Type | Description | Default Value | Required
+| Id a| Number |  |  | x
+| Type Name a| String |  |  | x
+| Class Name a| String |  |  | 
 |======================
-    
+
+[[Reconnection]]
+=== Reconnection
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|======================
+| Field | Type | Description | Default Value | Required
+| Fails Deployment a| Boolean | When the application is deployed, a connectivity test is performed on all connectors. If set to true, deployment will fail if the test doesn't pass after exhausting the associated reconnection strategy |  | 
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> | The reconnection strategy to use |  | 
+|======================
+
 [[reconnect]]
 === Reconnect
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Frequency a| Number | 
-| Count a| Number | 
-| Blocking a| Boolean | 
+| Field | Type | Description | Default Value | Required
+| Frequency a| Number | How often (in ms) to reconnect |  | 
+| Count a| Number | How many reconnection attempts to make |  | 
 |======================
-    
+
 [[reconnect-forever]]
 === Reconnect Forever
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Frequency a| Number | 
+| Field | Type | Description | Default Value | Required
+| Frequency a| Number | How often (in ms) to reconnect |  | 
 |======================
-    
+
+[[ExpirationPolicy]]
+=== Expiration Policy
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|======================
+| Field | Type | Description | Default Value | Required
+| Max Idle Time a| Number | A scalar time value for the maximum amount of time a dynamic configuration instance should be allowed to be idle before it's considered eligible for expiration |  | 
+| Time Unit a| Enumeration, one of:
+
+** NANOSECONDS
+** MICROSECONDS
+** MILLISECONDS
+** SECONDS
+** MINUTES
+** HOURS
+** DAYS | A time unit that qualifies the maxIdleTime attribute |  | 
+|======================
+
 [[ParameterType]]
 === Parameter Type
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Key a| String | 
-| Type Classifier a| <<TypeClassifier>> | 
+| Field | Type | Description | Default Value | Required
+| Key a| String |  |  | x
+| Type Classifier a| <<TypeClassifier>> |  |  | x
 |======================
-    
+
 [[TypeClassifier]]
 === Type Classifier
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
+| Field | Type | Description | Default Value | Required
 | Type a| Enumeration, one of:
 
 ** BIT
@@ -889,55 +964,53 @@ The map's values will contain the actual assignation for each parameter.+++ |  +
 ** LONGNVARCHAR
 ** NCLOB
 ** SQLXML
-** UNKNOWN | 
-| Custom Type a| String | 
+** UNKNOWN |  |  | 
+| Custom Type a| String |  |  | 
 |======================
-    
+
 [[StatementResult]]
 === Statement Result
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Affected Rows a| Number | 
-| Generated Keys a| Object | 
+| Field | Type | Description | Default Value | Required
+| Affected Rows a| Number |  |  | 
+| Generated Keys a| Object |  |  | 
 |======================
-    
+
 [[repeatable-in-memory-iterable]]
 === Repeatable In Memory Iterable
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Initial Buffer Size a| Number | 
-| Buffer Size Increment a| Number | 
-| Max Buffer Size a| Number | 
+| Field | Type | Description | Default Value | Required
+| Initial Buffer Size a| Number | This is the amount of instances that will be initially be allowed to be kept in memory in order to consume the stream and provide random access to it. If the stream contains more data than can fit into this buffer, then it will be expanded according to the bufferSizeIncrement attribute, with an upper limit of maxInMemorySize. Default value is 100 instances. |  | 
+| Buffer Size Increment a| Number | This is by how much will the buffer size by expanded if it exceeds its initial size. Setting a value of zero or lower will mean that the buffer should not expand, meaning that a STREAM_MAXIMUM_SIZE_EXCEEDED error will be raised when the buffer gets full. Default value is 100 instances. |  | 
+| Max Buffer Size a| Number | This is the maximum amount of memory that will be used. If more than that is used then a STREAM_MAXIMUM_SIZE_EXCEEDED error will be raised. A value lower or equal to zero means no limit. |  | 
 |======================
-    
+
 [[repeatable-file-store-iterable]]
 === Repeatable File Store Iterable
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Max In Memory Size a| Number | 
+| Field | Type | Description | Default Value | Required
+| Max In Memory Size a| Number | This is the maximum amount of instances that will be kept in memory. If more than that is required, then it will start to buffer the content on disk. |  | 
 | Buffer Unit a| Enumeration, one of:
 
 ** BYTE
 ** KB
 ** MB
-** GB | 
+** GB | The unit in which maxInMemorySize is expressed |  | 
 |======================
-    
+
 [[OutputParameter]]
 === Output Parameter
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Key a| String | 
-| Type Classifier a| <<TypeClassifier>> | 
+| Field | Type | Description | Default Value | Required
+| Key a| String |  |  | x
+| Type Classifier a| <<TypeClassifier>> |  |  | x
 |======================
-    
-
 

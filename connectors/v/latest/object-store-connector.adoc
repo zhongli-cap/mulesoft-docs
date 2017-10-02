@@ -1,50 +1,56 @@
 = Object Store Connector
-:keywords: object store, object, store, connnector
+:keywords: object store, object, store, connector
 
 *Reference:* link:/connectors/object-store-connector-reference[Object Store Connector Reference]
 
-An object store lets you temporarily store data in the form of key/value pairs.
+== About Object Stores
 
-The object store lets you store any serializable data such as JSON, XML, that you can define. Mule uses object stores to persist data for eventual retrieval. Internally, 
-Mule uses object stores in various filters, routers, and other message processors that need 
-to store state between messages.
+An ObjectStore is a Mule component which allows for simple key-value storage. Although it can serve a wide variety of use cases, it’s mainly design for:
 
-Data passes to the 
-object store, which you define how to store the data. You can use a key value like `payload.key` so that you can send a key value in the data. Similarly, you can set the value part of the key/value to `payload.value`. Your application can then write to the key and value parameters.
+* Storing synchronization information such as watermarks
+* Storing temporal information such as access tokens
+* Storing user information
+
+Additionally, the Mule Runtime itself uses ObjectStores to support some of its own components. For example:
+
+* The cache module uses an object store to maintain all of the cached data
+* The OAuth module (and every OAuth enabled connector) use object stores to store the access and refresh tokens.
+* The <until-successful> component uses an ObjectStore to store all the messages it has to retry, so that it can ensure that if Mule crashes, those messages are not lost and can continue processing when it recovers.
 
 
-== To Configure
+== Object Store limitations
 
-. In Anypoint Platform, click Design Center.
-. Create a new project as a Mule Application.
-. Add an HTTP Listener trigger. See link:/connectors/http-trigger-app-from-browser[To Start an App from a Browser] for configuration information.
-. Click the plus sign to create an ObjectStore component.
-. Choose an operation and add a value for each field. You can enter a simplified statement for a field or value such as payload.key or payload.value. You can also click the Map button to use DataWeave Transform to map out a more complex structure of values.
-+
-[%header,cols="20a,30a,50a"]
-|===
-|Operation |Fields |Description
-|Clear |none |Clears all keys and their values from the object store.
-|Contains |Key |Checks whether the object store contains the Key value.
-|Remove |Key |Removes the Key you specify and its value from the object store.
-|Retrieve |Key +
-Default Value
-|Retrieves the Key you specify and its value from the object store. You can also specify a Default Value to retrieve. 
-|Store |Key +
-Value +
-Fail if Present +
-Fail on Null Value
+ObjectStores are not an universal solution for data storage. They do not replace an actual Database and are not suitable for every use case. Most importantly, they do not support transactional access or modification. For use cases in which link:https://en.wikipedia.org/wiki/ACID[ACID] semantics are needed, or cases in which you expect the same key being updated in parallel, consider some other solution.
 
-|Stores an object in the object store. This can also indicate if a key can be overwritten or not.
+== Scopes of Object Store
 
-Fields:
+Each Mule application has each own default object store, which is a persistent one, always available to that app. However, quite often you’ll find yourself in the need to define additional object stores. Reasons for doing that can be:
 
-* Key: (Required) Specify the name of a key such as `payload.key`.
-* Value: (Required) Specify the value as a text value, or a statement that you can fill in from a program calling the  as `payload.value`, or click Map if you have a set of values in JSON. Map opens a user interface using the DataWeave transform that lets you specify the JSON map structure that you want to store in the object store.
-* Fail if Present: Fail if the key already exists.
-* Fail on Null Value: Fail if the key has a null value
-|===
-+
-. If an operation has an Advanced tab, this tab contains the Target Variable field where you can specify the name 
-of a variable into which the output of the operation is placed. For example, if the target variable is named OperationOutput, you can view the output using OperationOutput.payload or OperationOutput.attributes.
+* You want to partition your information by storing them in different stores
+* You want to use advanced ObjectStore features such as:
+** Transient/Persistent storage
+** Specify a time to live (TTL)
+** Specify a max capacity
+* You want to keep different components from sharing state by feeding them with different stores
+* You want different components to share information by feeding them with the same store
 
+You can define an object store globally in the application so it can be referenced by name and shared between multiple components. Or you can create a object store which is “private” to a particular component.
+
+=== Use a Global ObjectStore when:
+
+* Need to share state across components: Because the store can be reference by name, other components could also use it. Suppose you have a second instance of the salesforce connector, only that configured slightly different. You can use this other instance using the same tokens, avoiding the need to authenticate again.
+* Need to share state across Cluster Nodes: When you’re using Mule in cluster mode, you may want to have information which is available to every node in the cluster. Global ObjectStores are ideal for that.
+* Need to use the information in your application’s logic: The ObjectStore connector is not only capable of defining that store, it can also manipulate it. All of the operations we first described operate over the default object store by default. But they also accept referencing a global object store, so that you can act on them instead of the default one. For example, suppose you want to have an audit flow which verifies if certain users are currently authorized. You could do something like this:
+
+`<os:contains id="#[userId]" objectStore="tokensStore" />`
+
+=== Use a Private ObjectStore to:
+
+* Share state can either be a feature or a security risk. 
+* Be able to manipulate the store from the connector can either be a feature, or something error prone. Some developer could accidentally end up doing a bad use of the clear operation and delete all the authorization data.
+
+See also
+
+link:/connectors/object-store-to-store-and-retrieve[To Store and Retrieve information from an Object Store]
+link:/connectors/object-store-to-define-a-new-os[To Define a new Object Store]
+link:/connectors/object-store-to-watermark[Example: Watermark]

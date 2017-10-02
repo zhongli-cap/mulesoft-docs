@@ -9,6 +9,11 @@
 
 = JMS Connector Documentation Reference
 
++++
+JmsConnector is a JMS 1.0.2b, 1.1 and 2.0 compliant MuleSoft Extension, used to consume and produce JMS Messages.
+The Extension supports all JMS functionality including topics and queues, durable subscribers, acknowledgement modes
+and local transactions.
++++
 
 
 == Configurations
@@ -17,24 +22,23 @@
 === Config
 
 +++
-Base configuration for JmsExtension
+Base configuration for JmsConnector
 +++
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
-|Name | String | The name of this configuration. With this name can be later referenced. | | *x*{nbsp}
-| Encoding a| String |  +++The encoding of the Message body to consume if the message doesn't communicate it+++ |  | {nbsp}
-| Content Type a| String |  +++The default content type of the Message body to consume if the message doesn't communicate it+++ |  +++*/*+++ | {nbsp}
+|Name | String | The name for this configuration. Connectors reference the configuration with this name. | | *x*{nbsp}
+| Content Type a| String |  +++The default contentType of the Message body to be used if the message doesn't communicate it+++ |  +++*/*+++ | {nbsp}
 | Ack Mode a| Enumeration, one of:
 
-** NONE
+** IMMEDIATE
 ** AUTO
 ** MANUAL
 ** DUPS_OK |  +++The ConsumerAckMode to use when consuming a Message
 Can be overridden at the message source level.
-This attribute has to be NONE if transactionType is LOCAL or MULTI+++ |  +++AUTO+++ | {nbsp}
+This attribute has to be IMMEDIATE if transactionType is LOCAL or MULTI+++ |  +++AUTO+++ | {nbsp}
 | Consumer Type a| One of:
 
 * <<queue-consumer>>
@@ -100,7 +104,7 @@ Defaults to MILLISECONDS+++ |  +++MILLISECONDS+++ | {nbsp}
 
 [[consume]]
 === Consume
-`<http://www.mulesoft.org/schema/mule/jms:consume>`
+`<jms:consume>`
 
 +++
 Operation that allows the user to consume a single Message from a given Destination.
@@ -120,9 +124,8 @@ and headers as Result#getAttributes
 * <<topic-consumer>> |  +++the type of the MessageConsumer that is required for the given destination, along with any+++ |  | {nbsp}
 | Ack Mode a| Enumeration, one of:
 
-** AUTO
-** MANUAL
-** DUPS_OK |  +++the ConsumerAckMode that will be configured over the Message and Session+++ |  | {nbsp}
+** IMMEDIATE
+** MANUAL |  +++the ConsumerAckMode that will be configured over the Message and Session+++ |  | {nbsp}
 | Selector a| String |  +++a custom JMS selector for filtering the messages+++ |  | {nbsp}
 | Content Type a| String |  +++the Message's content content type+++ |  | {nbsp}
 | Encoding a| String |  +++the Message's content encoding+++ |  | {nbsp}
@@ -142,6 +145,9 @@ and headers as Result#getAttributes
 ** JOIN_IF_POSSIBLE
 ** NOT_SUPPORTED |  +++The type of joining action that operations can take regarding transactions.+++ |  +++JOIN_IF_POSSIBLE+++ | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -155,17 +161,18 @@ and headers as Result#getAttributes
 * <<config>> {nbsp}
 
 ==== Throws
-* JMS:CONNECTIVITY {nbsp}
-* JMS:DESTINATION_NOT_FOUND {nbsp}
-* JMS:CONSUMING {nbsp}
-* JMS:ACK {nbsp}
-* JMS:RETRY_EXHAUSTED {nbsp}
 * JMS:TIMEOUT {nbsp}
+* JMS:CONNECTIVITY {nbsp}
+* JMS:CONSUMING {nbsp}
+* JMS:SECURITY {nbsp}
+* JMS:RETRY_EXHAUSTED {nbsp}
+* JMS:DESTINATION_NOT_FOUND {nbsp}
+* JMS:ACK {nbsp}
 
 
 [[publish]]
 === Publish
-`<http://www.mulesoft.org/schema/mule/jms:publish>`
+`<jms:publish>`
 
 +++
 Operation that allows the user to send a Message to a JMS Destination
@@ -221,6 +228,8 @@ this Message should be replied to+++ |  | {nbsp}
 ** MINUTES
 ** HOURS
 ** DAYS |  +++Time unit to be used in the deliveryDelay configurations+++ |  | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 
@@ -228,16 +237,17 @@ this Message should be replied to+++ |  | {nbsp}
 * <<config>> {nbsp}
 
 ==== Throws
-* JMS:CONNECTIVITY {nbsp}
 * JMS:PUBLISHING {nbsp}
-* JMS:DESTINATION_NOT_FOUND {nbsp}
+* JMS:CONNECTIVITY {nbsp}
+* JMS:SECURITY {nbsp}
 * JMS:ILLEGAL_BODY {nbsp}
 * JMS:RETRY_EXHAUSTED {nbsp}
+* JMS:DESTINATION_NOT_FOUND {nbsp}
 
 
 [[publishConsume]]
 === Publish Consume
-`<http://www.mulesoft.org/schema/mule/jms:publish-consume>`
+`<jms:publish-consume>`
 
 +++
 Operation that allows the user to send a message to a JMS Destination and waits for a response
@@ -288,9 +298,8 @@ this Message should be replied to+++ |  | {nbsp}
 ** DAYS |  +++Time unit to be used in the deliveryDelay configurations+++ |  | {nbsp}
 | Ack Mode a| Enumeration, one of:
 
-** AUTO
-** MANUAL
-** DUPS_OK |  +++The Session ACK mode to use when consuming the message+++ |  | {nbsp}
+** IMMEDIATE
+** MANUAL |  +++The Session ACK mode to use when consuming the message+++ |  | {nbsp}
 | Maximum Wait a| Number |  +++Maximum time to wait for a message to arrive before timeout+++ |  +++10000+++ | {nbsp}
 | Maximum Wait Unit a| Enumeration, one of:
 
@@ -304,6 +313,9 @@ this Message should be replied to+++ |  | {nbsp}
 | Content Type a| String |  +++The content type of the message body to be consumed+++ |  | {nbsp}
 | Encoding a| String |  +++The encoding of the message body to be consumed+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
 |======================
 
 ==== Output
@@ -317,21 +329,70 @@ this Message should be replied to+++ |  | {nbsp}
 * <<config>> {nbsp}
 
 ==== Throws
-* JMS:CONNECTIVITY {nbsp}
 * JMS:PUBLISHING {nbsp}
-* JMS:DESTINATION_NOT_FOUND {nbsp}
-* JMS:CONSUMING {nbsp}
-* JMS:ILLEGAL_BODY {nbsp}
-* JMS:ACK {nbsp}
-* JMS:RETRY_EXHAUSTED {nbsp}
 * JMS:TIMEOUT {nbsp}
+* JMS:CONNECTIVITY {nbsp}
+* JMS:CONSUMING {nbsp}
+* JMS:SECURITY {nbsp}
+* JMS:ILLEGAL_BODY {nbsp}
+* JMS:RETRY_EXHAUSTED {nbsp}
+* JMS:DESTINATION_NOT_FOUND {nbsp}
+* JMS:ACK {nbsp}
+
+
+[[ack]]
+=== Ack
+`<jms:ack>`
+
++++
+Allows the user to perform an ACK when the AckMode#MANUAL mode is elected while consuming the Message.
+As per JMS Spec, performing an ACK over a single Message automatically works as an ACK for all the Messages
+produced in the same JmsSession.
+to a session of the current connection
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Ack Id a| String |  +++The AckId of the Message to ACK+++ |  | *x*{nbsp}
+|======================
+
+
+
+==== Throws
+* JMS:ACK {nbsp}
+
+
+[[recoverSession]]
+=== Recover Session
+`<jms:recover-session>`
+
++++
+Allows the user to perform a session recover when the AckMode#MANUAL mode is elected while consuming the
+Message.
+As per JMS Spec, performing a session recover automatically will redeliver all the consumed messages that had not being
+acknowledged before this recover.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Ack Id a| String |  +++The AckId of the Message Session to recover+++ |  | *x*{nbsp}
+|======================
+
+
+
+==== Throws
+* JMS:SESSION_RECOVER {nbsp}
 
 
 == Sources
 
 [[listener]]
 === Listener
-`<http://www.mulesoft.org/schema/mule/jms:listener>`
+`<jms:listener>`
 
 +++
 JMS Subscriber for Destinations, allows to listen
@@ -350,7 +411,7 @@ for incoming Messages
 * <<topic-consumer>> |  +++The Type of the Consumer that should be used for the provided destination+++ |  | {nbsp}
 | Ack Mode a| Enumeration, one of:
 
-** NONE
+** IMMEDIATE
 ** AUTO
 ** MANUAL
 ** DUPS_OK |  +++The Session ACK mode to use when consuming a message+++ |  | {nbsp}
@@ -362,6 +423,10 @@ for incoming Messages
 
 ** ALWAYS_BEGIN
 ** NONE |  +++The type of beginning action that sources can take regarding transactions.+++ |  +++NONE+++ | {nbsp}
+| Transaction Type a| Enumeration, one of:
+
+** LOCAL
+** XA |  +++The type of transaction to create. Availability will depend on the runtime version.+++ |  +++LOCAL+++ | {nbsp}
 | Redelivery Policy a| <<RedeliveryPolicy>> |  +++Defines a policy for processing the redelivery of the same message+++ |  | {nbsp}
 | Reconnection Strategy a| * <<reconnect>>
 * <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
@@ -411,198 +476,177 @@ for incoming Messages
 ==== For Configurations.
 * <<config>> {nbsp}
 
-==== Throws
-* MULE:SOURCE_RESPONSE_SEND {nbsp}
-* MULE:SOURCE_ERROR_RESPONSE_SEND {nbsp}
-* MULE:SOURCE_ERROR_RESPONSE_GENERATE {nbsp}
-* MULE:SOURCE_RESPONSE_GENERATE {nbsp}
 
 
 == Types
 [[RedeliveryPolicy]]
 === Redelivery Policy
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Max Redelivery Count a| Number | 
-| Use Secure Hash a| Boolean | 
-| Message Digest Algorithm a| String | 
-| Id Expression a| String | 
-| Object Store Ref a| String | 
+| Field | Type | Description | Default Value | Required
+| Max Redelivery Count a| Number | The maximum number of times a message can be redelivered and processed unsuccessfully before triggering process-failed-message |  | 
+| Use Secure Hash a| Boolean | Whether to use a secure hash algorithm to identify a redelivered message |  | 
+| Message Digest Algorithm a| String | The secure hashing algorithm to use. If not set, the default is SHA-256. |  | 
+| Id Expression a| String | Defines one or more expressions to use to determine when a message has been redelivered. This property may only be set if useSecureHash is false. |  | 
+| Object Store a| <<ObjectStore>> | The object store where the redelivery counter for each message is going to be stored. |  | 
 |======================
-    
+
 [[reconnect]]
 === Reconnect
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Frequency a| Number | 
-| Count a| Number | 
-| Blocking a| Boolean | 
+| Field | Type | Description | Default Value | Required
+| Frequency a| Number | How often (in ms) to reconnect |  | 
+| Count a| Number | How many reconnection attempts to make |  | 
 |======================
-    
+
 [[reconnect-forever]]
 === Reconnect Forever
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Frequency a| Number | 
+| Field | Type | Description | Default Value | Required
+| Frequency a| Number | How often (in ms) to reconnect |  | 
 |======================
-    
+
 [[JmsDestination]]
 === Jms Destination
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Destination a| String | 
+| Field | Type | Description | Default Value | Required
+| Destination a| String |  |  | x
 | Destination Type a| Enumeration, one of:
 
 ** QUEUE
-** TOPIC | QUEUE
+** TOPIC |  | QUEUE | 
 |======================
-    
+
 [[JmsxProperties]]
 === Jmsx Properties
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Jmsx User ID a| String | 
-| Jmsx App ID a| String | 
-| Jmsx Delivery Count a| Number | 
-| Jmsx Group ID a| String | 
-| Jmsx Group Seq a| Number | 
-| Jmsx Producer TXID a| String | 
-| Jmsx Consumer TXID a| String | 
-| Jmsx Rcv Timestamp a| Number | 
+| Field | Type | Description | Default Value | Required
+| Jmsx User ID a| String |  |  | 
+| Jmsx App ID a| String |  |  | 
+| Jmsx Delivery Count a| Number |  |  | 
+| Jmsx Group ID a| String |  |  | 
+| Jmsx Group Seq a| Number |  |  | 
+| Jmsx Producer TXID a| String |  |  | 
+| Jmsx Consumer TXID a| String |  |  | 
+| Jmsx Rcv Timestamp a| Number |  |  | 
 |======================
-    
-[[PoolingProfile]]
-=== Pooling Profile
 
-[cols=".^30%,.^40%,.^30%", options="header"]
-|======================
-| Field | Type | Default Value
-| Max Active a| Number | 
-| Max Idle a| Number | 
-| Max Wait a| Number | 
-| Min Eviction Millis a| Number | 
-| Eviction Check Interval Millis a| Number | 
-| Exhausted Action a| Enumeration, one of:
+[[Reconnection]]
+=== Reconnection
 
-** WHEN_EXHAUSTED_GROW
-** WHEN_EXHAUSTED_WAIT
-** WHEN_EXHAUSTED_FAIL | 
-| Initialisation Policy a| Enumeration, one of:
-
-** INITIALISE_NONE
-** INITIALISE_ONE
-** INITIALISE_ALL | 
-| Disabled a| Boolean | 
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-    
+| Field | Type | Description | Default Value | Required
+| Fails Deployment a| Boolean | When the application is deployed, a connectivity test is performed on all connectors. If set to true, deployment will fail if the test doesn't pass after exhausting the associated reconnection strategy |  | 
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> | The reconnection strategy to use |  | 
+|======================
+
 [[ActiveMQConnectionFactoryConfiguration]]
 === Active MQ Connection Factory Configuration
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Broker Url a| String | vm://localhost?broker.persistent=false&broker.useJmx=false
-| Enable Xa a| Boolean | false
-| Initial Redelivery Delay a| Number | 1000
-| Redelivery Delay a| Number | 1000
-| Max Redelivery a| Number | 0
+| Field | Type | Description | Default Value | Required
+| Broker Url a| String |  | vm://localhost?broker.persistent=false&broker.useJmx=false | 
+| Enable Xa a| Boolean |  | false | 
+| Initial Redelivery Delay a| Number |  | 1000 | 
+| Redelivery Delay a| Number |  | 1000 | 
+| Max Redelivery a| Number |  | 0 | 
 |======================
-    
+
 [[topic-consumer]]
 === Topic Consumer
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Is Durable a| Boolean | false
-| Is Shared a| Boolean | false
-| No Local a| Boolean | false
-| Subscription Name a| String | 
+| Field | Type | Description | Default Value | Required
+| Durable a| Boolean |  | false | 
+| Shared a| Boolean |  | false | 
+| No Local a| Boolean |  | false | 
+| Subscription Name a| String |  |  | 
 |======================
-    
+
 [[default-caching]]
 === Default Caching
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Session Cache Size a| Number | 1
-| Cache Producers a| Boolean | true
-| Cache Consumers a| Boolean | true
+| Field | Type | Description | Default Value | Required
+| Session Cache Size a| Number |  |  | 
+| Cache Producers a| Boolean |  | true | 
+| Cache Consumers a| Boolean |  | true | 
 |======================
-    
+
 [[JndiConnectionFactory]]
 === Jndi Connection Factory
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Connection Factory Jndi Name a| String | 
+| Field | Type | Description | Default Value | Required
+| Connection Factory Jndi Name a| String |  |  | x
 | Lookup Destination a| Enumeration, one of:
 
 ** NEVER
 ** ALWAYS
-** TRY_ALWAYS | NEVER
-| Name Resolver Provider a| <<JndiNameResolverProvider>> | 
+** TRY_ALWAYS |  | NEVER | 
+| Name Resolver Provider a| <<JndiNameResolverProvider>> |  |  | x
 |======================
-    
+
 [[JndiNameResolverProvider]]
 === Jndi Name Resolver Provider
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
+| Field | Type | Description | Default Value | Required
 | Custom Jndi Name Resolver a| One of:
 
 * <<SimpleJndiNameResolver>>
-* <<CachedJndiNameResolver>> | 
-| Name Resolver Builder a| <<JndiNameResolverProperties>> | 
+* <<CachedJndiNameResolver>> |  |  | 
+| Name Resolver Builder a| <<JndiNameResolverProperties>> |  |  | 
 |======================
-    
+
 [[JndiNameResolverProperties]]
 === Jndi Name Resolver Properties
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Jndi Initial Context Factory a| String | 
-| Jndi Provider Url a| String | 
-| Provider Properties a| Object | 
+| Field | Type | Description | Default Value | Required
+| Jndi Initial Context Factory a| String |  |  | x
+| Jndi Provider Url a| String |  |  | 
+| Provider Properties a| Object |  |  | 
 |======================
-    
+
 [[SimpleJndiNameResolver]]
 === Simple Jndi Name Resolver
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Context Factory a| Any | 
-| Jndi Initial Factory a| String | 
-| Jndi Provider Properties a| Object | 
-| Jndi Provider Url a| String | 
+| Field | Type | Description | Default Value | Required
+| Context Factory a| Any |  |  | 
+| Jndi Initial Factory a| String |  |  | 
+| Jndi Provider Properties a| Object |  |  | 
+| Jndi Provider Url a| String |  |  | 
 |======================
-    
+
 [[CachedJndiNameResolver]]
 === Cached Jndi Name Resolver
 
-[cols=".^30%,.^40%,.^30%", options="header"]
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
-| Field | Type | Default Value
-| Context Factory a| Any | 
-| Jndi Initial Factory a| String | 
-| Jndi Provider Properties a| Object | 
-| Jndi Provider Url a| String | 
+| Field | Type | Description | Default Value | Required
+| Context Factory a| Any |  |  | 
+| Jndi Initial Factory a| String |  |  | 
+| Jndi Provider Properties a| Object |  |  | 
+| Jndi Provider Url a| String |  |  | 
 |======================
-    
-
 
