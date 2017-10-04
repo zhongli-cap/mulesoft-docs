@@ -1,4 +1,4 @@
-= Formats
+= Formats that are Supported by DataWeave
 :keywords: studio, anypoint, esb, transform, transformer, format, aggregate, rename, split, filter convert, xml, json, csv, pojo, java object, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping
 
 DataWeave supports different types of data formats. Each format has an associated reader and a writer, and in some cases custom types are allowed. Each reader and writer defines configuration properties for customization.
@@ -16,8 +16,8 @@ The mapping between Java objects to DataWeave types is quite simple:
 |`Collections/Array/Iterator/Iterable` | link:/mule-user-guide/v/4.0/dataweave-types#array[Array]
 |`String/CharSequence/Char/Enum/Class` | link:/mule-user-guide/v/4.0/dataweave-types#string[String]
 |`int/Short/Long/BigInteger/Flat/Double/BigDecimal`|link:/mule-user-guide/v/4.0/dataweave-types#number[Number]
-|`Calendar/XmlGregorainCalendar`|link:/mule-user-guide/v/4.0/dataweave-types#datetime[Datetime]
-|`TimeZone`|link:/mule-user-guide/v/4.0/dataweave-types#timezone[Timezone]
+|`Calendar/XmlGregorainCalendar`|link:/mule-user-guide/v/4.0/dataweave-types#datetime[DateTime]
+|`TimeZone`|link:/mule-user-guide/v/4.0/dataweave-types#timezone[TimeZone]
 |`sql.Date/util.Date`|link:/mule-user-guide/v/4.0/dataweave-types#date[Date]
 |`Bean/Map`|link:/mule-user-guide/v/4.0/dataweave-types#object[Object]
 |`InputStream/Array[Byte]`|link:/mule-user-guide/v/4.0/dataweave-types#binary[Binary]
@@ -29,36 +29,34 @@ The mapping between Java objects to DataWeave types is quite simple:
 === Custom Types
 
 
-=== Metadata property *class*
+=== Metadata property `class`
 
-Java developers use the 'class' metadata key as hint for what class needs to be created and sent as an input.
-If this is not explicitly defined, DataWeave tries to infer from the context or it assigns it the default values:
+Java developers use the `class` metadata key as hint for what class needs to be created and sent as an input. If this is not explicitly defined, DataWeave tries to infer from the context or it assigns it the default values:
 
 
- * java.util.HashMap for *objects*
- * java.util.ArrayList for *lists*
+ * `java.util.HashMap` for objects
+ * `java.util.ArrayList` for lists
 
 .Transform
 [source,DataWeave, linenums]
 -----------------------------------------------------------------------
 %dw 2.0
-type user = Object { class: "com.anypoint.df.pojo.User"}
+type user = :object { class: "com.anypoint.df.pojo.User"}
 output application/xml
 ---
 {
-  name: "Mariano",
-  age: 31
+  name : "Mariano",
+  age : 31
 } as user
 
 -----------------------------------------------------------------------
 
-The above code defines the type of the required input as an instance of 'com.anypoint.df.pojo.User'.
+The code above defines the type of the required input as an instance of `com.anypoint.df.pojo.User`.
 
+// TODO: IS :enum correct? Or is it now Enum?
 === :enum
 
-In order to put an enum value in a java.util.Map, the DataWeave java module defines a custom type called :enum.
-It allows you to specify that a given string should be handled as the name of a specified enum type.
-It should always be used with the class property with the java class name of the enum.
+In order to put an enum value in a `java.util.Map`, the DataWeave Java module defines a custom type called `:enum`. It allows you to specify that a given string should be handled as the name of a specified enum type. It should always be used with the class property with the java class name of the enum.
 
 === Defining a Metadata Type
 
@@ -66,12 +64,6 @@ In the Transform component, you can define a Java type through the following met
 
 * By Providing a sample object
 
-[TIP]
-====
-For Anypoint Studio see link:https://docs.mulesoft.com/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation (Anypoint Studio)].
-
-For Design Center see link:https://docs.mulesoft.com/design-center/v/1.0/input-output-structure-transformation-design-center-task[To Define Input and Output Structure of a Transformation (Design Center)].
-====
 == CSV
 
 === Canonical Model
@@ -111,55 +103,56 @@ When defining an input of type CSV, there are a few optional parameters you can 
 [%header]
 |=======================
 |Parameter |Type |Default|Description
-|separator |char |, |Character that separates one field from another
-|quote |char |" |Character that delimits the field values
-|escape |char | \ |Character used to escape occurrences of the separator or quote character within field values
-|bodyStartLineNumber| number | 0 | The line number where the body starts.
-|ignoreEmptyLine |bool | true | defines if empty lines are ignored
-|header |bool |true |Indicates if the first line of the output shall contain field names
-|headerLineNumber | number | 0 | the line number where the header is located
-|bodyStartLineNumber | number | 0 | the line number where the actual body starts
+|`separator` |char |, |Character that separates one field from another
+|`quote` |char |" |Character that delimits the field values
+|`escape` |char | \ |Character used to escape occurrences of the separator or quote character within field values
+|`bodyStartLineNumber`| number | 0 | The line number where the body starts.
+|`ignoreEmptyLine` |bool | true | defines if empty lines are ignored
+|`header` |bool |true |Indicates if the first line of the output shall contain field names
+|`headerLineNumber` | number | 0 | the line number where the header is located
 |=======================
 
+* When `header=true` you can then access the fields within the input anywhere by name. Ex: `payload.userName`.
+* When `header=false` you must access the fields by index, referencing first the entry and then the field, Ex: `payload[107][2]`
 
-[NOTE]
-====
-When `header=true` you can then access the fields within the input anywhere by name. Ex: `payload.userName`.
-
-When `header=false` you must access the fields by index, referencing first the entry and then the field, Ex: `payload[107][2]`
-====
-
-These properties can be set via the XML of your Mule project:
-
+You can set these properties through the XML of your Mule project or through the Transform component:
+* XML example
++
 [source,xml,linenums]
 ----
-	 <dw:transform-message metadata:id="33a08359-5085-47d3-aa5f-c7dd98bb9c61"
-	 			doc:name="Transform Message">
- 			<dw:input-payload
- 			    <!-- Boolean that defines if the first line in the data contains headers -->
- 				<dw:reader-property name="header" value="false" />
- 				<!-- Character that separates fields, `','` by default -->
- 				<dw:reader-property name="separator" value="," />
- 				<!-- Character that defines quoted text, `" "` by default -->
- 				<dw:reader-property name="quote" value="&quot;" />
- 				<!-- Character that escapes quotes, `\` by default -->
- 				<dw:reader-property name="escape" value="\" />
- 			</dw:input-payload>
- 			<dw:set-payload>
-                <![CDATA[
-                    %dw 2.0
-                    output application/java
-                    ---
-                    // Your transformation script goes here
-                ]]>
-            </dw:set-payload>
-     </dw:transform-message>
+<dw:transform-message metadata:id="33a08359-5085-47d3-aa5f-c7dd98bb9c61"
+  doc:name="Transform">
+    <dw:input-payload
+      <!-- Boolean that defines if the first line in the data contains headers -->
+      <dw:reader-property name="header" value="false" />
+      <!-- Character that separates fields, `','` by default -->
+      <dw:reader-property name="separator" value="," />
+      <!-- Character that defines quoted text, `" "` by default -->
+      <dw:reader-property name="quote" value="&quot;" />
+      <!-- Character that escapes quotes, `\` by default -->
+      <dw:reader-property name="escape" value="\" />
+    </dw:input-payload>
+ 		<dw:set-payload>
+        <![CDATA[
+            %dw 2.0
+            output application/java
+            ---
+            // Your transformation script goes here
+        ]]>
+    </dw:set-payload>
+</dw:transform-message>
 ----
++
+* Transform component example:
+image::dataweave-formats-580be.png[]
 
-To set this via the Anypoint Studio UI, see link:https://docs.mulesoft.com/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation].
+// TODO IS THE INFO BELOW ACCURATE?
+All of these parameters are optional. A CSV output directive might look like this:
 
-
-
+[source,DataWeave]
+---------------------------------------------------------------------
+output text/csv separator=";", header=false, quoteValues=true
+---------------------------------------------------------------------
 
 === Writer Properties
 
@@ -168,14 +161,14 @@ When defining an output of type CSV, there are a few optional parameters you can
 [%header]
 |=======================
 |Parameter |Type |Default|Description
-|separator |char |, |Character that separates one field from another
-|encoding |string | |The character set to be used for the output
-|quote |char |" |Character that delimits the field values
-|escape |char | \ |Character used to escape occurrences of the separator or quote character within field values
-|lineSeparator|string | system line ending default | line separator to be used. Example: "\r\n"
-|header |bool |true |Indicates if the first line of the output shall contain field names
-|quoteHeader |bool |false |Indicates header values should be quoted
-|quoteValues |bool |false |Indicates if every value should be quoted whether or not it contains special characters within
+|`separator` |char |, |Character that separates one field from another
+|`encoding` |string | |The character set to be used for the output
+|`quote` |char |" |Character that delimits the field values
+|`escape` |char | \ |Character used to escape occurrences of the separator or quote character within field values
+|`lineSeparator`|string | system line ending default | line separator to be used. Example: "\r\n"
+|`header` |bool |true |Indicates if the first line of the output shall contain field names
+|`quoteHeader` |bool |false |Indicates header values should be quoted
+|`quoteValues` |bool |false |Indicates if every value should be quoted whether or not it contains special characters within
 |=======================
 
 All of these parameters are optional. A CSV output directive might for example look like this:
@@ -191,34 +184,25 @@ In the Transform component, you can define a CSV type through the following meth
 
 * By Providing a sample file
 * Via a graphical editor that allows you to set up each field manually
-
 +
 image::dataweave-formats-4a556.png[]
-
-[TIP]
-====
-For Anypoint Studio see link:https://docs.mulesoft.com/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation (Anypoint Studio)].
-
-For Design Center see link:https://docs.mulesoft.com/design-center/v/1.0/input-output-structure-transformation-design-center-task[To Define Input and Output Structure of a Transformation (Design Center)].
-====
 
 
 == Excel
 
-[NOTE]
-Excel support is a beta feature for Mule Runtime 3.8.2. It isn't supported on earlier versions of the runtime. Only .xlsx files are supported (excel 2007), .xls files aren't supported on any Mule runtime version.
-
+// TODO: mentioned as a Beta feature... IS THIS ACCURATE AND WHAT WE WANT TO DO?
+Excel support is a beta feature for Mule Runtime 4.0.2. It is not supported on earlier versions of the runtime. Only `.xlsx` files are supported (Excel 2007), but `.xls` files are not supported on any Mule runtime version.
 
 === Canonical Model
 
+// TODO: IS THIS ACCURATE?
+An Excel workbook is a sequence of sheets. In DataWeave, this is mapped to an object where each sheet is a key. Only one table is allowed per Excel sheet. A table is expressed as an array of rows. A row is an object where its keys are the columns and the values the cell content.
 
-An excel workbook is a sequence of sheets, in DataWeave this is mapped to an object where each sheet is a key. Only one table is allowed per excel sheet. A table is expressed as an array of rows. A row is an object where its keys are the columns and the values the cell content.
-
-For example:
+Example:
 
 .Input
 
-image:dataweave-formats-exceltable.png[]
+image:dataweave-formats-Exceltable.png[]
 
 .DataWeave representation
 [source,dataweave,linenums]
@@ -239,68 +223,59 @@ output application/xlsx header=true
 }
 ----
 
-
 === Reader Properties
 
-
-
-When defining an input of type excel, there are a few optional parameters you can add in the XML definition of your Mule project to customize how the data is parsed.
+When defining an input of type Excel, there are a few optional parameters you can add in the XML definition of your Mule project to customize how the data is parsed.
 
 [%header]
 |=======================
 |Parameter |Type |Default|Description
-|header | bool | true |	defines if the excel tables contain headers. When set to false, column names are used. (A, B, C, ...)
-|ignoreEmptyLine	| bool | true | defines if empty lines are ignored
-|tableOffset | string | A1 |	The position of the first cell of the tables
+|`header` | bool | true |	defines if the Excel tables contain headers. When set to false, column names are used. (A, B, C, ...)
+|`ignoreEmptyLine`	| bool | true | defines if empty lines are ignored
+|`tableOffset` | string | A1 |	The position of the first cell of the tables
 |=======================
 
-
-
-These properties can be set via the XML of your Mule project:
+These properties can be either set via the XML of your Mule project:
 
 [source,xml,linenums]
 ----
-	 <dw:transform-message metadata:id="33a08359-5085-47d3-aa5f-c7dd98bb9c61"
-	 			doc:name="Transform Message">
- 			<dw:input-payload
- 			    <!-- Boolean that defines if the first line in the data contains headers -->
- 				<dw:reader-property name="header" value="true" />
- 				<!-- Boolean that defines if empty lines are ignored -->
- 				<dw:reader-property name="ignoreEmptyLine" value="false" />
- 				<!-- Defines that defines what cell to start reading from. In this case Column A is ignored, and all rows above 9 -->
- 				<dw:reader-property name="tableOffset" value="B9" />
- 			</dw:input-payload>
- 			<dw:set-payload>
-                <![CDATA[
-                    %dw 2.0
-                    output application/java
-                    ---
-                    // Your transformation script goes here
-                ]]>
-            </dw:set-payload>
-     </dw:transform-message>
+<dw:transform-message metadata:id="33a08359-5085-47d3-aa5f-c7dd98bb9c61"
+  doc:name="Transform">
+    <dw:input-payload
+      <!-- Boolean that defines if the first line in the data contains headers -->
+      <dw:reader-property name="header" value="true" />
+      <!-- Boolean that defines if empty lines are ignored -->
+      <dw:reader-property name="ignoreEmptyLine" value="false" />
+      <!-- Defines that defines what cell to start reading from. In this case Column A is ignored, and all rows above 9 -->
+      <dw:reader-property name="tableOffset" value="B9" />
+    </dw:input-payload>
+    <dw:set-payload>
+        <![CDATA[
+            %dw 2.0
+            output application/java
+            ---
+            // Your transformation script goes here
+        ]]>
+    </dw:set-payload>
+</dw:transform-message>
 ----
 
-
-
-
-To set this via the Anypoint Studio UI, see link:https://docs.mulesoft.com/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation].
-
-
+Or via the UI of the Transform component:
+image:dataweave-formats-Excell-reader.png[]
 
 === Writer Properties
 
-When defining an output of type excel, there are a few optional parameters you can add to the output directive to customize how the data is parsed:
+When defining an output of type Excel, there are a few optional parameters you can add to the output directive to customize how the data is parsed:
 
 [%header]
 |=======================
 |Parameter |Type |Default|Description
-|header | bool | true |	defines if the excel tables contain headers. When there are no headers, column names are used. (A, B, C, ...)
-|ignoreEmptyLine	| bool | true | defines if empty lines are ignored
-|tableOffset | string | A1 |	The position of the first cell of the tables
+|`header` | bool | true |	defines if the Excel tables contain headers. When there are no headers, column names are used. (A, B, C, ...)
+|`ignoreEmptyLine`	| bool | true | defines if empty lines are ignored
+|`tableOffset` | string | A1 |	The position of the first cell of the tables
 |=======================
 
-All of these parameters are optional. An excel output directive might for example look like this:
+All of these parameters are optional. An Excel output directive might for example look like this:
 
 [source,DataWeave]
 ---------------------------------------------------------------------
@@ -309,21 +284,11 @@ output application/xlsx header=true
 
 === Defining a Metadata Type
 
-In the Transform component, you can define a excel type through the following methods:
+In the Transform component, you can define a Excel type through the following methods:
 
 * Via a graphical editor that allows you to set up each field manually
-
 +
-image:dataweave-formats-excel-metadata.png[]
-
-
-
-[TIP]
-====
-For Anypoint Studio see link:https://docs.mulesoft.com/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation (Anypoint Studio)].
-
-For Design Center see link:https://docs.mulesoft.com/design-center/v/1.0/input-output-structure-transformation-design-center-task[To Define Input and Output Structure of a Transformation (Design Center)].
-====
+image:dataweave-formats-Excel-metadata.png[]
 
 == XML
 
@@ -356,7 +321,6 @@ The XML data-structure is mapped to DataWeave objects that may contain other obj
 
 === Reader Properties
 
-
 When defining an input of type XML, there are a few optional parameters you can add in the XML definition of your Mule project to customize how the data is parsed.
 
 [%header]
@@ -369,14 +333,14 @@ When defining an input of type XML, there are a few optional parameters you can 
 |`externalEntities`|boolean | false | Defines if references to entities that are defined in a file outside the XML are accepted as valid. It's recommended to avoid these for link:https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Processing[security reasons] as well.
 |=======================
 
+These properties can be either set via the XML of your Mule project or through the Transform component:
 
-
-These properties can be set via the XML of your Mule project:
-
+* XML example:
++
 [source,xml,linenums]
 ----
 	 <dw:transform-message metadata:id="33a08359-5085-47d3-aa5f-c7dd98bb9c61"
-	 			doc:name="Transform Message">
+	 			doc:name="Transform">
  			<dw:input-payload
  			    <!-- specifies the strategy to be used by the reader -->
  				<dw:reader-property name="optimizeFor" value="speed" />
@@ -393,9 +357,10 @@ These properties can be set via the XML of your Mule project:
             </dw:set-payload>
      </dw:transform-message>
 ----
-
-To set this via the Anypoint Studio UI, see link:https://docs.mulesoft.com/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation].
-
++
+* Transform component example:
++
+image:dataweave-formats-6e5e4.png[]
 
 === Writer Properties
 
@@ -404,12 +369,13 @@ When defining an output of type XML, there are a few optional parameters you can
 [%header]
 |=======================
 |Parameter |Type |Default|Description
-|`indent`| boolean | true | defines if the XML code will be indented for better readability, or if it will be compressed into a single line
-| `inlineCloseOn` | string | `never` | defines wether an empty XML child element appears as single self-closing tag or with an opening and closing tag. The value `empty` sets it to output self-closing tags.
+|`indent`| boolean | true | Defines if the XML code will be indented for better readability, or if it will be compressed into a single line
+| `inlineCloseOn` | string | `never` | Defines wether an empty XML child element appears as single self-closing tag or with an opening and closing tag. The value `empty` sets it to output self-closing tags.
 |`encoding`|string | UTF-8 |The character set to be used for the output
 |`bufferSize`| number | 153600 | The size of the buffer writer
 |`inlineCloseOn` | string | | When the writer should use inline close tag. Possible values = `empty`/`none`
 |`skipNullOn`| string | | Possible values = `elements`/`attributes`/`everywhere`. See <<Skip Null On>>
+|`writeDeclaration`| boolean | true | Defines if the XML declaration will be included in the first line
 |=======================
 
 [source,DataWeave]
@@ -447,12 +413,12 @@ or like this (set with a value of "empty"):
 
 ==== Skip Null On
 
-You can specify whether your transform generates an outbound message that contains fields with "null" values, or if these fields are ignored entirely. This can be set through an attribute in the output directive named *skipNullOn*, which can be set to three different values: *elements*, *attributes*, or *everywhere*.
+You can specify whether your transform generates an outbound message that contains fields with "null" values, or if these fields are ignored entirely. This can be set through an attribute in the output directive named `skipNullOn`, which can be set to three different values: `elements`, `attributes`, or `everywhere`.
 
 When set to:
-* *elements*: A key:value pair with a null value is ignored.
-* *attributes*: An XML attribute with a null value is skipped.
-* *everywhere*: Apply this rule to both elements and attributes.
+* `elements`: A key:value pair with a null value is ignored.
+* `attributes`: An XML attribute with a null value is skipped.
+* `everywhere`: Apply this rule to both elements and attributes.
 
 === Defining a Metadata Type
 
@@ -461,19 +427,44 @@ In the Transform component, you can define a XML type through the following meth
 * By Providing a sample file
 * By pointing to a schema file
 
-[TIP]
-====
-For Anypoint Studio see link:https://docs.mulesoft.com/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation (Anypoint Studio)].
+=== Custom Types
 
-For Design Center see link:https://docs.mulesoft.com/design-center/v/1.0/input-output-structure-transformation-design-center-task[To Define Input and Output Structure of a Transformation (Design Center)].
-====
+// TODO: IS :cdata correct anymore? what is it? also mentions :string here
+==== :cdata
 
+XML defines a custom type named `:cdata`, it extends from string and is used to identify a CDATA XML block.
+It can be used to tell the writer to wrap the content inside CDATA or to check if the input string arrives inside a CDATA block. `:cdata` inherits from the type `:string`.
+
+.Transform
+[source,DataWeave, linenums]
+----------------------------------------------------------------------
+%dw 2.0
+output application/xml
+---
+{
+  users:
+  {
+    user : "Mariano" as :cdata,
+    age : 31 as :cdata
+  }
+}
+----------------------------------------------------------------------
+
+.Output
+[source,xml,linenums]
+----------------------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<users>
+  <user><![CDATA[Mariano]]></user>
+  <age><![CDATA[31]]></age>
+</users>
+----------------------------------------------------------------------
 
 == JSON
 
 === Canonical Model
 
-JSON data-structures are mapped to DataWeave data-structures in a straight forward way as they share a lot of similarities.
+JSON data structures are mapped to DataWeave data structures. They share a lot of similarities.
 
 
 === Writer Properties
@@ -483,8 +474,8 @@ When defining an output of type JSON, there are a few optional parameters you ca
 [%header]
 |=======================
 |Parameter |Type |Default|Description
-|`Indent`| boolean | true | defines if the JSON code will be indented for better readability, or if it will be compressed into a single line
-|`encoding`|string | UTF-8 |The character set to be used for the output
+|`indent`| boolean | true | Defines if the JSON code will be indented for better readability, or if it will be compressed into a single line
+|`encoding`| string | UTF-8 |The character set to be used for the output
 |`bufferSize`| number | 153600 | The size of the buffer writer
 |`inlineCloseOn` | string | | When the writer should use inline close tag. Possible values = empty/none
 |`skipNullOn`| string | | Possible values = `elements`/`attributes`/`everywhere`. See <<Skip Null On>>
@@ -498,12 +489,12 @@ output application/json indent=false, skipNullOn="arrays"
 
 ==== Skip Null On
 
-You can specify whether this generates an outbound message that contains fields with "null" values, or if these fields are ignored entirely. This can be set through an attribute in the output directive named *skipNullOn*, which can be set to three different values: *elements*, *attributes*, or *everywhere*.
+You can specify whether this generates an outbound message that contains fields with "null" values, or if these fields are ignored entirely. This can be set through an attribute in the output directive named `skipNullOn`, which can be set to three different values: `elements`, `attributes`, or `everywhere`.
 
 When set to:
-* *elements*: A key:value pair with a null value is ignored.
-* *attributes*: An XML attribute with a null value is skipped.
-* *everywhere*: Apply this rule to both elements and attributes.
+* `elements`: A key:value pair with a null value is ignored.
+* `attributes`: An XML attribute with a null value is skipped.
+* `everywhere`: Apply this rule to both elements and attributes.
 
 
 === Defining a Metadata Type
@@ -513,46 +504,35 @@ In the Transform component, you can define a JSON type through the following met
 * By Providing a sample file
 * By pointing to a schema file
 
-[TIP]
-====
-For Anypoint Studio see link:https://docs.mulesoft.com/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation (Anypoint Studio)].
-
-For Design Center see link:https://docs.mulesoft.com/design-center/v/1.0/input-output-structure-transformation-design-center-task[To Define Input and Output Structure of a Transformation (Design Center)].
-====
-
-
-
+[[flat_file]]
 == Flat File
 
-
 === Reader Properties
-
 
 When defining an input of type Flat File, there are a few optional parameters you can add in the XML definition of your Mule project to customize how the data is parsed.
 
 [%header]
 |=======================
 |Parameter |Type |Default|Description
-|`schemaPath`| string | | Location in your local disk of the schema file used to parse your input. The Schema must have an *.ESL* extension.
+|`schemaPath`| string | | Location in your local disk of the schema file used to parse your input. The Schema must have an `.ESL` extension.
 |`structureIdent`|string |  | The schema file might define multiple different structures, this field selects which to use. In case the schema only defines one, you also need to explicitly select that one through this field.
-
 |`missingValues`| string | spaces a| How missing values are represented in the input data:
 
-* *none*: treat all data as actual values
-* *spaces*: interpret a field consisting of only spaces as a missing value
-* *nulls*: interpret a field consisting only of 0 bytes as a missing value
+* `none`: treat all data as actual values
+* `spaces`: interpret a field consisting of only spaces as a missing value
+* `zeroes`: interpret numeric fields consisting of only '0' characters and character fields consisting of only spaces as missing values
+* `nulls`: interpret a field consisting only of 0 bytes as a missing value
 
 | `recordParsing` | string | strict a| expected separation between lines/records:
 
-* *strict*: line break expected at exact end of each record
-* *lenient*: line break used but records may be shorter or longer than schema specifies
-* *noTerminator*: means records follow one another with no separation
+* `strict`: line break expected at exact end of each record
+* `lenient`: line break used but records may be shorter or longer than schema specifies
+* `noTerminator`: means records follow one another with no separation
 |=======================
 
+These properties can be either set via the XML of your Mule project or through the UI of the Transform component:
 
-
-These properties can be set via the XML of your Mule project:
-
+* XML example:
 [source, xml, linenums]
 ----
 <dw:input-payload mimeType="text/plain" >
@@ -561,28 +541,25 @@ These properties can be set via the XML of your Mule project:
 </dw:input-payload>
 ----
 
-To set this via the Anypoint Studio UI, see link:https://docs.mulesoft.com/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation].
-
-[NOTE]
-Schemas with type `Binary` or `Packed` don't allow for line breaks to be detected, so setting `recordParsing` to "lenient"` will only allow long records to be handled, but not short ones. These schemas also currently only work with certain single-byte character encodings (so not with UTF-8 or any multibyte format).
-
+Note that schemas with type `Binary` or `Packed` don't allow for line breaks to be detected, so setting `recordParsing` to `lenient` will only allow long records to be handled, not short ones. These schemas also currently only work with certain single-byte character encodings (so not with UTF-8 or any multibyte format).
 
 === Writer Properties
 
-When defining an output of type flat file (which includes fixed width, EDI and Copybook but not CSV) there are a few optional parameters you can add to the output directive to customize how the data is parsed:
+When defining an output of type flat file there are a few optional parameters you can add to the output directive to customize how the data is written:
 
 [%header]
 |=======================
 |Parameter |Type |Default|Description
-|schemaPath |string | |Path where the schema file to be used is located
-|structureIdent |string | |In case the schema file defines multiple formats, indicates which of them to use
-
+|`schemaPath` |string | |Path where the schema file to be used is located
+|`structureIdent` |string | |In case the schema file defines multiple formats, indicates which of them to use
+|`encoding` |string | UTF-8 | Output character encoding
 |`missingValues`| string | spaces a| How to represent optional values missing from the supplied map:
 
-* *spaces*: fill the field with spaces
-* *nulls*: use 0 bytes
+* `spaces`: fill the field with spaces
+* `nulls`: use 0 bytes
 
-|`recordTerminator`| string | standard Java line termination for the system | The separation between lines/records. Possible values: `lf, cr, crlf, none`. Values translate directly to character codes (`none` leaves no separation between records)
+|`recordTerminator`| string | standard Java line termination for the system | Termination for every line/record. In Mule runtime versions 4.0.4 and older, this is only used as a separator when there are multiple records. Possible values: `lf, cr, crlf, none`. Values translate directly to character codes (`none` leaves no termination on each record).
+|`trimValues` |boolean |`false` |Trim string values longer than field length by truncating trailing characters
 
 |=======================
 
@@ -594,61 +571,43 @@ output text/plain schemaPath="src/main/resources/test-data/QBReqRsp.esl", struct
 payload
 ----
 
-[TIP]
-====
-See link:/mule-user-guide/v/4.0/dataweave-flat-file-schemas[DataWeave Flat File or EDI Schemas] for instructions and examples on how to create the required schema file.
-====
-
-
 === Defining a Metadata Type
 
 In the Transform component, you can define a Flat File type through the following methods:
 
 * By pointing to a schema file
 
-[TIP]
-====
-For Anypoint Studio see link:https://docs.mulesoft.com/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation (Anypoint Studio)].
-
-For Design Center see link:https://docs.mulesoft.com/design-center/v/1.0/input-output-structure-transformation-design-center-task[To Define Input and Output Structure of a Transformation (Design Center)].
-====
-
-
-
-
 
 == Fixed Width
 
-Fixed width types are technically considered a type of <<Flat File>> format, but when selecting this option the Transform Message component offers you settings that are better tailored to the needs of this format.
-
+// TODO: LINK <<Flat File>> here.
+Fixed width types are technically considered a type of <<Flat File>> format, but when selecting this option the Transform component offers you settings that are better tailored to the needs of this format.
 
 === Reader Properties
-
 
 When defining an input of type Fixed Width, there are a few optional parameters you can add in the XML definition of your Mule project to customize how the data is parsed.
 
 [%header]
 |=======================
 |Parameter |Type |Default|Description
-|`schemaPath`| string | | Location in your local disk of the schema file used to parse your input. The Schema must have an *.FFD* extension.
-|encoding |string | UTF-8 | MIME type encoding
+|`schemaPath`| string | | Location in your local disk of the schema file used to parse your input. The Schema must have an `.FFD` extension.
 |`missingValues`| string | spaces a| How missing values are represented in the input data:
 
-* *none*: treat all data as actual values
-* *spaces*: interpret a field consisting of only spaces as a missing value
-* *nulls*: interpret a field consisting only of 0 bytes as a missing value
+* `none`: treat all data as actual values
+* `spaces`: interpret a field consisting of only spaces as a missing value
+* `zeroes`: interpret numeric fields consisting of only '0' characters and character fields consisting of only spaces as missing values
+* `nulls`: interpret a field consisting only of 0 bytes as a missing value
 
 | `recordParsing` | string | strict a| expected separation between lines/records:
 
-* *strict*: line break expected at exact end of each record
-* *lenient*: line break used but records may be shorter or longer than schema specifies
-* *noTerminator*: means records follow one another with no separation
+* `strict`: line break expected at exact end of each record
+* `lenient`: line break used but records may be shorter or longer than schema specifies
+* `noTerminator`: means records follow one another with no separation
 |=======================
 
+These properties can be either set via the XML of your Mule project or through the Transform component UI.
 
-
-These properties can be set via the XML of your Mule project:
-
+* XML example:
 [source, xml, linenums]
 ----
 <dw:input-payload mimeType="text/plain" >
@@ -657,23 +616,22 @@ These properties can be set via the XML of your Mule project:
 </dw:input-payload>
 ----
 
-To set this via the Anypoint Studio UI, see link:https://docs.mulesoft.com/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation].
-
 === Writer Properties
 
-When defining an output of type fixed width there are a few optional parameters you can add to the output directive to customize how the data is parsed:
+When defining an output of type fixed width there are a few optional parameters you can add to the output directive to customize how the data is written:
 
 [%header]
 |=======================
 |Parameter |Type |Default|Description
-|schemaPath |string | |Path where the schema file to be used is located
-|encoding |string | UTF-8 | MIME type encoding
-`missingValues`| string | spaces a| How to represent optional values missing from the supplied map:
+|`schemaPath` |string | |Path where the schema file to be used is located
+|`encoding` |string | UTF-8 | Output character encoding
+|`missingValues`|string | spaces a| How to represent optional values missing from the supplied map:
 
-* *spaces*: fill the field with spaces
-* *nulls*: use 0 bytes
+* spaces: fill the field with spaces
+* nulls: use 0 bytes
 
-|`recordTerminator`| string | standard Java line termination for the system | The separation between lines/records. Possible values: `lf, cr, crlf, none`. Values translate directly to character codes (`none` leaves no separation between records)
+|`recordTerminator`| string | standard Java line termination for the system | Termination for every line/record. In Mule runtime versions 4.0.4 and older, this is only used as a separator when there are multiple records. Possible values: `lf, cr, crlf, none`. Values translate directly to character codes (`none` leaves no termination on each record).
+|`trimValues` |boolean |`false` |Trim string values longer than field length by truncating trailing characters
 |=======================
 
 [source,DataWeave,linenums]
@@ -684,39 +642,22 @@ output text/plain schemaPath="src/main/resources/test-data/QBReqRsp.esl", encodi
 payload
 ----
 
-[TIP]
-====
-See link:/mule-user-guide/v/4.0/dataweave-flat-file-schemas[DataWeave Flat File or EDI Schemas] for instructions and examples on how to create the required schema file.
-====
-
-
-
 === Defining a Metadata Type
 
+// TODO: <<flat file>>
 In the Transform component, you can define a Fixed Width type through the following methods:
 
 * By Providing a sample file
 * By pointing to a <<flat file>> schema file
 * Via a graphical editor that allows you to set up each field manually
-
 +
 image::dataweave-formats-27b3c.png[]
 
-[TIP]
-====
-For Anypoint Studio see link:https://docs.mulesoft.com/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation (Anypoint Studio)].
-
-For Design Center see link:https://docs.mulesoft.com/design-center/v/1.0/input-output-structure-transformation-design-center-task[To Define Input and Output Structure of a Transformation (Design Center)].
-====
-
-
+[[cobol_copybook]]
 == Cobol Copybook
 
+// TODO: <<flat file>>
 Copybook types are technically considered a type of <<Flat File>> format, but when selecting this option the Transform component offers you settings that are better tailored to the needs of this format.
-
-
-[NOTE]
-This format is currently being supported as an early access feature.
 
 === Reader Properties
 
@@ -727,55 +668,52 @@ When defining an input of type Copybook, there are a few optional parameters you
 |Parameter |Type |Default|Description
 |`schemaPath`| string | | Location in your local disk of the schema file used to parse your input
 |`segmentIdent`|string |  | In case the schema file defines multiple different structures, this field selects which to use
-|`encoding` |string | UTF-8 | MIME type encoding
+|`missingValues`| string | nulls | How missing values are represented in the input data:
 
-|`missingValues`| string | nulls a| How missing values are represented in the input data:
-
-* *none*: treat all data as actual values
-* *spaces*: interpret a field consisting of only spaces as a missing value
-* *nulls*: interpret a field consisting only of 0 bytes as a missing value
+* `none`: treat all data as actual values
+* `spaces`: interpret a field consisting of only spaces as a missing value
+* `zeroes`: interpret numeric fields consisting of only '0' characters and character fields consisting of only spaces as missing values
+* `nulls`: interpret a field consisting only of 0 bytes as a missing value
 
 | `recordParsing` | string | strict a| expected separation between lines/records:
 
-* *strict*: line break expected at exact end of each record
-* *lenient*: line break used but records may be shorter or longer than schema specifies
-* *noTerminator*: means records follow one another with no separation
+* `strict`: line break expected at exact end of each record
+* `lenient`: line break used but records may be shorter or longer than schema specifies
+* `noTerminator`: means records follow one another with no separation
 |=======================
 
+These properties can be set through the UI of the Transform component or through the XML of your Mule project.
 
-
-These properties can be set via the XML of your Mule project:
+XML example:
 
 [source, xml, linenums]
 ----
 <dw:input-payload mimeType="text/plain" >
-    <dw:reader-property name="schemaPath" value="myschema.ffs"/>
-    <dw:reader-property name="segmentIdent" value="structure1"/>
+  <dw:reader-property name="schemaPath" value="myschema.ffs"/>
+  <dw:reader-property name="segmentIdent" value="structure1"/>
 </dw:input-payload>
 ----
 
-To set this via the Anypoint Studio UI, see link:https://docs.mulesoft.com/anypoint-studio/v/6/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation].
-
-[NOTE]
-Schemas with type `Binary` or `Packed` don't allow for line breaks to be detected, so setting `recordParsing` to "lenient"` will only allow long records to be handled, but not short ones. These schemas also currently only work with certain single-byte character encodings (so not with UTF-8 or any multibyte format).
+Note that schemas with type `Binary` or `Packed` don't allow for line breaks to be detected, so setting `recordParsing` to "lenient"` will only allow long records to be handled, but not short ones. These schemas also currently only work with certain single-byte character encodings (so not with UTF-8 or any multibyte format).
 
 === Writer Properties
 
-When defining an output of type copybook there are a few optional parameters you can add to the output directive to customize how the data is parsed:
+When defining an output of type copybook there are a few optional parameters you can add to the output directive to customize how the data is written:
 
 [%header]
 |=======================
 |Parameter |Type |Default|Description
-|schemaPath |string | |Path where the schema file to be used is located
-|segmentIdent |string | |In case the schema file defines multiple formats, indicates which of them to use
-|encoding |string | UTF-8 | MIME type encoding
+|`schemaPath` |string | |Path where the schema file to be used is located
+|`segmentIdent` |string | |In case the schema file defines multiple formats, indicates which of them to use
+|`encoding` |string | UTF-8 | Output character encoding
 
-|`missingValues`| nulls | spaces a| How to represent optional values missing from the supplied map:
+|`missingValues`| string | nulls | How to represent optional values missing from the supplied map:
 
-* *spaces*: fill the field with spaces
-* *nulls*: use 0 bytes
+* `spaces`: fill the field with spaces
+* `nulls`: use 0 bytes
 
-|`recordTerminator`| string | standard Java line termination for the system | The separation between lines/records. Possible values: `lf, cr, crlf, none`. Values translate directly to character codes (`none` leaves no separation between records)
+|`recordTerminator`| string | standard Java line termination for the system | Termination for every line/record. In Mule runtime versions 4.0.4 and older, this is only used as a separator when there are multiple records. Possible values: `lf, cr, crlf, none`. Values translate directly to character codes (`none` leaves no termination on each record).
+|`trimValues` |boolean |`false` |Trim string values longer than field length by truncating trailing characters
 |=======================
 
 [source,DataWeave,linenums]
@@ -786,23 +724,27 @@ output text/plain schemaPath="src/main/resources/test-data/QBReqRsp.esl", struct
 payload
 ----
 
-[TIP]
-====
-See link:/mule-user-guide/v/4.0/dataweave-flat-file-schemas[DataWeave Flat File or EDI Schemas] for instructions and examples on how to create the required schema file.
-====
-
-
 === Defining a Metadata Type
 
 In the Transform component, you can define a Fixed Width type through the following methods:
 
 * By pointing to a <<flat file>> schema file
 
-
-[TIP]
-See link:/mule-user-guide/v/4.0/dataweave-flat-file-schemas[Flat File Schemas] for more detailed instructions on how to write the required schema.
-
 == See Also
 
+* link:/anypoint-studio/v/7/input-output-structure-transformation-studio-task[To Define Input and Output Structure of a Transformation]
+* link:https://docs.mulesoft.com/design-center/v/1.0/input-output-structure-transformation-design-center-task[To Define Input and Output Structure of a Transformation (Design Center)].
+* link:/mule-user-guide/v/4.0/dataweave-flat-file-schemas[DataWeave Flat File or EDI Schemas]
+* link:/mule-user-guide/v/4.0/dataweave-flat-file-schemas[Flat File Schemas]
 
+////
+* link:/mule-user-guide/v/4.0/dataweave-quickstart[DataWeave quickstart guide]
+* link:/anypoint-studio/v/6/transform-message-component-concept-studio[About Transform Component]
 * link:/mule-user-guide/v/4.0/dataweave-language-introduction[DataWeave Language Introduction]
+* link:/mule-user-guide/v/4.0/dataweave-operators[DataWeave Operators]
+* link:/mule-user-guide/v/4.0/dataweave-types[DataWeave Types]
+* link:/mule-user-guide/v/4.0/dataweave-memory-management[DataWeave Memory Management]
+* link:/mule-user-guide/v/4.0/dataweave-selectors[DataWeave Selectors]
+* link:/mule-user-guide/v/4.0/dataweave-examples[DataWeave Examples]
+* link:/mule-user-guide/v/4.0/mel-dataweave-functions[MEL DataWeave Functions]
+////
