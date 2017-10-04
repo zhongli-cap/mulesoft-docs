@@ -1,2 +1,117 @@
 [[_non_blocking_operations]]
 = Non Blocking Operations
+
+Mule 4 has a brand new execution engine based on reactive streams. That means there’s top level support for non blocking 
+operations. By default, all operations are blocking. As you probably noticed, the semantics of all the operation 
+examples we’ve seen above are inherently blocking: the runtime invokes a method and gets a value in response. And that’s 
+fine for operations which are more CPU intensive than they are IO intensive, or for operations which consume APIs which 
+cannot be consumed in a non blocking way such as JDBC (the API which powers the Database connector).
+
+One of the protocols which does support this is http. Being able to perform non blocking http request is key for 
+scalability of gateway proxies. Any connector consuming a REST API can also benefit from this. 
+
+Let’s see how the SDK allows you to develop non blocking operations looking at an overly simplified http request operation:
+
+[source, java]
+----
+public void request(String url, @Connection HttpClient client, @Content String body, // <1>
+    CompletionCallback<InputStream, HttpAttributes> callback ) { // <2>
+ client.send(url, body, new HttpResponseCallback() {
+   void onResponse(HttpResponse response) {
+     callback.success(Result.builder().output(response.getBody()) // <3>
+                          .attributes(toAttributes(response))
+                          .build());
+   }
+
+   void onError(Exception e) {
+     callback.error(e); // <4>
+   }
+ });
+}
+----
+
+<1> Unlike blocking operations, the return type is not specified through the method’s return type. Non blocking operations 
+always need to be specified through void methods.
+<2> An operation becomes non blocking when it has an argument of type `CompletionCallback`. This interface uses generics to 
+specify the operation's return type. The first generic is the type of the output payload and the second one the type of the 
+output attributes. These generic are mandatory.
+<3> The return value is passed through the success(Result) method of the `CompletionCallback`.
+<4> Non Blocking operations should not throw exceptions. Any errors should be channeled through the `error()` method in the callback.
+
+[TIP}
+Notice that in this example, the CompletionCallback is being consumed from between an `HttpResponseCallback`. This second callback 
+is provided by an httpClient which supports asynchronous responses itself. As stated before, in order to do non blocking, 
+you need to be consuming an API which allows that.
+
+So the result of this code, is a non blocking operation which returns an `InputStream` as payload and a `HttpAttributes` 
+object as message attributes.
+
+== Void operations
+
+It’s also possible to have a void non blocking operation. The use case for that is an IO operation which doesn’t return 
+anything, such as writing to a file:
+
+[source, java]
+----
+public void write(String path, @Content byte[] bytes, CompletionCallback<Void, Void> callback) {
+ writeAsync(result -> callback.success());
+}
+----
+
+As you can see here, you can use java's `Void` type to indicate that the operaetion is void.
+
+=== Gotcha
+
+You can also have an operation with sets the payload but *NOT* the attributes like this:
+
+[source, java]
+----
+public void foo(CompletionCallback<String, Void> callback) {
+ ...
+}
+----
+
+= Execution Types
+
+As stated above, Mule 4 now has a reactive execution engine. That means that unlike Mule 3.x in which each flow had its 
+own thread pool, SEDA queues, etc, now the runtime has a few global executors through which all tasks are run.
+
+In order to schedule those tasks correctly, the runtime needs to know which kind of processing each operation is going to 
+perform. The different processing types are:
+
+* CPU_INTENSIVE: Intensive processing such as a complex, time consuming calculations or transformations.
+* CPU_LITE: Processing which neither blocks nor is CPU intensive such as message passing, filtering, routing or 
+non-blocking IO.
+* BLOCKING: Blocking processing that perform blocking IO operations, `Thread.sleep(long)`, `Lock.lock()`, or any other 
+technique that blocks the current thread during processing.
+
+[TIP]
+Although the `BLOCKING` type considers the case of `Thread.sleep`, that is a very bad practice and should be avoided
+
+=== Inferring execution types automatically
+
+The SDK performs a best guess on what the execution type is so that you don't have to explicitly specify it. This best 
+guess is done by the following rules:
+
+* Operation requires connection and is blocking: `BLOCKING`
+* Operation requires connection and is non blocking: `CPU_LITE`
+* None of the above: `CPU_LITE`
+
+Notice that as educated as this guess might be, it’s still a guess. You should pay attention to which execution type 
+your operation corresponds with, and if it doesn’t match with the best guess then you should specify the correct one. 
+Failing to do that will negatively impact the performance of any application using your module.
+
+[TIP]
+The SDK will never guess a `CPU_INTENSIVE` type. For those kind of operations, it is mandatory for the developer to 
+specify it.
+
+=== Specifying execution types
+
+For cases in which the best guess described is not enough, you can manually specify an operation’s execution type 
+through the `@Execution` annotation:
+
+[source, java]
+----
+@Execution(CPU_INTENSIVE)
+public void computeFlightPlan() { .. }
+----
