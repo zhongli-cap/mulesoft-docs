@@ -6,7 +6,7 @@ By having batch steps accept only some records for processing, you streamline th
 
 A batch step uses two attributes to filter records:
 
-* accetpExpression
+* acceptExpression
 * acceptPolicy
 
 Filters are applied within batch steps. Each batch step can accept one acceptExpression and one acceptPolicy attributes to filter records. +
@@ -14,7 +14,7 @@ Batch filters only apply to batch steps which, in turn, are only usable within t
 
 === About the acceptExpression Attribute
 
-Use the acceptExpression attribute to process only those records which, relative to the MEL expression, evaluate to true; if the record evaluates to false, the batch step does not process the record. In other words, those records with a filter expression that resolves to false are the ones Mule filters _out_.
+Use the acceptExpression attribute to process only those records which evaluate to true; if the record evaluates to false, the batch step skips the record and sends it to the next one. In other words, those records with a filter expression that resolves to false are the ones Mule filters _out_.
 
 The example below filters out all records where the age is less than 21; the batch step does not process those records.
 
@@ -22,7 +22,7 @@ The example below filters out all records where the age is less than 21; the bat
 ----
 <batch:job jobName="batchJob">
 	<batch:process-records >
-		<batch:step name="adultsOnlyStep" acceptExpression="#[mel:payload.age > 21]">
+		<batch:step name="adultsOnlyStep" acceptExpression="#[payload.age > 21]">
 			...
 		</batch:step>
 	</batch:process-records>
@@ -44,7 +44,7 @@ Batch step processes only those records that _succeeded_ processing in all prece
 
 If you don't apply filters to a batch step, the batch processes only those records that _succeeded_ processing in all preceding steps. In other words, the default Accept Policy applied to all batch steps is NO_FAILURES.
 
-When a batch job instance exceeds its `max-failed-records` value, regardless of the filter set on the batch step, the step does not process any records, and simply pushes the failed batch job instance to the On Complete phase.
+When a batch job instance exceeds its `maxFailedRecords` value, regardless of the filter set on the batch step, the step does not process any records, and simply pushes the failed batch job instance to the On Complete phase.
 
 The example below illustrates the second batch step in a batch job that processes only those records that failed processing during the preceding step. In the first batch step, the runtime checked each record to see if it had an existing Salesforce contact; the second batch step, which creates a contact for each record, processes only the failed records (that is, records that failed to have an existing account). 
 
@@ -52,15 +52,12 @@ The example below illustrates the second batch step in a batch job that processe
 ----
 <batch:job jobName="batchJob">
 	<batch:process-records >
-
-    <batch:step name="batchStep1">
-      ...
-    </batch:step>
-
+		<batch:step name="batchStep1">
+			...
+		</batch:step>
 		<batch:step name="batchStep2" accept-policy="ONLY_FAILURES">
 			...
 		</batch:step>
-
 	</batch:process-records>
  </batch:job>
 ----

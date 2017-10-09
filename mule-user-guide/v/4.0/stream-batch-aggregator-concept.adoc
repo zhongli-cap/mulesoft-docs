@@ -1,11 +1,11 @@
 = About Streaming Batch Aggregator
 
 You can configure a batch aggregator scope to stream its content. +
-This enables you to batch process all the records in the job instance, no matter how many or how large they are.
+This enables you to aggregate all the records in the job instance, no matter how many or how large they are.
 
-Instead of a list of elements that you receive with a fixed-size batch aggregator, the streaming functionality – an iterator – ensures that you receive all the records in a batch job without running out of memory.
+Instead of a list of elements that you receive with a fixed-size batch aggregator, the streaming functionality ensures that you receive all the records in the job instance without running out of memory.
 
-For example, if you need to write millions of records, you can process the records as a streaming batch aggregator.
+For example, if you need to write millions records to CSV file, you can process the records as a streaming batch aggregator.
 
 [source, xml, linenums]
 ----
@@ -13,14 +13,16 @@ For example, if you need to write millions of records, you can process the recor
 	<batch:process-records >
 		<batch:step name="batchStep">
 			<batch:aggregator streaming="true">
-				...
+				<file:write path="reallyLarge.csv">
+					<file:content><![CDATA[%dw 2.0
+						...
+					
+					}]]></file:content>
 			</batch:aggregator>
 		</batch:step>
 	</batch:process-records>
 </batch:job>
 ----
-
-In general, you probably don't use batch streaming when sending data through an Anypoint Connector to a SaaS provider, like Salesforce, because SaaS providers often have restrictions on accepting streaming input. Rather, use streaming batch processing when writing to a file such as CSV, JSON, or XML.
 
 When using a streaming aggregator, you can replace, change, or store the payload and variable data of each record.
 
@@ -55,6 +57,13 @@ The sequential access method assumes that:
 Due to memory restrictions, random access is not supported for streaming aggregators. +
 The record payloads for random access are exposed as an `immutable List` and since streaming aggregators implies having access to the entire set of records, without a fixed commit size the runtime can't guaranteed that all records will fit in memory.
 
+== Tips
+
+* *Streaming from SaaS providers:* In general, you likely wouldn't use batch streaming when sending data through an Anypoint Connector TO a SaaS provider, like Salesforce, because SaaS providers often have restrictions on accepting streaming input. Rather, use streaming batch processing when writing to a file such as CSV, JSON, or XML.
+
+* *Batch streaming and performance:* Batch processing streaming data does affect the performance of your application, slowing the pace at which it processes transactions. Though performance slows, the trade-off to be able to batch process streaming data may warrant using it in your implementation.
+
+* *Batch streaming and access to items:* The biggest drawback to using batch streaming is that you have limited access to the items in the output. In other words, with a _fixed-size commit_, you get an unmodifiable list, thus allowing you to access and iteratively process its items; with _streaming commit_, you get a one-read, forward-only iterator. 
 
 == See Also
 
