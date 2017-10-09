@@ -1,0 +1,55 @@
+= Binary Streaming
+
+By binary streaming we refer to the use cases in which the stream is a flux of bytes that we treat in a generic
+way regardless of what they actually represent. Examples of this are the response of an Http request or
+retrieving/writing a file in a FTP server.
+
+The SDK supports this abstraction by leveraging Java's `InputStream` class.
+
+== Binary Streaming in Operations
+
+Operations can receive stream parameters, return streams or both.
+
+An example of an operation which operates over a stream can be a write operation in a File connector:
+
+[source, java, linenums]
+----
+public class FileOperations {
+
+    public void write(@Content InputStream content, String path) {
+        // do the writing
+    }
+----
+
+By just having a parameter of type `InputStream`, the SDK already provides all the necessary support for leveraging
+Mule's streaming capabilities. The `content` parameter in the exmaple above will always be assigned to a repeatable
+stream pointing to the begining of the stream, as if this were the first time the stream is being read (and maybe it
+is).
+
+Another posibility is that your operation _returns_ a binary stream instead. This would be the case of a read operation:
+
+[source, java, linenums]
+----
+public class FileOperations {
+
+    public InputStream read(String path) {
+        // do the reading
+    }
+----
+
+By returning an `InputStream`, the SDK automatically adds all the necessary magic to make that stream into a repeatable
+one.
+
+== Configuring Streaming
+
+The SDK will also automatically add support for configuring how that streaming should behave by allowing elements
+such as `<repeatable-file-store-stream />`, `<repeatable-in-memory-stream />` and `<non-repeatable-stream />`. For details
+on these elements please check the streaming documentation linked above, but here's an example of how you would configure
+custom file store streaming for the read example above:
+
+[source, xml, linenums]
+----
+<file:read path="myFile.json">
+    <repeatable-file-store-stream inMemorySize="10" bufferUnit="KB"/>
+</file:read>
+----

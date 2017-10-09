@@ -1,0 +1,76 @@
+= Obtaining config and connection in a Message Source
+:keywords: mule, sdk, sources, listener, triggers, config, connection
+
+== Obtaining the Config object
+
+Just like operations, a source might reference a configuration to obtain parameters about its behavior. To obtain such
+configuration, a field is to be annotated with the `@Config` annotation (the same used in operations arguments):
+
+[source, java, linenums]
+----
+public class HttpListener extends Source<InputStream, HttpRequestAttributes> {
+
+ @Config
+ private HttpListenerConfig config;
+----
+
+== Obtaining a Connection
+
+If the source requires a connection (99% of connectors will, unless you’re implementing a scheduler), then you need to obtain
+a connection. Just like with operations, the `@Connection` annotation is used for that, but with two big differences:
+
+* It is used in a field instead of a method argument
+* Instead of the connection object, a `ConnectionProvider` will be injected
+
+[source, java, linenums]
+----
+public class HttpListener extends Source<InputStream, HttpRequestAttributes> {
+
+    @Config
+    private HttpListenerConfig config;
+
+    @Connection
+    private ConnectionProvider<HttpServer> serverProvider;
+
+    @Parameter
+    @Optional(defaultValue = "/")
+    private String path;
+
+    private HttpServer httpServer;
+
+    @Override
+    public void onStart(SourceCallback<InputStream, HttpRequestAttributes> sourceCallback) throws MuleException {
+        httpServer = serverProvider.connect(); // <1>
+
+        server.listen(path).onRequest(request -> { // <2>
+            processRequest(request, sourceCallback); // <3>
+        });
+    }
+
+    @Override
+    public void onStop() {
+        if (httpServer != null) { // <4>
+            serverProvider.disconnect(httpServer); // <5>
+        }
+    }
+}
+----
+
+<1>  We use the `ConnectionProvider` to obtain an HttpServer. The connection provider has most likely already
+configured the server with the proper host and port.
+<2> Http requests are pushed into the server by the remote clients and the  `HttpServer` component will
+notify the source of every request. The source then uses the `SourceCallback` to push the message into the flow
+<3> The processRequest method is one the source should define to transform the http request into a message that
+can actually be pushed to the flow. We'll show how to do that later on, but for now assume this works in order to
+keep the example simple.
+<4> In the `onStop()` method we need to release resources, in this case the `HttpServer`. We check for null
+in case the `onStart()` method fail before the server could be created
+<5> We use the `disconnect()` method of the `ConnectionProvider` to release the server.
+
+[TIP]
+The example above is just pseudo-code, an oversimplification of the real Http connector in order to keep the
+example clear and concise.
+
+== Next step
+
+* <<1.5.4_source_push_message, Pushing Messages to a Flow form a Message Source>>

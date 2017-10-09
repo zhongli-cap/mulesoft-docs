@@ -1,0 +1,156 @@
+= Creating configuration objects
+:keywords: mule, sdk, config
+
+Configurations are a set of configurable parameters which affect the overall behavior of your module.
+All modules are required to have at least one configuration, but can also define as many as needed.
+
+Different configurations might not only provide a different set of parameters,
+but also specify their own set of operations, sources and connection providers which
+are only available when using that configuration.
+
+== Defining single configuration modules
+
+The simplest of cases is that of a Module which has only one config.
+For convenience, you can use the same class that you previously annotated
+with `@Extension` for that. For example:
+
+[source,java,linenums]
+----
+@Extension(name="singleConfig")
+@Operations(Operations.class)
+@Sources(MessageSources.class)
+@ConnectionProviders({BasicAuthConnection.class, OAuthConnection.class})
+public class SingleConfigModule {
+
+  @Parameter
+  private String someParameter;
+
+  @Parameter
+  private Integer numericParameter;
+
+  public String getSomeParameter() {
+    return someParameter;
+  }
+
+  public String getNumericParameter() {
+    return numericParameter;
+  }
+}
+
+----
+
+The above example shows the full skeleton of a module with one single config.
+You can see how the same class which declares the extension with all its operations,
+sources, connections, etc., is also enriched with `@Parameter` annotated fields,
+which will translate into the config's parameters.
+
+When another component, such as an operation or source, requires access to the
+config, they will do it through instances of the `SingleConfigModule` class.
+
+== Externalizing single configuration object
+
+Depending on how you want to organize your code, you might want to have a single
+configuration object but without reusing the `@Extension` annotated class. Reasons
+for doing this might range from maintainability (you think that you might want to add
+more configs in the future), separation of concerns, or plain old personal preference.
+
+You can use the `@Configurations` annotation to do that. The same reworked example
+would look like this:
+
+[source,java,linenums]
+----
+@Extension(name="singleConfig")
+@Configurations(Config.class) // <1>
+public class SingleConfigModule {
+}
+
+@Configuration(name="config") // <2>
+@Operations(Operations.class)
+@Sources(MessageSources.class)
+@ConnectionProviders({BasicAuthConnection.class, OAuthConnection.class})
+public class Config {
+
+  @Parameter
+  private String someParameter;
+
+  @Parameter
+  private Integer numericParameter;
+
+  public String getSomeParameter() {
+    return someParameter;
+  }
+
+  public String getNumericParameter() {
+    return numericParameter;
+  }
+}
+----
+
+<1> Reference a config class using the `@Configurations` annotation
+<2> Define a class which acts as a configuration and defines the parameters plus
+all the other components such as operations, connections, etc.
+
+[TIP]
+Notice that the `@Configuration` annotation requires you to give the configuration a
+name. For modules with only one configuration, the name `config` is recommended.
+
+== Defining multiple configurations
+
+Let's explain this one using the Http connector as an example.
+
+There are two sides to implementing the Http protocol: to listen for requests, and
+to send requests. Each of these aspects not only require very different sets of
+parameters, it also turns out that:
+
+* To listen for request, we need to define a `<http:listener />` element which acts as a message source.
+* To send a request, we need a `<http:request />` element which acts as an operation.
+
+Because an application may contain many listener elements, they will only work when
+paired with a `<http:listener-config />` which contains general settings about how the
+connection is to be stablished and other behavior parameters. The same happens with the requester
+operation, which is paired with a `<http:requester-config />` element.
+
+In code, this would look like this:
+
+[source,java,linenums]
+----
+@Extension(name="http")
+@Configurations({HttpListenerConfig.class, HttpRequesterConfig.class}) // <1>
+public class HttpConnector {
+
+}
+
+@Configuration(name="listener") // <2>
+@ConnectionProviders(HttpListenerConnection.class)
+@Sources(HttpListener.class)
+public class HttpListenerConfig {
+
+  /**
+   * Base path to use for all requests that reference this config.
+   */
+  @Parameter
+  @Optional
+  @Expression(NOT_SUPPORTED)
+  private String basePath;
+
+  public String getBasePath() {
+    return basePath;
+  }
+}
+
+@Configuration(name="requester") // <3>
+@Operations(HttpRequester.class)
+@ConnectionProviders(HttpRequesterConnection.class)
+public class HttpRequesterConfig {
+
+  // the requester parameters
+}
+----
+
+<1> The `@Extension` annotated class defines the two configurations
+<2> The HttpListener class defines the inbound connection and the message source which is exclusive to the listener feature
+<3> The HttpConfig class defines the request operation and the outbound connection type
+
+[TIP]
+Notice that this time, the name used in the `Configuration` annotation doesn't follow
+a specific default, but instead a descriptive name is used

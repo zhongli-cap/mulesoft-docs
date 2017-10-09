@@ -1,0 +1,97 @@
+= About Classloading Isolation
+
+To introduce the new classloading schema in Mule 4 we need to understand the classloading problems
+that we had in Mule 3.
+
+* Modules were not isolated from each other so is not possible to use different libraries in them.
+* Modules were not isolated from the runtime.
+* Modules were not isolated from the applications.
+
+
+This means that modules that use a library may conflict with other modules, applications or
+runtime dependencies, causing problems that arise from different versions loaded than the
+one expected by the module, like `ClassNotFoundException` or `NoSuchMethodException`, causing
+big issues to application developers.
+
+So in Mule 4, to tackle this problem, there is a brand new classloading schema that
+makes the runtime, applications and modules isolated from each other. Each one of them
+specifies which *packages* (filtering is made by package and *not* made by class)
+will export as part of their API, making them visible.
+
+// TODO
+<<classloading, Learn more about classloading isolation in Mule 4>>
+
+== Modules Classloading Isolation
+
+As said before, in Mule 4 classloading filtering is done by package and not by class,
+this means that the modules need to specify which packages is going to export for others to
+see. Lucky for you, the SDK makes all this work for you, but it's pretty important that
+you, as a module developer, understands this rule.
+
+It's simple, the way that the SDK knows what packages to export is by introspecting
+each configuration, connection and component return and input types and getting its packages. This means
+that you never want to share a package between an exported class and another class that
+you *don't* want to export.
+
+The suggested package hierarchy (the one that we use for our modules) is:
+
+----
+org.mule.module
+\--> .api.*
+\--> .internal.*
+----
+
+Where _api.*_ contains all the classes that are going to be exported and seen by
+the application (Return Types, Subtypes, Input Types, Connection interfaces) and
+ _internal.*_ contains all the classes that contains the specific behaviour of the module
+(Annotated classes, `Connection` and `Operation implementations`; and internal classes).
+
+=== Knowing the Exported classes
+
+It is recommended that *all* exported classes belongs to the module, it s highly discouraged
+and *never* recommended to return or receive objects from classes that belongs to a library
+that the module is using, because could end up in a library clash resulting in a
+module incompatible with other modules, app dependencies or even runtimes.
+
+For example, think the next scenario:
+
+We have two modules with two very different operations, both of them uses the same library for example _GSON_
+which parses a json and returns an instance of a `JsonObject` class. One of them uses _GSON_ version `1.1` and
+the other one _GSON_ version `2.3`. The `JsonObject` class lives in the same package in both
+versions but the implementation is *very* different between each other, which made them incompatible.
+
+The developers of the modules decided that it was a good idea to expose the `JsonObject`
+class as the return type of their operation:
+
+Module 1
+[source, java, linenums]
+----
+public JsonObject getEmployee(@Connection EmployeesServiceConnection connection, String id) {
+  return new JsonObject(connection.getById(id));
+}
+----
+
+Module 2
+[source, java, linenums]
+----
+public JsonObject getAllProducts(@Connection ProductsServiceConnection connection) {
+  return new JsonObject(connection.getProdsJson());
+}
+----
+
+But now when developing a mule application, and the mule developer tries to use both modules
+since both classes have exactly the same full qualified name they will clash. But not only that!
+since classloading filtering is done by package all the other classes that live in the same package
+of that class are going to be exported, resulting in different behaviour of the expected or error like
+`NoSuchMethodException` between other exceptions.
+
+=== The @Export annotation
+
+For extreme corner or complex cases when for some reason a module requires to export a class
+that is not automatically exported by the SDK, exist the `@Export` annotation.
+
+The `@Export` annotation receives an array of classes to be exported.
+
+[WARNING]
+Take in mind that exporting a class will end up exporting all the classes in the same
+package that the exported class.

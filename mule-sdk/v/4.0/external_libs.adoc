@@ -1,0 +1,63 @@
+= External Libraries
+:keywords: mule, SDK, library, dependency, external, jar, maven
+
+== Concept
+Connectors and Modules can depend on external libraries and sometimes these can not
+be packaged inside the connector, due to several causes: _licensing, versioning, custom libs, etc_.
+
+An example of this case is the *Database Connector* in which with the same
+base code you can work with several drivers and versions of a same driver.
+The solution for this problem is to not package any driver inside the connector,
+but asking the Mule developer to provide the desired *JDBC Driver* based on
+to what he requires to connect to.
+
+== Usage
+
+To declare that the Connector or Module requires a external library to work
+when is used in a Mule Application, you should annotate your `@Extension`, <<configs#, Configuration>>
+or <<connections#, ConnectionProvider>> class with the `@ExternalLib` annotation
+and fill all the properties that will help the Mule App developer how
+to configure these libraries.
+
+TIP: Is highly recommended to fill, if possible, all the properties that this
+annotation provides, this will help the Mule App developer how to configure
+these libraries more easily.
+
+[source, java, linenums]
+----
+@ExternalLib(name = "MySQL JDBC Driver",
+description = "A JDBC driver which supports connecting to the MySQL Database",
+nameRegexpMatcher = "(.*)\\.jar",
+requiredClassName = "com.mysql.jdbc.Driver",
+coordinates = "mysql:mysql-connector-java:5.1.44")
+public class MySqlConnectionProvider implements ConnectionProvider<Connection> {
+  //
+}
+----
+
+TIP: A Connector can required multiple external libraries, the `@ExternalLib`
+annotation can be used many times as needed.
+
+=== Properties
+
+[%header%autowidth.spread]
+|===
+| Property | Required | Type | Description
+| *name* | true | String | Friendly name to be displayed in the UI
+| *description* | false | String | Short explanation about the external library
+| *nameRegexpMatcher* | false | String | Regex expression used to match the name
+of the library's file and validate that the specified library by the Mule developer
+is the correct one.
+| *requiredClassName* | false | String | _(Only for Java Libraries)_ Name of a
+`Class` that will be present in the external library. This will be used to validate
+if the specified library by the Mule developer is the correct one.
+| *type* | true | Enum | *NATIVE*: Native library dependency +
+*JAR*: Jar file dependency +
+*DEPENDENCY*: External dependency (for example, a dependency obtained that is specified in the `pom.xml` if you are using Maven)
+| *coordinates* | false | String | Maven coordinates suggestion which indicates where the required library can be found. They should follow Maven's convention `groupId:artifactId:packaging:classifier:version`.
+| *optional* | false | boolean | Indicates whether the library is not required for the functioning of the Connector or Module.
+|===
+
+
+
+// TODO @estebanwasing will add an example to clarify this

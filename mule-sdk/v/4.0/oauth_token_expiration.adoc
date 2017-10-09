@@ -1,0 +1,32 @@
+= Handling expired access tokens
+
+Most services providers return (or should return) access token with a limited lifespan. In general, access tokens usually expired
+around 30 to 60 minutes after being issued, although this is not a standard strictly enforced among providers.
+
+In the same way, providers often provide a refresh token alongside the access token. The refresh token is a second token which can
+be used to replace an expired access token with a fresh one, without the need to perform the dance again.
+
+Unfortunatelly, there's no enforced standard that the SDK can use to automatically detect a token expiration scenario and obtain a new
+one. Different APIs communicate that in different ways. That is why the `AccessTokenExpiredException` exception exists.
+
+[source, java, linenums]
+----
+public void someOperation(@Connection SalesforceRestClient client) { // <1>
+    Response response = client.performSomeOperation(); // <2>
+    if (response.getStatusCode() == 401) { // <3>
+        throw new AccessTokenExpiredException(); // <4>
+    }
+}
+----
+
+<1> The example above uses an imaginary rest client to perform some operation. We assume this rest client was created through a
+`ConnectionProvider` annotated with `@AuthorizationCode`.
+<2> We perform the operation and we get a Response object which contains information of the Http call
+<3> We assume that in our example, a status code of 401 (unauthorize) means that the token has expired
+<4> We throw the `AccessTokenExpiredException`
+
+When the SDK detects this exception, it automatically performs the refresh dance and retries the operation with a new access token.
+
+Notice that in real life, different APIs will notify you of the access token expiration in different ways. Some will give you clients
+which throw exceptions, other's will give you custom messages. You need to research the remote API to figure out what's the best way
+to account for this.
