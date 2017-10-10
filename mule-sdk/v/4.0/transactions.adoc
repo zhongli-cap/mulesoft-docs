@@ -1,0 +1,197 @@
+= Transactions
+:keywords: mule, sdk, operation, source, tx, transactions, xa
+
+The SDK gives the capability to create connectors that are able to join and create
+a new transactions in a Mule Flow, including Source and Operations executions to
+work as a unit where, so if a problem occurs inside the flow, all the components
+participating in the transaction will rollback their execution as a unit, rolls
+back the operations within the transaction so that no one part results in partial completion.
+
+== Implementing Transactions in a Connector
+
+Mule’s transaction support works on the premise of a transactional resource
+identified by a key. *SDK* follows this concept reusing the connection abstraction
+an using the component connection as the key of the transaction.
+This means that in order to have a transaction, the extension must have a
+`ConnectionProvider` which yields instances of the `TransactionalConnection` interface.
+
+=== TransactionalConnection
+
+To enable transactions in your connector the first requisite is having a
+<<connections#, Connection Provider>> which provides connections implementing the
+ `TransactionalConnection` interface.
+
+The connection must implement methods `TransactionalConnection` that are used
+ to communicate the beginning and conclusion of a transaction.
+
+[source, java, linenums]
+----
+public class TXConnectionProvider implements ConnectionProvider<TXConnection> {
+  ...
+}
+----
+[source, java, linenums]
+----
+public class TxConnection implements TransactionalConnection {
+
+    @Override
+    public void begin() throws TransactionException {
+        //logic to begin a transaction
+    }
+
+    @Override
+    public void commit() throws TransactionException {
+        //logic to commit a transaction
+
+    }
+
+    @Override
+    public void rollback() throws TransactionException {
+        //logic to rollback a transaction
+    }
+}
+
+----
+
+Implementing this interface requires to implement the following three methods:
+
+[%header%autowidth.spread]
+|====
+| Method | Description
+|`begin()` | This method is called, when the transaction must begin.
+|`commit()` | This is called when the transaction finished correctly and must be committed.
+|`rollback()` | This is called then the transaction finished with an error and this one
+must be be rollbacked.
+|====
+
+//TODO review how much of Operation TXs should be explained here and how much in the
+// proper operations doc. The same with Sources.
+=== Transactions in Operations
+
+To make an Operation work under a transaction the `@Connection` parameter should
+be a transactional capable connection, this means a connection implementing
+`TransactionalConnection`.
+
+==== Transactional Actions
+
+When an operation is transactional, a synthetic parameter named `transactionalAction`
+is automatically added to it. That parameter is an enum type which can take 3
+possible values:
+
+[%header%autowidth.spread]
+|=======
+| Action Name | Description
+|*ALWAYS_JOIN* | This means that the connector will always join to the existent
+transaction, which implies if, there is no transaction or the current transaction
+is not compatible with the current Operation, the operation execution will fail.
+|*JOIN_IF_POSSIBLE* (Default) | If there is a transaction available, then use it, otherwise
+continue processing
+|*NOT_SUPPORTED* | The operation will execute outside any ongoing transaction.
+|=======
+
+[source, xml, linenums]
+----
+<try transactionalAction="BEGIN_OR_JOIN">
+      <transactional-connector:work config-ref="config" transactionalAction="ALWAYS_JOIN"/>
+</try>
+----
+
+===== Operation Transactional Actions inside the Operation Code
+
+In some cases the Connector developer would like to know at Operation level which
+`transactionalAction` has been configured in the Mule Application, for this use case
+setting a parameter of `OperationTransactionalAction` type is all the required
+work to inject the used value.
+
+[source, java, linenums]
+----
+public void work(@Connection TxConnection connection, OperationTransactionalAction action) {
+  //
+}
+----
+
+==== Operation Transaction Usage
+
+As you probably noticed by now, operations cannot start transactions. They must
+either had been started by a <<sources#, Message Source>>, or the operation has
+to be inside a `<try />` scope starting a new transaction.
+
+Previously to the execution of the transactional operation, Mule will check if
+the current transaction has a bounded key:
+
+* If there is an already bounded key, because a previously Operation or Source had
+already registered, Mule will check if this is compatible with the current Operation,
+if so, the Operation will use the bounded connection, otherwise Mule the execution
+flow will fail indicating that the current Operation was trying to enter to an
+incompatible Transaction.
+
+* If not, it will bound the Operation's
+Connection as the key and execute the the `TransactionalConnection.begin()` communicating
+that the transaction for the current Operation should start.
+
+At the end of the execution of the transaction scope, the `<try />` scope or the
+entire flow if the transaction was initialized by a <<sources#, Message Source>>,
+Mule will call to `TransactionalConnection.commit()` if this one finished correctly,
+otherwise, if an error occurred, `TransactionalConnection.rollback()` will be executed.
+
+When the connection joins the transaction, the provider’s connection management
+strategy is overridden, meaning that regardless of the connection’s strategy,
+the same connection will be used for all matching operations between the
+transaction’s scope.
+
+WARNING: This behavior is not totally compatible with the concept of
+`CachedConnectionProvider` since that would allow the same connection to join
+different transactions concurrently, this implies that the connector developer
+should know how to manage different transactions simultaneously in the same
+connection.
+The usage of `CachedConnectionProviders` with Transactions is totally discouraged.
+
+=== Transactions in Sources
+
+To make an Operation work under a transaction the `@Connection` parameter should be
+a `ConnectionProvider` capable of provide transaction compatible connections.
+
+==== Transactional Actions
+
+===== Source Transactional Actions
+
+When a Message Source is transactional, a synthetic parameter named `transactionalAction` is automatically
+added to it. That parameter is an enum type which can take 2 possible values:
+
+.Source Transactional Actions
+[%header%autowidth.spread]
+|=======
+| Action Name | Description
+|*ALWAYS BEGIN* | Will ensure that a new transaction is created for each invocation.
+|*NONE* (Default) | The source will not start any transaction and will not participate of one opened in the Flow
+|=======
+
+===== Source Transactional Actions inside the Operation Code
+
+In some cases the Connector developer would like to know at Source level which
+`transactionalAction` has been configured in the Mule Application, for this use case
+defining a parameter of `SourceTransactionalAction` type is all the required
+work to inject the used value.
+
+.Injecting SourceTransactionalAction to Source
+[source, java, linenums]
+----
+public class TransactionalSource extends Source<String, Void> {
+
+  @Connection
+  private ConnectionProvider<TXConnection> connection;
+
+  @Parameter
+  private SourceTransactionalAction action;
+
+  // rest of the code
+}
+----
+
+More information, <<sources_transactions#, Sources Transactions>>
+
+=== XA Transactions
+
+XA transactions are supported in a similar way. The only difference is that instead
+of a `TransactionalConnection`, the provider should return an `XATransactionalConnection`,
+which is a connection capable of returning a `XAResource`.
