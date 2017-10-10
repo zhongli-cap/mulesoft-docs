@@ -1,0 +1,159 @@
+= Writing your first test case
+
+This article is a brief introduction, step by step, on how to test an Module's
+Operation explaining the basics of every test case that any Mule Module Developer
+must do.
+
+== First concepts
+
+Every Module test case will contain two things as a basis:
+
+* *Test Case Class*, a Java class containing the test logic. Call flows and assert
+the results.
+* *Mule Application XML*, Mule application that makes use of the Module to test.
+
+TIP: This introduction to how to test a Module is based on the module
+project generated with Mule Extension Archetype. <<getting_started#generating-a-project-using-the-maven-archetype-directly,Creating Your First SDK Project>>.
+Is recommended to learn how to test a module with this example.
+
+== 1. Creating the Test Case Class
+
+When creating the Test Case Class, the first requirement is that this `Class`
+must inherit from `MuleArtifactFunctionalTestCase` which enables the testing of
+modules inside a Mule Application.
+
+[source, java, linenums]
+----
+public class BasicOperationsTestCase extends MuleArtifactFunctionalTestCase {
+
+}
+----
+
+== 2. Writing your Mule Application
+
+The way that Modules are tested is running Mule Application which makes
+use of the Module and executing their flows to make assertions about the
+result of these executions.
+
+The Mule Application XML must be placed inside the `src/test/resources` folder
+of the Module Project.
+
+[tabs]
+------
+[tab,title="XML Editor"]
+....
+[source, xml, linenums]
+----
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:basic="http://www.mulesoft.org/schema/mule/basic"
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+          http://www.mulesoft.org/schema/mule/basic http://www.mulesoft.org/schema/mule/basic/current/mule-basic.xsd">
+
+    <basic:config name="basic-config" configId="configId">
+        <basic:connection requiredParameter="aValue" />
+    </basic:config>
+
+    <flow name="sayHiFlow">
+        <basic:say-hi person="Mariano Gonzales"/>
+    </flow>
+
+    <flow name="retrieveInfoFlow">
+        <basic:retrieve-info config-ref="basic-config"/>
+    </flow>
+
+</mule>
+----
+....
+[tab,title="Visual Editor"]
+....
+image:testing/first-test-app.png[align="center"]
+....
+------
+
+TIP: An easy way to write Mule Applications is to create them in Anypoint Studio,
+copy the generated XML and paste it inside the Module project.
+
+== 3. Importing your Mule Application into the Test Case
+
+By now you have created the *Test Case Class* and a *Mule Application XML*, the
+next is to bind this two components, communicate to the Test Case which Mule
+Application should use to execute the test case, this is done overriding the
+`getConfigFile()` method and returning a `String` containing a relative path
+location of the *Mule Application XML*.
+
+WARNING: The config file path will be relative to the `module-project/src/test/resources` folder.
+Example, if the XML file is located in `module-project/src/test/resources/test-connector-mule-app.xml`
+the `getConfigFile()` method must return `test-connector-mule-app.xml`.
+
+[source, java, linenums]
+----
+public class ModuleTestCase extends MuleArtifactFunctionalTestCase {
+
+    @Override
+    protected String getConfigFile() {
+        return "test-connector-mule-app.xml";
+    }
+
+}
+----
+
+== 4. Writing your first Test Case
+
+Now everything is set up to start writing the Module test cases.
+The first test to write is about how to test a simple Operation with the purpose
+of execute it, retrieve the output of this one and make an assertion over it:
+
+=== 4.1 Executing a flow
+As explained above, the first thing that is required to do is to execute the flow,
+to do this, you have to make use of the `flowRunner("flowName")` utility method,
+this creates a instance of `FlorRunner`, an utility which allows the execution of
+flows. +
+Until now, you have a `FlowRunner` instance configured to run the flow indicated
+in the parameter, the last thing to do, is execute the flow, which is done doing
+`run()` over the `FlowRunner` instance. Example:
+
+[source, java, linenums]
+----
+Event event = flowRunner("sayHiFlow").run();
+----
+
+The execution of the flow gives as return an `Event`, this contains the `payload`,
+`attributes`, `vars`, and all the available information about the execution of the
+flow.
+
+=== 4.2 Retrieving the Payload value
+
+Continuing the example, now you have a `event` variable containing the result
+of the flow execution and is required to obtain the value of the payload to be able
+to make the required assertions:
+
+[source, java, linenums]
+----
+    Object payloadValue = event.getMessage()
+                               .getPayload()
+                               .getValue();
+    assertThat(payloadValue, is("Hello Mariano Gonzales!!!"))
+----
+
+=== 4.3 All together
+[source, java, linenums]
+----
+  @Test
+  public void executeSayHiOperation() throws Exception {
+    Event sayHiFlow = flowRunner("sayHiFlow").run();           //<1>
+    String payloadValue = ((String) sayHiFlow
+                                      .getMessage()
+                                      .getPayload()
+                                      .getValue());            //<2>
+    assertThat(payloadValue, is("Hello Mariano Gonzales!!!")); //<3>
+  }
+----
+<1> Executes the `sayHiFlow` flow
+<2> Retrieves the Payload value
+<3> Makes an assertion over the value
+
+TIP: The flowRunner gives, besides of running flows, it also gives the capability
+of how to call the flow and with which values, which is explained <<testing_flowrunner#, here>>
+
+//Link to something explaining with more detail the flowRunner.

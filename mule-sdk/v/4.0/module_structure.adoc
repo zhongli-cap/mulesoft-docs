@@ -1,0 +1,91 @@
+= Learning the Module Model
+:keywords: mule, sdk, module, extension, components, structure
+
+The entry point for building a mule module is the `@Extension` annotated class,
+this class is the one used to export all the module functionality and all the elements
+associated to it.
+
+[WARNING]
+This class *must* be a public non-abstract class, the `@Extension` annotation cannot be used
+on interfaces, abstract classes, private/protected classes nor typed classes (with generics).
+
+[source, java, linenums]
+----
+@Extension(name = "basic")
+public class BasicModule {
+}
+----
+
+By using the `@Extension` annotation you will need to provide a descriptive and concise name for your module
+(no `extension`, `module`, `connector` should be used to name the module, if one of this
+words is included the SDK will trim them), optionally you can specify the module `vendor` and the
+module `category` (See <<license#, Licensing>>).
+
+One you have your empty module, you can start adding elements to it.
+
+In the big picture we have the following elements:
+
+[[components]]
+* Components
+** <<operations#, Operations>>
+** <<sources#, Sources>>
+** <<functions#, Functions>>
+** <<routers#, Routers>>
+** <<scopes#, Scopes>>
+* <<connections#, Connection Providers>>
+* <<configs#, Configurations>>
+* <<parameters#, Parameters>>
+
+Let's describe each of them shortly.
+
+image::structure/model.png[Module Basic Model Diagram]
+A diagram of a basic module structure.
+
+== Components
+
+The Components are the key of a module functionality, they work is that given a set of
+parameters they can be executed altering or producing the messages in a flow.
+
+<<sources#, `Sources`>> and <<operations#, `Operations`>> are the most common components in a module. <<operations#, `Operations`>> are
+components which process an incoming message and generate a result, <<sources#, `Sources`>> are another
+type component which receives or generates new messages to be processed by the Mule Runtime.
+
+== Configuration
+
+`Configurations` are a set of configurable parameters which affect the behavior of the Module.
+Both <<sources#, `Sources`>> and <<operations#, `Operations`>> typically depend on a `Configuration` to get parameters on how they should
+behave, but this is not required, there are those which do not require a configuration and can simply
+work on their own.
+
+Modules are not required to have a configuration, but if they do, they can also define
+as many other configurations as needed. Different configurations might not only provide
+a different set of parameters, but also specify their own set of <<operations#, `Operations`>> and <<sources#, `Sources`>>
+which are only available when using that configuration.
+
+== Connection Providers
+
+A <<connections#, `Connection Provider`>> is the Module element in charge of handling connections,
+which are created from a <<configs#, `Configuration`>>. They centralize the logic and parametrization
+to provision and release connections of some specific type.
+
+Like the <<configs#, `Configurations`>>, <<sources#, `Sources`>> and <<operations#, `Operations`>> typically depend on a *connection*
+in order to be executed, this is not required, but is pretty common. The *connections* used
+by <<operations#, `Operations`>> and <<sources#, `Sources`>> will be provided for this <<connections#, `Connection Providers`>>.
+
+<<connections#, `Connection Providers`>> are bounded to the <<configs#, `Configurations`>>. <<configs#, `Configurations`>> can have none, one
+or many <<connections#, `Connection Providers`>> that creates different types of *connections*. For example:
+a `ConnectionProvider` for HTTPS and another one for (non-secured) HTTP *connections*.
+
+== Parameters
+
+The `Parameters` are the most granular element on the module model and they are used
+in all the described elements: <<operations#, `Operations`>>, <<sources#, `Sources`>>, <<configs#, `Configurations`>> and <<connections#, `Connection Providers`>>.
+
+They represent the configurable elements that accepts the values then used for elements
+to execute or just to hold the configured values.
+
+== Other Elements
+
+There are more element types that a module can have, for example: <<routers#, `Routers`>>, <<routers#, `Scopes`>>, <<functions#, `Functions`>> or
+<<errors#, `Errors`>> between others, all of them are documented in a separated section. The ones
+described here are the core elements that probably most modules will have.
