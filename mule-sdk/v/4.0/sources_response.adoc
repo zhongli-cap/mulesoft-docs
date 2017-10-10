@@ -69,16 +69,15 @@ Let's see another oversimplified example from the Http connector:
 
 [source, java, linenums]
 ----
-@EmitsResponse <1>
+@EmitsResponse
 public class HttpListener extends Source<InputStream, HttpRequestAttributes> {
 
     @Override
     public void onStart(SourceCallback<InputStream, HttpRequestAttributes> sourceCallback) throws MuleException {
         httpServer = serverProvider.connect();
-
-        server.listen(path).onRequest(request -> {
+        httpServer.listen(path).onRequest(request -> {
             SourceCallbackContext ctx = sourceCallback.createContext(); // <2>
-            ctx.setVariable("responseContext", new HttpResponseContext(request.getResponseSender()); // <3>
+            ctx.setVariable("responseContext", new HttpResponseContext(request.getResponseSender())); // <3>
             Result<InputStream, HttpRequestAttributes> result = requestToResult(request);
             sourceCallback.handle(result, ctx); // <4>
         });
@@ -86,12 +85,12 @@ public class HttpListener extends Source<InputStream, HttpRequestAttributes> {
 
     @OnSuccess
     public void onSuccess(@Content String responseBody,
-                    @Optional responseStatusCode,
-                    SourceCallbackContext callbackContext // <5>
-                    ) throws Exception {
+                          @Optional String responseStatusCode,
+                          SourceCallbackContext callbackContext) // <5
+    throws Exception {
         if (hasResponse(responseStatusCode)) { // <6>
             HttpResponseContext responseContext = callbackContext.getVariable("responseContext"); // <7>
-            responseContext.sendResponse(responseBody, statusCode); <8>
+            responseContext.sendResponse(responseBody, statusCode); // <8>
         }
     }
 }
@@ -106,7 +105,7 @@ connector which knows how to send responses
 <4> We generate and push the message through the `SourceCallback`, using both the `Result` object and the newly
 create context.
 <5> The callback method has two parameters, a `@Content` one which is the body of the response to be sent and the
-HTTP status code of the response. There's a third argument of type `SourceCallbackContext`. This is not an actual
+HTTP status code of the response. There is a third argument of type `SourceCallbackContext`. This is not an actual
 parameter but a way to tell the SDK that we want to recover the same context that was passed to the `handle()` method.
 <6> Because the Http protocol not always sends a response, we check if the response status code requires the response
 to be sent or not.
@@ -124,8 +123,7 @@ Similarly to the example above:
 [source, java, linenums]
 ----
 @OnError
-public void onError(
-                   @Optional @DisplayName(ERROR_RESPONSE_SETTINGS) @NullSafe HttpListenerErrorResponseBuilder errorResponseBuilder,
+public void onError(@Optional @DisplayName(ERROR_RESPONSE_SETTINGS) @NullSafe HttpListenerErrorResponseBuilder errorResponseBuilder,
                    SourceCallbackContext callbackContext,
                    Error error) {
 
@@ -134,7 +132,7 @@ public void onError(
 
 In this case, the method is very similar to the success one. It also receives parameters, the callback context
 and will send an error response back to the requester. But it can also receive an Error object.
-This is the actual Mule Error object which contains the information about the actual failure that was catched.
+This is the actual Mule Error object which contains the information about the actual obtained failure.
 
 [TIP]
 The `Error` object is not a Java `java.lang.Error` object but an SDK `org.mule.runtime.api.message.Error`
@@ -179,4 +177,4 @@ In the example above, the method sends a generic error response in case an error
 
 == Next step
 
-* <<1.5.6_source_async_response, Sending asynchronous responses from a Message Source>>
+* <<source_async_response#, Sending asynchronous responses from a Message Source>>
