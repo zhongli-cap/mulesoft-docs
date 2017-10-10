@@ -6,7 +6,12 @@ Parameters are configurable arguments that belong to a given component.
 are the components which we refer as being _parameterizables_, because
 they are the ones that can be configured through their parameters.
 
-The purpose of the parameters is to provide the information needed by the component so it can be configured in order work properly.
+The purpose of the parameters is to provide the information needed by the component so it can be
+configured in order work properly. +
+Each parameter contains the following information:
+
+* A type that restricts the kind of value the parameter can have.
+* A name that uniquely identifies it.
 
 Let's see an example which is as easy as you can get:
 
@@ -29,11 +34,71 @@ Just take a look at `foo` below.
 public void method(String foo){}
 ----
 
-== Structure of a parameter
-Each parameter contains the following information:
+== Using complex types
 
-* A type that restricts the kind of value the parameter can have.
-* A name that uniquely identifies it.
+Now, let's move to more complex parameters instead of using simple types like strings and integers.
+
+[source, java, linenums]
+----
+@Parameter
+@Optional
+private Options options;
+----
+
+Where `Options` is an `POJO Object` defined by us as:
+
+[source, java, linenums]
+----
+public class Options {
+
+    @Parameter
+    public String color;
+
+    @Parameter
+    @Optional
+    public String mode;
+
+    public String getColor(){
+        return color;
+    }
+
+    public void setColor(String color){
+        this.color = color;
+    }
+
+    public String getMode(){
+        return mode;
+    }
+
+    public void setMode(String mode){
+        this.mode = mode;
+    }
+}
+----
+
+A few notes about this example:
+
+* The entire parameter `Options` is used as an optional parameter, so if you decide to use it you need to fulfill that all the required parameters inside `Options` have been set.
+* If `options` is not configured, it value will be `null` (see <<null_safe#, NullSafe>> for altering this behavior).
+* `Options` parameters must be Java bean properties (i.e. they need to have setters and getters matching the fields names).
+
+=== Complex Type DSL
+
+Complex types should be somehow separated from regular parameters, we can't just merge all the complex type attributes
+with the element specific parameters because it will not have any sense.
+
+That's why for Complex Types, a child definition will be created.
+For example using the `Options` type in a <<configs#, Configuration>>:
+
+[source, xml, linenums]
+----
+<module:config name="config-name" someConfigAttribute="value">
+  <module:options color="BLUE" mode="DARK"/>
+</module:config>
+----
+
+[NOTE]
+`module:options` is separated from the parameters `name` and `someConfigAttribute`.
 
 == Modifiers
 
@@ -103,72 +168,44 @@ private String clazz;
 As you see, by using `@Alias` we can name the parameter as a Java reserved word, something that wouldn't be possible by
 just naming the field as the reserved word.
 
-== Using complex types
+=== Customizing the Parameter DSL
 
-Now, let's move to more complex parameters instead of using simple types like strings and integers.
+It is possible to customize how the Parameter looks and behaves in the DSL using the `@ParameterDsl` annotation.
+This annotation allows setting directives regarding syntax and semantics of the generated XML DSL,
+and can be applied to any Parameter in the model.
 
-[source, java, linenums]
-----
-@Parameter
-@Optional
-private Options options;
-----
+The `@ParameterDsl` annotation has two configurable elements:
 
-Where `Options` is an `POJO Object` defined by us as:
+* `allowInlineDefinition`: +
+  Defines whether the associated Parameter should support inline definition as child element or not.
+  This is used for customizing the DSL of Complex Type Parameters, specially when we need to avoid
+  the inline definition because it has illegal fields (like a `name` field) or because the structure
+  is so complex that makes no sense to represent it inline.
 
-[source, java, linenums]
-----
-public class Options {
+  For example using the `Options` type in a <<configs#, Configuration>> but declaring the Parameter
+  with `@ParameterDsl(allowInlineDefinition=false)`, we no longer have the child element:
 
-    @Parameter
-    public String color;
+  [source, xml, linenums]
+  ----
+  <module:config name="config-name" someConfigAttribute="value" options="#[vars.options]"/>
+  ----
 
-    @Parameter
-    @Optional
-    public String mode;
+* `allowReferences`: +
+  Defines if the associated Parameter should support registry references when receiving an `String`.
+  This is useful to control how the Parameter will behave upon configuration, if the type of the
+  Parameter doesn't provide enough information to automatically configure the references support.
 
-    public String getColor(){
-        return color;
-    }
+  For example, in the JMS Connector we want to avoid the user to inject an object from
+  the registry as a ConsumerType configuration, thus we declare it as not supporting references:
 
-    public void setColor(String color){
-        this.color = color;
-    }
-
-    public String getMode(){
-        return mode;
-    }
-
-    public void setMode(String mode){
-        this.mode = mode;
-    }
-}
-----
-
-A few notes about this example:
-
-* The entire parameter `Options` is used as an optional parameter, so if you decide to use it you need to fulfill that all the required parameters inside `Options` have been set.
-* If `options` is not configured, it value will be `null` (see <<null_safe#, NullSafe>> for altering this behavior).
-* `Options` parameters must be Java bean properties (i.e. they need to have setters and getters matching the fields names).
-
-
-=== Complex Type DSL
-
-Complex types should be somehow separated from regular parameters, we can't just merge all the complex type attributes
-with the element specific parameters because it will not have any sense.
-
-That's why for Complex Types, a child definition will be created.
-For example using the `Options` type in a <<configs#, Configuration>>:
-
-[source, xml, linenums]
-----
-<module:config name="config-name" someConfigAttribute="value">
-  <module:options color="BLUE" mode="DARK"/>
-</module:config>
-----
-
-[NOTE]
-`module:options` is separated from the parameters `name` and `someConfigAttribute`.
+  [source, java, linenums]
+  ----
+   @Parameter
+   @Optional
+   @Expression(NOT_SUPPORTED)
+   @ParameterDsl(allowReferences = false)
+   private ConsumerType consumerType;
+  ----
 
 [[groups]]
 == Parameter Groups
