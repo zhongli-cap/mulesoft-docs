@@ -3,9 +3,28 @@
 
 *October 6, 2017*
 
+Mule Runtime 3.9.0 is focused on customer requested enhancements and bug fixes. +
+This release allows you to:
+
+* Support for PGP signatures in Anypoint Enterprise Security
+* Certificate revocation list support for TLS configurations.
+* Communicate with FTP and SFTP servers via proxy.
+* Configure Mule to work with external Hazelcast servers for Anypoint Fabric.
+* Write database queries using the ‘WITH’ operator.
+* Process messages with non-blocking processing strategy and one way flows.
+* Speed startup times with parallel deployment support.
+
+Additionally, this version of the API Gateway introduces mechanisms for alleviating disaster recovery conditions. +
+
+* Gatekeeper is now able to use the last known state of each tracked API.
+:: If at initialization time, Anypoint API Platform is unreachable for any reason, the runtime will use the last known state of each tracked API (ie applied policies and registered API Contracts before the disaster condition), until connection is reestablished again; in which case the normal cyclic reconciliation mechanism will be triggered. +
+This Gatekeeper functionality also works on Cloudhub workers.
+* Deploying or redeploying an app now runs a reconciliation cycle, independently from the general reconciliation mechanism.
+:: This behavior is introduced for the benefit of customers that have long reconciliation cycles and when deploying or redeploying an app have to wait a long time for policies to be applied or restart the runtime itself. +
+Both reconciliation mechanisms follow BackOff and BackOn rules to make connection attempts. Logs were also improved to show this with fine grained details.
 
 
-== Supported Software
+== Software Compatibility Testing
 
 Mule was tested on the following software:
 
@@ -13,8 +32,8 @@ Mule was tested on the following software:
 |===
 |Software |Version
 |JDK | JDK 1.8.0 (Recommended JDK 1.8.0_144)
-|OS |MacOS 10.11.4, HP-UX 11i V3, AIX 7.2, Windows 2012 R2 Server, Windows 8.1, Solaris 11.3, RHEL 7, Ubuntu Server 15.04
-|Application Servers |Tomcat 7, Tomcat 8, WebLogic 12c, WildFly 8, WildFly 9, WebSphere 8, Jetty 8, Jetty 9
+|OS |MacOS 10.11.x, HP-UX 11i V3, AIX 7.2, Windows 2016 Server, Windows 10, Solaris 11.3, RHEL 7, Ubuntu Server 16.04
+|Application Servers |Tomcat 7, Tomcat 8, Weblogic 12c, Wildfly 8, Wildfly 9, Websphere 8, Jetty 8, Jetty 9
 |Databases |Oracle 11g, Oracle 12c, MySQL 5.5+, DB2 10, PostgreSQL 9, Derby 10, Microsoft SQL Server 2014
 |===
 
@@ -23,6 +42,42 @@ API Gateway is compatible with the following software:
 * APIkit 3.9.0
 * Anypoint Studio 6.4.0
 
+== Changes
+
+*Flow*
+
+* The initialState property of a flow now supports a property placeholder.
+:: You can set The initalState of a flow using a property placeholder such as:
++
+[source,xml,linenums]
+----
+<flow name="trigger" initialState="${flow.state}"/>
+----
++
+And define this placeholder from the `mule-app.properties` file:
++
+[source]
+----
+flow.state=stopped
+----
++
+This is helpful when working in a disaster-recovery environment.
+
+*HTTP  Listener*
+
+* Support CRL in the HTTP listener.
+:: Implement certificate validation through revocation lists for clients connecting to the HTTP listener.
+* Support flag ``-Dmule.timeout.disable=true` in HTTP Listeners.
+:: Disable timeout when listening to external resources.
+
+*Remote Hazelcast*
+
+* Support for using clusttering in remote fashion.
+
+*Java Service Wrapper*
+
+* Change the default tanuki timeout action
+:: When the wrapper detects a timeout in the ping to the runtime, it will generate a DUMP and then restart in place of just restart as it was done before. This is useful for troubleshooting purposes.
 
 == Bundled Runtime Manager Agent
 
@@ -30,12 +85,8 @@ This version of Mule runtime comes bundled with the Runtime Manager Agent plugin
 
 See link:/release-notes/runtime-manager-agent-release-notes[Runtime Manager Agent Release Notes].
 
-== Migration Guide
 
-This runtime uses link:/release-notes/dataweave-1.0.2-release-notes[DataWeave version 1.0.2], if you have any DataWeave transformations on your code, check its corresponding migration guide.
-
-
-== Community Edition Fixed issues
+== Community Edition Resolved Issues
 
 [%header,cols="25a,75a"]
 |===
@@ -46,6 +97,7 @@ This runtime uses link:/release-notes/dataweave-1.0.2-release-notes[DataWeave ve
 | MULE-13582 | 	In domain scenarios, MuleMessage is losing its original context after MuleClient.request()
 | MULE-13577 | 	Statements not closed on when searching metadata
 | MULE-13558 | 	Http requesters built with the same tlsContext are not cached
+| MULE-13490 | 	In WSC resolution of URIs containing a long concatenation of relative paths fails
 | MULE-13476 | 	In Message Filter, unaccepted processor doesn't modify message nor payload
 | MULE-13469 | 	WSDL parsing fails with nested included/imported XSDs
 | MULE-13398 | 	Propagation of SSL prevents Jackson serialization of InboundProperties
@@ -75,346 +127,162 @@ This runtime uses link:/release-notes/dataweave-1.0.2-release-notes[DataWeave ve
 | MULE-12738 | 	In SftpClient exceptions do not wrap the root SftpException
 | MULE-12730 | 	Transformer weightings are not correctly sorted when inputweighting does not match but outputweighting matches
 | MULE-12672 | 	JDOM 1 was excluded in distribution but Flatpack needs it
-| MULE-12667 | 	When the replyTo consumer in JMSMessageDispatcher is created the correlation id is not appropriately resolved
-| MULE-12647 | 	Mimetype is not updated in DefaultMuleMessage when payload is null
 | MULE-12625 | 	An option to set Hazelcast transactions as TWO_PHASE should be available
-| MULE-12595 | 	HTTP transport endpoint >30% performance drop on Mule 3.8.5
-| MULE-12510 | 	Apply the changes from CXF-6665
-| MULE-12442 | 	TextFileObjectStore: File grows indefinitely when entries are overwritten
-| MULE-12402 | 	until-successful retries fail after application restart due to inner flow still stopped
-| MULE-12335 | 	Database Connector unable to handle BLOB conversion
-| MULE-12267 | 	NotificationUtils not checking for null parentElement
 | MULE-12266 | 	Ensure that Notifications provides a copy of the MuleEvent to avoid thread access problems.
-| MULE-12252 | 	Race condition when writing to cache stream through MuleUniversalConduit
 | MULE-12236 | 	A potential bug by a code smell
-| MULE-12230 | 	FtpConnector should take into account that Files could have been consumed
-| MULE-12206 | 	SedaStageInterceptingMessageProcessor thread should clear RequestContext
-| MULE-12193 | 	Stop phase being initiated twice when a connection error occurs
-| MULE-12190 | 	Race condition in FtpRequestTimeoutTestCase
 | MULE-12183 | 	AbstractAsyncRequestReplyRequester should not add correlation sequence to correlationID
-| MULE-12153 | 	WS RequestBodyGenerator fails and generates a warning when imports/includes demands a TLS context
-| MULE-12127 | 	NameResolvingGrizzlyHttpClientTlsTestCase
-| MULE-12124 | 	StalePooledConnectionResetTestCase
-| MULE-12112 | 	Database Connector unable to handle CLOB during sql query
-| MULE-12076 | 	TLS Context is not replicated in wsdl retrieval when importing xsd's.
-| MULE-12069 | 	MULE-7211: VariablesComponentTestCase
-| MULE-12068 | 	Add TransformerFactory to our XMLSecureFactories
-| MULE-12055 | 	MULE-7211: SftpAutoDeleteTestCase (flaky test)
-| MULE-12046 | 	IMAP decode special character in username and password twice
-| MULE-12043 | 	In AbstractXPathExpressionEvaluator, replace the cache WeakHashMap with a guava cache
-| MULE-12042 | 	Empty Failure Expression evaluated positive in Catch Message Exception
-| MULE-12041 | 	Globalfunctions are overriden each time they are defined
 | MULE-12040 | 	Don't use application log after the application is undeployed
 | MULE-12023 | 	In HttpMultipartMuleMessageFactory, multiple threads use instance variable without syncronization
-| MULE-12017 | 	JMSAppender not property closed after application is undeployed
-| MULE-11998 | 	It should be possible to define endpoints with different names and the same address for stp/ftp connectors
-| MULE-11992 | 	An Exception is raised if reconnect-notifier is used within a global configuration
-| MULE-11976 | 	Token splitter in Invoke processor does not handle inner commas
-| MULE-11974 | 	Prefixed user and password has to be masked in db connection exceptions
-| MULE-11973 | 	PGP secret key should not be needed for encryption
-| MULE-11966 | 	JmxAgent registers objects using the object name and not the original registry name
-| MULE-11949 | 	OAuth: token refresh overrides payload when resending request
 | MULE-11948 | 	Error message "Value of {cdata-section-elements} must be a list of QNames in '{uri}local' notation"
-| MULE-11932 | 	Quartz test does not verify stateful job correctly
 | MULE-11920 | 	JVM killed ungracefully on shutdown
-| MULE-11918 | 	Credentials are shown in generic db connection when an exception is raised
-| MULE-11914 | 	Email transport does not invoke exception strategy when flow processing strategy is synchronous
-| MULE-11891 | 	NotPermittedException in http sends status 405 (method not allowed) instead of 403 (forbidden)
-| MULE-11879 | 	Mule does not recognize zip file as deployment units if extension is not in lowercase
-| MULE-11877 | 	Wrong description for org.mule.transport.sftp.getLastModifiedTime()
 | MULE-11875 | 	Race condition when putting an object in the registry asynchronously and disposing the muleContext at the same time
-| MULE-11872 | 	Flaky tests for expiration in persisted object store
-| MULE-11865 | 	Sftp endpoints does not preserve session serialized variables
-| MULE-11862 | 	A deadlock is possible when two request fail using a connection pool
 | MULE-11857 | 	A new version of the jws library needs to be updated so that the project is compiled using it.
-| MULE-11850 | 	Paths for processors in dynamically referenced subflows are not recalculated
-| MULE-11829 | 	VM Receiver process message read from queue and does not process further message till the previous processing has ended
-| MULE-11828 | 	Wrapper does not log boot error before stopping wrapped JVM in WARN loglevel
-| MULE-11766 | 	DefaultExtensionManager's method attemptToCreateImplicitConfigurationInstance should be syncronized
-| MULE-11635 | 	No reconnection attempt in case of LDAP communication error
 | MULE-11600 | 	Lifecycle is incorrectly applied after application deployment fails
-| MULE-11598 | 	HTTP Listener error responses don't include content-length nor last chunk
-| MULE-11549 | 	VM does not manage retrieval and storage of session, losing variables when session is serialized or encoded.
-| MULE-11539 | 	No content response includes Transfer-Encoding header
-| MULE-11535 | 	HTTP transport returns 500 instead of 400 when URL isn't correctly encoded
-| MULE-11534 | 	XmlMetaDataFieldFactory returns empty field list for element with complexType/any
-| MULE-11532 | 	JsonTransformerResolver doesn't reuse transformers when there are more than one
-| MULE-11510 | 	Nodes coming xpath3 functions output do not work with Xquery-transformer
-| MULE-11498 | 	SFTP connector uses "." for listing and some implementations don't support it
-| MULE-11497 | 	Encoding is ignored account in SFTP endpoint
-| MULE-11488 | 	XmlToXMLStreamReader does not support ByteArrayOutputStream as source type
-| MULE-11479 | 	HTTP requester ignores socket properties connect timeout
-| MULE-11455 | 	JMS connector doesn't allow subclasses to change send() parameters
-| MULE-11382 | 	Fix: after until successful flow variables loses mime type
-| MULE-11381 | 	Bring ASM fix from SPR-13695 into Mule
-| MULE-11358 | 	Path Element is not correctly created for elements after a MessageFilter
-| MULE-11337 | 	Listener sends error response when connection is closed
-| MULE-11333 | 	Fix: In Message Enricher a double copy is made and changes are lost after handling exception
-| MULE-11323 | 	Fix: A more declarative exception message has to be added to unsupported methods in DefaultMessageCollection
-| MULE-11302 | 	Default XML Transformer factory does nor support StAXSource
 | MULE-11301 | 	Cannot change the signature key identifier when using WSS Sign security in the Web Service Consumer.
-| MULE-11298 | 	Fix: wsconsumer ignores proxy when retrieving wsdl in initialization phase
-| MULE-11286 | 	Fix: avoid verification of timestamp action matching in request and response of a soap service.
-| MULE-11282 | 	Fix: QuartzMessageReceiver handles the stop message by default and does not stop current scheduled jobs.
-| MULE-11274 | 	MVEL optimizer does not refresh when the payload type changes
-| MULE-11271 | 	Fix: Multiple Quartz connectors register quartz scheduler with the same name.
-| MULE-11266 | 	Fix: Text file object store does not update persistent file stored record according to expiration policy.
 | MULE-11246 | 	Improve PGP Module
-| MULE-11240 | 	Apply changes from CXF-7162
-| MULE-11206 | 	Prevent possible hash collision attacks in Java 7
-| MULE-11204 | 	Memory leak on mule db module on high load scenario when streaming is enabled
-| MULE-11145 | 	Apply Processors to Custom Validators
 | MULE-11128 | 	LocationExecutionContextProvider doesn't mask passwords
 | MULE-11127 | 	Cannot default to request config requestStreamingMode nor sendBodyMode
-| MULE-11124 | 	"content-type" set in HTTP request builder should not be case sensitive
-| MULE-11118 | 	Return a 5xx response when thread pool is exhausted instead of ignoring the request
 | MULE-11089 | 	Deployment tries to redeploy when an app has a missing plugin
-| MULE-11002 | 	Increase of contention found using xpath, due to high classloading usage
 | MULE-10999 | 	Update xmlbeans dependency to our fork in mule-common
-| MULE-10996 | 	Content-Length header case conflicts with streaming
-| MULE-10985 | 	Parallel deployment causes runtime contention on Logger.
-| MULE-10975 | 	AbstractAggregator eventGroups object store ignores the object store configuration in the registry
-| MULE-10921 | 	FtpWork never processes file if lock is not granted
-| MULE-10918 | 	Until successful is losing session vars
-| MULE-10913 | 	DB Pool retrieving invalid connections
-| MULE-10911 | 	Poll component should ignore scheduling when application is being stopped
-| MULE-10909 | 	MySQL objects leaked after undeployment
 | MULE-10886 | 	Exception thrown in mule-domain-maven-plugin
-| MULE-10882 | 	Unregister resources from Bitronix (ResourceRegistrar and ManagementRegistrar)
-| MULE-10881 | 	AsyncInterceptingMessageProcessor#processNextAsync not rethrowing exception
-| MULE-10854 | 	Use scrollable ResultSet when supported for stored procedure calls
-| MULE-10817 | 	ExpressionMuleEventKeyGenerator does not evaluates composite expressions
-| MULE-10773 | 	Jaxb unmarshaller doesn't support namespaces anymore
-| MULE-10722 | 	Not Handling FTP Connection Errors in FTPMessageReceiver
-| MULE-10721 | 	Simultaneous Http requests with MuleClient produce error
 | MULE-10720 | 	xml-to-dom-transformer default returnType should be org.w3c.dom.Document instead of byte[]
 | MULE-10719 | 	Double Upload When Releasing With mule-domain-maven-plugin
-| MULE-10717 | 	Flows can start processing messages before referenced flows are completely started
-| MULE-10686 | 	Disable entity expansion when processing XML to avoid DoS
-| MULE-10644 | 	Ensure MULE-9534 fix only applies to one-way endpoints and add tests for JMS Message ID request response correlation pattern
-| MULE-10620 | 	Envelope namespace used in body produces broken xml when getting the body
-| MULE-10598 | 	Apply changes from CXF-7058
-| MULE-10593 | 	App with missing config fails to deploy but has status "created"
-| MULE-10581 | 	Batch process cannot resume after a crash, if there is a corrupted file in the ObjectStore
-| MULE-10578 | 	Exception thrown form a Work#run() is ignored by the WorkManager
-| MULE-10573 | 	File Transport processes files that did not finish copying
-| MULE-10507 | 	OAuth Authorization in HTTP Requester redirection URL only works on localhost
-| MULE-10500 | 	SoapFaultException must keep the original SoapFault
-| MULE-10417 | 	When sending multiple HTTP headers with the same key using a Requester the format is not the expected by HTTP spec
-| MULE-10356 | 	Http inbound endpoint returns additional headers in 100 Continue response
-| MULE-10352 | 	Make HttpClient Startable instead of Initialisable to match Stoppable
-| MULE-10348 | 	Processors in DefaultMessageProcessorChain are not completely initialized
-| MULE-10306 | 	Add option to disable internal entity expansion in XML (leads to DoS)
-| MULE-10268 | 	Proxy Authentication Header is not included when using proxy for HTTPS target server
-| MULE-10233 | 	HTTP Requester is not sending custom headers for multipart requests
-| MULE-10211 | 	Http request component downloads entire http response slowing down application and introducing potential for out of memory errors for large http responses
-| MULE-10196 | 	When AbstractConnector fails to connect receivers, it leaves the connector connection active
-| MULE-10193 | 	HttpListener - MuleMessage cast exception when sending duplicate Content-Type header
-| MULE-10187 | 	HTTPS Requester thread hangs intermittently
-| MULE-10186 | 	Classloader leak due to shutdown listeners are not cleared
-| MULE-10180 | 	Classloader leak when Oracle JDBC Driver is not used but included in application lib folder
-| MULE-10178 | 	InputStream not closed on core, launcher and spring-config
-| MULE-10120 | 	Map not sent as form data if mimeType is application/java
-| MULE-10107 | 	High contention when many threads try to create exceptions
-| MULE-10100 | 	Until successful returns event copy causing uses in other scopes to fail
-| MULE-10095 | 	OOM when starting mule with large tx log file
-| MULE-10091 | 	Properties missing when using jetty-ssl
-| MULE-10078 | 	Properly handle disposal of XaTransactedJmsMessageReceiver
-| MULE-10071 | 	Fix Flaky deprecation tests
-| MULE-10003 | 	OAuth2 authorization-code-grant-type should reuse refresh_token
-| MULE-9996	 | First successful is not notifying all paths
-| MULE-9933	 | RestrictedSSLSocketFactory needs to implement getDefault method so it can be set as the socket factory used by the Ldap provider in the JVM
-| MULE-9891	 | doc:name in reference exception strategy overrides doc:name of the flow
-| MULE-9886	 | HttpResponseBuilder does not override Content-Length header after recalculating it
-| MULE-9826	 | HTTP timeout when sending x-www-form-urlencoded POST
-| MULE-9816	 | Typo in TransactionJournal
-| MULE-9757	 | SFTP: Returning of sftp clients to the pool are blocked waiting for the reconnection strategy
-| MULE-9740	 | No object DCH for MIME type
-| MULE-9670	 | Reason phrase and entity are mistaken in RequestHandler
-| MULE-9659	 | Lifecycle error when deploying application if there are two inbound-endpoints with the same URI registered
-| MULE-9592	 | MuleEndpointURI fails to extract right user and password
-| MULE-9567	 | AHC/Grizzly: Readd locally closed connection validation
-| MULE-8989	 | Mule gives error when making http request from JBoss
-| MULE-8777	 | HttpMapParam expects multiple values in ParameterMap, but ParameterMap only returns one
-| MULE-8747	 | Inconsistent mule state on deployment failed
-| MULE-8414	 | Jetty-ssl transport not setting some HTTP inbound properties
-| MULE-8413	 | xpath3 function not working with output from WebService Consumer component
 | MULE-8207	 | Fix ConcurrentModificationException in FileMessageReceiver
-| MULE-8196	 | Listener 503 responses do not include an informative http body.
 | MULE-7794	 | CXF Proxy is throwing NPE when Schemas are imported in WSDL
-| MULE-7324	 | CxfBasicTestCase has wrong assertions
-| MULE-6331	 | Client so_timeout is replaced by responseTimeout
-| MULE-1683	 | When the quartz connector is stopped, standby() method should be invoked instead of shutdown()|  |
+| MULE-1683	 | When the quartz connector is stopped, standby() method should be invoked instead of shutdown()
+| MULE-12385 | 	Fix: Some endpoints allow to define a reconnection strategy
+| AGW-1533 |  Policy cache is not replicated in all members of a cluster.
+| AGW-1529 |  Backoff info logs show insufficient info about the executed task.
+| AGW-1528 |  Client ID enforcement does not validate if platform is unreachable.
+| AGW-1523 |  HTTP client responses are not consumed on error causing connection leak.
+| AGW-1482 |  Policies and contracts last known state is not preserved in Cloudhub.
+| AGW-1470 |  Right after deploying an application, platform policies are not requested.
+| AGW-1310 |  When RestClient fails to be initialized there is no automatic attempt to initialize again.
+| AGW-929 | Gatekeeper should be able to use last known state.
+| AGW-867 | CORS policy not adding Access-Control-Allow-Origin header to failed responses.
 |===
 
-== Community Edition Improvements
+== Community Edition Enhancement Request
 
 [%header,cols="25a,75a"]
 |===
 |Issue |Description
-| MULE-13275 |	Configuration Management
-| MULE-12919 |	Improve FTP Receiver Reconnection
-| MULE-12902 |	In JmsRequester,TransactionListener is never unregistered causing a memory leak.
-| MULE-12808 |	JMS doesn't close consumers in transaction scope.
-| MULE-12766 |	Move to Grizzly AHC
-| MULE-12752 |	Http should have locally closed
-| MULE-12745 |	Set HeapMemoryManager as Default Grizzly Memory Manager.
-| MULE-12739 |	Set Drools Assert Behavior Option to EQUALITY to avoid duplicated facts be saved.
-| MULE-12718 |	Performance degradation in MEL caused by MULE-11274
-| MULE-12717 |	Add status parameter to mule.bat
-| MULE-12612 |	FTP should only allow synchronous Reconnection Strategy
-| MULE-12585 |	Allow HTTP streaming to be turned off
-| MULE-12418 |	Fix: When wmq outbound applies request-reply exchange, correlationId attribute is ignored.
-| MULE-12385 |	Fix: Some endpoints allow to define a reconnection strategy
-| MULE-12366 |	Temporary Queues aren't deleted when JMS is used with BTM
-| MULE-12273 |	Add validations in PGP Module to avoid NPE and improve traceability
-| MULE-12268 |	Add test to verify the reception of multiple headers in the HTTP request
-| MULE-12245 |	Remove endorsed XML libraries
-| MULE-12203 |	Fix SftpFileAgeFunctionalTestCase
-| MULE-12179 |	Remove old fallback mechanism for TransformerFactory implementations
-| MULE-12142 |	Stop Mule Context before disposing it in AbstractMuleContextTestCase
-| MULE-12108 |	Fix AsynchronousUntilSuccessfulProcessingStrategyTestCase
-| MULE-12105 |	Provide a way to avoid properties be overridden when Runtime is run as Windows Service
-| MULE-11970 |	Update of logs which are indirectly causing a deadlock condition
-| MULE-11924 |	After multiform request, Mule Message has an invalid data type.
-| MULE-11903 |	Fix: Http requester can't handle large headers.
-| MULE-11869 |	Default Reconnect Strategy is ignored in DB Config.
-| MULE-11835 |	RSS parser isn't parsing elements with namespaces.
-| MULE-11825 |	Template-query isn't validating the definition of params used in query text.
-| MULE-11665 |	Fix: Memory Leak in Custom Agreggator.
-| MULE-11303 |	Update XML tests to use the same SAX transformer as Mule Standalone
-| MULE-11293 |	Fix: Session property disappearing after dispatchEvent()
-| MULE-11281 |	Fix: SFTP Inbound Endpoint doesn't set the MimeType
-| MULE-11203 |	Add Error Message about not supported Asynchronous Retry Policies in DB Connection.
-| MULE-11191 |	Fix: FTP reconnect Notifier is not working
-| MULE-11185 |	Fix: sftpclient unable to validate duplicate files for relative paths involving ~ symbol
-| MULE-11159 |	Fix: FileToString Transform is not able to process incoming message payload retrieved from file connector when streaming attribute is set to false.
-| MULE-11110 |	Fix: fileAge of Connector is replaced by fileAge of endpoint
-| MULE-11079 |	Fix: Set Payload doesn't work correctly with special characters in a variable value.
-| MULE-11022 |	Http Conficts with Wildcard in the middle of the path.
-| MULE-11008 |	Fix: JsonData doesn't have to implement Serializable
-| MULE-10986 |	Fix conflict Similar HTTP Listener Path with Wildcards
-| MULE-10979 |	Remove System Properties Configuration
-| MULE-10646 |	Refactor GrizzlyHttpClient to use BodyDeferringAsyncHandler
-| MULE-10643 |	ResourceBundle class loader leak when undeploying application
-| MULE-9714	 |Create mule-module-scripting-jruby sources and javadocs
-| MULE-9689	 |Split Jar reactor from Distribution reactor
-| MULE-9635	 |Include AHC/Grizzly performance fix in mule's custom ahc code
-| MULE-8990	 |State param encoding in OAuth support not compatible with certain services like Concur
+| MULE-12961 | 	WSC: Add support for WS-SecurityPolicy.
+| MULE-12989 | 	Moving tmp folder inside execution (.mule) and remove it when undeploying
+| MULE-12638 | 	Allow schedulers configuration
+| MULE-12522 | 	ProcessorNotificationPath badly generated for Transactional scope
+| MULE-11989 | 	Generic DB Config should accept user and password as attributes
+| MULE-10718 | 	Enrich HttpClient exception to include request URI
+| MULE-9218	 |  Http Calls performance degrades after time due grizzly connection pool.
+| MULE-8252	 |  When the status code is set, http listener should auto complete de reason phrase
+| MULE-7081	 |  SFTP sizeCheckWaitTime should be applied per poll cycle instead of per file
+| MULE-6619	 |  Flow initialState should support a property placeholder
+| MULE-12919 | 	Improve FTP Receiver Reconnection
+| MULE-12717 | 	Add status parameter to mule.bat
+| MULE-12245 | 	Remove endorsed XML libraries
 |===
 
 
-== Community Edition Migration to Mule 3.8.0
+== Community Edition Migration to Mule 3.9.0
 
-When migrating to Mule 3.8.0, follow the implicit and explicit guidelines related to these issues:
+When migrating to Mule 3.9.0, follow the implicit and explicit guidelines related to these issues:
 
 [%header,cols="25a,75a"]
 |===
 |Issue |Description
-| MULE-12245 |	Old Xalan and Xerces implementations were removed in favor of the newer versions included in Java. Only minor incompatibilities could result such as ordering changes of some XML attributes.
-| MULE-12017 |	log4j was updated from 2.5 to 2.8.2 and slf4j from 1.7.7 to 1.7.24. There is a minor incompatibility with code using logger.error(null, "message", e), in which case the first null argument should be omitted.
-| MULE-11948 |	Saxon was upgraded from 9.6.0-7 to 9.6.0-10
-| MULE-9931 |	"Transaction log files size are now restricted by size, using a default size of 500 mb. The configured size is just an approximated value which may be exceeded based on the size of the record store by the transaction. This is configurable using the attribute queueTransactionFilesSize of the <configuration> element. +
-The size restriction applies to the set of transaction log files for local transactions and XA transactions independently meaning that if both types of transactions are used for queue the set of tx files will use up to 1 gb."
-| MULE-10100 |	MULE-10100: Processing after a synchronous until successful resulting in a VoidMuleEvent will now continue with the original event.
-| MULE-10306 |	MULE-10306: XML entity expansion in XML transformers is now disabled by default because it allows DoS attacks. To restore previous behaviour use the expandInternalEntities="true" attribute.
-| MULE-10686 |	MULE-10686: XML entity expansion in Jersey is now disabled by default because it allows DoS attacks. To restore previous behaviour use the mule.xml.expandInternalEntities=true property.
-| MULE-10979 |	MULE-10979: The default response timeout and default transaction timeout can't be configured using system properties on the command line or in the wrapper.conf file anymore. In replacement, use the configuration element. For example: <configuration defaultResponseTimeout="20000"   defaultTransactionTimeout="40000"/>.
-| MULE-11118 |	MULE-11118: The HTTP listener now replies with status code 503 when the thread pool is exhausted (and poolExhaustedAction="ABORT") instead of closing the socket.
-| MULE-11825 |	MULE-11825: In a DB template query, to set a DB param with the null value, you can use the "NULL" literal value. For example: <db:in-param name="name" defaultValue="NULL"/>
-| MULE-12385 |	MULE-12385: Reconnection Strategies can only be defined in connector components or globally (using <configuration> element). In mule 3.x, defining reconnection strategies was being supported by the XSD, but ignored by Runtime. Now, the XSD was changed to not allow to use this invalid configuration.
-| MULE-12612 |	MULE-12612: As FTP reconnection is at operation level, FTP connector does not support asynchronous reconnection strategies because it only makes sense if reconnection takes place during the start phase of the connector lifecycle. In case you use this kind of reconnection, please change them as follows: <reconnect blocking="true"/> inside FTP Connector, or just remove the blocking attribute.
-|	MULE-13164 | Inconsistent null return from one-way VM inbound endpoint. From Mule 3.9 one-way inbound VM endpoints will now consistently return null to Flow using a request-response outbound endpoint or Mule Client using send(). (In previous versions a successful response led to null return yet an error resulted in a message being returned.)
-|	MULE-11246 | The secretAliasId parameter isn't mandatory anymore. If not given, Mule will take the secretAliasId from the message to decrypt. Additionally, from 3.9.x the secretAliasId must be an hexadecimal value.
-|	MULE-11161 | The default PGP Encryption algorithm has been changed from CAST5 to AES 256.|
-|===
-
-== Community Library Changes
-
-[%header,cols="25a,75a"]
-|===
-|Issue |Description
-| MULE-13336 | 	Update Grizzly to version 2.3.33
-| MULE-13197 | 	Update json-schema-validator version to 2.2.8
-| MULE-12590 | 	Upgrade JRuby to 1.7.27 or newer
-| MULE-12530 | 	Upgrade commons-beanutils to 1.9.3
-| MULE-12821 | 	Upgrade abdera-client to 1.1.3
-| MULE-12782 | 	Upgrade commons lang to >=3.1 +
+| MULE-12245 | 	Old Xalan and Xerces implementations were removed in favor of the newer versions included in Java. Only minor incompatibilities could result such as ordering changes of some XML attributes.
 | MULE-12017 | 	log4j was updated from 2.5 to 2.8.2 and slf4j from 1.7.7 to 1.7.24. There is a minor incompatibility with code using logger.error(null, "message", e), in which case the first null argument should be omitted.
 | MULE-11948 | 	Saxon was upgraded from 9.6.0-7 to 9.6.0-10
-| MULE-13199 | 	Upgrade Jackson to 2.8.9
-| MULE-13477 | 	Upgrade Grizzly AHC to 1.14 release
-| MULE-13443 | 	Upgrade CXF to 2.7.19-MULE-002 patch release.
-| MULE-9587	 | Upgrade ActiveMQ to version 5.15.0
-| MULE-13176 | 	Upgrade commons-validator
-| MULE-12755 | 	Upgrade Drools to 5.2.1.Final
-| MULE-12754 | 	Upgrade XStream to 1.4.10
-| MULE-12565 | 	Upgrade Ant to 1.9.6
-| MULE-10612 | 	Upgrade JAXB to 2.1.17
-| MULE-10466 | 	Update javax transport version to 1.2
+| MULE-9931	| Transaction log files size are now restricted by size, using a default size of 500 mb. The configured size is just an approximated value which may be exceeded based on the size of the record store by the transaction. This is configurable using the attribute queueTransactionFilesSize of the <configuration> element. +
+The size restriction applies to the set of transaction log files for local transactions and XA transactions independently meaning that if both types of transactions are used for queue the set of tx files will use up to 1 gb."
+| MULE-10100 | 	Processing after a synchronous until successful resulting in a VoidMuleEvent will now continue with the original event.
+| MULE-10306 | 	XML entity expansion in XML transformers is now disabled by default because it allows DoS attacks. To restore previous behaviour use the expandInternalEntities="true" attribute.
+| MULE-10686 | 	XML entity expansion in Jersey is now disabled by default because it allows DoS attacks. To restore previous behaviour use the mule.xml.expandInternalEntities=true property.
+| MULE-10979 | 	The default response timeout and default transaction timeout can't be configured using system properties on the command line or in the wrapper.conf file anymore. In replacement, use the configuration element. For example: <configuration defaultResponseTimeout="20000"  defaultTransactionTimeout="40000"/>.
+| MULE-11118 | 	The HTTP listener now replies with status code 503 when the thread pool is exhausted (and poolExhaustedAction="ABORT") instead of closing the socket.
+| MULE-11825 | 	In a DB template query, to set a DB param with the null value, you can use the "NULL" literal value. For example: <db:in-param name="name" defaultValue="NULL"/>
+| MULE-12385 | 	Reconnection Strategies can only be defined in connector components or globally (using <configuration> element). In mule 3.x, defining reconnection strategies was being supported by the XSD, but ignored by Runtime. Now, the XSD was changed to not allow to use this invalid configuration.
+| MULE-12612 | 	As FTP reconnection is at operation level, FTP connector does not support asynchronous reconnection strategies because it only makes sense if reconnection takes place during the start phase of the connector lifecycle. In case you use this kind of reconnection, please change them as follows: <reconnect blocking="true"/> inside FTP Connector, or just remove the blocking attribute.
+| MULE-13164 | 	Inconsistent null return from one-way VM inbound endpoint. From Mule 3.9 one-way inbound VM endpoints will now consistently return null to Flow using a request-response outbound endpoint or Mule Client using send(). (In previous versions a successful response led to null return yet an error resulted in a message being returned.)
+| MULE-11246 | 	The secretAliasId parameter isn't mandatory anymore. If not given, Mule will take the secretAliasId from the message to decrypt. Additionally, from 3.9.x the secretAliasId must be an hexadecimal value.
+| MULE-11161 | 	The default PGP Encryption algorithm has been changed from CAST5 to AES 256.
 |===
 
-
-== Enterprise Edition Fixed Issues
+== Community Updated Libraries
 
 [%header,cols="25a,75a"]
 |===
 |Issue |Description
+| MULE-13336 |  Update Grizzly to version 2.3.33
+| MULE-13197 |  Update json-schema-validator version to 2.2.8
+| MULE-12590 |  Upgrade JRuby to 1.7.27
+| MULE-12821 |  Upgrade abdera-client to 1.1.3
+| MULE-12782 |  Upgrade commons lang to 3.6
+| MULE-11948 |  Saxon was upgraded from 9.6.0-7 to 9.6.0-10
+| MULE-13199 |  Upgrade Jackson to 2.8.9
+| MULE-13477 |  Upgrade Grizzly AHC to 1.14 release
+| MULE-13443 |  Upgrade CXF to 2.7.19-MULE-002 patch release.
+| MULE-9587	 |  Upgrade ActiveMQ to version 5.15.0
+| MULE-13176 |  Upgrade commons-validator to 1.6
+| MULE-12755 |  Upgrade Drools to 5.2.1.Final
+| MULE-12754 |  Upgrade XStream to 1.4.10
+| MULE-12565 |  Upgrade Ant to 1.9.6
+| MULE-10612 |  Upgrade JAXB to 2.1.17
+| MULE-10466 |  Update javax transport version to 1.2
+| MULE-12344 |  Update tomcat to 6.0.53
+|===
+
+
+== Community Edition Known Issues
+
+[%header,cols="25a,75a"]
+|===
+| MULE-10967 | Flow name can't be a system property used in http listener path
+|===
+
+== Enterprise Edition Resolved Issues
+
+[%header,cols="25a,75a"]
+|===
+|Issue |Description
+| EE-5686 |	When stopping a cluster, dispose is not invoked
 | EE-5563 |	An option to set Hazelcast transactions as TWO_PHASE should be available
 | EE-5521 |	Race condition when finishExecution in batch blocks dispatcher for any job till on complete phase finishes
-| EE-5514 |	When the replyTo consumer in JMSMessageDispatcher is created the correlation id is not appropriately resolved
-| EE-5467 |	Race condition in AMI when the thread dispatcher reads from the persistent queue before tx commit
-| EE-5457 |	Application stats cannot be cleaned when serialized in an embedded app
-| EE-5447 |	targetClient property of wmq:outbound-endpoint isn't parsed correctly
-| EE-5428 |	WS RequestBodyGenerator fails and generates a warning when imports/includes demands a TLS context
 | EE-5384 |	In WS endpoint, queue is a required attribute when It shouldn't
-| EE-5376 |	Force only one polling node after merge of clusters
-| EE-5313 |	Batch block size cannot be set as a context property
-| EE-5308 |	Use of Round Robin with IIS results in invalid session token
-| EE-5297 |	WMQ connector doesn't use endpoint attributes
-| EE-5282 |	BatchRecordDispatcherDelegate does not catch RejectedExecutionException
-| EE-5250 |	Resuming batchjob that finished all batch steps (send to on complete)
-| EE-5195 |	Create new BatchTransactionContextFactory each time the DefaultBatchEngine is started
-| EE-5190 |	Many Request attributes get duplicated when doing Name Resolving failover
-| EE-5182 |	Poll watermark got updated in batch input phase even there's an exception
 | EE-5159 |	Exception locking polling lock on Mule graceful shutdown
 | EE-5070 |	Possible DoS in Xerces processing of remote provided xml (CVE-2013-4002)
-| EE-5028 |	MMC agent not started in embedded mode
-| EE-4979 |	Fix Batch flush upon stop TestCases
-| EE-4978 |	Log Resource leak - Upgrade c3p0 to version 0.9.5.2 or newer
-| EE-4946 |	Exception in Batch commit causes memory leak
 |===
 
-== Enterprise Improvements
+== Enterprise Enhancement Request
 
 [%header,cols="25a,75a"]
 |===
 |Issue |Description
-|EE-5660 |	Configuration Management
-|EE-5646 |	Add callables library in EE distributions for hazelcast client mode
-|EE-5547 |	Performance degradation in MEL caused by MULE-11274
-|EE-5448 |	Merge changes for Remote Hazelcast changes into 3.9.x and potentially 3.8.x
-|EE-5380 |	Remove src/README.txt from the distribution
-|EE-5345 |	Allow to set tcpInboundPort property in ClusteringTicket
-|EE-5100 |	Change the default tanuki timeout action
-|EE-5055 |	Batch should auto stop job instances when queues are corrupted
+| EE-5646 | Add callables library in EE distributions for hazelcast client mode
+| EE-5100 | Change the default tanuki timeout action
 |===
 
-== Enterprise Edition Migration
+== Enterprise Edition Migration to Mule 3.9.0
 
-When migrating to the Mule 3.8.0 Enterprise Environment, follow the implicit and explicit guidelines related to these issues:
+When migrating to the Mule 3.9.0 Enterprise Environment, follow the implicit and explicit guidelines related to these issues:
 
 [%header,cols="25a,75a"]
 |===
 |Issue |Description
-|EE-5021 |	Kryo was upgraded from 3.0.3 to 4.0.0. WARNING: A fresh install is required when upgrading to Mule 3.9.
+| EE-5021	| Kryo was upgraded from 3.0.3 to 4.0.0. WARNING: A fresh install is required when upgrading to Mule 3.9.
 |===
 
-== Enterprise Edition Library Changes
+== Enterprise Edition Updated Libraries
 
 [%header,cols="25a,75a"]
 |===
 |Issue |Description
-|EE-5451 |	Update tomcat to latest version release
-|EE-5021 |	Upgrade kryo to 4.0.0
+| EE-5021 |	Upgrade kryo to 4.0.0
+|===
+
+== Community Edition Known Issues
+
+[%header,cols="25a,75a"]
+|===
+| EE-5553 |	NPE when jmsCorrelationId is null in websphere MQ
 |===
