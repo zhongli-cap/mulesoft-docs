@@ -1,4 +1,4 @@
-= XML Reference for the FTP Connector (Studio)
+= XML Reference for the FTP and SFTP Connectors (Studio)
 :keywords: ftp, connector, matcher, directory, listener
 :toc:
 :toc-title:
@@ -10,12 +10,12 @@ toc::[]
 [[short_description]]
 This reference provides the XML namespace and schema location for the FTP connector along with some common FTP use cases.
 
-When you add an FTP connector operation to a flow in Mule app, Anypoint Studio automatically populates the XML code with the connector namespace and schema location. If you are creating your XML by hand, you need to add this code yourself.
+When you add an FTP or SFTP connector operation to a flow in Mule app, Anypoint Studio automatically populates the XML code with the connector namespace and schema location. If you are creating your XML by hand, you need to add this code yourself.
 
-* Namespace: `+http://www.mulesoft.org/schema/mule/ftp+`
-* Schema Location: `+http://www.mulesoft.org/schema/mule/ftp/current/mule-ftp.xsd+`
+* Namespaces: `+http://www.mulesoft.org/schema/mule/ftp+`, `+http://www.mulesoft.org/schema/mule/sftp+`
+* Schema Location: `+http://www.mulesoft.org/schema/mule/ftp/current/mule-ftp.xsd+`, `+http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd+`
 
-If you are manually coding the Mule application in Studio's XML editor or another text editor, you need to define the namespace and schema location in the header of your Configuration XML, inside the `<mule>` tag like this:
+If you are manually coding the Mule application in Studio's XML editor or another text editor, you need to define the namespace and schema location in the header of your Configuration XML, inside the `<mule>` tag like this FTP example:
 
 [source, xml,linenums]
 ----
@@ -46,6 +46,7 @@ Note that Studio interprets `current` in the schema path as the current Mule ver
 [[connection]]
 FTP connection example:
 
+[source, xml,linenums]
 ----
 <ftp:config name="config">
  <ftp:connection username="anonymous" password="password" host="localhost"
@@ -55,36 +56,46 @@ FTP connection example:
 
 SFTP connection example:
 
+[source, xml,linenums]
 ----
-<ftp:config name="config">
-   <ftp:sftp-connection username="muletest1" password="muletest1"
+<sftp:config name="config">
+   <sftp:sftp-connection username="muletest1" password="muletest1"
     host="localhost" port="${SFTP_PORT}" workingDir="${workingDir}" />
-</ftp:config>
+</sftp:config>
 ----
 
 SFTP connection through a proxy:
 
+[source, xml,linenums]
 ----
-<ftp:config name="sftp">
-   <ftp:sftp-connection username="muletest1" password="muletest1"
+<sftp:config name="sftp">
+   <sftp:sftp-connection username="muletest1" password="muletest1"
     host="127.0.0.100" port="${SFTP_PORT}" workingDir="${workingDir}">
-       <ftp:sftp-proxy-config host="localhost" port="${proxyPort}"
+       <sftp:sftp-proxy-config host="localhost" port="${proxyPort}"
         protocol="HTTP"/>
-   </ftp:sftp-connection>
-</ftp:config>
+   </sftp:sftp-connection>
+</sftp:config>
 ----
 
 == Operations
 
 * Read operation: This example reads the file at the specified path and returns a Mule message with an `InputStream` as payload and a `FileAttributes` instance as attributes. If the file does not exist, a `FTP:ILLEGAL_PATH` error will be thrown.
 +
+[source, xml,linenums]
 ----
 <ftp:read path="#[path]" outputEncoding="UTF-8"
  outputMimeType="application/xml" />
 ----
 +
+[source, xml,linenums]
+----
+<sftp:read path="#[path]" outputEncoding="UTF-8"
+ outputMimeType="application/xml" />
+----
++
 * List operation: This example lists the contents of a folder and handle regular files and subdirectories differently.+
 +
+[source, xml,linenums]
 ----
 <flow name="list">
   <ftp:list directoryPath="~/dropFolder" />
@@ -102,8 +113,11 @@ SFTP connection through a proxy:
 </flow>
 ----
 +
-** The `<ftp:matcher>` element (available to the List operation) defines criteria for accepting or rejecting a file.
+For SFTP, the only difference is prefix to the element name: `<sftp:list directoryPath="~/dropFolder" />`
 +
+** The `<ftp:matcher/>` or `<sftp:matcher/>` element (available to the List operation) defines criteria for accepting or rejecting a file.
++
+[source, xml,linenums]
 ----
 <ftp:matcher
  filenamePattern="a?*.{htm,html,pdf}"
@@ -116,10 +130,13 @@ SFTP connection through a proxy:
  maxSize="1024" />
 ----
 +
+For SFTP, the only difference is prefix to the element name: `<sftp:matcher/>`
++
 Note that `INCLUDE` is the default for `directories` and `regularFile`.
 +
 ** Example of top level, reusable matcher (Studio only):
 +
+[source, xml,linenums]
 ----
 <ftp:matcher name="smallFileMatcher" maxSize="100" />
 +
@@ -131,6 +148,7 @@ Note that `INCLUDE` is the default for `directories` and `regularFile`.
 +
 ** Example of an inner, non-reusable, matcher:
 +
+[source, xml,linenums]
 ----
 <flow name="smallFiles">
   <ftp:list path="~/smallfiles" matcher="smallFileMatcher">
@@ -142,8 +160,11 @@ Note that `INCLUDE` is the default for `directories` and `regularFile`.
 </flow>
 ----
 +
+For SFTP, the only difference is prefix to the element names: `<sftp:list/>`, `<sftp:matcher/>`, `<sftp:match-with/>`
++
 * Polling:  This example uses the Scheduler to check a directory regularly for new files to list. It lists the contents of a folder once per second, processes the files one by one, and then deletes each processed file.
 +
+[source, xml,linenums]
 ----
 <flow name="poll">
   <scheduler>
@@ -157,31 +178,37 @@ Note that `INCLUDE` is the default for `directories` and `regularFile`.
     <flow-ref name="processFile" />
     <ftp:delete path="#[attributes.path]" />
   </foreach>
-  
+
   ...
 </flow>
 ----
 +
 * Copy:
 +
+[source, xml,linenums]
 ----
 <ftp:copy sourcePath="source.txt" targetPath="backup" overwrite="true|false"
  createParentDirectories="true|false" renameTo="renamed.txt"/>
 ----
 +
+For SFTP, the only difference is prefix to the element name: `<sftp:copy/>`
++
 * Move:
 +
+[source, xml,linenums]
 ----
 <ftp:move sourcePath="source.txt" targetPath="backup"  overwrite="true|false"
  createParentDirectories="true|false" renameTo="renamed.txt"/>
 ----
++
+For SFTP, the only difference is prefix to the element name: `<sftp:move/>`
 
 [[see_also]]
 == See Also
 
-link:ftp-about-the-ftp-connector[About the FTP Connector]
-
 link:ftp-documentation[FTP Connector Technical Reference]
+
+link:sftp-documentation[SFTP Connector Technical Reference]
 
 ////
 examples identity files
