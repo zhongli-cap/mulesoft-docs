@@ -1,7 +1,7 @@
 = RSS Module Reference
 :keywords: transport, rss, connector, syndicated, feeds
 
-The Mule RSS support makes it possible to integrate easily with RSS feeds via the http://java.net/projects/rome/pages/Home[Rome] project.
+The Mule RSS support makes it possible to integrate easily with RSS feeds.
 
 It contains the following components:
 
@@ -33,34 +33,21 @@ public class EntryReceiver
 }
 ----
 
-By default the RSS feed is split into entries for you, so for each entry, the component method invokes with the next entry in the feed. Flow configuration:
-
-[source, xml, linenums]
-----
-<flow name="eventConsumer">
-    <rss:inbound-endpoint address="http://localhost:9002/events"/>
-    <component class="org.mule.module.rss.EntryReceiver"/>
-</flow>
-----
-
 == ETags
 
 The Atom HTTP endpoint respects ETags and the 304 Not Modified response code by default, so you don't need to worry about consuming unnecessary updates.
 
 === Accessing the Feed Itself
 
-If you want access to the feed itself, it is available via a header on the current message called \'feed.object'. You could have this injected into your entry point method using annotations -
+If you want access to the feed itself, it is available via a header on the current message called feed.object. You could have this injected into your entry point method using annotations:
 
 *EntryReceiver.java*
-[source, java, linenums]
+[source, java]
 ----
 public void processEntry(@Payload Entry entry, @Expr("#[header:invocation:feed.object]") Feed feed) throws Exception
 ----
 
-
-If you want to process the Feed in its entirety (not have it split into Entry objects) you can set the following flag on the endpoint:
-
-Now your component invokes once for each feed change no matter how many entries are added or updated. The method for your component should expect a `com.sun.syndication.feed.synd.SyndFeed` object or just a `org.w3c.dom.Document` if you want to process the XML model or even an `java.io.InputStream` or `java.lang.String` to get a raw representation.
+The method for your component should expect a `com.sun.syndication.feed.synd.SyndFeed` object or just a `org.w3c.dom.Document` if you want to process the XML model or even an `java.io.InputStream` or `java.lang.String` to get a raw representation.
 
 *FeedReceiver.java*
 
@@ -140,17 +127,13 @@ For reference the follow example shows the explicit configuration for reading an
 
 The `rss:entry-last-updated-filter` comes after the `<rss:feed-splitter/>` because you need to split the feeds so that the filter can process them. Also we do not set a `lastUpdate` date on the filter, which implies the default behavior that all available entries are read, and then only new entries since the last read are processed.
 
-=== Configuration Reference
-
-THERE IS NO TEXT HERE FOR WHATEVER REASON
-
-= RSS Module
+== Configuration Reference - RSS Module
 
 RSS is a popular syndication format used by many websites to provide a feed of data such as news or updates.
 
 === Transformers
 
-These are transformers specific to this transport. Note that these are added automatically to the Mule registry at start up. When doing automatic transformations these will be included when searching for the correct transformers.
+These are transformers specific to this transport. Note that these are added automatically to the Mule registry at start up. When doing automatic transformations, these are included when searching for the correct transformers.
 
 .Transformers
 [%header%autowidth.spread]
@@ -167,16 +150,11 @@ Filters can be used to control which data is allowed to continue in the flow.
 [%header%autowidth.spread]
 |===
 |Name |Description
-|entry-last-updated-filter |Will filter RSS entry objects based on their last update date. This is useful for filtering older entries from the feed. This filter works only on RSS SyndEntry objects not SyndFeed objects.
-|feed-last-updated-filter |Will filter the whole RSS Feed based on its last update date. This is useful for processing a feed that has not been updated since a specific date. This filter works only on RSS SyndFeed objects.
+|entry-last-updated-filter |Filters RSS entry objects based on their last update date. This is useful for filtering older entries from the feed. This filter works only on RSS SyndEntry objects not SyndFeed objects.
+|feed-last-updated-filter |Filters the whole RSS Feed based on its last update date. This is useful for processing a feed that has not been updated since a specific date. This filter works only on RSS SyndFeed objects.
 |===
 
-== Feed splitter
+== Feed Splitter
 
-Will split the entries of a feed into single entry objects. Each entry will be a separate message in Mule.
+Splits entries of a feed into single entry objects. Each entry is a separate message in Mule.
 
-.Child Elements of <feed-splitter...>
-[%header,cols="34,33,33",width=80%]
-|===
-|Name |Cardinality |Description
-|===
