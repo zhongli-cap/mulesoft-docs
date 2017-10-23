@@ -28,20 +28,22 @@ $ kubectl
 
 . Obtain the `anypoint-1.6.1-installer.tar.gz` archive from your customer success representative.
 
-. Determine the master node of your cluster.
+. Determine the master node of your cluster by running the following command:
 +
 ----
-[ec2-user@ip-172-31-14-206 1.6.1]$ systemctl status | grep gravitational
-           │     └─25249 grep --color=auto gravitational
-             ├─gravity__gravitational.io__teleport__1.2.0.service
-             ├─gravity__gravitational.io__planet-master__0.1.39-138.service
+$ systemctl status | grep gravitational
+   │     └─25249 grep --color=auto gravitational
+     ├─gravity__gravitational.io__teleport__1.2.0.service
+     ├─gravity__gravitational.io__planet-master__0.1.39-138.service
 ----
++
+You may have to run this command on each node of your cluster. The node that returns the output above is the master node.
 
 . Use `ssh` to login to the master node of your cluster.
 
 . Upload the installer to the master node of your cluster.
 
-. Uncompress the installer archive.
+. Create a directory and uncompress the installer archive.
 +
 ----
 mkdir anypoint-1.6.1
@@ -57,33 +59,11 @@ sudo ./upload
 +
 This command uploads data to the master node and performs internal updates.
 +
+Wait until the command finishes before proceeding to the next step. Depending on your network configuration, this command may take a while to complete. When the the `upload` command completes successfully, it displays the following message:
++
 ----
-sudo ./upload
-/etc/container-environment: line 19: --exec-opt: command not found
-gravitational.io/gravity:3.62.0 imported: gravitational.io/gravity:3.62.0 93MB
--> update old gravity packages with the new binary
-gravitational.io/gravity:1.25.0 deleted
-gravitational.io/gravity:1.25.0 imported: gravitational.io/gravity:1.25.0 93MB
-gravitational.io/gravity:1.25.0 labels updated
-gravitational.io/gravity:1.27.0 deleted
-gravitational.io/gravity:1.27.0 imported: gravitational.io/gravity:1.27.0 93MB
-gravitational.io/gravity:1.27.0 labels updated
--> update gravity binary on all nodes
-daemonset "gravity-binary-update" created
-configmap "gravity-binary-update" created
--> clean up gravity binary update resources
-daemonset "gravity-binary-update" deleted
-configmap "gravity-binary-update" deleted
--> restart gravity site pods
-pod "gravity-site-0ablz" deleted
-pod "gravity-site-3thio" deleted
-pod "gravity-site-um5ry" deleted
--> wait until gravity site is running
--> upload the update
 new application anypoint 1.6.1 has been uploaded
 ----
-+
-Depending on your network configuration, this command may take a while to complete. Wait until the command finishes before proceeding to the next step.
 
 
 . Download the installation script and copy it to each node in your cluster.
@@ -121,17 +101,7 @@ From the master node, run the following command:
 ----
 ./manual_update_161.sh start-update
 ----
-+
-The output of this command should be similar to the following:
-+
-----
-./manual_update_161.sh start-update
-Initiating the update process, setting it in manual mode
-updating anypoint from 1.5.2 to 1.6.1
-update operation (3f097853-64dd-4201-973f-2bb4a686c9ee) has been started
 
-The update operation has been created in manual mode.
-----
 
 . Bootstrap the system update process
 +
@@ -148,24 +118,7 @@ Perform the following command by logging into each node in your cluster. You mus
 ----
 ./manual_update_161.sh update-system
 ----
-+
-The output of this command should be similar to the following:
-+
-----
-Updating the Gravity/Planet system on this node
-applying {gravitational.io/gravity:1.27.0 gravitational.io/gravity:3.62.0 }
-binary package gravitational.io/gravity:3.62.0 installed in /usr/bin/gravity
-applying {anypoint-5.6.2-3nodes-for-update/planet-ip-172-31-14-206.us-east-2.compute.internal-secrets:0.0.1 anypoint-5.6.2-3nodes-for-update/planet-172.31.14.206-secrets:0.0.1504292122 }
-secrets package anypoint-5.6.2-3nodes-for-update/planet-172.31.14.206-secrets:0.0.1504292122 installed in /var/lib/gravity/secrets
-applying {anypoint-5.6.2-3nodes-for-update/planet-config-1723114206anypoint-562-3nodes-for-update:0.0.1 anypoint-5.6.2-3nodes-for-update/planet-config-1723114206anypoint-562-3nodes-for-update:0.1.61-157 }
-applying {gravitational.io/planet-master:0.1.39-138 gravitational.io/planet-master:0.1.61-157 planet-config-1723114206anypoint-562-3nodes-for-update}
-gravitational.io/planet-master:0.1.39-138 is installed as a service, uninstalling
-gravitational.io/planet-master:0.1.61-157 successfully installed
-applying {gravitational.io/teleport:1.2.0 gravitational.io/teleport:2.0.6 }
-gravitational.io/teleport:1.2.0 is installed as a service, uninstalling
-gravitational.io/teleport:2.0.6 successfully installed
-system successfully updated: changeset(id=108cfd7f-997e-4656-b425-21557c261d8a, created=2017-09-01 18:58:33.894121128 +0000 UTC, changes=update(gravitational.io/gravity:1.27.0 -> gravitational.io/gravity:3.62.0), update(anypoint-5.6.2-3nodes-for-update/planet-ip-172-31-14-206.us-east-2.compute.internal-secrets:0.0.1 -> anypoint-5.6.2-3nodes-for-update/planet-172.31.14.206-secrets:0.0.1504292122), update(anypoint-5.6.2-3nodes-for-update/planet-config-1723114206anypoint-562-3nodes-for-update:0.0.1 -> anypoint-5.6.2-3nodes-for-update/planet-config-1723114206anypoint-562-3nodes-for-update:0.1.61-157), update(gravitational.io/planet-master:0.1.39-138 -> gravitational.io/planet-master:0.1.61-157), update(gravitational.io/teleport:1.2.0 -> gravitational.io/teleport:2.0.6))
-----
+
 
 . Bootstrap the RBAC configuration in the cluster
 +
@@ -188,48 +141,22 @@ kubectl get nodes
 exit
 ----
 
-. Drain each of the nodes in your cluster.
+. Drain each of the nodes in your cluster by running the following command on each node in your cluster. 
 +
-From the master node, run the following command one each node in your cluster. You must pass the nodename for each node.
+You must pass the nodename for each node.
 +
 ----
 ./manual_update_161.sh drain=<node-name>
 ----
 +
-The ouput of this command should be similar to the following:
-+
-----
-./manual_update_161.sh drain=172.31.11.215
-Draining node 172.31.11.215
-node "172.31.11.215" cordoned
-WARNING: Ignoring DaemonSet-managed pods: cassandra-p4mjy, stolon-keeper-d2get, gravity-site-tgme5, kube-dns-v18-41u28, log-forwarder-ujp6d; Deleting pods not managed by ReplicationController, ReplicaSet, Job, DaemonSet or StatefulSet: bandwagon; Deleting pods with local storage: bandwagon-mulesoft-install-35afd2-ingx2, gravity-site-tgme5, monitoring-app-install-39664d-l7xo4, pithos-app-install-95fa7b-58flh, site-app-post-install-916df9-03pol, stolon-app-install-5480c4-v6n81
-pod "exchange-api-db-migration-q8itn" evicted
-pod "site-app-post-install-916df9-03pol" evicted
-pod "pithos-app-install-95fa7b-58flh" evicted
-...
-...
-...
-----
-+
 Before continuing, ensure that all pods are in `running` or `pending` state. No pod should be in `crashloopbackoff` or `terminating` state.
 
-. Make each of the nodes in your cluster is schedulable.
+. Make each of the nodes in your cluster is schedulable by running the following command for each node in your cluster. 
 +
-From the master node, run the following command for each node in your cluster. You must pass the nodename for each node.
+You must pass the nodename for each node.
 +
 ----
 ./manual_update_161.sh uncordon=<node-name>
-----
-+
-The output of this command should be similar to the following:
-+
-----
-./manual_update_161.sh uncordon=172.31.11.215
-Uncordoning node 172.31.11.215
-node "172.31.11.215" uncordoned
-Proceed with the next node drain or by updating application resources by running 'manual_update_161.sh update-app'
-WARNING - before proceeding, please verify that the node is fully 'uncordoned', by checking the output
-of 'kubectl get nodes' from inside Gravity and wait the node to be 'Ready' again.
 ----
 
 . From the master node, initiate the application update
