@@ -1,0 +1,166 @@
+= DataWeave Functions to Invoke the Runtime (dw::Runtime)
+
+The functions described here are packaged in the Runtime module. The module is included with Mule runtime, but you must import it to your DataWeave code by adding the line `import dw::Runtime` to your header.
+
+This module contains functions that allow you to interact with the DataWeave engine.
+
+== `fail`
+
+=== fail(String): Nothing
+
+Throws an exception with the specified message.
+
+.Example
+[source,Dataweave, linenums]
+----
+%dw 2.0
+import dw::Runtime
+output application/dw
+---
+Runtime::fail("Error")
+----
+
+.Output
+----
+Error
+----
+
+== `failIf`
+
+=== failIf(T, (value: T) -> Boolean, String): T
+
+Throws an exception with the specified message if the expression in the evaluator returns `true`.
+
+// TODO: ADDED BY SDUKE, add to dwl
+.Example
+[source,Dataweave, linenums]
+----
+%dw 2.0
+import failIf from dw::Runtime
+output application/json
+---
+{ "a" : "b" } failIf ("b" is String)
+----
+
+.Output
+----
+Failed
+----
+
+.Example
+[source,Dataweave, linenums]
+----
+%dw 2.0
+import * from dw::Runtime
+output application/json
+---
+123 failIf ($ is Null)
+----
+
+.Output
+----
+123
+----
+
+== `try`
+
+=== try(() -> T): TryResult<T>
+
+Executes a function (a lambda without inputs) that you pass to it and returns a `TryResult` of type T.
+
+// TODO: DESCRIPTION AND EXAMPLE ADDED BY SDUKE, add to dwl
+
+.Example
+[source,Dataweave, linenums]
+----
+%dw 2.0
+import try, fail from dw::Runtime
+output application/json
+---
+try(fail)
+----
+
+.Output
+----
+{
+  "success": false,
+  "error": {
+    "kind": "UserException",
+    "message": "Error",
+    "location": "Unknown location",
+    "stack": [
+
+    ]
+  }
+}
+----
+
+////
+.Example
+[source,Dataweave, linenums]
+----
+%dw 2.0
+import try, fail from dw::Runtime
+import dw::core::Assertions
+fun then<A, V>(result: A, assertions: (result: A) -> V): V = assertions(result)
+fun shouldFail2() = fail("Test")
+fun shouldFail1() = shouldFail2()
+fun shouldFail() = shouldFail1()
+fun shouldNotFail() = 123
+output application/json
+---
+[
+  try(() -> (1 / 0)) then [
+    Assertions::mustEqual($.success, false)
+  ],
+
+  try(shouldFail) then [
+    Assertions::mustEqual($.success, false),
+    Assertions::mustEqual($.error.message, "Test"),
+    Assertions::mustEqual(sizeOf($.error.stack), 3),
+    Assertions::mustEqual($.error.kind, "UserException"),
+    Assertions::mustEqual($.result?, false)
+  ],
+
+  try(shouldNotFail) then [
+    Assertions::mustEqual($.success, true),
+    Assertions::mustEqual($.error?, false),
+    Assertions::mustEqual($.result, 123)
+  ]
+] is Array
+----
+
+.Output
+----
+true
+----
+////
+
+== `wait`
+
+=== wait(T, Number): T
+Stops the execution for the specified timeout (in milliseconds).
+
+// TODO: ADDED BY SDUKE, add to dwl
+
+.Example
+[source,Dataweave, linenums]
+----
+%dw 2.0
+import * from dw::Runtime
+output application/json
+---
+{user: 1} wait 2000
+----
+
+.Output
+----
+{
+  "user": 1
+}
+----
+
+== See Also
+
+link:dw-functions[DataWeave Functions]
+link:dataweave-types[DataWeave Types]

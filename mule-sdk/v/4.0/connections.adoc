@@ -1,0 +1,183 @@
+= Modules Connectivity Framework
+:keywords: mule, sdk, connection, connectivity, management, pooling, cached, provider, connection-provider
+
+Since Mule is an integration platform, connected modules (connectors) are probably the most common
+type of modules.
+
+The connectivity framework starts with the concept of a `ConnectionProvider`.
+This is an interface responsible for creating, disconnecting and describing the
+connection so that the runtime can handle it properly, while remaining abstracted
+from the concerns of actually manage those connections.
+
+== Declaring a Connection Provider
+
+To declare a new `ConnectionProvider` you should create a new class that implements
+the `ConnectionProvider` interface. The `ConnectionProvider` interface is a typed interface
+receives one type argument that indicates the class of the instances that the `ConnectionProvider`
+handles.
+
+For example:
+Here we are declaring `FooConnectionProvider` class that implements the `ConnectionProvider` interface.
+
+[source, java, linenums]
+----
+public class FooConnectionProvider implements ConnectionProvider<FooConnection> {
+
+  @Parameter
+  private String password;
+
+  public FooConnection connect() throws ConnectionException {
+    return new FooConnection(password);
+  }
+
+  public void disconnect(FooConnection connection) {
+    connection.invalidate();
+  }
+
+  public ConnectionValidationResult validate(FooConnection connection) {
+    return connection.isValid() ?
+      ConnectionValidationResult.success() :
+      ConnectionValidationResult.failure("Connection is not valid", new InvalidConnectionException());
+  }
+}
+----
+
+[NOTE]
+Is important to mark that all the defined `ConnectionProviders` must be instantiable,
+public and have a default constructor.
+
+When another component, such as an operation or source, requires access to the
+connection, they will do it through instances of the `FooConnection` class.
+
+The above example contains a `@Parameter` and 3 methods: `connect()`, `disconnect()` and `validate()`, let's
+describe each.
+
+=== Connection Provider Parameters
+
+As any other `Module` element, the `ConnectionProviders` can have `@Parameters`.
+All the `ConnectionProvider` `@Parameters` must be configurable elements that are
+required to instantiate the actual connection, in the `connect()` method.
+
+[WARNING]
+Common `@Parameters` that are required by more than one operations must *not* be part
+of the connection provider, that's a common case for <<configs#, Configurations>>
+`@Parameter`. See: <<parameters#, `@Parameter` section>>
+
+[[_connections_connect]]
+=== Connect
+
+The `connect()` method is the one in charge of instantiating the actual connections with
+all the configured parameters information. It's *very important* to know that the returned
+connection is expected to be ready to use.
+
+The returned *connection* itself does not need to implement an interface or contract,
+it doesn’t necessarily references the socket connection itself, it can simply be a
+client or something of that sort.
+
+=== Disconnect
+The `disconnect(Connection)` method receives a live connection and disposes it freeing
+all it's allocated resources.
+
+=== Validate
+As said <<_connections_connect, above>> the `connect()` method in the `ConnectionProvider` *must* return
+a valid, fully functional connection. However they might become stale while sitting idle.
+To prevent that, the `ConnectionProvider` has the `validate(Connection)` method which
+will be invoked before a connection is used to check if still valid.
+
+If the validation fails, then the connection will be invalidated and a new one will be taken.
+
+==== Connection Validation Result
+
+The `validate(Connection)` method will return an object of type `ConnectionValidationResult` which
+can result on two types a `ConnectionValidationResult.success()` or a `ConnectionValidationResult.failure()`.
+
+When a `failure()` is returned, a descriptive message and a failing `Exception` (which gives context on
+why the connection is actually invalid) should be provided to the new `failure()`,
+optionally an `ErrorType` can be provided to add the <<errors#, error handling>> capabilities.
+
+* `failure(String, Exception)`
+* `failure(String, ErrorType, Exception)`
+
+== Adding a Connection Provider
+
+`ConnectionProviders` are bounded to `Configurations`, so a `Configuration` can have none, one
+or many `Connection Providers`.
+
+In order to add a `ConnectionProvider` implementations to a `Module` `Configuration` the
+`@ConnectionProviders` annotation must be introduced. This annotation is used to declare the
+`ConnectionProviders` that a `Module` defines, it can be used at the `@Extension`
+or `@Configuration` level.
+
+If an extension contains more than one `ConnectionProvider`, then the `@Alias`
+annotation is to be used to give each one a significant name. By convention,
+the name of that connection provider will add the *“-connection”* suffix
+to that provided name.
+
+Example of a `ConnectionProvider` declared at `@Extension` level for the:
+
+[source, java, linenums]
+----
+@Extension(name="foo")
+@Operations(Operations.class)
+@ConnectionProviders(FooConnectionProvider.class)
+public class FooModule {
+
+  @Parameter
+  private String someParameter;
+
+  public String getSomeParameter() {
+    return someParameter;
+  }
+}
+----
+
+Example of the XML for this config with the example `FooConnectionProvider`:
+
+[source, xml, linenums]
+----
+<foo:config name="a-foo-config" someParameter="value">
+    <foo:connection password="aVeryDificultPassword"/>
+</foo:config>
+----
+
+== Connection Management
+
+There are 3 different connection management strategies that can be specified for a
+`ConnectionProvider`.
+
+=== Pooling Strategy
+The connections are pooled. A cache of connections is maintained so that they can be
+reused when future requests require one.
+
+This is useful when connections are expensive to be created, or concurrent access to a
+connection instance is not supported.
+
+// TODO link to MULE pooling profile configuration
+For this pooling strategy `ConnectionProviders` a pooling profile configuration is
+automatically added to the connection.
+
+You can enable pooling connection management by implementing the `PoolingConnectionProvider` interface
+
+=== Cached Strategy
+Per each configuration instance, a connection is established and cached so that one specific
+config always gets the same connection. The connection is maintained until the configuration itself
+is stopped.
+
+You can enable cached connection management by implementing the `CachedConnectionProvider` interface.
+
+=== No Strategy
+
+The runtime adds no additional infrastructure like in the pooling cases.
+The `ConnectionProvider` is responsible for providing the totality of the
+connection handling behavior. The `connect()` method is going to be called each
+time an operation needs one and destroys it once the operation finishes.
+
+Implementing the `ConnectionProvider` interface means no strategy.
+
+== Using Connections
+
+Using connections in Operations and Sources is quite different, so take a look at
+both specific documentations to learn about that.
+
+* <<operations#_using_connections, Using Connections in Operations>>
+* <<sources-config-connection#, Using Connections in Sources>>

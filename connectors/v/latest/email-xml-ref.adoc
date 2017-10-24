@@ -1,0 +1,651 @@
+= XML Reference for the Email Connector (Studio)
+:keywords: ftp, connector, matcher, directory, listener
+:toc:
+:toc-title:
+
+toc::[]
+
+//Anypoint Studio, Design Center: FTP connector
+
+[[short_description]]
+This reference provides the XML namespace and schema location for the Email connector along with some common FTP use cases.
+
+When you add an Email connector operation to a flow in Mule app, Anypoint Studio automatically populates the XML code with the connector namespace and schema location. If you are creating your XML by hand, you need to add this code yourself.
+
+* Namespace: `+http://www.mulesoft.org/schema/mule/ftp+`
+* Schema Location: `+http://www.mulesoft.org/schema/mule/ftp/current/mule-ftp.xsd+`
+
+If you are manually coding the Mule application in Studio's XML editor or another text editor, you need to define the namespace and schema location in the header of your Configuration XML, inside the `<mule>` tag like this:
+
+[source, xml,linenums]
+----
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:email="http://www.mulesoft.org/schema/mule/email"
+  xmlns="http://www.mulesoft.org/schema/mule/core"
+  xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+  http://www.mulesoft.org/schema/mule/email
+  http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
+
+      <!-- put your global configuration elements and flows here -->
+
+</mule>
+----
+
+Note that Studio interprets `current` in the schema path as the current Mule version.
+
+== POM File Dependency
+
+For Maven dependency management, you should see an XML snippet like this in your `pom.xml` file.
+
+----
+<dependency>
+  <groupId>org.mule.connectors</groupId>
+  <artifactId>mule-email-connector</artifactId>
+  <version>LATEST</version>
+  <classifier>mule-plugin</classifier>
+</dependency>
+----
+
+When using Studio 7 to add the connector to the Mule Palette, the snippet appears automatically. It can contain a three-digit version number, instead of `LATEST`.
+
+== Configurations
+
+[[connection]]
+
+=== SMTP and SMTPS Connections
+
+* SMTP connection example:
++
+----
+<email:smtp-config name="config">
+  <email:smtp-connection host="127.0.0.1" port="${port}"/>
+</email:smtp-config>
+----
++
+* SMTPS connection example:
++
+----
+<email:smtp-config name="config">
+  <email:smtps-connection host="127.0.0.1" port="${port}">
+    <tls:context enabledProtocols="TLSv1.2,SSLv3">
+      <tls:trust-store path="greenmail.jks" password="changeit"/>
+    </tls:context>
+  </email:smtps-connection>
+</email:smtp-config>
+----
+
+=== POP3 and POP3S Connections
+
+* POP3 connection example:
++
+----
+  <email:pop3-config name="config">
+    <email:pop3-connection
+     host="127.0.0.1"
+     port="${port}"
+     password="password"
+     user="me@mycompany.com"/>
+  </email:pop3-config>
+----
++
+* POP3S connection example:
++
+----
+  <email:pop3-config name="config">
+    <email:pop3s-connection
+     host="127.0.0.1"
+     port="${port}"
+     password="password"
+     user="me@mycompany.com"/>
+
+    <tls:context enabledProtocols="TLSv1.2,SSLv3">
+      <tls:trust-store path="greenmail.jks" password="changeit"/>
+    </tls:context>
+
+    </email:pop3s-connection>
+  </email:pop3-config>
+----
+
+=== IMAP and IMAPS Connections
+
+* IMAP connection example:
++
+----
+  <email:imap-config name="config">
+    <email:imap-connection
+     host="127.0.0.1"
+     port="${port}"
+     password="password"
+     user="me@mycompany.com"/>
+  </email:imap-config>
+----
++
+* IMAPS connection example:
++
+----
+  <email:pop3-config name="config">
+    <email:pop3s-connection
+     host="127.0.0.1"
+     port="${port}"
+     password="password"
+     user="me@mycompany.com"/>
+
+    <tls:context enabledProtocols="TLSv1.2,SSLv3">
+      <tls:trust-store path="greenmail.jks" password="changeit"/>
+    </tls:context>
+
+    </email:pop3s-connection>
+  </email:pop3-config>
+----
++
+* IMAP connection example that does not read content (uses `eagerlyFetchContent="false"`):
++
+----
+  <email:imap-config
+    name="config-dont-read"
+    eagerlyFetchContent="false">
+
+    <!-- IMAP or IMAPS connection here -->
+
+  </email:imap-config>
+----
+
+== Listing Email (POP3 and POP3S)
+
+These examples list email over POP3 or POP3S.
+
+* Using `email:list-pop3` to list and read emails. To list emails without reading them, you need to list them over SMTP.
++
+----
+<flow name="retrieveAndRead">
+  <email:list-pop3 config-ref="config"/>
+</flow>
+----
++
+* Using `email:pop3-matcher` inline within the List operation element to match emails with regular expressions in Subject and From fields.
++
+----
+<email:pop3-matcher
+ subjectRegex="Email Subject"
+ fromRegex="@mulesoft"/>
+----
++
+* Using `email:list-pop3` to reference a matcher that is configured as a global element (`pop3Matcher="matcher"`) instead of specifying the matching properties inline.
++
+----
+<flow name="retrieveMatchingSubjectAndFromAddress">
+    <email:list-pop3 config-ref="config" pop3Matcher="matcher"/>
+</flow>
+----
++
+* Using `email:list-pop3` to delete emails after retrieving them by setting `eleteAfterRetrieve="true"`.
++
+----
+<flow name="retrieveAndDelete">
+    <email:list-pop3 config-ref="config" deleteAfterRetrieve="true"/>
+</flow>
+----
++
+* Using `email:list-pop3` with a variable that places a limit on the emails to retrieve.
++
+----
+<flow name="retrieveWithLimit">
+    <email:list-pop3 config-ref="config" limit="#[vars.limit]"/>
+</flow>
+----
++
+* Using `email:list-pop3` with a variable (`#[vars.pageSize]`) that specifies on the emails to retrieve. The default `pageSize` is 10.
++
+----
+<flow name="retrieveWithPageSize">
+    <email:list-pop3 config-ref="config" pageSize="#[vars.pageSize]" pop3Matcher="matcher"/>
+</flow>
+----
++
+* Using `email:list-pop3` with a variable (`#[vars.pageSize]`) and matcher on the Subject (`subjectRegex="[0-9]+"`).
++
+----
+<flow name="retrieveNumberedWithPageSize">
+    <email:list-pop3 config-ref="config" pageSize="#[vars.pageSize]">
+        <email:pop3-matcher subjectRegex="[0-9]+"/>
+    </email:list-pop3>
+</flow>
+----
+
+=== Sending Email
+
+* Send operation: This simple example sends content in plain text to several types of addresses (to, cc, bcc).
++
+----
+<flow name="sendEmail">
+  <email:send config-ref="config" subject="Email Subject">
+
+    <email:to-addresses>
+      <email:to-address value="you@yourcompany.com"/>
+    </email:to-addresses>
+    <email:cc-addresses>
+      <email:cc-address value="you1@yourcompany.com"/>
+    </email:cc-addresses>
+    <email:bcc-addresses>
+      <email:bcc-address value="you2@yourcompany.com"/>
+      <email:bcc-address value="you3@yourcompany.com"/>
+    </email:bcc-addresses>
+
+    <email:body contentType="text/plain">
+      <email:content>Email Content</email:content>
+    </email:body>
+
+  </email:send>
+</flow>
+----
++
+* Send email example (vars.stream): TODO, EXPLAIN
++
+----
+<flow name="sendStreamEmail">
+  <email:send config-ref="config" subject="Email Subject">
+
+    <!-- addresses here -->
+
+    <email:body contentType="text/plain">
+      <email:content>#[vars.stream]</email:content>
+    </email:body>
+
+  </email:send>
+</flow>
+----
++
+* Send email example (vars.json): TODO, EXPLAIN
++
+----
+<flow name="sendJson">
+  <email:send config-ref="config">
+
+    <!-- addresses here -->
+
+    <email:body contentType="text/json">
+      <email:content>#[vars.json]</email:content>
+    </email:body>
+
+  </email:send>
+</flow>
+----
+
+=== Adding Headers to an Email
+
+Send email example (headers): TODO, EXPLAIN
+----
+<flow name="sendEmailHeaders">
+  <email:send config-ref="config-custom-headers" subject="Email Subject">
+
+    <!-- addresses here -->
+
+    <email:headers>
+      #[{'CustomOperationHeader' : 'Dummy'}]
+    </email:headers>
+
+    <email:body contentType="text/plain">
+      <email:content>Email Content</email:content>
+    </email:body>
+
+  </email:send>
+</flow>
+----
++
+* Sending email example (vars.encoding): TODO, EXPLAIN
++
+----
+<flow name="sendEncodedMessage">
+  <email:send config-ref="config" subject="Email Subject">
+
+    <!-- addresses here -->
+
+    <email:body encoding="#[vars.encoding]">
+      <email:content>#[payload]</email:content>
+    </email:body>
+
+  </email:send>
+</flow>
+----
++
+* Sending email without a body: TODO: WHY DO THIS, IS IT SIMPLY FOR TESTING?
++
+----
+<flow name="sendEmailWithoutBody">
+    <email:send config-ref="config" subject="Email Subject">
+        <email:to-addresses>
+            <email:to-address value="you@yourcompany.com"/>
+        </email:to-addresses>
+    </email:send>
+</flow>
+----
++
+* Sending email with attachments:
++
+----
+<flow name="sendEmailWithLargePayloads">
+  <email:send config-ref="config"
+   subject="Email Subject" attachmentsContentTransferEncoding="#[vars.contentTransferEncoding]">
+
+    <!-- addresses here -->
+
+    <email:body contentTransferEncoding="#[vars.contentTransferEncoding]">
+      <email:content>#[payload]</email:content>
+    </email:body>
+
+    <email:attachments>
+      #[{
+          'zip.zip' : vars.zip,
+          'image.jpg' : vars.jpg,
+          'text.txt' : vars.text
+      }]
+    </email:attachments>
+
+  </email:send>
+</flow>
+----
++
+* Sending email with attachments:
++
+----
+<flow name="sendZipFile">
+  <email:send config-ref="config" subject="Email Subject">
+
+  <!-- addresses here -->
+
+  <!-- email body here -->
+
+  <email:attachments>
+    #[{zipFile : vars.zipFile}]
+  </email:attachments>
+
+  </email:send>
+</flow>
+----
+
+=== IMAP and IMAPS Operations
+
+* Matching emails with regular expressions in Subject and From fields.
++
+----
+<email:imap-matcher name="matcher" subjectRegex="Email Subject" fromRegex="@mulesoft"/>
+----
++
+* IMAP connection example that does not read content automatically (by setting `eagerlyFetchContent="false"`):
++
+----
+  <email:imap-config
+    name="config-dont-read"
+    eagerlyFetchContent="false">
+
+    <!-- imap connection here -->
+
+  </email:imap-config>
+
+  <flow name="retrieveAndDontRead">
+      <email:list-imap config-ref="config-dont-read"/>
+  </flow>
+----
++
+* Listing email
++
+----
+<flow name="retrieveAndMarkRead">
+    <email:list-imap config-ref="config"/>
+    <foreach>
+        <email:mark-as-read config-ref="config" emailId="#[attributes.id]"/>
+    </foreach>
+</flow>
+----
++
+* Listing email
++
+----
+<flow name="retrieveAndThenExpungeDelete">
+    <email:list-imap config-ref="config"/>
+    <foreach>
+        <email:mark-as-deleted config-ref="config" emailId="#[attributes.id]"/>
+    </foreach>
+    <email:expunge-folder config-ref="config"/>
+</flow>
+----
++
+* Listing email
++
+----
+<flow name="retrieveAndMarkDelete">
+    <email:list-imap config-ref="config"/>
+    <foreach>
+        <email:mark-as-deleted config-ref="config" emailId="#[attributes.id]"/>
+    </foreach>
+</flow>
+----
++
+* Marking email as deleted:
++
+----
+<flow name="failMarkingEmail">
+    <email:mark-as-deleted config-ref="config" emailId="0"/>
+</flow>
+----
++
+* Listing unread email by using a matcher that excludes email that has been read (`seen="EXCLUDE"`):
++
+----
+<flow name="retrieveOnlyNotReadEmails">
+    <email:list-imap config-ref="config">
+        <email:imap-matcher seen="EXCLUDE"/>
+    </email:list-imap>
+</flow>
+----
++
+* Listing recent email by using a matcher (`recent="REQUIRE"`):
++
+----
+<flow name="retrieveOnlyRecentEmails">
+    <email:list-imap config-ref="config">
+        <email:imap-matcher recent="REQUIRE"/>
+    </email:list-imap>
+</flow>
+----
++
+* Listing and reading email:
++
+----
+<flow name="retrieveAndRead">
+    <email:list-imap config-ref="config"/>
+</flow>
+----
++
+* Listing email that matches values set in a global configuration element (`imapMatcher="matcher"`):
++
+*
+----
+<flow name="retrieveMatchingSubjectAndFromAddress">
+    <email:list-imap config-ref="config" imapMatcher="matcher"/>
+</flow>
+----
++
+* Deleting email after listing them by using `deleteAfterRetrieve="true"`:
+----
+<flow name="retrieveAndDelete">
+    <email:list-imap config-ref="config" deleteAfterRetrieve="true"/>
+</flow>
+----
++
+* TODO
++
+----
+<flow name="retrieveWithLimit">
+    <email:list-imap config-ref="config" limit="#[vars.limit]"/>
+</flow>
+----
++
+* Listing email based on a regular expression that matches the Subject of the email:
++
+----
+<flow name="retrieveNumberedWithPageSize">
+  <email:list-imap config-ref="config" pageSize="#[vars.pageSize]">
+    <email:imap-matcher subjectRegex="[0-9]+"/>
+  </email:list-imap>
+</flow>
+----
++
+* Listing email based on a matcher:
++
+----
+<flow name="retrieveWithPageSize">
+    <email:list-imap config-ref="config" pageSize="#[vars.pageSize]" imapMatcher="matcher"/>
+</flow>
+----
++
+Here, the matcher is global element with the name `matcher`.
++
+* Deleting an email based on a specified ID (`emailId="6"`):
++
+----
+<flow name="retrieveAndDeleteIncomingAndScheduled">
+  <email:list-imap config-ref="config"/>
+
+  <email:delete config-ref="config" emailId="6"/>
+
+</flow>
+----
++
+* Deleting selected email based on attribute values where `attributes.id > 5`):
++
+----
+<flow name="retrieveAndDeleteSelected">
+  <email:list-imap config-ref="config"/>
+  <foreach>
+    <choice>
+      <when expression="#[attributes.id > 5]">
+        <email:delete config-ref="config" emailId="#[attributes.id]"/>
+      </when>
+      <otherwise>
+        <logger/>
+      </otherwise>
+    </choice>
+  </foreach>
+</flow>
+----
+
+[[see_also]]
+== See Also
+
+link:email-about-the-email-connector[About the Email Connector]
+
+link:email-documentation[Email Connector Technical Reference]
+
+////
+TODO: ATTACHMENTS EXAMPLE USES SET VARIABLE, WHICH DOES NOT EXIST ANYMORE. NOT CLEAR HOW TO ACCESS ATTACHMENTS.
+* Using `email:list-pop3` with `foreach` to list email along with their attachments.
++
+----
+<flow name="retrieveWithAttachments">
+  <email:list-pop3 config-ref="config"/>
+  <foreach>
+    <set-variable variableName="json"
+     value="#[write(payload.attachments['attachment.json'],
+     'text/plain')]" />
+    <set-variable variableName="text"
+     value="#[write(payload.attachments['text-attachment'],
+     'text/plain')]" />
+  </foreach>
+</flow>
+----
++
+////
+
+////
+Sending email with attachments:
+----
+<flow name="sendEmailWithAttachment">
+  <set-variable variableName="json"
+     value="#[output application/json ---
+     {key: 'value'}]" mimeType="application/json"/>
+  <set-variable variableName="textPlain"
+     value="This is the email text
+     attachment" mimeType="text/plain"/>
+  <set-variable variableName="octetStream"
+     value="#[vars.textPlain]"
+     mimeType="application/octet-stream"/>
+
+  <email:send config-ref="config">
+
+    <!-- addresses here -->
+
+    <!-- email body here -->
+
+    <email:attachments>
+      #[{
+        'text-attachment' : vars.textPlain,
+        'json-attachment' : vars.json,
+        'stream-attachment' : vars.octetStream
+      }]
+    </email:attachments>
+
+  </email:send>
+</flow>
+----
+
+Sending email with attachments:
+----
+<flow name="noContentTypeAttachment">
+  <set-variable
+     variableName="textAttachment"
+     value="This is the email text attachment"
+     mimeType="text/plain"/>
+
+    <email:send config-ref="config">
+
+    <!-- addresses here -->
+
+    <!-- email body here -->
+
+    <email:attachments>
+      #[{'text-attachment' : vars.textAttachment}]
+    </email:attachments>
+
+  </email:send>
+</flow>
+----
++
+////
+////
+* Listing email with its attachments:
++
+----
+<flow name="retrieveWithAttachments">
+  <email:list-imap config-ref="config"/>
+  <foreach>
+    <set-variable variableName="json"
+     value="#[write(payload.attachments['attachment.json'], 'text/plain')]" />
+    <set-variable variableName="text"
+     value="#[write(payload.attachments['text-attachment'], 'text/plain')]" />
+  </foreach>
+</flow>
+----
++
+The example use For Each to iterate through each email and write the attachment payload.
++
+////
+
+////
+TODO: IS THIS NEEDED?
+* IMAP connection that uses a password that has special characters: TODO
+
+----
+  <email:imap-config
+   name="configSpecialCharacterCredentials"
+   eagerlyFetchContent="false">
+
+    <email:imap-connection
+     host="127.0.0.1"
+     port="${port}"
+     password="${specialCharacterPassword}"
+     user="me@mycompany.com"/>
+
+</email:imap-config>
+----
+////

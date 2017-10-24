@@ -1,4 +1,4 @@
-= To Perform Basic File Operations
+= To Perform Basic File Operations with the FTP or SFTP Connector
 :keywords: file, ftp, connector, operation
 :toc:
 :toc-title:
@@ -12,7 +12,7 @@ Basic file operations include reading from a file, writing to a file, creating d
 [[preconditions]]
 == Preconditions
 
-* After adding the FTP connector to your flow, you select an FTP operation, such as Read or Write.
+* In your flow, select an FTP or SFTP operation, such as Read or Write.
 * All operations require you to set up or select an <<see_also,FTP or SFTP configuration>> for the connector.
 
 
@@ -20,71 +20,123 @@ Basic file operations include reading from a file, writing to a file, creating d
 
 //== To Read from a File
 [[read_file]]
-include::include-to-read-a-file.adoc[]
+== To Read a File
+
+After reading a file that is hosted on the FTP server, you might copy or move it to another location, or delete it from the FTP server.
+
+. Meet the <<preconditions,Preconditions>> for the Read operation.
+. Provide the File Path to the file that you want to read.
++
+The path must include a file name. Otherwise, the operation will generate an FTP:ILLEGAL_PATH error.
++
+. Provide any advanced settings you need, for example:
++
+* Lock (a host file system lock that defaults to `false`): `true`
+* Output Mime Type: `application/xml`
+* Output Encoding: `UTF-8`
 
 //== To Write to a file
 [[write_to_file]]
-include::include-to-write-to-a-file.adoc[]
+== To Write to a File
+
+The Write operation can create, overwrite, or append content to a file that is hosted on the FTP server.
+
+. Meet the <<preconditions,Preconditions>> for the Write operation.
+. Set the Path to the file that you want to write.
++
+If you do not provide a path, the operation will attempt to discover it from the local file attributes associated with the message. Unsuccessful attempts produce an error message.
+. Provide the Content you want to write to the file.
++
+For example, you might add JSON content as a string, or you might map a content payload to another output format. The operation will attempt to transform any mapped content. If that attempt is unsuccessful, the operation will fail.
++
+. Check Create Parent Directories if the directory for the file to which the operation is writing does not exist yet.
+. Set the Write Mode:
++
+* Append
+* Create New
+* Overwrite (Default)
++
+Note that Create New throws an error if the file already exists.
 
 //== To List files
 [[list_files]]
-include::include-to-list-files.adoc[]
+== To List Files
 
+This operation lists all the files and folders in a given Directory Path. This path can be absolute, or it can be relative to the Working Directory specified in the connector configuration. In addition, it provides a setting for recursing through subdirectories.
+
+The List operation returns a List of messages with a payload and file attributes. Each message represents a file or subdirectory in the directory. The payload of a subdirectory is `null`.
+
+The connector streams the file content without opening the file until it is needed, which avoids excess memory use and the assignment of handles by the OS to access and open the file.
+
+This example uses the List operation to list all files in a directory on the FTP server that match file properties. This operation can recurse through subdirectories.
+
+. Meet the <<preconditions,Preconditions>> for the List operation.
+. Provide a Directory Path to the files that you want to list.
+. Select Recursive if you want to include the contents of subdirectories.
+. Opt to provide a Matcher to the files that you want to list.
++
+Example:
++
+Filename Pattern: `*[1-2]*.html`
+
+[[copy_or_move_file]]
 == To Copy or Move a File
 
 You can use the Copy or Move operation with this procedure.
 
 Note that copying and moving files over FTP is slower than over SFTP because FTP does not provide native support for the operations.
 
-include::include-to-copy-or-move-a-file.adoc[]
+. Meet the <<preconditions,Preconditions>> for the Copy or Move operation.
+. Provide a Source Path to the file.
++
+Example: `input/source.txt`
++
+. Provide the Target Path for the file (without including the file name).
++
+Directory example: `backup`
++
+. If the parent directories for the file do not exist already, select Create Parent Directories.
+. Choose whether to select Overwrite for an existing version of the file.
+. Provide a name for the new file (if needed).
 
+[[create_dir]]
 == To Create a Directory
 
 This procedure uses the Create Directory operation. Note that if you simply want to write, copy, or move a file to a new directory, you can instead use the Write, Copy, or Move operations with Create Parent Directories checked (or set to true).
 
-include::include-to-create-a-directory.adoc[]
+. Meet the <<preconditions,Preconditions>> for the Create Directory operation.
+. Provide the name for the new directory with Directory Path.
++
+Example: `backup/march_2017`
 
+[[rename_file]]
 == To Rename a File
 
 This procedure uses the Rename operation. You can use this operation to rename  files and directories.
 
-include::include-to-rename-a-file.adoc[]
+. Meet the <<preconditions,Preconditions>> for the Rename operation.
+. Set the Path to the file that you want to rename.
+  ** Example: `oldname.txt`
+. Provide a New Name for the file.
+  ** Example: `newname.txt`
+. Choose whether to Overwrite any existing version of the file you are creating.
 
+[[delete_file]]
 == To Delete a File
 
 This procedure uses the Delete operation.
 
-include::include-to-delete-a-file.adoc[]
+. Meet the <<preconditions,Preconditions>> for the Delete operation.
+. Provide a Path to the file that you want to delete.
++
+Example: `path/to/deleteme.txt`
 
 // do not remove this anchor
 [[see_also]]
 == See Also
 
-include::include_link_list.adoc[tags=ftp-set-up]
+link:ftp-to-set-up-ftp[To Set Up an FTP Configuration]
 
-include::include_link_list.adoc[tags=sftp-set-up]
+link:sftp-to-set-up-sftp[To Set Up an SFTP Configuration]
 
-include::include_link_list.adoc[tags=set-data-types]
-
-include::include_link_list.adoc[tags=ftp-connector]
-
-include::include_link_list.adoc[tags=tech-ref-ftp]
-
-
-
-////
-=== Example
-PROBABLY WILL REMOVE THIS
-
-[source,xml,linenums]
-....
-<spring:beans>
-    <spring:import resource="file-read-config.xml"/>
-</spring:beans>
-
-<flow name="readAndDo">
-    <file:read path="input" />
-    <file:copy sourcePath="input/source.txt" targetPath="backup" overwrite="true" createParentDirectories="true"/>
-</flow>
-....
-////
+link:https://docs.mulesoft.com/design-center/v/1.0/to-manage-data-types[To Handle Data Types]

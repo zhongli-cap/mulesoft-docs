@@ -1,0 +1,30 @@
+= About Preventing SQL Injection
+
+The database connector supports using expressions in any part of the query. Improper use of expressions in a database query can lead to SQL injection. It's tempting to use expressions in many situations. For example, you might want to run the same query on different historic tables depending on a condition or filter a query to select certain values. Avoid constructing parts of the query involving a structure, such as table, directly from user input. Follow these best practices:
+
+* Use the colon-parameter name syntax `:param` to a define a dynamic value parameter, such as the parameter in a WHERE clause. 
+* To safely modify a database structure:
++
+** Get modifications from a safe data source. For example, to modify a table name, get a pre-constructed file of possible table names the user can select. 
+** Construct the SQL Query Text by referencing the variable set to the value retrieved from the safe data source.
+
+The following code shows an example of the colon-parameter syntax in the WHERE clause:
+
+[source,xml,linenums]
+----
+   <set-variable variableName="table" value="PLANET"/>
+   <db:select config-ref="dbConfig">
+       <db:sql>#["SELECT * FROM $(table) WHERE colA = :colvalue”]</db:sql>
+       <db:input-parameters>
+           #[{'colvalue' : payload}]
+       </db:input-parameters>
+   </db:select>
+----
+
+The database connector supports the `:param` syntax in the WHERE clause of this example, but not in the FROM clause. You cannot reference structures, such as a table, using this syntax. You need to use a variable table name in the FROM clause in this example and set the variable to a value that you get from a safe data source. Using an expression, such as `attributes.queryParams.table` in the FROM clause to reference a table structure invites SQL injection.
+
+== See Also
+
+* link:/connectors/db-dynamic-query-task[To Query Data Dynamically]
+* link:/connectors/db-filter-query-task[To Filter Data Using an Input Parameter]
+* link:/connectors/database-documentation[Database Connector Technical Reference]

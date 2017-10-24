@@ -1,0 +1,183 @@
+= Errors Definition
+:keywords: error, sdk, error handling, operations, try, catch, on error, propagate
+
+Errors at Mule are a way of communicating that something went wrong while also
+providing meaningful information so the Mule developer can take corrective actions
+depending on the kind of error that was thrown.
+
+// TODO add link to mule error handling docs
+// For more information about how does error handling works in Mule, please refer
+// to the <<_the_mule_doc_that_talks_about_mule_errors#erew, Error>> handling mule's documentation
+
+== Defining Module Errors
+
+The first step is to define all the errors that can be thrown by a Module, this
+is made by defining an `Enum` implementing the `ErrorTypeDefinition` interface.
+Each value defined in this enum will be considered as an Error.
+
+[source, java, linenums]
+----
+public enum SimpleError implements ErrorTypeDefinition<SimpleError> {
+      INVALID_PARAMETER,
+      TIME_OUT,
+      NOT ALLOWED
+}
+----
+
+=== Errors Hierarchy
+
+// TODO add link to mule error handling docs
+// As explained in <<_the_mule_doc_that_talks_about_mule_errors#erew, Mule Errors>>,
+// the Errors have hierarchy in the same way that Java Exceptions are defined,
+// and the Module errors can define that hierarchy in the `ErrorTypeDefinition` enum.
+
+Module errors can only inherit from the errors of the same module, this means
+values from the same Enum, or Mule Mule errors. The Mule Errors are defined
+in `org.mule.runtime.extension.api.error.MuleErrors`.
+
+TIP: If an error doesn't define a parent error, this will automatically inherit from `MULE:ANY`.
+
+[source, java, linenums]
+----
+public enum HierarchalError implements ErrorTypeDefinition<HierarchalError> {
+    INVALID_PARAMETER,
+    TIME_OUT,
+    NOT_ALLOWED,
+    ILLEGAL_ACTION(NOT_ALLOWED),
+    BAD_CREDENTIALS(MuleErrors.CONNECTIVITY);
+
+    private ErrorTypeDefinition<? extends Enum<?>> parent;
+
+    HierarchalError(ErrorTypeDefinition<? extends Enum<?>> parent) {
+        this.parent = parent;
+    }
+
+    HierarchalError() {
+    }
+
+    @Override
+    public Optional<ErrorTypeDefinition<? extends Enum<?>>> getParent() {
+        return Optional.ofNullable(parent);
+    }
+}
+----
+
+=== Registering Errors in the Module
+
+To communicate which errors are the ones that a Module handles, the `@Extension`
+annotated class should be annotated with `@Error`, this annotation references
+a `ErrorTypeDefinition` enum containing the defined errors.
+
+[source, java, linenums]
+----
+@Extension(name = "Foo")
+@ErrorTypes(HierarchalError.class)
+@Xml(prefix = "test-connector")
+public class FooExtension {
+  // Content
+}
+----
+
+== Specifying which errors could be thrown
+
+After we declared all the possible errors in our Module, we need to provide the
+information that binds the errors with the Operations that can actually throw them.
+
+To do that we need to implement an `ErrorTypeProvider`, which is a class which
+communicates the errors that can be thrown by an Operation.
+
+[source, java, linenums]
+----
+public class ExecuteErrorsProvider implements ErrorTypeProvider {
+    @Override
+    public Set<ErrorTypeDefinition> getErrorTypes() {
+        HashSet<ErrorTypeDefinition> errors = new HashSet<>();
+        errors.add(HierarchalErrors.INVALID_PARAMETER);
+        errors.add(HierarchalErrors.BAD_CREDENTIALS);
+        errors.add(HierarchalErrors.ILLEGAL_ACTION);
+        return errors;
+    }
+}
+----
+
+After defined the `ErrorTypeProvider`, is required to bound this with the proper
+Operation, this is done using the `@Throws` annotation at Operation level:
+
+[source, java, linenums]
+----
+@Throws(ExecuteErrorsProvider.class)
+public void execute(){
+  // operation body
+}
+----
+
+As consequence when a `@Throws` annotated Operation is used in the Studio or
+Flow Designer, these IDEs will hint the Mule developer which errors the operation
+can throw:
+
+[tabs]
+------
+[tab,title="Visual Editor"]
+....
+image:errors/studio_errors.gif[align="center"]
+....
+[tab,title="XML Editor"]
+....
+[source, xml, linenums]
+----
+<flow name="flowName">
+  <try>
+    <test-connector:execute/>
+    <error-handler >
+      <on-error-continue type="TEST-CONNECTOR:ILLEGAL_ACTION">
+        <logger level="INFO" message="#[error]"/>
+      </on-error-continue>
+    </error-handler>
+  </try>
+</flow>
+----
+....
+------
+
+== Throwing Errors
+
+Errors, at the end of the day, are a Mule representation of a Java Exception,
+but how is an Exception is bound with an specific Error?
+
+There is no static binding between Errors and Exceptions, to communicate an
+error the Operation should throw `org.mule.runtime.extension.api.exception.ModuleException` or
+child exceptions of this class, indicating in the Constructor the desired `ErrorTypeDefinition`
+to throw.
+
+[source, java, linenums]
+----
+@Throws(ExecuteErrorsProvider.class)
+public void execute(){
+  try {
+      throw new IllegalStateException();
+  } catch (IllegalStateException e){
+      throw new ModuleException(HierarchalErrors.ILLEGAL_ACTION, e);
+  }
+}
+----
+
+Also a recommended practice is to wrap this logic inside new exception classes:
+
+[source, java, linenums]
+----
+public final class IllegalActionException extends ModuleException {
+
+  public IllegalActionException(Exception cause) {
+    super(HierarchalErrors.ILLEGAL_ACTION, cause);
+  }
+}
+----
+
+WARNING: Throwing an Error that is not declared in the `ErrorTypeProvider` of an
+Operation, will conclude in a Unexpected Error Exception. +
+Operations are not allowed to throw no declared Errors.
+
+
+//TODO: change link to mule error handlers
+// === More information
+// To see how you can catch errors and take actions within your flows, please head to <<_the_mule_doc_that_talks_about_mule_errors#erew, Mule Error Handling>>
