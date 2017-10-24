@@ -2,10 +2,14 @@
 
 link:/getting-started/api-lifecycle-overview#which-version[_Requires Crowd Release_]
 
-
-This procedure covers how design an API in the visual editor. The example API consumes the free online REST service JSONPlaceholder. For example purposes, the oversimplified API just lists the comments the service collects about a particular post. 
+This procedure covers how to design an API in the visual editor. The example API consumes the free online REST service JSONPlaceholder. For example purposes, the oversimplified API just lists the comments the service collects about a particular post. 
 
 To call the API, you enter the implementation URL of the API in a browser and add the ID of a post in the last component of the URL. Comments appear in the browser output.
+
+The visual editor supports project locking, so if you are idle, the project enters read-only mode. Assuming nobody obtained the lock while you were idle, just click Edit to unlock and continue.
+
+image::locked-branch.png[]
+
 
 . In Anypoint Platform, click Design Center. Set up a project to create a new API specification:
 +
@@ -18,31 +22,50 @@ image::vd-new-api.png[height=186,width=397]
 +
 * Click Create.
 +
-Visual API Designer opens.
+The visual editor opens and presents fields of RAML root properties for you to fill in. 
++
+image::api-info.png[height=347,width=404]
++
+Click jsonplaceholder in the navigation pane if API Info doesn't appear.
 +
 . In API Info, set options as follows:
 +
-* In Title, accept the default title, which is the same as the project name, or change the title of the API. For example, change the title to *placeholder*.
-* In Version, type a version of the API. For example, *'0.1'*.
+* In Title, accept the default or change the API title. For example, change the title to *placeholder*.
+* In Version, type a version of the API. For example, *0.1*.
 * In Protocols, select HTTP or HTTPS. Select HTTP for this example.
-* In Media Type, select a media type. For example, select application/json.
-* In Base URI, type the base URI. For example, type the following URI:
+* In Media Type, select the format of the data the API returns. For example, select application/json.
+* In Base URI, type the following example URI:
 +
-`+http://jsonplaceholder.typicode.com/posts/{num}+`
+`+http://jsonplaceholder.typicode.com/posts/{num}/+`
 +
-. Click Base URI Parameters, and then +. Define the Num parameter: 
+{num} is the base URI parameter that represents the ID of a post.
++
+. In Description, type a description of API using markdown. For example, type *This API gets the comments about a post given a variable integer post **id** at the end of the URL.*
++
+. Click Base URI Parameters.
++
+image::add-base-uri-parameter.png[height=106,width=401]
++
+. Define the Num base URI parameter: 
++
+* Click + Add Base URI Parameter.
++
+Name and Type fields appear.
 +
 * In Name, type an arbitrary name. For example: *Num*. 
 * In Type, select a RAML scalar type. For example, select Integer.
-* In Description, type an description of the Base URI. For example, type *The unsecured URL ofthe JSONPlaceholder service.*
-* Click Details >, and define additional RAML facets to restrict the inputs allowed for the parameter:
-* In Description, type an description of Num. For example, type *The number of stored comments in posts.*
-** Accept the default Required setting = checked.
-** In Minimum and Maximum, enter input range limits. For example, type *1* and *5*, respectively. To call the API, you need to provide a number between 1-5.
+* In Base URI Parameters, click Details >.
++
+image::baseuri-details.png[height=155,width=506]
++
+Fill in the fields to define RAML facets that restrict what you can substitute for {num} in the URI. For example:
++
+** In Description, describe the Num property. For example, *The number of stored comments in posts.*
+** Change the default Required setting to unchecked. You define a default in the event a parameter isn't entered.
+** In Minimum and Maximum, enter input range limits. For example, type *1* and *5*, respectively. To call the API, {num} must be a number between 1-5.
 ** In Format, select a value. For example, select int.
 ** In Example number, enter *3*.
 ** In Default Number, enter *1*.
-** In Description, type a description of API using markdown. For example, type *This API gets the comments about a post given a variable integer post **id** at the end of the URL.*
 +
 The generated RAML code appears on the right. 
 +
@@ -50,92 +73,98 @@ The generated RAML code appears on the right.
 #%RAML 1.0
 title: placeholder
 description: This API gets the comments about a post given a variable integer post **id** at the end of the URL.
-version: 0.1
-baseUri: http://jsonplaceholder.typicode.com/posts/{num}
+version: '0.1'
+mediaType: application/json
+protocols:
+  - HTTP
 baseUriParameters:
-  num: 
-    format: int
-    type: integer
+  Num: 
+    maximum: 5
     minimum: 1
-    maximum: 10
+    format: int
     example: 3
-    description: The number of stored comments in posts
     default: 1
+    description: The number of stored comments in posts
+    type: integer
+    required: false
+baseUri: http://jsonplaceholder.typicode.com/posts/{num}/
 ----
 +
-. Click + and select New Resource.
+. In the navigation pane, click + and select Resource.
 +
-image::vd-newresource.png[height=215,width=397]
+image::vd-newresource.png[height=95,width=224]
 +
-/newResource appears in the navigation pane and a code stub for the resource appears in the RAML code:
+. In the navigation pane, click /newResource.
 +
-----
-/newResource:
-  displayName: /newResource
-----
+image::new-resource.png[height=102,width=174]
 +
-. In the canvas, set options for defining the resource:
+. Set the options that appear to define the resource:
 +
-* In URL, rename the resource to */comments*.
-* Select one or more methods. For this example, select GET.
-* Click Responses, and then click Add Response +.
+* Rename the resource from /newResource to */comments*.
+* Select one or more HTTP methods. For this example, select GET because the API will get comments about posts from the service.
+* Click Documentation and describe the GET method. For example, type *Get comments about posts.*
+* Click Responses, and then click + Add Response.
++
+image::add-response.png[height=174,width=361]
++
 * In Status, accept the default 200-OK.
 * In Description, describe the status. For example, type *Success, comments retrieved.*
-* Click Bodies (0) +
-* Accept the default application/json as the mime type for the example response.
-* In Type, select Array.
-* In Description, describe the example response. For example, type *A list of comments about a particular post. You specify the **post ID** in the last part of the URI that calls the API.*
-* Skip Minimum and Maximum Length, Pattern, and Default. In Example, enter the following JSON array in markdown:
 +
-----
-[
-                    {
-                      "postId": 1,
-                      "id": 1,
-                      "name": "id labore ex et quam laborum",
-                      "email": "Eliseo@gardner.biz",
-                      "body": "laudantium enim quasi est quidem magnam voluptate ipsam eos\ntempora quo necessitatibus\ndolor quam autem quasi\nreiciendis et nam sapiente accusantium"
-                    },
-                    {
-                      "postId": 1,
-                      "id": 2,
-                      "name": "quo vero reiciendis velit similique earum",
-                      "email": "Jayne_Kuhic@sydney.com",
-                      "body": "est natus enim nihil est dolore omnis voluptatem numquam\net omnis occaecati quod ullam at\nvoluptatem error expedita pariatur\nnihil sint nostrum voluptatem reiciendis et"
-                    }
-                  ]
-----
-+
-* Select the response, and click Code Block to format the markdown.
+image::response.png[height=265,width=559]
 
-* Click Documentation, and enter the following description in markdown:
+== To Test the Design
+
+. Assume you have no query parameters or headers, and exit the visual editor so you can test the API. Click Edit RAML.
 +
-*Retrieve a list of posts.*
+image::edit-raml.png[height=103,width=177]
 +
-. Click Edit RAML, and at the end of the generated RAML type the following code for the /comments resource:
+Note: When you leave the visual editor, you lose the visual formatting and enter the non-visual api design mode. 
++
+. Click Continue to enter api non-visual design mode.
++
+The RAML you created in visual design mode appears in the api design editor:
 +
 ----
+#%RAML 1.0
+title: placeholder
+description: This API gets the comments about a post given a variable integer post **id** at the end of the URL.
+version: '0.1'
+mediaType: application/json
+protocols:
+  - HTTP
+baseUriParameters:
+  Num:
+    maximum: 5
+    minimum: 1
+    format: int
+    example: 3
+    description: he number of stored comments in posts.
+    default: 1
+    type: integer
+    required: false
+baseUri: 'http://jsonplaceholder.typicode.com/posts/{num}/'
 /comments:
+  displayName: /comments
   get:
-    description: Retrieve a list of posts
+    description: Get comments about posts.
+    displayName: get
     responses:
-      200:
-        body:
-          application/json:
-            example: | 
-                  [
-                    {
-                      "postId": 1,
-                      "id": 1,
-                      "name": "id labore ex et quam laborum",
-                      "email": "Eliseo@gardner.biz",
-                      "body": "laudantium enim quasi est quidem magnam voluptate ipsam eos\ntempora quo necessitatibus\ndolor quam autem quasi\nreiciendis et nam sapiente accusantium"
-                    },
-                    {
-                      "postId": 1,
-                      "id": 2,
-                      "name": "quo vero reiciendis velit similique earum",
-                      "email": "Jayne_Kuhic@sydney.com",
-                      "body": "est natus enim nihil est dolore omnis voluptatem numquam\net omnis occaecati quod ullam at\nvoluptatem error expedita pariatur\nnihil sint nostrum voluptatem reiciendis et"
-                    }
-                  ]
+      '200':
+        description: 'Success, comments retrieved.'
+----
++
+. Click Open Navigation.
++
+image::open-navigation.png[height=242,width=307]
++
+. Click GET, TRY IT, and Send.
++
+A status 200 and comments about the default post 1 are returned.
++
+. Enter a URI parameter of 3 and click Send.
++
+Comments about post 3 are returned.
+
+== See Also
+
+* link:/design-center/v/1.0/design-branch-filelock-concept[About Sharing Branches and Project Locking]
