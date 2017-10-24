@@ -43,6 +43,7 @@ Mule 4 automatically handles data streams for users. This greatly simplifies wor
 * Data can be read multiple times or accessed randomly with the DataWeave expression language without side effects.
 * Data can be sent to multiple places, without the user caching that data in memory first.
 * Users can transparently access larger than memory data.
+* Users can customize whether data is stored on disk using streaming strategies.
 
 == Non-Blocking, Self-Tuning Runtime
 
@@ -62,6 +63,13 @@ For any given module operation, it is now possible to define a target, which sav
 ----
 
 This saves the Mule message in the myVar variable to be accessed later. This reduces flow complexity by removing the need for enricher.
+
+You can also control what is stored in the variable using the targetValue attribute. For example, if you wanted to only store the response code from an HTTP request, you could do the following:
+
+[source,XML,linenums]
+----
+<httpn:request target="myVar" targetValue="#[attributes.statusCode]" .../>
+----
 
 == Simplified Connectors and Modules Experience
 
@@ -83,6 +91,10 @@ You can configure your error handlers to catch errors so that the flow can keep 
 
 There is also a new Try Scope, This allows you to catch errors in the middle of a flow, without having to create a new flow, specifically to catch that error.
 
+== Batch is easier to use and is now a scope
+
+In Mule 3, batch jobs were top-level concerns, similar flows. But we’ve simplified this so it is now a scope that can live inside a flow–– making it easier to understand, invoke dynamically, and interact with other Mule components. There are also no longer a special set of variables (i.e. recordVars) for batch. You can now just use flow variables directly; this reduces the complexity and makes it easier to learn how to write batch jobs.
+
 == Mule API
 
 Mule 4 includes new, well defined APIs. These make it easier for you to extend Mule and provides clarity on what the proper extension points are.
@@ -103,15 +115,79 @@ Mule 4 loads each Module in its own classloader, isolating the modules from inte
 * There is now a well defined Mule API, so you can be sure you're using supported APIs.
 * There is classloader isolation between your application, the runtime and connectors, so that any library changes that happen internally will not affect your app.
 
-== Compatibility Module
+== Improved support for configuration
+Mule 4 features an easier way to configure environment specific properties, which is Spring-optional. With it, you can now define application-specific properties in a YAML file inside your application. These will be the default properties for your application and you can override them using system properties. In the future, we’ll also be using this metadata to provide an improved configuration management UI from runtime manager.
 
-To help you migrate to Mule 4, there is a new compatibility module which provides backward compatibility for a number of features from Mule 3, including:
+== Connectors and Modules Updates
 
-* Transports: HTTP, JMS, Database.
-* Mule Expression Language.
-* set-payload, set-variable, set-property, remove-property, copy-properties.
-* poll.
+=== Database Connector
+The database connector has undergone minor updates:
+* Bulk operations have been separated so that operations do not change behavior depending on the received payload
+* There's single experience for executing static and dynamic queries.
+* DataWeave transformations can be embedded inside the insert/update operations so that you can construct the datasets you want to send to the DB without having a side effect on the message or using enrichers
+* The connector will use Mule’s new streaming framework to handle large data sets.
 
+=== File and FTP Connectors
+The File and FTP connectors have been improved so that they are operation based and share the same set of operations. This enables many new capabilities:
+* The ability to read files or fully list directories’ contents on demand, unlike the old transport (which only provided a polling inbound endpoint)
+* Top level support for common file system operations such as copying, moving, renaming, deleting, creating directories, and more
+* Support for locking files on the file system level
+* Advanced file matching functionality
+* Support for local files, FTP, SFTP and FTPS
+
+=== JMS Connector
+The JMS connector has been updated to utilize the new, simplified connector experience. In addition to the JMS listener and sender, you can also consume messages in the middle of a flow using the JMS consume operation.
+
+=== Scripting Module
+The scripting module is now updated for Mule 4, enabling you to now embed your Groovy, Ruby, Python, or JavaScript scripts inside Mule flows. You can inject data from the Mule message into your code using the new parameters configuration attribute.
+
+[source,XML,linenums]
+----
+<script:execute engine="groovy">
+    <script:code>
+         return "$payload $prop1 $prop2"
+    </script:code>
+    <script:parameters>
+         #[{prop1: "Received", prop2: "A-OK"}]
+    </script:parameters>
+</script:execute>
+---
+
+=== Spring module
+Mule 4 decouples the Mule internals from Spring, ensuring that users don't need to know Spring to learn Mule and enables Spring users to select which version of spring they run. To use Spring beans, now you add the Spring module to your application, and simply import your Spring bean files.
+
+[source,XML,linenums]
+----
+<spring:config name="springConfig" files="beans.xml"/>
+----
+
+=== VM Connector
+The VM connector has been updated to utilize the new, simplified connector experience. In addition to the VM listener and sender, you can also consume messages in the middle of a flow using the VM consume operation
+
+=== Other Modules and Connectors
+All other modules and connectors that have been updated have been updated to be consistent with the overall Mule 4 experience, but have otherwise gone through no functionality changes unless explicitly noted in their release notes.
+
+== Mule SDK
+The Mule SDK is a successor to the Anypoint Connector Devkit. It enables developers to easily extend Mule and create new Mule modules which can be shared in Exchange. Unlike Mule 3, where there were multiple ways to create extensions, the Mule 4 SDK provides a single way to extend Mule, assuring consistency and upgradeability of components. It was used to build all Mule 4 modules and connectors.
+
+While similar to DevKit in many respects, it features many improvements:
+* The SDK does not generate code, which enables extensions to get new runtime features without having to be re-released
+* Transactions support
+* Request-Response message sources support
+* Dynamic configurations
+* Router support
+* Non Blocking operations
+* Classloading isolation
+
+// == Compatibility Module
+// 
+// To help you migrate to Mule 4, there is a new compatibility module which provides backward compatibility for a number of features from Mule 3, including:
+// 
+// * Transports: HTTP, JMS, Database.
+// * Mule Expression Language.
+// * set-payload, set-variable, set-property, remove-property, copy-properties.
+// * poll.
+// 
 // COMBAK link to the migration guide
 
 == See Also
