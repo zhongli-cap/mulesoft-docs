@@ -1,0 +1,70 @@
+= About Caching Strategies with the Cache Scope
+:keywords: cache, anypoint, studio
+
+A caching strategy defines the actions a Cache scope takes when a message enters its sub-flow. Because the default strategy stores the cache in an `InMemoryObjectStore` instead of an `ObjectStore`, Mule recommends that you create a strategy that uses an `ObjectStore` for caching in a production environment and only use the default strategy for testing and non-production purposes.
+
+The Cache scope only caches non-consumable payloads. It does not cache consumable payloads (such as a streaming payload), which can only be read once before they are lost.
+
+In general, the caching process behaves like this:
+
+. A message enters the Cache scope.
+. Cache scope determines whether the message payload is consumable.
+. The Cache scope generates a key to identify the message’s payload.
++
+Mule uses an SHA256KeyGenerator and a SHA256 digest to generate a unique key for the message payload.
++
+. The Cache scope compares the newly generated key to cached responses that it has previously processed and saves it in the default `InMemoryObjectStore` or in the `ObjectStore` you configure.
++
+* If there is no cached response event (a _cache miss_), the Cache scope processes the new message and produces a response.
++
+It also saves the resulting response in the object store (if the response is non-consumable).
++
+* If there is a cached response event (a _cache hit_), the caching strategy generates a response that combines data from both the new request and the cached response.
++
+Note that if the generated response has a consumable payload, it does not cache the response.
++
+. The Cache scope pushes the response out into the parent flow for continued processing.
+
+== To Set Up a Caching Strategy
+
+You can create a caching strategy from a Cache component or from the Global Elements configuration in Anypoint Studio. Once you create a strategy, a Cache component in the flow can reference it.
+
+. Open the Caching Strategy configuration window from the Cache component or from the Caching Strategies option available from the Global Elements tab in Studio.
+. Provide a Name for your caching strategy.
+. Reference an `ObjectStore` or create one for your Cache component to reference.
++
+. Select a mechanism for generating key used for storing events within the caching strategy:
++
+** Default
+** Key Expression: A DataWeave expression.
+** Key Generator
++
+. Perform any optional steps:
++
+* Select or create a Response Generator.
+* Select or create a Consumable Message Filter.
+* Change the Event Copy Strategy from Simple (the default, where data is immutable) to Serializable (where data is mutable).
+
+== See Also
+
+link:cache-scope[About the Cache Scope]
+
+link:cache-scope-to-configure[To Configure the Cache Scope]
+
+link:/connectors/v/latest/object-store-to-define-a-new-os[Example: To Define a Global ObjectStore]
+
+////
+TODO: SENT TO GEORGE. DOES NOT RELATE TO THE CACHE SCOPE.
+[caching_clusters]
+=== Caching Nodes in a Cluster
+
+For caching data for nodes in a cluster, the default strategy unifies the cache in a single `ObjectStore`. The exception is the default caching strategy used by Cache scope.
+
+If you want to provide a separate cache for each cluster node, you need to configure your application to use a managed store that controls an in-memory store. The configuration for the managed store should be:
+
+* `maxEntries: 4000`
+* `entryTTL: -1`
+* `expirationInterval: 1000`
+////
+
+// TODO: HOW TO CUSTOMIZE A GLOBAL CACHING STRATEGY
