@@ -5,33 +5,39 @@ The Cache scope is for storing and reusing frequently called data. You can use a
 
 * Processing repeated requests for the same information.
 
-* Processing requests for information that involve large, non-consumable message payloads.
+* Processing requests for information that involve large, non-consumable payloads.
 
-The Cache scope only caches non-consumable payloads. It does not cache consumable payloads (such as a streaming payload), which can only be read once before they are lost.
+When a message processor in a Mule app sends a message to the Cache scope, the parent flow expects an output. The Cache scope processes the message payload, delivers the output to the parent flow, and saves the output (that is, caches the response). The next time the Cache scope receives the same kind of message payload, the scope can offer a cached response rather than invoking a potentially time-consuming process again.
+
+You can put any number of message processors (such as connectors or components) into a Cache scope and configure the Caching Strategy to store the responses (which contain the payload of the response message) produced by the processing that occurs within the scope.
 
 == Caching Process
 
-In general, the caching process behaves like this:
+The Cache scope only caches non-consumable payloads. It does not cache consumable payloads (such as a streaming payload), which can only be read once before they are lost.
+
+In general, the caching process follows this sequence:
 
 . A message enters the Cache scope.
 . Cache scope determines whether the message payload is consumable.
 . The Cache scope generates a key to identify the message’s payload.
 +
-Mule uses an SHA256KeyGenerator and a SHA256 digest to generate a unique key for the message payload.
+By default, Mule uses an SHA256KeyGenerator and a SHA256 digest to generate a unique key for the message payload. However, you can set up your own key through a Custom Caching Strategy.
 +
-. The Cache scope compares the newly generated key to cached responses that it has previously processed and saves it in the default `InMemoryObjectStore` or in the ObjectStore you configure.
+. The Cache scope compares the newly generated key to cached responses that it has previously processed and saves it in the ObjectStore you set up (recommended) or in the default `InMemoryObjectStore`.
 +
 * If there is no cached response event (a _cache miss_), the Cache scope processes the new message and produces a response.
 +
 It also saves the resulting response in the object store (if the response is non-consumable).
 +
-* If there is a cached response event (a _cache hit_), the caching strategy generates a response that combines data from both the new request and the cached response.
+* If there is a cached response event (a _cache hit_), the Caching Strategy generates a response that combines data from both the new request and the cached response.
 +
 Note that if the generated response has a consumable payload, it does not cache the response.
 +
 . The Cache scope pushes the response out into the parent flow for continued processing.
 
-You can put any number of message processors (such as connectors or components) into a Cache scope and configure the caching strategy to store the responses (which contain the payload of the response message) produced by the processing that occurs within the scope.
+==  Caching Strategy
+
+A Caching Strategy defines the actions a Cache scope takes when a message  enters its sub-flow. By default, the Cache scope uses a Caching Strategy that stores data in an InMemoryObjectStore instead of an ObjectStore. MuleSoft recommends that you only use the default for non-production purposes, such as testing. For production environments, you should set up a Caching Strategy that uses the ObjectStore.
 
 == Supported Exchange Patterns
 
@@ -44,18 +50,9 @@ Regardless of exchange pattern settings or any data retrieval activity that migh
 
 For instance, you can use a Cache scope to manage customer requests for flight information. Many customers might request the same pricing information about flights from San Francisco to Buenos Aires. Rather than using a lot of processing power to send separate requests to several airline databases with each customer query, you can use a Cache scope to arrange to send a request to the databases fewer times – say, once every ten minutes – and present users with the cached flight pricing information. Where timeliness of data is not critical, Cache scope can save time and processing power.
 
-
-==  Caching Strategy
-
-A caching strategy defines the actions a Cache scope takes when a message enters its sub-flow. By default, the Cache scope uses a caching strategy that stores data in an InMemoryObjectStore instead of an ObjectStore. MuleSoft recommends that you only use the default for non-production purposes, such as testing. For production environments, you should set up a caching strategy that uses the ObjectStore.
-
-== Caching Flow
-
-When a message processor in a Mule app sends a message to the Cache scope, the parent flow expects an output. The Cache scope processes the message, delivers the output to the parent flow, and saves the output (that is, caches the response). The next time the Cache scope receives the same kind of message, the scope can offer a cached response rather than invoking a potentially time-consuming process again.
-
 == Filters
 
-Instead of processing all messages that it receives, the Cache scope can exclude specific messages from the Cache scope flow based on an DataWeave expression or a global filter.
+Instead of processing all message payloads that it receives, the Cache scope can exclude specific payloads from the Cache scope flow based on an DataWeave expression or a global filter.
 
 == See Also
 
