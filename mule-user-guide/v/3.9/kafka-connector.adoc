@@ -36,7 +36,7 @@ For hardware and software requirements, see link:/mule-user-guide/v/3.9/hardware
 
 == Install the Kafka Connector
 
-You can install this connector in Anypoint Studio using the instructions in link:/anypoint-exchange/anypoint-exchange[Installing a Connector from Anypoint Exchange].
+You can install this connector in Anypoint Studio using the instructions in link:/anypoint-studio/v/6/import-asset-exchange-task[To Import an Asset from Exchange].
 
 [[configure]]
 == Configure the Kafka Connector Global Element
@@ -155,7 +155,7 @@ Inside the `<version>` tags, put the desired version number. The available versi
 The example use case walkthroughs are geared toward Anypoint Studio users. For those writing and configuring the application in XML, jump straight to the example Mule application XML code to
 link:#consume-xml[Consume Messages] or link:#publish-xml[Publish Messages] to see how the Kafka global element and the connector are configured in the XML in each use case.
 
-=== Consume Messages from Kafka Topic
+== Consume Messages from Kafka Topic
 
 See how to use the connector to consume messages from a topic and log each consumed message to console in the following format: "New message arrived: <message>".
 
@@ -223,7 +223,7 @@ http://www.mulesoft.org/schema/mule/apachekafka/current/mule-apachekafka.xsd">
 </mule>
 ----
 
-=== Publish Messages to Kafka Topic
+== Publish Messages to Kafka Topic
 
 Use the connector to publish messages to a topic.
 
@@ -310,9 +310,127 @@ http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
 </mule>
 ----
 
+== To Configure Kafka to Use Kerberos
+
+. Download and install Kerberos KDC and Zookeeper. 
++
+After installing, ensure you have the following principals `zookeeper/localhost@LOCALHOST` and `kafka/localhost@LOCALHOST`. This is an example for localhost and realm LOCALHOST depending on your KDC it might differ in the last part for `localhost@LOCALHOST`. You need to have the associated keytab files saved  so that you can they can be accessed by the processes that are started for Zookeeper and Kafka.
++
+. Start Kafka server. This assumes you have downloaded Kafka server and KAFKA_HOME represents home directory for that server.
+. Create the zookeeper_server_jaas.conf file under KAFKA_HOME/config with the following content:
++
+[source,code,linenums]
+----
+Server {
+  com.sun.security.auth.module.Krb5LoginModule required
+  useKeyTab=true
+  useTicketCache=true
+  storeKey=true
+  debug=true
+  keyTab=PATH_TO_ZOOKEEPER_KEYTAB/zookeeper.keytab"
+  principal="zookeeper/localhost@LOCALHOST";
+};
+----
++
+Replace PATH_TO_ZOOKEEPER_KEYTAB with the correct folder path above and in the code blocks that follow.
++
+In the default configuration it is very important to use `Server` as an identifier for your configuration.
++
+. Create the kafka_server_jaas.conf file under KAFKA_HOME/config with the following content:
++
+[source,code,linenums]
+----
+KafkaServer {
+  com.sun.security.auth.module.Krb5LoginModule required
+  useKeyTab=true
+  storeKey=true
+  debug=true
+  keyTab="PATH_TO_ZOOKEEPER_KEYTAB/kafka.keytab"
+  principal="kafka/localhost@LOCALHOST";
+};
+
+// Zookeeper client authentication
+Client {
+    com.sun.security.auth.module.Krb5LoginModule required
+    useKeyTab=true
+    storeKey=true
+    debug=true
+    keyTab=”PATH_TO_ZOOKEEPER_KEYTAB/kafka.keytab"
+    principal="kafka/localhost@LOCALHOST";
+};
+----
++
+In the default configuration it is very important to use `KafkaServer` and `Client` as identifiers for your configurations. `KafkaServer` is used to authenticate Kafka clients and `Client` is used to self authenticate against Zookeeper.
++
+. Add these two properties to `zookeeper.properties` under `KAFKA_HOME/config`:
++
+[source,code,linenums]
+----
+authProvider.1=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
+requireClientAuthScheme=sasl
+----
++
+These are enabled in Kerberos authentication of the Kafka broker against the Zookeeper server.
++
+.  Add the following properties to `server.properties` under `KAFKA_HOME/config`:
++
+[source,code,linenums]
+----
+listeners=PLAINTEXT://:9092,SASL_PLAINTEXT://localhost:9093
+sasl.enabled.mechanisms=GSSAPI
+sasl.kerberos.service.name=kafka
+----
++
+These tell the kafka broker to create one channel on port 9093 that requires Kerberos authentication.
++
+.  Open a new terminal and change directory to `KAFKA_HOME/bin`.
+.  To start Zookeeper you have to set an environment variable KAFKA_OPTS with the following value:
++
+[source,code]
+----
+-Djava.security.krb5.conf=<path_to_krb_config>/krb5.conf -Djava.security.auth.login.config=../config/kafka_server_jaas.conf
+----
++
+For example:
++
+[source,code]
+----
+export KAFKA_OPTS="-Djava.security.krb5.conf=../config/krb5.conf -Djava.security.auth.login.config=../config/kafka_server_jaas.conf”
+----
++
+The krb5.conf file contains Kerberos configuration information, including the locations of KDCs and admin servers for the Kerberos realms of interest. Under Linux you can usually find it under /etc/krb5.conf. 
++
+. Start zookeeper by running `./zookeeper-server-start(.sh/bat) ../config/zookeeper.properties`.
+. Open a new terminal and change directory to KAFKA_HOME/bin.
+. Start Kafka broker by running:
++
+[source,code]
+----
+./kafka-server-start(.sh/bat) ../config/server.properties
+----
++
+You should see no errors in the console. 
++
+. Configure the connector. To connect to Kafka from within the connector, set the bootstrap servers to point to localhost:9093 and put the following properties in consumer.properties and producer.properties along with other properties that you usually put in those files.
++
+[source,code,linenums]
+----
+security.protocol=SASL_PLAINTEXT
+sasl.mechanism=GSSAPI
+sasl.jaas.config=com.sun.security.auth.module.Krb5LoginModule required \
+      useKeyTab=true \
+      storeKey=true  \
+      debug=true \
+      keyTab="PATH_TO_ZOOKEEPER_KEYTAB/kafka.keytab" \
+      principal="kafka/localhost@LOCALHOST";
+sasl.kerberos.service.name=kafka
+----
 
 == See Also
 
+* https://help.ubuntu.com/lts/serverguide/kerberos.html[How to install Kerberos on Ubuntu].
+* https://web.mit.edu/kerberos/krb5-1.12/doc/admin/conf_files/krb5_conf.html[MIT Kerberos Documentation - krb5.conf].
+* https://kafka.apache.org/documentation/#security_sasl[Understand Kafka SASL/Kerberos configuration].
 * Access the link:/release-notes/kafka-connector-release-notes[Apache Kafka Connector Release Notes].
-* Read more about link:/mule-user-guide/v/3.9/anypoint-connectors[Anypoint Connectors].
-* See the link:http://kafka.apache.org/documentation.html[Apache Kafka documentation]
+* Read more about link:/mule-user-guide/v/3.8/anypoint-connectors[Anypoint Connectors].
+* See the http://kafka.apache.org/documentation.html[Apache Kafka documentation]

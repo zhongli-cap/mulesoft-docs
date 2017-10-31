@@ -286,24 +286,47 @@ The example flow:
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:ws="http://www.mulesoft.org/schema/mule/ws" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" 
+xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" 
+xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml" 
+xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" 
+xmlns:ws="http://www.mulesoft.org/schema/mule/ws" 
+xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+xmlns="http://www.mulesoft.org/schema/mule/core" 
+xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
 	xmlns:spring="http://www.springframework.org/schema/beans"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/ws http://www.mulesoft.org/schema/mule/ws/current/mule-ws.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
-http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
-http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd">
-    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8082" doc:name="HTTP Listener Configuration"/>
-    <ws:consumer-config name="Web_Service_Consumerweather" wsdlLocation="http://www.webservicex.com/globalweather.asmx?WSDL" service="GlobalWeather" port="GlobalWeatherSoap" serviceAddress="http://www.webservicex.com/globalweather.asmx"  doc:name="Web Service Consumer"/>
-    <http:request-config name="HTTP_Request_Configuration" host="www.webservicex.com" port="80" doc:name="HTTP Request Configuration">
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+	http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core 
+http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ws 
+http://www.mulesoft.org/schema/mule/ws/current/mule-ws.xsd
+http://www.mulesoft.org/schema/mule/http 
+http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking 
+http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/dw 
+http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/xml 
+http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" 
+      port="8082" doc:name="HTTP Listener Configuration"/>
+    <ws:consumer-config name="Web_Service_Consumerweather" 
+      wsdlLocation="http://www.webservicex.com/globalweather.asmx?WSDL" 
+      service="GlobalWeather" port="GlobalWeatherSoap" 
+      serviceAddress="http://www.webservicex.com/globalweather.asmx"  
+      doc:name="Web Service Consumer"/>
+    <http:request-config name="HTTP_Request_Configuration" host="www.webservicex.com" 
+    port="80" doc:name="HTTP Request Configuration">
         <http:proxy host="example.proxy.com" port="8080"/>
     </http:request-config>
     <flow name="soap-wsc-proxy">
-        <http:listener config-ref="HTTP_Listener_Configuration" path="/country" doc:name="HTTP"/>
-        <set-variable variableName="CountryName" value="#[message.inboundProperties.'http.query.params'.CountryName]" doc:name="Get Cities by Country"/>
+        <http:listener config-ref="HTTP_Listener_Configuration" 
+	path="/country" doc:name="HTTP"/>
+        <set-variable variableName="CountryName" 
+	value="#[message.inboundProperties.'http.query.params'.CountryName]" 
+	doc:name="Get Cities by Country"/>
         <dw:transform-message doc:name="Transform Message">
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/xml
@@ -315,13 +338,35 @@ http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/
 	}
 }]]></dw:set-payload>
         </dw:transform-message>
-        <ws:consumer config-ref="Web_Service_Consumerweather" doc:name="Web Service Consumer" operation="GetCitiesByCountry"/>
+        <ws:consumer config-ref="Web_Service_Consumerweather" 
+	doc:name="Web Service Consumer" operation="GetCitiesByCountry"/>
         <logger level="INFO" doc:name="Logger"/>
     </flow>
 </mule>
 ----
 
+////
+== Signature Key Identifiers
 
+As of Mule 3.8.3 and later, Mule supports the use of the Signature Key Identifiers. 
+Previously when sending a signed message using the WS-Security extension, Web Service Consumer 
+incorrectly referenced the token type as an Issuer and Serial Number, whereas the 
+backend service only accepted a Subject Key Identifier. This caused the 
+"Security Data : The signature verification failed" error. 
+
+You can now use Signature Key Identifiers that define what key identifier
+to use for a signature. The following types are supported:
+
+* DirectReference
+* EmbeddedKeyName
+* EncryptedKeySHA1
+* IssuerSerial
+* SKIKeyIdentifier
+* X509KeyIdentifier
+
+See: https://www.oasis-open.org/committees/download.php/13383/wss-v1.1-spec-pr-x509TokenProfile-01.htm#_Toc105230344[X509 Token References]
+
+////
 
 == Securely Connecting to a SOAP Web Service
 
