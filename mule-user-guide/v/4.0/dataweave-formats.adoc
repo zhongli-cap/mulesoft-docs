@@ -7,14 +7,14 @@ DataWeave recognizes these content types for data inputs and outputs:
 
 * `application/csv`: CSV
 * `application/dw`: DataWeave (for testing a DataWeave expression).
-* `multipart/form-data`: Form data
+* `multipart/form-data`: Form data, for binary or large payloads
 * `application/flatfile`: Flat file
 * `application/java`: Java
 * `application/json`: JSON
 * `application/octet-stream`
 * `application/xml`: XML
 * `application/xlsx`: Excel
-* `application/x-www-form-urlencoded`: Form data
+* `application/x-www-form-urlencoded`: URL encoded form data
 * `text/plain`: Cobol copybook, Fixed width file, Plain text
 
 [java]
@@ -56,7 +56,7 @@ Java developers use the `class` metadata key as hint for what class needs to be 
 -----------------------------------------------------------------------
 %dw 2.0
 type user = Object { class: "com.anypoint.df.pojo.User"}
-output application/xml
+output application/json
 ---
 {
   name : "Mariano",
@@ -82,17 +82,12 @@ In the Transform component, you can define a Java type through the following met
 
 CSV content is modeled in DataWeave as a list of objects, where every record is an object and every field in it is a property. For example:
 
-.Input
-[source,csv,linenums]
-----
-Name,Last Name
-Mariano, De achaval
-Leandro, Shokida
-----
-
-.DataWeave representation
+.Transform
 [source,dataweave,linenums]
 ----
+%dw 2.0
+output application/csv
+---
 [
   {
     Name: "Mariano",
@@ -103,6 +98,14 @@ Leandro, Shokida
     "Last Name": " Shokida"
   }
 ]
+----
+
+.CSV Output
+[source,csv,linenums]
+----
+Name,Last Name
+Mariano, De achaval
+Leandro, Shokida
 ----
 
 === Reader Properties (for CSV)
@@ -319,7 +322,7 @@ The XML data structure is mapped to DataWeave objects that can contain other obj
 </users>
 ----
 
-.DataWeave representation
+.Transform
 [source,dataweave,linenums]
 ----
 {
@@ -576,6 +579,7 @@ When defining an output of type flat file there are a few optional parameters yo
 |`trimValues` |boolean |`false` |Trim string values longer than field length by truncating trailing characters
 |=======================
 
+.Transform
 [source,DataWeave,linenums]
 ----
 %dw 2.0
@@ -647,6 +651,7 @@ When defining an output of type fixed width there are a few optional parameters 
 |`trimValues` |boolean |`false` |Trim string values longer than field length by truncating trailing characters
 |=======================
 
+.Transform
 [source,DataWeave,linenums]
 ----
 %dw 2.0
@@ -730,6 +735,7 @@ When defining an output of type copybook there are a few optional parameters you
 |`trimValues` |boolean |`false` |Trim string values longer than field length by truncating trailing characters
 |=======================
 
+.Transform
 [source,DataWeave,linenums]
 ----
 %dw 2.0
@@ -743,6 +749,36 @@ payload
 In the Transform component, you can define a Fixed Width type through the following methods:
 
 * By pointing to a Flat File schema file.
+
+== URL Encoding
+
+Functions in the `dw::core::URL` module can transform non-URL-encoded text to URL-encoded (`application/x-www-form-urlencoded`) text and back.
+
+.Transform
+[source,DataWeave,linenums]
+----
+%dw 2.0
+import * from dw::core::URL
+output application/xml
+---
+{
+	'myStrings':
+
+	{
+		'encoding': encodeURI(' my text to encode '),
+		'decoding': decodeURI('%20my%20text%20to%20decode%20')
+	}
+}
+----
+
+.Output
+----
+<?xml version='1.0' encoding='UTF-8'?>
+<myStrings>
+  <encoding>%20my%20text%20to%20encode%20</encoding>
+  <decoding> my text to decode </decoding>
+</myStrings>
+----
 
 == See Also
 
