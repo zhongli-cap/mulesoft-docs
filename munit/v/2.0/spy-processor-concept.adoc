@@ -1,0 +1,178 @@
+= About the Spy Event Processor
+:keywords: munit, testing, unit testing
+
+The Spy Processor allows you to spy what happens before and after an event processor is called. +
+This allows you to validate, for example that a selected Mule Event reaches a specific event processor containing a specific payload or variable.
+
+Setting a spy processor tells MUnit to run a set of instructions (usually assertions or verifications) before and/or after the execution of the spied event processor.
+
+Assume that you have this Mule Application
+
+[source,xml,linenums]
+----
+<http:listener-config name="HTTP_Listener_config">
+  <http:listener-connection host="0.0.0.0" port="${http.port}" />
+</http:listener-config>
+
+<flow name="testFlow">
+
+  <http:listener config-ref="HTTP_Listener_config" path="/"/>
+  <set-payload value="#['Real_Payload']"/>
+
+</flow>
+----
+
+You can configure the spy processor to spy any HTTP Listener and assert that they payloa is null before reaching the component, and not null after it's been processed:
+
+[source,xml,linenums]
+----
+<munit:test name="suiteTest" >
+
+  <munit:enable-flow-sources >
+    <munit:enable-flow-source value="testFlow" />
+  </munit:enable-flow-sources>
+
+  <munit:behavior >
+
+    <munit-tools:spy processor="http:listener">
+
+      <munit-tools:before-call >
+        <munit-tools:assert-that expression="#[payload]" is="#[MunitTools::nullValue()]"/>
+      </munit-tools:before-call>
+
+      <munit-tools:after-call >
+        <munit-tools:assert-that expression="#[payload]" is="#[MunitTools::notNullValue()]"/>
+      </munit-tools:after-call>
+
+    </munit-tools:spy>
+
+  </munit:behavior>
+
+</munit:test>
+----
+
+Or even to spy any HTTP Lister, whose path is configured to be "/"
+
+[source,xml,linenums]
+----
+<munit:test name="suiteTest" >
+
+  <munit:enable-flow-sources >
+    <munit:enable-flow-source value="testFlow" />
+  </munit:enable-flow-sources>
+
+  <munit:behavior >
+
+    <munit-tools:spy processor="http:listener">
+      <munit-tools:with-attributes >
+        <munit-tools:with-attribute attributeName="path" whereValue="/" />
+      </munit-tools:with-attributes>
+
+      <munit-tools:before-call >
+        <munit-tools:assert-that expression="#[payload]" is="#[MunitTools::nullValue()]"/>
+      </munit-tools:before-call>
+
+      <munit-tools:after-call >
+        <munit-tools:assert-that expression="#[payload]" is="#[MunitTools::notNullValue()]"/>
+      </munit-tools:after-call>
+
+    </munit-tools:spy>
+
+  </munit:behavior>
+
+</munit:test>
+----
+
+As shown above, this processor allows you to define actions for before and after calling a spied processor. This means that you can choose to set a payload or a variable within the scope of a spy, but it does not affect the Mule Application event within the test's Execution scope.
+
+Consider the following example:
++
+. A Mule application that sets an initial payload of 'Hello World', and then changes it to 'Bye World':
++
+[source,xml,linenums]
+----
+
+<flow name="testFlow">
+  <set-payload value="#['Hello World]'"/>
+  <set-payload value="#['Bye World']" doc:name="SetPayload"/>
+</flow>
+
+----
++
+.  A spy processor that inspects the Mule event before and after reaching the second set-payload component (the one named "SetPayload").
++
+[source,xml,linenums]
+----
+<munit-tools:spy processor=".*:.*" doc:name="Spy">
+    <munit-tools:with-attributes>
+        <munit-tools:with-attribute attributeName="doc:name" whereValue="#['SetPayload']"/>
+    </munit-tools:with-attributes>
+
+    <munit-tools:before-call> //<1>
+        <munit-tools:assert-that expression="#[payload]" is="#[MunitTools::notNullValue()]"/>
+        <munit-tools:assert-that expression="#[payload]" is="#[MunitTools::equalTo('Hello World')]"/>
+        <set-variable variableName="beforeCallKey" value="#['beforeCallValue']"/>
+        <set-payload value="#['Before Spy Payload']"/>
+    </munit-tools:before-call>
+
+    <munit-tools:after-call> //<2>
+        <munit-tools:assert-that expression="#[payload]" is="#[MunitTools::notNullValue()]"/>
+        <munit-tools:assert-that expression="#[payload]" is="#[MunitTools::equalTo('Bye World')]"/>
+        <set-variable variableName="afterCallKey" value="#['afterCallValue']"/>
+        <set-payload value="#['After Spy Payload']"/>
+    </munit-tools:after-call>
+</munit-tools:spy>
+
+----
+<1> On its before-call scope, the spy processor validate that the event's payload was not Null, and equal to "Hello World". It also adds a "beforeCallKey" variable and changes the payload to "Before Spy Payload".
+<2> On its after-call scope, which executes after the event is processed by the "SetPayload" component, the spy processor validates again that the event's payload is still "Bye World" even if the before-call scope set it to "Before Spy Payload" a few moments earlier. It also updates the payload again, and sets a new variable called "afterCallKey".
++
+. To verify that the changes inside the spy processor do not alter the Mule application's event, add the spy-processor to an MUnit test
++
+[source,xml,linenums]
+----
+<munit:test name="testEventNotChangedInsideSpy"
+                description="The event should not be modified by the spy">
+
+        <munit:behavior>
+          <munit-tools:spy processor=".*:.*" doc:name="Spy">
+              <munit-tools:with-attributes>
+                  <munit-tools:with-attribute attributeName="doc:name" whereValue="#['SetPayload']"/>
+              </munit-tools:with-attributes>
+
+              <munit-tools:before-call> //<1>
+                  <munit-tools:assert-that expression="#[payload]" is="#[MunitTools::notNullValue()]"/>
+                  <munit-tools:assert-that expression="#[payload]" is="#[MunitTools::equalTo('Hello World')]"/>
+                  <set-variable variableName="beforeCallKey" value="#['beforeCallValue']"/>
+                  <set-payload value="#['Before Spy Payload']"/>
+              </munit-tools:before-call>
+
+              <munit-tools:after-call> //<2>
+                  <munit-tools:assert-that expression="#[payload]" is="#[MunitTools::notNullValue()]"/>
+                  <munit-tools:assert-that expression="#[payload]" is="#[MunitTools::equalTo('Bye World')]"/>
+                  <set-variable variableName="afterCallKey" value="#['afterCallValue']"/>
+                  <set-payload value="#['After Spy Payload']"/>
+              </munit-tools:after-call>
+          </munit-tools:spy>
+        </munit:behavior>
+
+        <munit:execution>
+            <flow-ref name="testFlow"/> //<3>
+        </munit:execution>
+
+        <munit:validation> //<4>
+            <munit-tools:assert-that expression="#[payload]" is="#[MunitTools::equalTo('Bye World')]"/>
+            <munit-tools:assert-that expression="#[vars.beforeCallKey]" is="#[MunitTools::nullValue()]"/>
+            <munit-tools:assert-that expression="#[vars.afterCallKey]" is="#[MunitTools::nullValue()]"/>
+        </munit:validation>
+    </munit:test>
+
+----
+<3> Inside its' excution scope, the MUnit test calls the flow being tested.
+<4> Inside its' validation scope, the MUnit test validates that none of the variables set in the spy's before-call and after-call scopes exist, and that the payload is still "Bye World" despite the after-call scope changed it to "After Spy Payload".
+
+
+
+== See Also
+
+** link:/munit/v/2.0/message-processors[About MUnit Event Processors]

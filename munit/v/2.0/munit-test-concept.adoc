@@ -1,4 +1,4 @@
-= About MUnit
+= About MUnit Test
 
 The MUnit Test is the basic processor of an MUnit Test Suite. It represents each test scenario you want to try.
 
@@ -7,6 +7,11 @@ The MUnit Test is divided in three scopes:
 [%header,cols="20,80"]
 |===
 |Scope |Description
+
+| Enable Flow Sources
+| The enable-flow-sources scope contains the name of the flows to be enabled. +
+
+
 | Behavior
 | The behavior scope is meant to set all the preconditions before executing the test logic. +
 Mocks and Spies should go in this section.
@@ -24,17 +29,26 @@ All these scopes are optional.
 
 [source, xml, linenums]
 ----
+
 <munit:test name="exampleTest" description="Test to verify scenario 1">>
+
+     <munit:enable-flow-sources>
+         <munit:enable-flow-source value="exampleFlow"/>
+     </munit:enable-flow-sources>
+
      <munit:behavior>
          <munit-tools:mock-when.../>
      </munit:behavior>
+
      <munit:execution>
          <flow-ref name="exampleFlow"/>
      </munit:execution>
+
      <munit:validation>
          <munit-tools:assert-that ...>
      </munit:validation>
  </munit:test>
+
 ----
 
 .A Studio representation of the MUnit Test
@@ -99,10 +113,26 @@ You can add the attribute expectedErrorType and expectException, as shown below:
 </munit:test>
 ----
 
-The attribute expectException expects one of the following:
+* The attribute expectedErrorType expects an error ID that needs to be defined inside the application being tested.
+:: This attribute allows you to validate that a defined error type in your application is thrown. If you define an errorType that does not exists in your application, the test does not run.
++
+[source, xml, linenums]
+----
+<munit:test name="MUnit-test-suite"
+  description="Test Error Type"
+  expectedErrorType="FTP:ILLEGAL_PATH">
+  ...
+</munit:test>
+----
++
+This Error Type test expects that an FTP operation will throw an FTP:ILLEGAL_PATH error. +
+If none of your flows are using using an FTP connector, then the error type is not defined within your application and the test will not run.
++
+[TIP]
+ErrorTypes that belong to the Mule Runtime does not need to be typified. For example, MULE:RETRY_EXHAUSTED can be defined as simply RETRY_EXHAUSTED.
 
-* A literal exception class name (canonical form).
-:: When you provide a literal value, it should take the form of the canonical class name_ of the exception that is expected. In these cases, Mule always throws a `MuleMessagingException`. MUnit validates the provided classname if the underlying cause of the `MuleMessagingException` thrown is of the exact same type.
+* The attribute expectException expects a literal exception class name (canonical form).
+:: When you provide a literal value, it should take the form of the canonical class name of the exception that is expected. In these cases, Mule always throws a `MuleMessagingException`. MUnit validates the provided classname if the underlying cause of the `MuleMessagingException` thrown is of the exact same type.
 +
 [source, xml, linenums]
 ----
@@ -112,38 +142,7 @@ The attribute expectException expects one of the following:
   ...
 </munit:test>
 ----
-
-* An expression.
-:: If you choose to use expressions, Mule itself offers a collection of MEL expressions available using the compatibility module, that simplifies the validations of the exceptions thrown.
 +
-[cols="30,70"]
-|===
-|Name |Description
-
-|`mel:exception.causedBy(exception_type)`
-|Evaluates if the exception was caused by an (instance of) the provided exception type.
-Example: `exception.causedBy(org.mule.example.ExceptionType)`
-
-|`mel:exception.causedExactlyBy(exception_type)`
-|Evaluates if the exception was caused by the specific exception type provided, discarding all other exception types. For example, if the provided exception type is `NullPointerException`, the expression returns true only if the test returns a NullPointerException.
-Example: `exception.causedExactlyBy(org.mule.example.ExceptionType)`
-
-|`mel:exception.causeMatches(<regex>)`
-|Checks the cause exception type name matches the provided regex. Supports any java regex plus, prefix, suffix. Example: `exception.causeMatches(org.mule.example.*)`
-
-|===
-+
-[NOTE]
---
-You can combine any expressions as a boolean expression. For example: +
-`exception.causeMatches('*') && !exception.causedBy(java.lang.ArithmeticException) &&
-!exception.causedBy(org.mule.api.registry.ResolverException)`
---
-+
-This MEL expression is meant to be used with the expressions listed above, but no verification is performed done to avoid other usages. The only contract being enforced is: The MEL expression should return a boolean value. If true, the test is successful.
-+
-If the MEL expression returns something that cannot be cast to a Boolean value, the test fails. +
-
 If you define that your test expects an exception and none is thrown, the test fails immediately.
 
 
