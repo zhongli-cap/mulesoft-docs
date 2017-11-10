@@ -5,12 +5,23 @@
 === compose(Array<String>, Array<String>): String
 
 Compose is a custom interpolator used to replace URL components by the encodeURIComponent result of it.
-Example:
-[source, dataweave]
+
+.Transform
+[source,DataWeave, linenums]
 ----
- compose `http://asd/$(' text to encode ')/text to encode`
-  ==
- 'http://asd/%20text%20to%20encode%20/text to encode'
+%dw 2.0
+import * from dw::core::URL
+output application/json
+---
+{ 'composition': compose `encoding http://asd/$(' text to encode ')/text now` }
+----
+
+.Output
+[source,JSON, linenums]
+----
+{
+  "composition": "encoding http://asd/%20text%20to%20encode%20/text now"
+}
 ----
 
 
@@ -18,7 +29,27 @@ Example:
 
 === decodeURI(String): String
 
-The `decodeURI()` function decodes a Uniform Resource Identifier (URI) previously created by encodeURI or by a similar routine. Replaces each escape sequence in the encoded URI with the character that it represents, but does not decode escape sequences that could not have been introduced by encodeURI. The character `#` is not decoded from escape sequences.
+The `decodeURI()` function decodes a Uniform Resource Identifier (URI) previously created by encodeURI or by a similar routine. Replaces each escape sequence in the encoded URI with the character that it represents, but does not decode escape sequences that could not have been introduced by `encodeURI`. The character `#` is not decoded from escape sequences.
+
+.Transform
+[source,DataWeave, linenums]
+----
+%dw 2.0
+import * from dw::core::URL
+output application/json
+---
+{
+  a: decodeURI('http://asd/%20text%20to%20decode%20/text')
+}
+----
+
+.Output
+[source,JSON, linenums]
+----
+{
+  "a": "http://asd/ text to decode /text"
+}
+----
 
 
 == `decodeURIComponent`
@@ -46,6 +77,27 @@ With the exception of the types in the table below, `encodeURI()` replaces all c
 | Number sign          | #
 |===
 
+.Transform
+[source,DataWeave, linenums]
+----
+%dw 2.0
+import * from dw::core::URL
+output application/json
+---
+{
+  a: encodeURI("http://asd/ text to encode /text ?")
+}
+----
+
+.Output
+[source,JSON, linenums]
+----
+{
+  "a": "http://asd/%20text%20to%20encode%20/text%20?"
+}
+----
+
+
 == `encodeURIComponent`
 
 === encodeURIComponent(String): String
@@ -68,7 +120,37 @@ The `encodeURIComponent()` function encodes a Uniform Resource Identifier (URI) 
 
 === parseURI(String): URI
 
-Parses an URL and returns an URI object. The `isValid: Boolean` property denotes if the parse was succeed. Every field in the URI object is optional, and it will be present only if it was present in the original URL
+Parses an URL and returns a URI object. The `isValid: Boolean` property denotes if the parse was successful. Every field in the URI object is optional, and it will be present only if it was present in the original URL.
+
+.Transform
+[source,DataWeave, linenums]
+----
+%dw 2.0
+import * from dw::core::URL
+output application/json
+---
+{
+  'composition': parseURI('https://en.wikipedia.org/wiki/Uniform_Resource_Identifier#footer')
+}
+----
+
+.Output
+[source,JSON, linenums]
+----
+{
+  "composition": {
+    "isValid": true,
+    "raw": "+https://en.wikipedia.org/wiki/Uniform_Resource_Identifier#footer+",
+    "host": "en.wikipedia.org",
+    "authority": "en.wikipedia.org",
+    "fragment": "footer",
+    "path": "/wiki/Uniform_Resource_Identifier",
+    "scheme": "https",
+    "isAbsolute": true,
+    "isOpaque": false
+  }
+}
+----
 
 == URI Types
 
