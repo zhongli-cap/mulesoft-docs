@@ -1,0 +1,257 @@
+= OAuth
+:keywords: mule, sdk, security, oauth
+
+OAuth is an authentication protocol used by many APIs in order to allow an application to act in behalf of a user
+without the need to actually shared the user's credentials. If you are unfamiliar with the protocol, please visit
+link:https://oauth.net/2/[this link].
+
+The SDK provides supports for building modules which are _OAuth enabled_, which means that they establish connections
+which are authenticated through the OAuth protocol. This allows to hide most of the complexities of the OAuth protocol (which is
+a *VERY* complex one) from the end user, providing a simpler, easier experience which doesn't require to go through the
+learning curve of OAuth.
+
+The OAuth support provided by the SDK is limited to:
+
+* OAuth version 2
+* Only the Authorization grant type is supported at the moment
+
+= Developing an OAuth enabled module
+
+OAuth support is added at the `ConnectionProvider` level by adding the `@AuthorizationCode` annotation.
+
+Let's explain it through an oversimplified `ConnectionProvider` for the Salesforce connector:
+
+[source, java, linenums]
+----
+@AuthorizationCode(
+    authorizationUrl = "https://login.salesforce.com/services/oauth2/authorize",
+    accessTokenUrl = "https://login.salesforce.com/services/oauth2/token")
+public class SalesforceOAuthConnectionProvider<C> implements ConnectionProvider<SalesforceClient> {
+
+   @Parameter
+   @Optional(defaultValue = "34.0")
+   private Double apiVersion;
+
+  /**
+   * Tailors the login page to the user's device type.
+   */
+  @OAuthParameter
+  private String display;
+
+  /**
+   * Avoid interacting with the user
+   */
+  @OAuthParameter
+  @Optional(defaultValue = "false")
+  private boolean immediate;
+
+  /**
+   * Specifies how the authorization server prompts the user for reauthentication and reapproval
+   */
+  @OAuthParameter
+  @Optional(defaultValue = "true")
+  private boolean prompt;
+
+  @OAuthCallbackValue(expression = "#[payload.instance_url]")
+  private String instanceId;
+
+  @OAuthCallbackValue(expression = "#[payload.id]")
+  private String userId;
+
+  private AuthorizationCodeState state;
+
+  @Override
+  public SalesforceClient connect() throws ConnectionException {
+    if (state.getAccessToken() == null) {
+      throw new SalesforceException(MessageFormat.format(COULD_NOT_EXTRACT_FIELD, "accessToken"));
+    }
+
+    if (instanceId == null) {
+      throw new SalesforceException(MessageFormat.format(COULD_NOT_EXTRACT_FIELD, "instanceId"));
+    }
+
+    return new SalesforceClient(state.getAccessToken(), instanceId, apiVersion);
+  }
+
+  public void disconnect(SalesforceClient connection) {
+    connection.close();
+  }
+
+  @Override
+  public ConnectionValidationResult validate(SalesforceClient connection) {
+    return success();
+  }
+}
+----
+
+The class implements `ConnectionProvider`, just like with any other means of connection in the SDK. Therefore, the operations
+authenticated through object will just operate over the `SalesforceClient` object that this provider returns. This is an important
+design consideration, since it allows to decouple the operation from the authentication method used, since the connector could
+very well defined another `ConnectionProvider` which uses plain old basic authentication and all the operations would remain fully
+compatible.
+
+== @AuthorizationCode
+
+This annotation indicates that this connection provider requires an OAuth dance using the Authorization Code grant type.
+
+This annotation has the following attributes:
+
+[source, java, linenums]
+----
+public @interface AuthorizationCode {
+
+  /**
+   * @return The Url of the endpoint which provides the access tokens
+   */
+  String accessTokenUrl();
+
+  /**
+   * @return The url of the authorization endpoint which starts the OAuth dance
+   */
+  String authorizationUrl();
+
+  /**
+   * @return Expression to be used on the response of {@link #accessTokenUrl()} to extract the access token
+   */
+  String accessTokenExpr() default "#[payload.access_token]";
+
+  /**
+   * @return Expression to be used on the response of {@link #accessTokenUrl()} to extract the access token expiration
+   */
+  String expirationExpr() default "#[payload.expires_in]";
+
+  /**
+   * @return Expression to be used on the response of {@link #accessTokenUrl()} to extract the refresh token
+   */
+  String refreshTokenExpr() default "#[payload.refresh_token]";
+
+  /**
+   * @return The default set of scopes to be requested, as a comma separated list. Empty string means no default scopes.
+   */
+  String defaultScopes() default "";
+
+}
+----
+
+== Connection Management strategy
+
+The example provider doesn’t implement any specialization of the `ConnectionProvider` interface, which means that the
+OAuth mechanism is combinable with the other connection management strategies. The connection objects can be pooled,
+cached or created from scratch each time depending on which interface is used (`PoolingConnectionProvider`,
+`CachedConnectionProvider`, `ConnectionProvider`, etc). (For more information on connectivity management please read
+our <<connections#, connectivity reference>>
+
+Be mindful however of the semantics of using the vanilla `ConnectionProvider` interface in this scenario. In a regular
+“non oauth” connection provider, using the vanilla interface means that each time a component requires a connection,
+a new one will be created and it will be destroyed when the component is finished. Although this will remain true for the
+OAuth case, it does not mean that the OAuth dance will be performed again. New connection objects will be created,
+but the same access token will be reused as long as it remains valid.
+
+== Regular Parameters Vs OAuth Parameters
+
+This `ConnectionProvider` can have parameters, just like any other connection provider. However, we’ll now have to
+distinguish between the regular parameters we all know and love, from the concept of `@OAuthParameter`.
+
+`OAuthParameters` are those which will actually be included as custom parameters while performing the OAuth dance. So for
+example, while the apiVersion parameter is something that the connection provider will just use to create the
+SalesforceClient, the immediate parameter is actually sent on the OAuth request to the service provider.
+
+From the module's point of view, they are just another parameter the user will provide a value for.
+You can combine these parameters with `@Optional`, `@Expression` and all the other annotations you can use with the
+traditional `@Parameter` annotation. In the DSL, regular and oauth parameter will appear together. The module's final
+user should doesn't perceive any difference.
+
+=== Request Alias
+
+Some custom oauth parameter could include characters not supported in Java. For example "Api-Key". Since you cannot use "-"
+as part of a field name, the `@OAuthParameter` annotation has an optional parameter called `requestAlias`
+
+For example:
+
+[source, java, linenums]
+----
+@OAuthParameter(requestAlias = "api-key")
+private String apiKey;
+----
+
+== @OAuthCallbackValue
+
+Callback values are extracted from the response that the service provider sends through the OAuth callback. Although most
+service providers will simply return standard stuff like access and refresh tokens, expiration information, etc., some others
+will return additional stuff. In the Salesforce case, they return user and instance ids.
+
+The annotation includes an expression which is applied on the response in order to extract the value. That value is then
+assigned to the field for the connection provider to use. At the moment the `connect()`, `validate()` or `disconnect()` methods
+are invoked, those fields will be set and usable.
+
+== @AuthorizationCodeState
+
+Every `ConnectionProvider` annotated with `AuthorizationCode` *MUST* contain one (and only one) field of type
+`AuthorizationCodeState`.
+
+It’s a simple immutable POJO which contains information regarding the outcome of the OAuth dance. It contains the following
+information:
+
+[source, java, linenums]
+----
+public interface AuthorizationCodeState {
+
+  /**
+   * @return The obtained access token
+   */
+  String getAccessToken();
+
+  /**
+   * @return The obtained refresh token
+   */
+  Optional<String> getRefreshToken();
+
+  /**
+   * @return The id of the user that was authenticated
+   */
+  String getResourceOwnerId();
+
+  /**
+   * @return The access token's expiration. The actual format of it depends on the OAuth provider
+   */
+  Optional<String> getExpiresIn();
+
+  /**
+   * @return The OAuth state that was originally sent
+   */
+  Optional<String> getState();
+
+  /**
+   * @return The url of the authorization endpoint that was used in the authorization process
+   */
+  String getAuthorizationUrl();
+
+  /**
+   * @return The url of the access token endpoint that was used in the authorization process
+   */
+  String getAccessTokenUrl();
+
+  /**
+   * @return The OAuth consumer key that was used in the authorization process
+   */
+  String getConsumerKey();
+
+  /**
+   * @return The OAuth consumer secret that was used in the authorization process
+   */
+  String getConsumerSecret();
+
+  /**
+   * @return The external callback url that the user configured or {@link Optional#empty()} if none was provided
+   */
+  Optional<String> getExternalCallbackUrl();
+}
+----
+
+It is through this object that the provider gains access to the accessToken and other standard information that was obtained
+during the OAuth dance. Going back to the original Salesforce example, you can see how the `connect()` method makes use of
+this POJO in order to create the client.
+
+== Next step
+
+<<oauth-configuring#, Configuring an OAuth enabled module>>

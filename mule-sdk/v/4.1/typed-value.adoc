@@ -1,0 +1,54 @@
+= Typed Values
+:keywords: mule, sdk, operation, source, MIME, MIME Type, Encoding, Typed Value
+
+=== TypedValue<Type>
+
+A common use case for <<operations#, Operations>> and <<sources#, Sources>> is
+to receive, along side of the real value of the Parameter, is the Media Type
+information about it, look the following example:
+
+[source, java, linenums]
+----
+public void receiveContent(InputStream content) {
+  // operation logic
+}
+----
+
+[source, xml, linenums]
+----
+<flow name="mediaTypeFlow">
+    <set-payload value="output application/json --- { key : 'value'}">
+    <cool-extension:receive-content content="#[payload]" />
+</flow>
+----
+
+In the Mule App you can see that you are receiving a `JSON` value, but inside the
+Operation's code is not possible to easily know which is the *MIME Type* and
+*encoding* that represent the `content` parameter value.
+
+==== Using TypedValue Parameters
+
+To be able to retrieve the Media Type information, *MIME Type* and
+*encoding*, you simple need to wrap the parameter type into a `TypedValue<OriginalType>`.
+Look at the following example, using the same Mule Application but using a `TypedValue` parameter.:
+
+.Media type friendly parameter
+[source, java, linenums]
+----
+public void receiveContent(TypedValue<InputStream> content) {
+    DataType dataType = content.getDataType();
+    MediaType mediaType = dataType.getMediaType();
+    boolean streamType = dataType.isStreamType();
+    Long lenght = content.getLength().orElse(-1L);
+
+    InputStream theContent = content.value(); // The proper value
+
+    System.out.println(mediaType);  // application/json; UTF-8
+    System.out.println(streamType); // true
+    System.out.println(lenght);     // 18
+}
+----
+
+The usage of `TypedValue` parameters is highly recommended for use cases
+where the `MIME Type` information is required to communicate with other systems
+that rely on this or to be able how to handle the parameter value.

@@ -1,0 +1,108 @@
+= Best Practices
+:keywords: mule, sdk, best, practices
+
+Here's a summary of the SDK best practices, tips and tricks that we recommend you follow when developing your modules.
+
+== Mind the end-to-end experience
+
+Before publishing your module, try it in Studio and Flow Designer. Makes sure that it provides a good usability and experience.
+A module which works but is hard to use is not complete.
+
+== Module  Java API
+
+The SDK exports by package and not by class, the way that the SDK knows what packages to export is by introspecting each operation
+and sources return and input types and getting its packages. This means that you never want to share a package between an exported
+class and a not exported one.
+
+Said that, the suggested package hierarchy is:
+
+[linenums]
+----
+org.mule.salesforce
+    .api.*
+    .internal.*
+----
+
+Where _api.*_ contains all the classes that are going to be exported and seen by the application (Return Types, Subtypes, Input Types,
+Connection Client interfaces) and _internal.*_ contains all the classes that contains the specific behavior of the module
+(Annotated classes, Connection and Operation implementations).
+
+This way we separate both worlds and get a clear look on what should be exported and what should not.
+
+[TIP]
+You should *ONLY* export packaged defined in your module. *Never* export packaged from other dependency libs
+
+== Types
+
+All types *must* be DataWeave compliant. This means that all exposed types must have an empty constructor and a getter method
+for each field that should be usable.
+
+== @ErrorTypes
+
+* Mule works in terms of errors instead of exceptions. Each operation should declare which errors can be thrown, and each module
+defines its own errors.
+* Use `ModuleException` to wrap an exception and enrich it with a custom error type.
+* Exceptions classes should not be exported in your module.
+
+== Config vs ConnectionProvider
+
+* Config has all the parameters that control how the module works.
+* `ConnectionProvider` has all the parameters needed to generate a connection.
+
+== Expressions
+
+By default, everything accepts expressions. Sometimes it doesn’t have any sense to allow a parameter to be configured with an
+expression, you can disable that option with:
+
+[source, java, linenums]
+----
+@Expression(NOT_SUPPORTED)
+----
+
+== Do not access the MuleContext
+
+The only reason why a module would need access to the `MuleContext` is to obtain certain Runtime services. Use `@Inject` to
+obtain those services instead.
+
+For example, instead of:
+
+[source, java, linenums]
+----
+muleContext.getRegistry().lookupByType(MyClass.class)
+----
+
+use
+
+[source, java, linenums]
+----
+public class MyComponent {
+    @Inject
+    MyClass myClass;
+}
+----
+
+== Transactions
+Non transactional operations should not receive a transactional connection. The SDK will make those operation transactional and in
+in Studio the user will be wrongfully presented with transactional options.
+
+== Use Mule the HTTP client
+
+* Do not use Jersey or similar Http library. Use the Mule HTTP service. That will give you access to all the features of the
+http requester, including non blocking execution.
+* Pay special attention to endpoints which require TLS. Make sure you initialize the `TlsContextFactory` correctly.
+
+== Use Mule the SOAP client
+
+* Do not use CXF or similar library for consuming Web Services. Use the Mule SOAP service. That will give you access to all the features of the
+web service consumer.
+
+== Misc
+
+* Do not use boxed booleans. Only native booleans are allowed. All `boolean` parameters will be considered optional and defaulting to
+`false`. You can use the `@Optional` annotation to change the default of a particular `boolean`, but you can never make it a required
+parameter.
+* Use plural names for `List` or `Array` parameters
+* Remember to use the `@ConfigOverride` whenever you want an operation to override a configuration setting
+* Use `@DefaultEncoding` to obtain the runtime's default encoding
+* `@Nullsafe`: Use it whenever it makes sense to avoid `NullPointerException` problems
+* Dates: do not use `java.util.Date` or `java.util.Calendar`` use Java 8 `java.time.LocalDate` instead
