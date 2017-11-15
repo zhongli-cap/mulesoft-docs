@@ -1,4 +1,5 @@
 = Amazon EC2 Connector
+:keywords: anypoint studio, connector, ec2, amazon ec2, user guide
 
 _Select_
 
@@ -12,9 +13,7 @@ To use the Amazon EC2 Connector, you must have the following:
 
 * Access to Amazon Web Services - EC2.
 * To access AWS with the connector, you need AWS Identity and Access Management (IAM) user account credentials.
-* Anypoint Studio - Enterprise Edition.
-
-*Notes:* If you or your IAM users forget or lose the secret access key, you can create a new access key. 
+* Anypoint Studio version 7.0 (or higher) or Anypoint Mozart Flow Designer.
 
 [[compatibility]]
 === Compatibility
@@ -23,22 +22,17 @@ Amazon EC2 connector is compatible with:
 
 [%header,cols="20a,80a",width=70%]
 |===
-|Application/Service|Version
-|Mule Runtime|3.5.0 or later
-|AWS SDK for Java|1.11.134
-|Java|1.6 and 1.7
-|Anypoint Studio|5.2 or later
+|Application/Service |Version
+|Mule Runtime |4.0.0
+|AWS SDK for Java |1.11.134
+|Java |1.8.0_x
+|Anypoint Studio |7.0 or higher
 |===
 
 [[install]]
 == Install the Connector
 
-. In Anypoint Studio, click the Exchange icon in the Studio taskbar.
-. Click Login in Anypoint Exchange.
-. Search for this connector and click Install.
-. Follow the prompts to install the connector.
-
-When an updated version of a connector is released, Anypoint Studio displays the Updates Available popup in the bottom right corner of Studio. Click the popup and install the new version.
+You can install the connector in Anypoint Studio using the instructions in link:/mule-user-guide/v/4.0/installing-connectors[Installing Connectors].
 
 
 [[config]]
@@ -53,26 +47,25 @@ To use the Amazon EC2 connector in your Mule application, configure a global Am
 . On the Global Mule Configuration Elements screen, click Create.
 . In the Choose Global Type wizard, expand Connector Configuration and select Amazon EC2: Configuration and click Ok.
 +
-image:ec2-config-global-wizard.png[ec2-config-global-wizard]
+image:amazon-ec2-config-global-wizard.png[Global Element Configuration Wizard]
 +
 . Configure the parameters according to instructions below.
 +
 [%header,cols="30a,70a",width=80%]
 |===
-|Parameter|Description
-|Name|Enter a name for the configuration to reference it.
-|Access Key|Alphanumeric text string that uniquely identifies the user who owns the account.
-|Secret Key|Key that plays the role of a password.
-|Try Default AWS Credentials Provider Chain|Checkbox that controls whether temporary credentials should be used.
+|Parameter |Description
+|Name |Enter a name for the configuration to reference it.
+|Access Key |Alphanumeric text string that uniquely identifies the user who owns the account.
+|Secret Key |Key that plays the role of a password.
+|Try Default AWS Credentials Provider Chain |Checkbox that controls whether temporary credentials should be used.
 |===
 +
-In the image above, the placeholder values refer to a configuration file placed in the
-`src` folder of your project. 
-
+In the image above, the placeholder values refer to a configuration file `mule-artifact.properties` placed in the
+`src/main/resources` folder of your project. 
 You can either enter your credentials into the global configuration properties, or reference a configuration file that contains these values. For simpler maintenance and better re-usability of your project, Mule recommends that you use a configuration file. Keeping these values in a separate file is useful if you need to deploy to different environments, such as production, development, and QA, where your access credentials differ. 
-
-. Keep the Pooling Profile and the Reconnection tabs with their default entries.
-. Click Test Connection to confirm that the parameters of your global configuration are accurate, and that Mule is able to successfully connect to your instance of Amazon EC2.
++
+. Keep the Advanced tab which has Reconnection strategy with their default entries.
+. Click Test Connection to confirm that the parameters of your global configuration are accurate, and that Mule is able to successfully connect to your instance of Amazon EC2. 
 . Click OK to save the global connector configurations.
 
 === Configuring With the XML Editor or Standalone
@@ -83,18 +76,16 @@ Ensure that you have included the Amazon EC2 namespaces in your configuration fi
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" 
-xmlns:ec2="http://www.mulesoft.org/schema/mule/ec2" 
-xmlns="http://www.mulesoft.org/schema/mule/core" 
-xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-xmlns:spring="http://www.springframework.org/schema/beans"
-xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-xsi:schemaLocation="http://www.springframework.org/schema/beans 
-http://www.springframework.org/schema/beans/spring-beans-current.xsd
+<mule xmlns:ec2="http://www.mulesoft.org/schema/mule/ec2"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/ec2 http://www.mulesoft.org/schema/mule/ec2/current/mule-ec2.xsd">
-
 <!-- Put your flows and configuration elements here -->
 
 </mule>
@@ -106,28 +97,20 @@ Create a global Amazon EC2 configuration outside and above your flows, using the
 
 [source,xml,linenums]
 ----
-<ec2:config name="Amazon_EC2__Configuration" accessKey="${amazon.accesskey}" 
-     secretKey="${amazon.secretkey}" doc:name="Amazon EC2: Configuration"/>
+<ec2:config name="Amazon_EC2_configuration" doc:name="Amazon EC2 Configuration" >
+	<ec2:basic-connection accessKey="${amazon.accesskey}" secretKey="${amazon.secretkey}" region="${amazon.region}" />
+</ec2:config>
 ----
 
 [[using-the-connector]]
+
+If you or your IAM users forget or lose the secret access key, you can create a new access key. 
+
 == EC2 Connector Operations
-
-
 
 The Amazon EC2 connector supports the following list of operations:
 
-* AMIs Operations
-* Elastic IP Addresses Operations
-* Elastic Network Interfaces  Operations - Amazon VPC
-* Instances Operations
-* Key Pairs Operations
-* Regions and Availability Zones Operations
-* Security Groups Operations
-* Tags Operations
-* Volumes and Snapshots Operations - Amazon EBS
-
-=== AMIs Operations
+AMIs:
 
 * CreateImage
 * DeregisterImage
@@ -136,7 +119,7 @@ The Amazon EC2 connector supports the following list of operations:
 * ModifyImageAttribute
 * ResetImageAttribute
 
-=== Elastic IP Addresses Operations
+Elastic IP Addresses:
 
 * AllocateAddress
 * AssociateAddress
@@ -148,7 +131,7 @@ The Amazon EC2 connector supports the following list of operations:
 * RestoreAddressToClassic
 
 
-=== Elastic Network Interfaces Operations - Amazon VPC
+Elastic Network Interfaces (Amazon VPC):
 
 * AssignIpv6Addresses
 * AssignPrivateIpAddresses
@@ -164,7 +147,7 @@ The Amazon EC2 connector supports the following list of operations:
 * UnassignPrivateIpAddresses
 
 
-=== Instances Operations
+Instances:
 
 * AssociateIamInstanceProfile
 * DescribeIamInstanceProfileAssociations
@@ -187,7 +170,7 @@ The Amazon EC2 connector supports the following list of operations:
 * TerminateInstances
 * UnmonitorInstances
 
-=== Key Pairs Operations
+Key Pairs:
 
 * CreateKeyPair
 * DeleteKeyPair
@@ -195,13 +178,13 @@ The Amazon EC2 connector supports the following list of operations:
 * ImportKeyPair
 
 
-=== Regions and Availability Zones Operations
+Regions and Availability Zones:
 
 * DescribeAvailabilityZones
 * DescribeRegions
 
 
-=== Security Groups Operations
+Security Groups:
 
 * AuthorizeSecurityGroupEgress
 * AuthorizeSecurityGroupIngress
@@ -214,14 +197,14 @@ The Amazon EC2 connector supports the following list of operations:
 * RevokeSecurityGroupIngress
 
 
-=== Tags Operations
+Tags:
 
 * CreateTags
 * DeleteTags
 * DescribeTags
 
 
-=== Volumes and Snapshots Operations - Amazon EBS
+Volumes and Snapshots (Amazon EBS):
 
 * AttachVolume
 * CopySnapshot
@@ -251,18 +234,21 @@ Namespace: `+http://www.mulesoft.org/schema/mule/ec2+`
 
 Schema Location: `+http://www.mulesoft.org/schema/mule/ec2/current/mule-ec2.xsd+`
 
+[TIP]
 If you are manually coding the Mule application in Studio's XML editor or other text editor, paste these into the header of your Configuration XML, inside the `<mule>` tag.
 
 [source, xml,linenums]
 ----
-<mule xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xmlns:ec2="http://www.mulesoft.org/schema/mule/ec2"
-      xsi:schemaLocation="
-               http://www.mulesoft.org/schema/mule/core
-               http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-               http://www.mulesoft.org/schema/mule/ec2
-               http://www.mulesoft.org/schema/mule/ec2/current/mule-ec2.xsd">
+<mule xmlns:ec2="http://www.mulesoft.org/schema/mule/ec2"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/ec2 http://www.mulesoft.org/schema/mule/ec2/current/mule-ec2.xsd">
 
       <!-- here go your global configuration elements and flows -->
 
@@ -278,23 +264,21 @@ If you are coding a Mavenized Mule application, this XML snippet must be include
 <dependency>
     <groupId>org.mule.modules</groupId>
     <artifactId>mule-module-ec2</artifactId>
-    <version>RELEASE</version>
+    <version>2.0.0-rc</version>
+    <classifier>mule-plugin</classifier>
 </dependency>
 ----
-
-In the `<version>` tags, put the desired version number, the word `RELEASE` for the latest release, or `SNAPSHOT` for the latest available version.
-
 
 [[use-cases-and-demos]]
 == Use Cases and Demos
 Listed below are the few common use cases for the connector:
 
-[%autowidth.spread]
+[%autowidth]
 |===
-|Starting an Amazon EC2 instance|By using Amazon EC2, Amazon EBS-backed AMI can be started which you've previously stopped.
-|Stoping an Amazon EC2 instance|By using Amazon EC2, Amazon EBS-backed instance can be stopped.
-|Creating an EBS volume|By using Amazon EC2, an EBS volume can be created which can be attached to an instance in the same Availability Zone.
-|Attaching an EBS volume to an Amazon EC2 instance|By using Amazon EC2, an EBS volume can be attached to a running or stopped Amazon EC2 instance.
+|Starting an Amazon EC2 instance |By using Amazon EC2, Amazon EBS-backed AMI can be started which you've previously stopped.
+|Stoping an Amazon EC2 instance |By using Amazon EC2, Amazon EBS-backed instance can be stopped.
+|Creating an EBS volume |By using Amazon EC2, an EBS volume can be created which can be attached to an instance in the same Availability Zone.
+|Attaching an EBS volume to an Amazon EC2 instance |By using Amazon EC2, an EBS volume can be attached to a running or stopped Amazon EC2 instance.
 |===
 
 [[example-use-case]]
@@ -302,10 +286,11 @@ Listed below are the few common use cases for the connector:
 
 This demo creates an EBS volume that can be attached to an EC2 instance in the same Availability Zone.
 
-image:ec2-create-volume-usecase-flow.png[ec2-create-volume-usecase-flow]
+
+image:amazon-ec2-create-volume-usecase-flow.png[Creating an EBS volume]
 
 . Create a new Mule Project in Anypoint Studio.
-. Add the following properties to the `mule-app.properties` file to hold your Amazon EC2 credentials and place it in the project's `src/main/app` directory.
+. Add the following properties to the `mule-artifact.properties` file to hold your Amazon EC2 credentials and place it in the project's `src/main/resources` directory.
 +
 [source,code,linenums]
 ----
@@ -314,91 +299,92 @@ amazon.secretkey=<Secret Key>
 amazon.region=<Region>
 ----
 +
-. Drag an HTTP connector onto the canvas and configure the following parameters:
+. Drag an HTTP Listner component onto the canvas and configure the following parameters:
 +
-image:ec2-http-props.png[ec2 http props]
+image:amazon-ec2-http-props.png[ec2 HTTP configure properties]
 +
 [%header%autowidth.spread]
 |===
-|Parameter|Value
-|Display Name|HTTP
-|Connector Configuration| If no HTTP element has been created yet, click the plus sign to add a new HTTP Listener Configuration and click OK (leave the values to its defaults).
-|Path|/
+|Parameter |Value
+|Display Name |Listner
+|Extension Configuration | If no HTTP Listner configuration has been created yet, click the plus sign to add a new HTTP Listener Configuration and click OK (Give values "localhost" and "8081" for Host and Port columns).
+|Path |/createVolume
 |===
 +
-. Drag the Amazon EC2 Connector next to the HTTP endpoint component.
+. Drag the Amazon EC2 Connector "Create volume" next to the HTTP Listner component.
 . Configure the EC2 connector by adding a new Amazon EC2 Global Element. Click the plus sign next to the Connector Configuration field.
 .. Configure the global element according to the table below:
 +
 [%header%autowidth.spread]
 |===
-|Parameter|Description|Value
-|Name|Enter a name for the configuration to reference it.|<Configuration_Name>
-|Access Key|Alphanumeric text string that uniquely identifies the user who owns the account.|`${amazon.accesskey}`
-|Secret Key|Key that plays the role of a password.|`${amazon.secretkey}`
-|Region Endpoint|Region to be set for the Amazon EC2 Client.|`${amazon.region}`
+|Parameter |Description |Value
+|Name |Enter a name for the configuration to reference it. |<Configuration_Name>
+|Access Key |Alphanumeric text string that uniquely identifies the user who owns the account. |`${amazon.accesskey}`
+|Secret Key |Key that plays the role of a password. |`${amazon.secretkey}`
+|Region Endpoint |Region to be select from drop down for the Amazon EC2 Client. |USEAST1
 |===
 .. Your configuration should look like this:
 +
-image:ec2-use-case-config.png[ec2 use case config]
+image:amazon-ec2-use-case-config.png[ec2 use case config]
 +
 .. The corresponding XML configuration should be as follows:
 +
 [source,xml]
 ----
-<ec2:config name="Amazon_EC2__Configuration" accessKey="${amazon.accesskey}" secretKey="${amazon.secretkey}" region="${amazon.region}" doc:name="Amazon EC2: Configuration"/>
+<ec2:config name="Amazon_EC2_configuration" doc:name="Amazon EC2 Configuration" >
+<ec2:basic-connection accessKey="${amazon.accesskey}" secretKey="${amazon.secretkey}" region="${amazon.region}" />
+</ec2:config>
 ----
 +
 . Click Test Connection to confirm that Mule can connect with the EC2 instance. If the connection is successful, click OK to save the configurations. Otherwise, review or correct any incorrect parameters, then test again.
-. Back in the properties editor of the Amazon EC2 connector, configure the remaining parameters:
+. Back in the properties editor of the Amazon EC2 Create volume operation, configure the remaining parameters:
 +
 [%header%autowidth.spread]
 |===
-|Parameter|Value
+|Parameter |Value
+|Display Name |Create Volume (or any other name you prefer)
 2+|Basic Settings
-|Display Name|Create Volume (or any other name you prefer)
-|Connector Configuration|Amazon_EC2__Configuration (the reference name to the global element you have created)
-|Operation| Create volume
+|Extenstion Configuration |Amazon_EC2_Configuration (the reference name to the global element you have created)
 2+|General
-|Availability Zone|us-east-1a (or any other availability zone to which you have access)
-|Size|5 (The size of the volume, in GiBs)
-|Volume Type|Standard (the default Volume Type)
+|Availability Zone |us-east-1a (or any other availability zone to which you have access)
+|Size |5 (The size of the volume, in GiBs)
+|Volume Type |Standard (the default Volume Type)
 |===
 +
-image:ec2-create-volume-props.png[ec2-create-volume-props]
+image:amazon-ec2-create-volume-props.png[publish message connector props]
 +
 . Check that your XML looks like this:
 +
 [source,xml]
 ----
-<ec2:create-volume config-ref="Amazon_EC2__Configuration" availabilityZone="us-east-1a"  size="1" doc:name="Create Volume"/>
+<ec2:create-volume config-ref="Amazon_EC2_configuration" availabilityZone="us-east-1a" doc:name="Create volume" size="5"/>
 ----
 +
-. Add a Set Payload transformer after the Amazon EC2 connector to send the response to the client (here, the browser). Configure the SetPayload transformer according to the table below.
+. Add a Set Payload transformer after the Amazon EC2 Create Volume operation to send the response to the client in the browser. Configure the SetPayload transformer according to the table below.
 +
 [%header%autowidth.spread]
 |===
-|Parameter|Value
-|Display Name|Payload (or any other name you prefer)
-|Value|`#[payload.volume.volumeId]` (here we just want to print the volume ID of the EBS volume we created)
+|Parameter |Value
+|Display Name |Set Payload (or any other name you prefer)
+|Value |`#[payload.volume.volumeId]` (to print the volume ID of the EBS volume we created)
 |===
 +
-image:ec2-create-volume-payload.png[ec2 create volume payload transformer]
+image:amazon-ec2-create-volume-payload.png[ec2 create volume payload transformer]
 +
-. Add a Logger component after the Set Payload transformer to print the Volume Id that is being transformed by the Set Payload transformer from the Create Volume operation in the Mule Console. Configure the Logger according to the table below.
+. Add a Logger component after the Set Payload transformer to print the Volume ID that is being transformed by the Set Payload transformer from the Create Volume operation in the Mule Console. Configure the Logger according to the table below.
 +
 [%header%autowidth.spread]
 |===
-|Parameter|Value
-|Display Name|Logger (or any other name you prefer)
-|Message|#[payload]
-|Level|INFO
+|Parameter |Value
+|Display Name |Logger (or any other name you prefer)
+|Message |`#[payload]`
+|Level |INFO
 |===
 +
-image:ec2-create-volume-logger-props.png[ec2 create volume logger props]
+image:amazon-ec2-create-volume-logger-props.png[ec2 create volume logger]
 +
 . Save and Run the project as a Mule Application. Right-click the project in Package Explorer and click Run As > Mule Application.
-. Open a browser and check the response after entering the URL `http://localhost:8081/createVolume`. You should see the generated Volume ID in the browser and the console.
+. Open a browser and check the response after entering the URL `+http://localhost:8081/createVolume+`. You should see the generated Volume ID in the browser and the console.
 
 [[example-code]]
 === Demo Mule Application XML Code
@@ -409,35 +395,33 @@ Paste this code into your XML Editor to quickly load the flow for this example u
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ec2="http://www.mulesoft.org/schema/mule/ec2"
-	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+<mule xmlns:ec2="http://www.mulesoft.org/schema/mule/ec2" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/ec2 http://www.mulesoft.org/schema/mule/ec2/current/mule-ec2.xsd">
-
-	<http:listener-config name="HTTP_Listener_Configuration"
-		host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration" />
-	<ec2:config name="Amazon_EC2__Configuration" accessKey="${amazon.accesskey}" secretKey="${amazon.secretkey}"
-	doc:name="Amazon EC2: Configuration" />
-	<flow name="create-ebs-voume">
-		<http:listener config-ref="HTTP_Listener_Configuration"
-			path="/createVolume" doc:name="HTTP" />
-		<ec2:create-volume config-ref="Amazon_EC2__Configuration"
-			availabilityZone="us-east-1a" size="1" doc:name="Create Volume" />
-		<set-payload value="#[payload.volume.volumeId]" doc:name="Payload" />
-		<logger message="#[payload]" level="INFO" doc:name="Logger" />
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" >
+		<http:listener-connection host="localhost" port="8081" />
+	</http:listener-config>
+	<ec2:config name="Amazon_EC2_configuration" doc:name="Amazon EC2 Configuration" >
+		<ec2:basic-connection accessKey="${amazon.accesskey}" secretKey="${amazon.secretkey}" region="USEAST1" />
+	</ec2:config>
+	<flow name="create-ebs-volume" >
+		<http:listener config-ref="HTTP_Listener_config" path="/createVolume" doc:name="Listener" />
+		<ec2:create-volume config-ref="Amazon_EC2_configuration" availabilityZone="us-east-1a" doc:name="Create volume" size="5"/>
+		<set-payload value="#[payload.volume.volumeId]" doc:name="Set Payload"  />
+		<logger level="INFO" doc:name="Logger" message="#[payload]"/>
 	</flow>
 </mule>
 ----
 
-
-[[demo]]
+[[see-also]]
 == See Also
 
+* Read more about link:/mule-user-guide/v/4.0/anypoint-connectors[Anypoint Connectors].
 * You can download a fully functional example from link:http://mulesoft.github.io/ec2-connector/[Mule Amazon EC2 Connector on github.io].
-* link:https://www.mulesoft.com/legal/versioning-back-support-policy#anypoint-connectors[Connector Support Policy - _Select_].
-* http://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys[AWS documentation].
+* IAM Secret access key information: http://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys[AWS documentatiohttps://mulesoft.github.io/ec2-connector/[EC2 Connector Reference].
++
+There may be some operations not supported by the connector that are provided for AWS http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Operations.html[AWS EC2 Actions]. If you require  additional operations to be supported, see the https://support.mulesoft.com/s/ideas[Support Portal].
+* MuleSoft maintains this connector under the link:https://www.mulesoft.com/legal/versioning-back-support-policy#anypoint-connectors[Connector Support Policy - _Select_].
+* link:/release-notes/amazon-ec2-connector-release-notes[Amazon EC2 Connector Release Notes]
