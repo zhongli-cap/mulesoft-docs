@@ -1,859 +1,458 @@
 = Anypoint MQ Connector Reference
 
-https://www.mulesoft.com/legal/versioning-back-support-policy#anypoint-connectors[_Select_]
++++
+Anypoint MQ is a multi-tenant, cloud messaging service that enables customers to perform advanced asynchronous messaging scenarios between their applications.
++++
 
-*Guide:* link:/connectors/anypoint-mq-connector[Anypoint MQ Connector]
 
-== Global Element Properties - General Tab
+== Configurations
+---
+[[default-subscriber]]
+=== Default Subscriber
 
-The General tab fields are:
 
-[%header,cols="25s,75a"]
+==== Parameters
+
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |===
-|Studio Field |Description
-|Name |Configuration name.
+| Name | Type | Description | Default Value | Required
+|Name | String | The name for this configuration. Connectors reference the configuration with this name. | | x
+| Connection a| <<default-subscriber_connection, Connection>>
+ | The connection types that can be provided to this configuration. | | x
+| Expiration Policy a| <<ExpirationPolicy>> |  +++Configures the minimum amount of time that a dynamic configuration instance can remain idle before the runtime considers it eligible for expiration. This does not mean that the platform will expire the instance at the exact moment that it becomes eligible. The runtime will actually purge the instances when it sees it fit.+++ |  |
+| Acknowledgement Mode a| Enumeration, one of:
 
-Required: Yes +
-Default: None
-|URL |Region URL shown in Anypoint Platform.
-
-Possible values are:
-
-* US East (N. Virginia): +https://mq-us-east-1.anypoint.mulesoft.com/api/v1+
-* US West (Oregon): +https://mq-us-west-2.anypoint.mulesoft.com/api/v1+
-* EU (Ireland): +https://mq-eu-west-1.anypoint.mulesoft.com/api/v1+
-* Asia Pacific (Singapore): +https://mq-ap-southeast-1.anypoint.mulesoft.com/api/v1+
-* Asia Pacific (Sydney): +https://mq-ap-southeast-2.anypoint.mulesoft.com/api/v1+
-
-FIFO queues can reside in US East, US West, and EU Ireland.
-
-Required: Yes +
-Default: None
-|Client App ID |From Anypoint Platform > MQ > Client Apps. Click the app and copy the  Client App ID value.
-
-Required: Yes +
-Default: None
-|Client Secret |From Anypoint Platform > MQ > Client Apps. Click the app and copy the Client Secret value.
-
-Required: Yes +
-Default: None
-|Basic Settings: Acknowledgement Mode |Defines how the Anypoint MQ messages are acknowledged when the message are removed from being inflight messages. If set to the default value of AUTO, this parameter does not appear in the XML flow.
-
-Possible values are:
-
-* AUTO (Default)- Messages are acknowledged or negatively acknowledged depending on whether or not exceptions occur.
-* MANUAL - Messages are acknowledged using a custom ACK message processor.
-* NONE - Messages are acknowledged and removed as soon as they are received.
-
-Required: No +
-Default: AUTO
-|Acknowledgement Timeout |(Basic Settings menu in Studio) When you take an Anypoint MQ message from a queue, the broker puts it in flight, and the message remains in that state until the ACK is performed (application reads the message and Anypoint MQ deletes it), or the Acknowledgement Timeout is reached. If ACK is performed, then the message is removed from the queue, if Acknowledgement Timeout is reached, the message returns to the queue. If set to the default
-value of 0, this parameter does not appear in the XML flow.
-
-Required: No +
-Default: 0
-|Polling Time |(Basic Settings menu in Studio) Maximum time in milliseconds to wait for the expected message or messages. If set to the default value of 10000 (10 seconds), this parameter does not appear in the XML flow.
-
-Required: No +
-Default: 10000 (10 seconds)
-|Max Redelivery |Number of redeliveries
-to try in case a message fails. -1 indicates that Anypoint MQ retries indefinitely. If set to the default value of -1, this parameter does not appear in the XML flow.
-
-Required: No +
-Default: -1
+** IMMEDIATE
+** AUTO
+** MANUAL |  +++Acknowledgement mode to use for the messages retrieved from the subscribers.+++ |  +++AUTO+++ |
+| Acknowledgement Timeout a| Number |  +++Duration that a message is held by a broker waiting for an Acknowledgement or Not Acknowledgement. After that duration elapses, the message is again available to any subscriber.+++ |  +++0+++ |
+| Polling Time a| Number |  +++How much time (milliseconds) to be waited if the requested messages are not ready to be consumed.+++ |  +++1000+++ |
+| Max Redelivery a| Number |  +++Number of redeliveries to try in case message processing fails. To avoid a poison message, the default value is set to -1 (infinite).+++ |  +++-1+++ |
+| Fetch Size a| Number |  +++Number of messages to receive when asking for messages. The response can contain fewer messages than this number depending on the poolingTime set.+++ |  +++10+++ |
+| Fetch Timeout a| Number |  +++Maximum duration in milliseconds to wait for the required amount of messages. If this duration elapses, the response is sent with as many messages as received during the period.+++ |  +++1000+++ |
+| Frequency a| Number |  +++Duration in milliseconds to execute the retrieve operation when the prefetch queue is not empty.+++ |  +++5000+++ |
 |===
 
-== Global Element Properties - Advanced Tab
+==== Connection Types
+[[default-subscriber_connection]]
+===== Connection
 
-[%header,cols="25s,75a"]
+
+====== Parameters
+
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |===
-|Studio Field |Description
-|Connection: Reconnection |Reconnection Strategies specify how a connector behaves when its connection fails.
-|Fails deployment when test connection fails |Indicates whether or not the MQ connector fails if its connection to the backend server fails.
-|Reconnection Strategy |Indicates what to do in the event of a connection failure.
-
-Possible values:
-
-* None - Take no action in the event of failure
-* Standard -
-* Forever - Keep trying to re-establish the connection forever
-|Pooling Profile |Indicates how to handle the pooling profile.
-
-Possible values:
-
-* Use default connection pool configuration
-* Edit inline
-
-If you choose Edit Inline, additional fields appear.
-|Max Active |The maximum number of threads to use.
-
-Required: No +
-Default: None
-|Max Idle |The maximum number of idle or inactive threads that can be in the pool before they are destroyed. The thread pool does not grow from Max Idle Threads towards Max Active Threads unless the queue is completely filled up.
-
-Required: No +
-Default: None
-|Initialisation Policy |Determines how components in a pool should be initialized.
-
-Possible values are:
-
-* INITIALISE_NONE - Does not load components into the pool on startup.
-* INITIALISE_ONE - Loads one initial component into the pool on startup.
-* INITIALISE_ALL - Loads all components in the pool on startup.
-
-Type: enumeration +
-Required: no +
-Default: INITIALISE_ONE
-|Exhausted Action |Specifies the behavior of the Mule component pool when the pool is exhausted.
-
-Possible values are:
-
-* WHEN_EXHAUSTED_FAIL - Throws a NoSuchElementException.
-* WHEN_EXHAUSTED_WAIT - Blocks by invoking Object.wait(long) until a new or idle object is available.
-* WHEN_EXHAUSTED_GROW - Creates a new Mule instance and returns it, essentially making maxActive meaningless. If a positive maxWait value is supplied, it blocks for at most that many milliseconds, after which a NoSuchElementException is thrown. If maxThreadWait is a negative value, it blocks indefinitely.
-
-Type: enumeration +
-Required: no +
-Default: WHEN_EXHAUSTED_GROW
-|Max Wait |Specifies the number of milliseconds to wait for a pooled component to become available when the pool is exhausted and the exhaustedAction is set to WHEN_EXHAUSTED_WAIT.
-
-Type: string +
-Required: no +
-Default: none
-|Eviction Check Interval  |Specifies the number of milliseconds between runs of the object evictor. When non-positive, no object evictor is executed.
-
-Type: string +
-Required: no +
-Default: none
+| Name | Type | Description | Default Value | Required
+| URL a| String |  +++The MQ connector provides the URL depending on queue region. In Anypoint Platform &gt; MQ, you can change your region and copy/paste the new URL into this field."+++ |  +++https://mq-us-east-1.anypoint.mulesoft.com/api/v1+++ |
+| Client App ID a| String |  +++In Anypoint Platform &gt; MQ &gt; Client Apps, click an app name (or create a new app) and click Copy for the Client App ID field. Paste this value in the Studio Client App ID field+++ |  | x
+| Client Secret a| String |  +++In Anypoint Platform &gt; MQ &gt; Client Apps, click an app name (or create a new app) and click Copy for the Client Secret field. Paste this value in the Studio Client Secret field.+++ |  | x
+| Proxy Config a| <<ProxyParameterGroup>> |  |  |
+| TCP Client Socket Properties a| <<TcpClientSocketParameterGroup>> |  |  |
+| TLS Context a| <<Tls>> |  |  |
+| Reconnection a| <<Reconnection>> |  +++When the application is deployed, a connectivity test is performed on all connectors. If set to true, deployment will fail if the test doesn't pass after exhausting the associated reconnection strategy+++ |  |
+| Pooling Profile a| <<PoolingProfile>> |  +++Characteristics of the connection pool+++ |  |
 |===
 
-== About Common XML Elements
+==== Associated Operations
+* <<ack>>
+* <<consume>>
+* <<nack>>
+* <<publish>>
 
-[%header,cols="25s,75a"]
+==== Associated Sources
+* <<subscriber>>
+
+
+== Operations
+
+[[ack]]
+=== Ack
+`<anypoint-mq:ack>`
+
++++
+Executes an Acknowledgement over a given AnypointMQMessageContext indicating that the message has been consumed correctly and deletes the message from In Flight status.
++++
+
+==== Parameters
+
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |===
-|XML Element |Description
-|doc:name |Configuration name.
-
-Required: Yes +
-Default: None +
-XML Example:
-
-[source,xml]
-----
-<anypoint-mq:config name="Anypoint_MQ_Configuration" doc:name="Anypoint MQ Configuration">
-----
-|clientMode |Specifies whether the Anypoint MQ connector uses an improved HTTP client (SYNC, the default)
-or a deprecated HTTP client provided by the Mule Runtime (MULE). The improved HTTP client can
-be either synchronous or asynchronous.
-
-Possible values:
-
-* ASYNC - Require the MQ client to use an asynchronous HTTP client library.
-* SYNC(Default) - Require the MQ client to use a synchronous HTTP client library. This
-value is recommended when using MQ threading profiles.
-* MULE (Deprecated) - The HTTP connector used to communicate with MQ is the Grizzly
-library provided by the Mule Runtime.
-
-Required: No +
-Default: SYNC
-XML Example:
-
-[source,xml]
-----
-<anypoint-mq:config name="Anypoint_MQ_Configuration" clientMode="SYNC" ... />
-----
-|provider |Sets a provider configuration for the current app consisting of the URL, Client App ID, and Client Secret.
-
-Required: Yes +
-Default: None +
-XML Example:
-
-[source,xml]
-----
-<anypoint-mq:provider url="..." clientId="..." clientSecret="..."/>
-----
-|url |Region URL shown in Anypoint Platform.
-
-Possible values are:
-
-* US East (N. Virginia): +https://mq-us-east-1.anypoint.mulesoft.com/api/v1+
-* US West (Oregon): +https://mq-us-west-2.anypoint.mulesoft.com/api/v1+
-* EU (Ireland): +https://mq-eu-west-1.anypoint.mulesoft.com/api/v1+
-* Asia Pacific (Singapore): +https://mq-ap-southeast-1.anypoint.mulesoft.com/api/v1+
-* Asia Pacific (Sydney): +https://mq-ap-southeast-2.anypoint.mulesoft.com/api/v1+
-
-FIFO queues can reside in US East, US West, and EU Ireland.
-
-Required: Yes +
-Default: None
-
-XML Example:
-
-[source,xml]
-----
-<anypoint-mq:provider url="https://mq-us-east-1.anypoint.mulesoft.com/api/v1" .../>
-----
-|clientId |From Anypoint Platform > MQ > Client Apps. Click the app and copy the Client App ID value.
-
-Required: Yes +
-Default: None +
-XML Example:
-
-[source,xml]
-----
-<anypoint-mq:provider url="..." clientId="<id>" clientSecret="..."/>
-----
-|clientSecret |From Anypoint Platform > MQ > Client Apps. Click the app and copy the Client Secret value.
-
-Required: Yes +
-Default: None +
-XML Example:
-
-[source,xml]
-----
-<anypoint-mq:provider url="..." clientId="..." clientSecret="<secret>"/>
-----
-|provider-ref |Sets the URL, Client App ID, and Client Secret for all apps.
-
-Required: No +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<anypoint-mq:config name="..." doc:name="..." maxRedelivery="..." acknowledgementMode="..."
- acknowledgementTimeout="..." pollingTime="..." provider-ref="Provider_Settings">
-----
-|maxRedelivery |Number of redeliveries
-to try in case a message fails. -1 indicates that Anypoint MQ retry indefinitely. If set to the default value of -1, this parameter does not appear in the XML flow.
-
-Required: No +
-Default: -1 +
-XML Example:
-
-[source,xml]
-----
-<anypoint-mq:config name="..." doc:name="..." maxRedelivery="10" ... >
-----
-|acknowledgementMode |Defines how the Anypoint MQ messages are acknowledged when the message are removed from being inflight messages. If set to the default
-value of AUTO, this parameter does not appear in the XML flow.
-
-Possible values are:
-
-* AUTO (Default)- Messages are acknowledged or negatively acknowledged depending on whether or not exceptions occur. * MANUAL - Messages are acknowledged using a custom ACK message processor.
-* NONE - Messages are acknowledged and removed as soon as they are received.
-
-Required: No +
-Default: AUTO +
-XML Example:
-
-[source,xml]
-----
-<anypoint-mq:config ... acknowledgementMode="NONE" acknowledgementTimeout="42" ...>
-----
-|acknowledgementTimeout |When you take an Anypoint MQ message from a queue, the broker puts it in flight, and the message remains in that state until the ACK is performed (application reads the message and Anypoint MQ deletes it), or the Acknowledgement Timeout is reached. If ACK is performed, then the message is removed from the queue, if Acknowledgement Timeout is reached, the message returns to the queue. If set to the default
-value of 0, this parameter does not appear in the XML flow.
-
-Required: No +
-Default: 0 +
-XML Example:
-
-[source,xml]
-----
-<anypoint-mq:config ... acknowledgementMode="NONE" acknowledgementTimeout="42" ...>
-----
-|pollingTime |Maximum time in milliseconds to wait for the expected message or messages. If set to the default value of 10000 (10 seconds), this parameter does not appear in the XML flow.
-
-Required: No +
-Default: 10000 (10 seconds) +
-XML Example:
-
-[source,xml]
-----
-<anypoint-mq:config name="..." doc:name="..." pollingTime="99000">
-----
-|worker-threading-profile |Define threading profile behavior or
- use default worker threading profile. The threading profile options let you optimize connector performance for use with Anypoint MQ.
-
-*Note:* After configuring worker-threading-profile, change the name of the statement to start with anypoint-mq, and switch the order of the statement with the anypoint-mq:provider statement in the anypoint-mq:config block.
-
-This example shows how the finished statements should appear:
-
-[source,xml,linenums]
-----
-<anypoint-mq:config name="Anypoint_MQ_Configuration" doc:name="Anypoint MQ Configuration">
-  <anypoint-mq:provider url="https://mq-us-east-1.anypoint.mulesoft.com/api/v1" clientId="ID" clientSecret="SECRET"/>
-  <anypoint-mq:worker-threading-profile maxThreadsActive="42" maxThreadsIdle="42" threadTTL="4200" threadWaitTimeout="-1"/>
-</anypoint-mq:config>
-----
-
-Required: No +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<http:worker-threading-profile maxThreadsActive="..." maxThreadsIdle="..."
-threadTTL="..." poolExhaustedAction="..." threadWaitTimeout="..."
-maxBufferSize="..."/>
-----
-|maxThreadsActive |The maximum number of threads to use.
-
-Required: No +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<http:worker-threading-profile maxThreadsActive="42" maxThreadsIdle="42"
-threadTTL="..." poolExhaustedAction="..." threadWaitTimeout="..."
-maxBufferSize="..."/>
-----
-|maxThreadsIdle |The maximum number of idle or inactive threads that can be in the pool before they are destroyed.  The thread pool does not grow from Max Idle Threads towards Max Active Threads unless the queue is completely filled up.
-
-Required: No +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<http:worker-threading-profile maxThreadsActive="42" maxThreadsIdle="42"
-threadTTL="..." poolExhaustedAction="..." threadWaitTimeout="..."
-maxBufferSize="..."/>
-----
-|threadTTL |Thread time to live duration in milliseconds.
-
-Required: No +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<http:worker-threading-profile maxThreadsActive="..." maxThreadsIdle="..."
-threadTTL="1000" poolExhaustedAction="..." threadWaitTimeout="..."
-maxBufferSize="..."/>
-----
-|poolExhaustedAction |When the maximum pool size or queue size is bounded, this value determines how to handle incoming tasks.
-
-Possible values are:
-
-* WAIT - Wait until a thread becomes available; don’t use this value if the minimum number of threads is zero, in which case a thread may never become available.
-* DISCARD - Throw away the current request and return.
-* DISCARD_OLDEST - Throw away the oldest request and return.
-* ABORT - Throw a RuntimeException.
-* RUN - The default; the thread making the execute request runs the task itself, which helps guard against lockup.
-
-Required: No +
-Default: RUN +
-XML Example:
-
-[source,xml,linenums]
-----
-<http:worker-threading-profile maxThreadsActive="..." maxThreadsIdle="..."
-threadTTL="..." poolExhaustedAction="DISCARD_OLDEST" threadWaitTimeout="..."
-maxBufferSize="..."/>
-----
-|threadWaitTimeout |Thread wait timeout in milliseconds.
-
-*Type:* Long +
-Required: No +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<http:worker-threading-profile maxThreadsActive="..." maxThreadsIdle="..."
-threadTTL="..." poolExhaustedAction="..." threadWaitTimeout="1000"
-maxBufferSize="..."/>
-----
-|maxBufferSize |Max buffer size.
-
-*Type:* Integer +
-Required: No +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<http:worker-threading-profile maxThreadsActive="..." maxThreadsIdle="..."
-threadTTL="..." poolExhaustedAction="..." threadWaitTimeout="..."
-maxBufferSize="1000"/>
-----
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | x
+| Message Context a| <<AnypointMQMessageContext>> |  +++AnypointMQMessageContext that represents the received message+++ |  | x
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  |
 |===
 
-== About Basic XML Elements
 
-[%header,cols="25s,75a"]
+==== For Configurations
+
+* <<default-subscriber>>
+
+==== Throws
+
+* ANYPOINT-MQ:UNKNOWN
+* ANYPOINT-MQ:RETRY_EXHAUSTED
+* ANYPOINT-MQ:CONNECTIVITY
+* ANYPOINT-MQ:RESOURCE_NOT_FOUND
+
+
+[[consume]]
+=== Consume
+`<anypoint-mq:consume>`
+
+
+==== Parameters
+
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |===
-|XML Element |Description
-|anypoint-mq:<operation> |Operation that this connector instance performs.
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | x
+| Destination a| String |  +++Queue or Exchange name from where to fetch a Message+++ |  | x
+| Acknowledgement Mode a| Enumeration, one of:
 
-Possible values:
-
-* publish - Send a message to a queue or message exchange.
-* consume - Consume a message from a queue.
-* ack - Acknowledge a message, that is, accept a message and delete the message.
-* nack - Negatively acknowledge a message, that is, do not accept a message and return the message to the queue.
-
-Required: Yes +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="demoFlow">
-    <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-    <anypoint-mq:consume config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ"
-    destination="MyQ" acknowledgementMode="NONE" acknowledgementTimeout="42" pollingTime="99000">
-    </anypoint-mq:consume>
-</flow>
-----
-|===
-
-=== About the Studio TLS/SSL and Proxy Tabs
-
-The TSL/SSL and Proxy tabs share the same information as the
-link:/connectors/http-connector[HTTP Connector].
-
-=== About the Studio Prefetch Tab
-
-Lets you set the number of messages to receive at once when asking for messages. The response can contain fewer messages than this number depending on the Polling Time (pollingTime in XML) setting.
-
-When you subscribe a flow to an Anypoint MQ queue, the flow pool regularly polls the queue looking for messages. This operation can be very time consuming. In order to avoid delays, prefetch was introduced. This is a component placed between the flow and the Anypoint MQ queue that polls the queue regularly, but without processing the pooled messages. You can change these values depending on your site's performance and use case needs.
-
-The Prefetch tab fields are:
-
-[%header,cols="25s,75a"]
-|===
-|Value |Description
-|Fetch Size |Number of messages to prefetch. *&#8224;*
-|Fetch Timeout |Maximum duration in milliseconds to wait for the required amount of messages. When this time elapses, the response is sent with as many messages as taken during the period.
-|Frequency |The duration in milliseconds to execute
-the retrieve operation when the prefetch queue is not empty.
+** IMMEDIATE
+** MANUAL |  +++Acknowledgement mode to use for the messages retrieved from this subscriber. Can be only used 'MANUAL' or 'NONE'.+++ |  +++MANUAL+++ |
+| Polling Time a| Number |  +++How much time (milliseconds) to be waited if the requested messages are not ready to be consumed.+++ |  +++10000+++ |
+| Acknowledgement Timeout a| Number |  +++Duration that a message is held by a broker waiting for an Acknowledgement or Not Acknowledgement. After that duration expires, the message is again available to any subscriber.+++ |  +++0+++ |
+| Output Mime Type a| String |  +++The mime type of the payload that this operation outputs.+++ |  |
+| Output Encoding a| String |  +++The encoding of the payload that this operation outputs.+++ |  |
+| Streaming Strategy a| * <<repeatable-in-memory-stream>>
+* <<repeatable-file-store-stream>>
+* <<non-repeatable-stream>> |  +++Configure if repeatable streams should be used and their behavior+++ |  |
+| Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  |
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ |
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  |
 |===
 
-*&#8224;* *Fetch Size Notes*:
+==== Output
 
-* For best performance, set Fetch Size to 10 (maximum value) and reduce Frequency to increase the polling time and the resulting dequeuing of transactions per second (TPS). You can increase Fetch Timeout if message processing is slow. For example, if processing takes 5 seconds, set the Fetch Timeout to at least double this time (10000 milliseconds).
-* If Fetch Size is greater than 1, multiple messages are requested at the same time. This has the effect of launching separate messages though the Mule flow, potentially concurrently, depending on the Mule worker thread configuration.
-* Fetch Size does not guarantee messages process in parallel, some messages may, others do not.
-
-Apart from these performance-related parameters, it is important to properly configure the xref:am[Acknowledgement Mode].
-
-The equivalent XML for the Prefetch default values is:
-
-[source,xml]
-----
-<anypoint-mq:prefetch fetchSize="10" fetchTimeout="1000" frequency="5000"/>
-----
-
-== About Basic Settings
-
-[%header,cols="25s,75a"]
+[cols=".^50%,.^50%"]
 |===
-|Studio Field |Description
-|Operation |Operation that this connector instance performs.
-
-Possible values:
-
-* publish - Send a message to a queue or message exchange.
-* consume - Consume a message from a queue.
-* ack - Acknowledge a message, that is, accept a message and delete the message.
-* nack - Negatively acknowledge a message, that is, do not accept a message and return the message to the queue.
-
-Required: Yes +
-Default: None
+| Type a| Binary
+| Attributes Type a| <<AnypointMQMessageContext>>
 |===
 
-== About Publisher Settings
+==== For Configurations
 
-[%header,cols="25s,75a"]
+* <<default-subscriber>>
+
+==== Throws
+
+* ANYPOINT-MQ:UNKNOWN
+* ANYPOINT-MQ:RETRY_EXHAUSTED
+* ANYPOINT-MQ:CONNECTIVITY
+* ANYPOINT-MQ:RESOURCE_NOT_FOUND
+
+
+[[nack]]
+=== Nack
+`<anypoint-mq:nack>`
+
++++
+Executes an Not Acknowledgement over a given AnypointMQMessageContext and change the status of the message from In Flight to In Queue to be consumed again for a subscriber
++++
+
+==== Parameters
+
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |===
-|Studio Field |Description
-|Destination |Queue or message exchange name.
-
-Required: Yes +
-Default: None
-|Message ID |Optional ID of a message to publish. When publishing to FIFO queues,
-if you specify a custom Message ID and the Message ID is the same on multiple messages, the
-messages with the same Message ID cannot be redelivered. For applications such as those used in transactional use cases where messages need to be processed exactly once, Anypoint MQ supports exactly once delivery of messages when messages are published to FIFO queues. FIFO queues supports deduplication of messages. For example, if you retry sending a message with the same message ID within the 5-minute deduplication interval to a FIFO queue, Anypoint MQ guarantees the messages with the same message ID are retrieved and processed exactly once by the subscriber. When building applications requiring this feature on Anypoint Studio, you can set the message ID in publisher settings inside Anypoint MQ connector. If a message ID is not explicitly set, MQ auto generates a unique message ID for each message that's sent to a queue.
-
-Required: No +
-Default: None
-|Send Outbound Properties |Send properties when publishing.
-
-Required: Yes +
-Default: Checked
-|Send Content Type |Send content type when publishing.
-
-Required: Yes +
-Default: Checked
-|Property |Optional property content to set for publish.
-
-Required: No +
-Default: None
-|Value |Optional value content to set for publish.
-
-Required: No +
-Default: None
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | x
+| Message Context a| <<AnypointMQMessageContext>> |  +++AnypointMQMessageContext that represents the received message+++ |  | x
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  |
 |===
 
-== About Consumer Settings
 
-[%header,cols="25s,75a"]
+==== For Configurations
+
+* <<default-subscriber>>
+
+==== Throws
+
+* ANYPOINT-MQ:UNKNOWN
+* ANYPOINT-MQ:RETRY_EXHAUSTED
+* ANYPOINT-MQ:CONNECTIVITY
+* ANYPOINT-MQ:RESOURCE_NOT_FOUND
+
+
+[[publish]]
+=== Publish
+`<anypoint-mq:publish>`
+
+
+==== Parameters
+
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |===
-|Studio Field |Description
-|Destination |Queue name.
-
-Required: Yes +
-Default: None
-|Acknowledgement Mode |If you use
-the Anypoint MQ connector as a message processor, the operations are MANUAL (default) or NONE. If the MQ connector is used as an entry point, the mode options are From configuration (Default), AUTO, MANUAL, or NONE.
-*Note:* This value overrides the *Acknowledgement Mode* field in the Global Elements Properties Basic Settings.
-
-Required: No +
-Default: MANUAL if connector is a message processor,
-or From configuration if connector is an entry point
-|Acknowledgement Timeout |Duration in milliseconds until the acknowledgement mode
-times out. *Note:* This value overrides the *Acknowledgement Timeout* field in the Global Elements Properties Basic Settings.
-|Polling Time |Duration in milliseconds that the MQ connector polls the queue or message exchange for messages. *Note:* This value overrides the *Polling Time* field in the Global Elements Properties Basic Settings. The default is 10000 milliseconds (10 seconds).
-|Reconnection Wait Time |Duration in milliseconds for how long to wait before MQ attempts to re-establish a connection to the MQ backend server. The default is 3000 milliseconds (3 seconds).
-|Reconnection Attempts |Number of times MQ should attempt to re-establish a connection to the MQ backend server. -1 means try forever.
-|===
-
-== About Subscriber Settings
-
-[%header,cols="25s,75a"]
-|===
-|Studio Field |Description
-|Destination |Queue name.
-
-Required: Yes +
-Default: None
-|Acknowledgement Mode |When the MQ connector is used as an entry point, the mode options are From configuration (Default), AUTO, MANUAL, or NONE.
-
-*Notes:*
-
-* This value overrides the *Acknowledgement Mode* field in the Global Elements Properties Basic Settings.
-* The default value automatically ACKs every message sent to the destination queue.
-
-Required: No +
-Default: From configuration if connector is an entry point
-|Acknowledgement Timeout |Duration in milliseconds until the acknowledgement mode
-times out. *Note:* This value overrides the *Acknowledgement Timeout* field in the Global Elements Properties Basic Settings.
-|Polling Time |Duration in milliseconds that the MQ connector polls a queue for messages. *Note:* This value overrides the Polling Time field in the Global Elements Properties Basic Settings.
-|Reconnection Wait Time |Duration in milliseconds for how long to wait before MQ attempts to re-establish a connection to the MQ backend server. The default is 3000 milliseconds (3 seconds).
-|Reconnection Attempts |Number of times MQ should attempt to re-establish a connection to the MQ backend server. -1 means try forever.
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | x
+| Destination a| String |  +++Queue or Exchange name from where to fetch a Message+++ |  | x
+| Body a| Binary |  +++Body of the message+++ |  +++#[payload]+++ |
+| Message Id a| String |  +++ID of the message to publish+++ |  |
+| Send Content Type a| Boolean |  +++Indicates whether the content type of the Mule Message should be attached or not+++ |  +++true+++ |
+| Properties a| Object |  +++Additional properties to be sent within the message+++ |  |
+| Output Mime Type a| String |  +++The mime type of the payload that this operation outputs.+++ |  |
+| Output Encoding a| String |  +++The encoding of the payload that this operation outputs.+++ |  |
+| Streaming Strategy a| * <<repeatable-in-memory-stream>>
+* <<repeatable-file-store-stream>>
+* <<non-repeatable-stream>> |  +++Configure if repeatable streams should be used and their behavior+++ |  |
+| Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  |
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ |
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  |
 |===
 
-== About Publish XML Elements
+==== Output
 
-[%header,cols="25s,75a"]
+[cols=".^50%,.^50%"]
 |===
-|XML Element |Description
-|destination |Queue or message exchange name.
-
-Required: Yes +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="demoFlow">
-    <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-    <anypoint-mq:consume config-ref="Anypoint_MQ_Configuration"
-     doc:name="Anypoint MQ" destination="MyQ"
-     acknowledgementMode="NONE" acknowledgementTimeout="42"
-     pollingTime="99000">
-    </anypoint-mq:consume>
-</flow>
-----
-|messageId |Optional ID of a message to publish. When publishing to FIFO queues,
-if you specify a custom Message ID and the Message ID is the same on multiple messages, the
-messages with the same Message ID are not redelivered. For applications such as those used in transactional use cases where messages need to be processed exactly once, Anypoint MQ supports exactly once delivery of messages when messages are published to FIFO queues. FIFO queues supports deduplication of messages. For example, if you retry sending a message with the same message ID within the 5-minute deduplication interval to a FIFO queue, Anypoint MQ guarantees the messages with the same message ID are retrieved and processed exactly once by the subscriber. When building applications requiring this feature on Anypoint Studio, you can set the message ID in publisher settings inside Anypoint MQ connector. If a message ID is not explicitly set, MQ auto generates a unique message ID for each message that's sent to a queue.
-
-Required: No +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="demoFlow">
-  <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-  <anypoint-mq:publish config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ" destination="QUEUEorMsgEx">
-      <anypoint-mq:message-builder messageId="4254a4254b4254c4254"
-       sendContentType="false" sendOutboundProperties="false">
-          <anypoint-mq:properties>
-              <anypoint-mq:property propertyName="ThisIsAProperty" value="4254"/>
-          </anypoint-mq:properties>
-      </anypoint-mq:message-builder>
-  </anypoint-mq:publish>
-</flow>
-----
-|sendOutboundProperties |Send properties when publishing.
-
-Required: Yes +
-Default: Checked +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="demoFlow">
-  <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-  <anypoint-mq:publish config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ"
-  destination="QUEUEorMsgEx">
-    <anypoint-mq:message-builder messageId="4254a4254b4254c4254" sendContentType="false"
-       sendOutboundProperties="false">
-     ...
-    </anypoint-mq:message-builder>
-  </anypoint-mq:publish>
-</flow>
-----
-|sendContentType |Send content type when publishing.
-
-Required: Yes +
-Default: Checked +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="demoFlow">
-  <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-  <anypoint-mq:publish config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ"
-  destination="QUEUEorMsgEx">
-    <anypoint-mq:message-builder messageId="4254a4254b4254c4254" sendContentType="false"
-       sendOutboundProperties="false">
-     ...
-    </anypoint-mq:message-builder>
-  </anypoint-mq:publish>
-</flow>
-----
-|propertyName |Optional property content to set for publish.
-
-Required: No +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<anypoint-mq:properties>
-    <anypoint-mq:property propertyName="ThisIsAProperty" value="4254"/>
-</anypoint-mq:properties>
-----
-|value |Optional value content to set for publish.
-
-Required: No +
-Default: None +
-XML Example:
-
-source,xml,linenums]
-----
-<anypoint-mq:properties>
-    <anypoint-mq:property propertyName="ThisIsAProperty" value="4254"/>
-</anypoint-mq:properties>
-----
+| Type a| Binary
+| Attributes Type a| <<AnypointMqMessagePublishAttributes>>
 |===
 
-== About Consume XML Elements
+==== For Configurations
 
-[%header,cols="25s,75a"]
+* <<default-subscriber>>
+
+==== Throws
+
+* ANYPOINT-MQ:UNKNOWN
+* ANYPOINT-MQ:RETRY_EXHAUSTED
+* ANYPOINT-MQ:CONNECTIVITY
+* ANYPOINT-MQ:RESOURCE_NOT_FOUND
+
+
+== Sources
+
+[[subscriber]]
+=== Subscriber
+`<anypoint-mq:subscriber>`
+
++++
+Anypoint MQ Subscriber Message Source, retrieves messages from the given destination name.
++++
+
+==== Parameters
+
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |===
-|XML Element |Description
-|destination |Queue or message exchange name.
-
-Required: Yes +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="demoFlow">
-    <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-    <anypoint-mq:consume config-ref="Anypoint_MQ_Configuration"
-     doc:name="Anypoint MQ" destination="MyQ"
-     acknowledgementMode="NONE" acknowledgementTimeout="42"
-     pollingTime="99000">
-    </anypoint-mq:consume>
-</flow>
-----
-|acknowledgementMode |The modes are MANUAL (default) or NONE.
-
-Required: No +
-Default: MANUAL if connector is a message processor,
-or From configuration if connector is an entry point +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="demoFlow">
-    <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-    <anypoint-mq:consume config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ"
-     destination="ImaQ" acknowledgementMode="NONE" acknowledgementTimeout="42"
-     pollingTime="99000">
-    </anypoint-mq:consume>
-</flow>
-----
-|acknowledgementTimeout |Duration in milliseconds until the acknowledgement mode
-times out.
-
-Required: No +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="demoFlow">
-    <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-    <anypoint-mq:consume config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ"
-     destination="ImaQ" acknowledgementMode="NONE" acknowledgementTimeout="42"
-     pollingTime="99000">
-    </anypoint-mq:consume>
-</flow>
-|pollingTime |Duration in milliseconds that the MQ connector polls the queue or message exchange for messages.
-
-Required: No +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="demoFlow">
-    <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-    <anypoint-mq:consume config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ"
-     destination="ImaQ" acknowledgementMode="NONE" acknowledgementTimeout="42"
-     pollingTime="99000">
-    </anypoint-mq:consume>
-</flow>
-|reconnectionWaitTime |Duration in milliseconds to wait before attempting to reconnect to the MQ backend server.
-
-Required: No +
-Default: 3000 milliseconds (3 seconds) +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="mqAsEndpointFlow">
-    <anypoint-mq:subscriber config-ref="Anypoint_MQ_Configuration" destination="Q1"
-    doc:name="Anypoint MQ" reconnectionAttempts="-1" reconnectionWaitTime="3000"/>
-    <logger message="#[payload]" level="INFO" doc:name="Logger"/>
-</flow>
-----
-|reconnectionAttempts |Number of attempts to make to re-establish a connection to the MQ backend server.
-The -1 default value indicates to retry forever.
-
-Required: No +
-Default: -1 +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="mqAsEndpointFlow">
-    <anypoint-mq:subscriber config-ref="Anypoint_MQ_Configuration" destination="Q1"
-    doc:name="Anypoint MQ" reconnectionAttempts="-1" reconnectionWaitTime="3000"/>
-    <logger message="#[payload]" level="INFO" doc:name="Logger"/>
-</flow>
-----
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | x
+| Destination a| String |  +++Queue name from where to retrieve messages.+++ |  | x
+| Output Mime Type a| String |  +++The mime type of the payload that this operation outputs.+++ |  |
+| Output Encoding a| String |  +++The encoding of the payload that this operation outputs.+++ |  |
+| Redelivery Policy a| <<RedeliveryPolicy>> |  +++Defines a policy for processing the redelivery of the same message+++ |  |
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  |
 |===
 
-== About Subscribe XML Elements
+==== Output
 
-[%header,cols="25s,75a"]
+[cols=".^50%,.^50%"]
 |===
-|XML Element |Description
-|destination |Queue name.
-
-Required: Yes +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="demoFlow">
-    <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-    <anypoint-mq:consume config-ref="Anypoint_MQ_Configuration"
-     doc:name="Anypoint MQ" destination="MyQ"
-     acknowledgementMode="NONE" acknowledgementTimeout="42"
-     pollingTime="99000">
-    </anypoint-mq:consume>
-</flow>
-----
-|acknowledgementMode |The mode options are From configuration (Default), AUTO,
-MANUAL, or NONE. The default mode
-automatically ACKs each message sent to the destination queue.
-
-Required: No +
-Default: MANUAL if connector is a message processor,
-or From configuration if connector is an entry point +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="demoFlow">
-    <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-    <anypoint-mq:consume config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ"
-     destination="ImaQ" acknowledgementMode="NONE" acknowledgementTimeout="42"
-     pollingTime="99000">
-    </anypoint-mq:consume>
-</flow>
-----
-|acknowledgementTimeout |Duration in milliseconds until the acknowledgement mode
-times out.
-
-Required: No +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="demoFlow">
-    <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-    <anypoint-mq:consume config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ"
-     destination="ImaQ" acknowledgementMode="NONE" acknowledgementTimeout="42"
-     pollingTime="99000">
-    </anypoint-mq:consume>
-</flow>
-|pollingTime |Duration in milliseconds that the MQ connector polls a queue for messages.
-
-Required: No +
-Default: None +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="demoFlow">
-    <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
-    <anypoint-mq:consume config-ref="Anypoint_MQ_Configuration" doc:name="Anypoint MQ"
-     destination="ImaQ" acknowledgementMode="NONE" acknowledgementTimeout="42"
-     pollingTime="99000">
-    </anypoint-mq:consume>
-</flow>
-|reconnectionWaitTime |Duration in milliseconds to wait before attempting to reconnect to the MQ backend server.
-
-Required: No +
-Default: 3000 milliseconds (3 seconds) +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="mqAsEndpointFlow">
-    <anypoint-mq:subscriber config-ref="Anypoint_MQ_Configuration" destination="Q1"
-    doc:name="Anypoint MQ" reconnectionAttempts="-1" reconnectionWaitTime="3000"/>
-    <logger message="#[payload]" level="INFO" doc:name="Logger"/>
-</flow>
-----
-|reconnectionAttempts |Number of attempts to make to re-establish a connection to the MQ backend server.
-The -1 default value indicates to retry forever.
-
-Required: No +
-Default: -1 +
-XML Example:
-
-[source,xml,linenums]
-----
-<flow name="mqAsEndpointFlow">
-    <anypoint-mq:subscriber config-ref="Anypoint_MQ_Configuration" destination="Q1"
-    doc:name="Anypoint MQ" reconnectionAttempts="-1" reconnectionWaitTime="3000"/>
-    <logger message="#[payload]" level="INFO" doc:name="Logger"/>
-</flow>
-----
+| Type a| Binary
+| Attributes Type a| <<AnypointMQMessageContext>>
 |===
+
+==== For Configurations
+
+* <<default-subscriber>>
+
+
+
+== Types
+[[ProxyParameterGroup]]
+=== Proxy Parameter Group
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|===
+| Field | Type | Description | Default Value | Required
+| Host a| String |  |  | 
+| Port a| Number |  |  | 
+| Username a| String |  |  | 
+| Password a| String |  |  | 
+|===
+
+[[TcpClientSocketParameterGroup]]
+=== Tcp Client Socket Parameter Group
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|===
+| Field | Type | Description | Default Value | Required
+| Send Buffer Size a| Number |  |  | 
+| Receive Buffer Size a| Number |  |  | 
+| Client Timeout a| Number |  |  | 
+| Send Tcp No Delay a| Boolean |  | true | 
+| Linger a| Number |  |  | 
+| Keep Alive a| Boolean |  | false | 
+| Connection Timeout a| Number |  | 30000 | 
+|===
+
+[[Tls]]
+=== Tls
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|===
+| Field | Type | Description | Default Value | Required
+| Enabled Protocols a| String | A comma separated list of protocols enabled for this context. |  | 
+| Enabled Cipher Suites a| String | A comma separated list of cipher suites enabled for this context. |  | 
+| Trust Store a| <<TrustStore>> |  |  | 
+| Key Store a| <<KeyStore>> |  |  | 
+|===
+
+[[TrustStore]]
+=== Trust Store
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|===
+| Field | Type | Description | Default Value | Required
+| Path a| String | The location (which will be resolved relative to the current classpath and file system, if possible) of the trust store. |  | 
+| Password a| String | The password used to protect the trust store. |  | 
+| Type a| String | The type of store used. |  | 
+| Algorithm a| String | The algorithm used by the trust store. |  | 
+| Insecure a| Boolean | If true, no certificate validations will be performed, rendering connections vulnerable to attacks. Use at your own risk. |  | 
+|===
+
+[[KeyStore]]
+=== Key Store
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|===
+| Field | Type | Description | Default Value | Required
+| Path a| String | The location (which will be resolved relative to the current classpath and file system, if possible) of the key store. |  | 
+| Type a| String | The type of store used. |  | 
+| Alias a| String | When the key store contains many private keys, this attribute indicates the alias of the key that should be used. If not defined, the first key in the file will be used by default. |  | 
+| Key Password a| String | The password used to protect the private key. |  | 
+| Password a| String | The password used to protect the key store. |  | 
+| Algorithm a| String | The algorithm used by the key store. |  | 
+|===
+
+[[Reconnection]]
+=== Reconnection
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|===
+| Field | Type | Description | Default Value | Required
+| Fails Deployment a| Boolean | When the application is deployed, a connectivity test is performed on all connectors. If set to true, deployment will fail if the test doesn't pass after exhausting the associated reconnection strategy |  | 
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> | The reconnection strategy to use |  | 
+|===
+
+[[reconnect]]
+=== Reconnect
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|===
+| Field | Type | Description | Default Value | Required
+| Frequency a| Number | How often (in ms) to reconnect |  | 
+| Count a| Number | How many reconnection attempts to make |  | 
+|===
+
+[[reconnect-forever]]
+=== Reconnect Forever
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|===
+| Field | Type | Description | Default Value | Required
+| Frequency a| Number | How often (in ms) to reconnect |  | 
+|===
+
+[[PoolingProfile]]
+=== Pooling Profile
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|===
+| Field | Type | Description | Default Value | Required
+| Max Active a| Number | Controls the maximum number of Mule components that can be borrowed from a session at one time. When set to a negative value, there is no limit to the number of components that may be active at one time. When maxActive is exceeded, the pool is said to be exhausted. |  | 
+| Max Idle a| Number | Controls the maximum number of Mule components that can sit idle in the pool at any time. When set to a negative value, there is no limit to the number of Mule components that may be idle at one time. |  | 
+| Max Wait a| Number | Specifies the number of milliseconds to wait for a pooled component to become available when the pool is exhausted and the exhaustedAction is set to WHEN_EXHAUSTED_WAIT. |  | 
+| Min Eviction Millis a| Number | Determines the minimum amount of time an object may sit idle in the pool before it is eligible for eviction. When non-positive, no objects will be evicted from the pool due to idle time alone. |  | 
+| Eviction Check Interval Millis a| Number | Specifies the number of milliseconds between runs of the object evictor. When non-positive, no object evictor is executed. |  | 
+| Exhausted Action a| Enumeration, one of:
+
+** WHEN_EXHAUSTED_GROW
+** WHEN_EXHAUSTED_WAIT
+** WHEN_EXHAUSTED_FAIL | Specifies the behavior of the Mule component pool when the pool is exhausted. Possible values are: "WHEN_EXHAUSTED_FAIL", which will throw a NoSuchElementException, "WHEN_EXHAUSTED_WAIT", which will block by invoking Object.wait(long) until a new or idle object is available, or WHEN_EXHAUSTED_GROW, which will create a new Mule instance and return it, essentially making maxActive meaningless. If a positive maxWait value is supplied, it will block for at most that many milliseconds, after which a NoSuchElementException will be thrown. If maxThreadWait is a negative value, it will block indefinitely. |  | 
+| Initialisation Policy a| Enumeration, one of:
+
+** INITIALISE_NONE
+** INITIALISE_ONE
+** INITIALISE_ALL | Determines how components in a pool should be initialized. The possible values are: INITIALISE_NONE (will not load any components into the pool on startup), INITIALISE_ONE (will load one initial component into the pool on startup), or INITIALISE_ALL (will load all components in the pool on startup) |  | 
+| Disabled a| Boolean | Whether pooling should be disabled |  | 
+|===
+
+[[ExpirationPolicy]]
+=== Expiration Policy
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|===
+| Field | Type | Description | Default Value | Required
+| Max Idle Time a| Number | A scalar time value for the maximum amount of time a dynamic configuration instance should be allowed to be idle before it's considered eligible for expiration |  | 
+| Time Unit a| Enumeration, one of:
+
+** NANOSECONDS
+** MICROSECONDS
+** MILLISECONDS
+** SECONDS
+** MINUTES
+** HOURS
+** DAYS | A time unit that qualifies the maxIdleTime attribute |  | 
+|===
+
+[[RedeliveryPolicy]]
+=== Redelivery Policy
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|===
+| Field | Type | Description | Default Value | Required
+| Max Redelivery Count a| Number | The maximum number of times a message can be redelivered and processed unsuccessfully before triggering process-failed-message |  | 
+| Use Secure Hash a| Boolean | Whether to use a secure hash algorithm to identify a redelivered message |  | 
+| Message Digest Algorithm a| String | The secure hashing algorithm to use. If not set, the default is SHA-256. |  | 
+| Id Expression a| String | Defines one or more expressions to use to determine when a message has been redelivered. This property may only be set if useSecureHash is false. |  | 
+| Object Store a| <<ObjectStore>> | The object store where the redelivery counter for each message is going to be stored. |  | 
+|===
+
+[[repeatable-in-memory-stream]]
+=== Repeatable In Memory Stream
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|===
+| Field | Type | Description | Default Value | Required
+| Initial Buffer Size a| Number | This is the amount of memory that will be allocated in order to consume the stream and provide random access to it. If the stream contains more data than can be fit into this buffer, then it will be expanded by according to the bufferSizeIncrement attribute, with an upper limit of maxInMemorySize. |  | 
+| Buffer Size Increment a| Number | This is by how much will be buffer size by expanded if it exceeds its initial size. Setting a value of zero or lower will mean that the buffer should not expand, meaning that a STREAM_MAXIMUM_SIZE_EXCEEDED error will be raised when the buffer gets full. |  | 
+| Max Buffer Size a| Number | This is the maximum amount of memory that will be used. If more than that is used then a STREAM_MAXIMUM_SIZE_EXCEEDED error will be raised. A value lower or equal to zero means no limit. |  | 
+| Buffer Unit a| Enumeration, one of:
+
+** BYTE
+** KB
+** MB
+** GB | The unit in which all these attributes are expressed |  | 
+|===
+
+[[repeatable-file-store-stream]]
+=== Repeatable File Store Stream
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|===
+| Field | Type | Description | Default Value | Required
+| Max In Memory Size a| Number | Defines the maximum memory that the stream should use to keep data in memory. If more than that is consumed then it will start to buffer the content on disk. |  | 
+| Buffer Unit a| Enumeration, one of:
+
+** BYTE
+** KB
+** MB
+** GB | The unit in which maxInMemorySize is expressed |  | 
+|===
+
+[[AnypointMqMessagePublishAttributes]]
+=== Anypoint Mq Message Publish Attributes
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|===
+| Field | Type | Description | Default Value | Required
+| Message Id a| String |  |  | 
+|===
+
