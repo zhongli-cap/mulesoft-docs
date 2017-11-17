@@ -8,14 +8,14 @@ DataWeave recognizes these content types for data inputs and outputs:
 * `application/csv`: CSV
 * `application/dw`: DataWeave (for testing a DataWeave expression).
 * `multipart/form-data`: Form data, for binary or large payloads
-* `application/flatfile`: Flat file
+* `application/flatfile`: Flat file, Cobol copybook, Fixed width file
 * `application/java`: Java
 * `application/json`: JSON
-* `application/octet-stream`
+* `application/octet-stream`: Binary data
 * `application/xml`: XML
 * `application/xlsx`: Excel
 * `application/x-www-form-urlencoded`: URL encoded form data
-* `text/plain`: Cobol copybook, Fixed width file, Plain text
+* `text/plain`: Plain text
 
 [java]
 == Java
@@ -75,7 +75,7 @@ In order to put an enum value in a `java.util.Map`, the DataWeave Java module de
 
 In the Transform component, you can define a Java type through the following methods:
 
-* By Providing a sample object
+* By providing a sample object
 
 [[csv]]
 == CSV
@@ -124,6 +124,7 @@ When defining an input of type CSV, there are a few optional parameters you can 
 |`ignoreEmptyLine` |bool | true | defines if empty lines are ignored
 |`header` |bool |true |Indicates if the first line of the output shall contain field names
 |`headerLineNumber` | number | 0 | the line number where the header is located
+|`streaming` | bool | false | Used for streaming input csv (use only if entries are accessed sequentially)
 |=======================
 
 * When `header=true` you can then access the fields within the input anywhere by name. Ex: `payload.userName`.
@@ -197,7 +198,7 @@ output text/csv separator=";", header=false, quoteValues=true
 
 In the Transform component, you can define a CSV type through the following methods:
 
-* By Providing a sample file
+* By providing a sample file
 * Via a graphical editor that allows you to set up each field manually
 +
 image::dataweave-formats-4a556.png[]
@@ -434,6 +435,7 @@ It can also be structured like this (set with a value of "empty"):
 You can specify whether your transform generates an outbound message that contains fields with "null" values, or if these fields are ignored entirely. This can be set through an attribute in the output directive named `skipNullOn`, which can be set to three different values: `elements`, `attributes`, or `everywhere`.
 
 When set to:
+
 * `elements`: A key:value pair with a null value is ignored.
 * `attributes`: An XML attribute with a null value is skipped.
 * `everywhere`: Apply this rule to both elements and attributes.
@@ -442,7 +444,7 @@ When set to:
 
 In the Transform component, you can define a XML type through the following methods:
 
-* By Providing a sample file
+* By providing a sample file
 * By pointing to a schema file
 
 === Custom Types (for XML)
@@ -518,7 +520,7 @@ When set to:
 
 In the Transform component, you can define a JSON type through the following methods:
 
-* By Providing a sample file
+* By providing a sample file
 * By pointing to a schema file
 
 [[flat_file]]
@@ -552,7 +554,7 @@ These properties can be either set via the XML of your Mule project or through t
 * XML example:
 [source, xml, linenums]
 ----
-<dw:input-payload mimeType="text/plain" >
+<dw:input-payload mimeType="application/flatfile" >
   <dw:reader-property name="schemaPath" value="myschema.esl"/>
   <dw:reader-property name="structureIdent" value="structure1"/>
 </dw:input-payload>
@@ -583,7 +585,7 @@ When defining an output of type flat file there are a few optional parameters yo
 [source,DataWeave,linenums]
 ----
 %dw 2.0
-output text/plain schemaPath="src/main/resources/test-data/QBReqRsp.esl", structureIdent=“QBResponse"
+output application/flatfile schemaPath="src/main/resources/test-data/QBReqRsp.esl", structureIdent="QBResponse"
 ---
 payload
 ----
@@ -627,7 +629,7 @@ These properties can be either set via the XML of your Mule project or through t
 * XML example:
 [source, xml, linenums]
 ----
-<dw:input-payload mimeType="text/plain" >
+<dw:input-payload mimeType="application/flatfile" >
   <dw:reader-property name="schemaPath" value="myschema.ffd"/>
   <dw:reader-property name="structureIdent" value="structure1"/>
 </dw:input-payload>
@@ -655,7 +657,7 @@ When defining an output of type fixed width there are a few optional parameters 
 [source,DataWeave,linenums]
 ----
 %dw 2.0
-output text/plain schemaPath="src/main/resources/test-data/QBReqRsp.esl", encoding="UTF-8"
+output application/flatfile schemaPath="src/main/resources/test-data/QBReqRsp.esl", encoding="UTF-8"
 ---
 payload
 ----
@@ -665,7 +667,7 @@ payload
 // TODO: <<flat file>>
 In the Transform component, you can define a Fixed Width type through the following methods:
 
-* By Providing a sample file
+* By providing a sample file
 * By pointing to a Flat File schema file
 * Via a graphical editor that allows you to set up each field manually
 +
@@ -707,7 +709,7 @@ XML example:
 
 [source, xml, linenums]
 ----
-<dw:input-payload mimeType="text/plain" >
+<dw:input-payload mimeType="application/flatfile" >
   <dw:reader-property name="schemaPath" value="myschema.ffs"/>
   <dw:reader-property name="segmentIdent" value="structure1"/>
 </dw:input-payload>
@@ -739,7 +741,7 @@ When defining an output of type copybook there are a few optional parameters you
 [source,DataWeave,linenums]
 ----
 %dw 2.0
-output text/plain schemaPath="src/main/resources/test-data/QBReqRsp.esl", structureIdent=“QBResponse"
+output application/flatfile schemaPath="src/main/resources/test-data/QBReqRsp.esl", structureIdent="QBResponse"
 ---
 payload
 ----
@@ -752,32 +754,22 @@ In the Transform component, you can define a Fixed Width type through the follow
 
 == URL Encoding
 
-Functions in the `dw::core::URL` module can transform non-URL-encoded text to URL-encoded (`application/x-www-form-urlencoded`) text and back.
+A URL encoded string is mapped to a DataWeave Object
+
+.Input
+[source, url-encoded, linenums]
+----
+key=value&key+1=value%40&key=value+here&key+2%25
+----
 
 .Transform
 [source,DataWeave,linenums]
 ----
-%dw 2.0
-import * from dw::core::URL
-output application/xml
----
 {
-	'myStrings':
-
-	{
-		'encoding': encodeURI(' my text to encode '),
-		'decoding': decodeURI('%20my%20text%20to%20decode%20')
-	}
+  "key" : ["value", "value here"],
+  "key 1": "value@",
+  "key 2%": null
 }
-----
-
-.Output
-----
-<?xml version='1.0' encoding='UTF-8'?>
-<myStrings>
-  <encoding>%20my%20text%20to%20encode%20</encoding>
-  <decoding> my text to decode </decoding>
-</myStrings>
 ----
 
 == See Also
