@@ -6,6 +6,7 @@ You can use this connector in Anypoint Studio by adding it as a dependency in yo
 
 . Open your Mule project in Anypoint Studio.
 . Add the connector as a dependency in the pom.xml file:
++
 [source, linenums]
 ----
 <dependency>
@@ -21,7 +22,7 @@ You can use this connector in Anypoint Studio by adding it as a dependency in yo
 . Drag and drop the connector to the Studio Canvas.
 . Select an authentication mechanism listed on the Global connector configuration. It can be one of the followings:
 +
-[cols="40%,60%",options="header"]
+[%header,cols="40a,60a"]
 |===
 |Configuration |Description
 |Login Authentication |Makes use of the SuiteTalk's login API call on the first request sent by the connector to establish a session with NetSuite.
@@ -35,7 +36,7 @@ You can use this connector in Anypoint Studio by adding it as a dependency in yo
 +
 image:netsuite-loginStudio.png[login authentication]
 +
-[%header,cols="30%,70%"]
+[%header,cols="30a,70a"]
 |===
 |Parameter |Description
 |Name |Enter a name for the configuration with which to reference it later.
@@ -68,7 +69,7 @@ image:netsuite-ssoStudio.png[request based authentication]
 |===
 |Parameter |Description
 |Name |Enter a name for the configuration so it can be referenced later.
-|SSO Library | Add your SSO dependency as a maven dependency format once you click on 'Add dependency' button
+|SSO Library | Add your SSO dependency as a Maven dependency format once you click Add Dependency.
 |Partner Id |Enter the partner ID used in the mapping process.
 |Partner Account |Enter the account ID of the SuiteTalk NetSuite web services.
 |Company ID |Enter the company ID used in the mapping process for the connector to generate a token.
@@ -76,423 +77,170 @@ image:netsuite-ssoStudio.png[request based authentication]
 |Key File |Enter the privateKey file name to pick up from the project. This file should be the .der file generated as per NetSuite’s specifications. This is used to encrypt the company ID and user ID into a token for ssoLogin.
 |Application Id |Enter the application ID corresponding to the Integration record to be used.
 |===
++
 .. Token Authentication
 +
 image:netsuite-tokenStudio.png[request based authentication]
 +
-[%header,cols="30%,70%"]
+[%header,cols="30a,70a"]
 |===
 |Parameter |Description
 |Consumer Key |Enter the consumer key value for the token based authentication enabled integration record being used.
 |Consumer Secret |Enter the consumer secret value for the token based authentication enabled integration record being used.
 |Token ID |Enter the token id representing the unique combination of a user and integration generated within the NetSuite environment.
 |Token Secret |Enter the respective token secret for the user/integration pair.
-|Account |Enter the account ID of the SuiteTalk NetSuite web services. This is usually found within NetSuite sandbox UI under Setup > Integration > Web Service Preferences.
+|Account |Enter the account ID of the SuiteTalk NetSuite web services. This is usually found within NetSuite sandbox UI under Set Up > Integration > Web Service Preferences.
 |Signature algorithm | Type of HMAC signature algorithm
 |===
 
 == Use Case: Studio
 
-=== Add a new Employee record
+== NetSuite RESTlet Use Case
 
-The current use case describes how to create a Mule application to add a new Employee record in NetSuite using Login Authentication.
+This use case shows how to call RESTlets that are deployed in NetSuite instances. 
 
-image:netsuite_flow_add_record.png[Add Record Flow]
+By following these instructions, you can:
 
-. Create a new Mule Project in Anypoint Studio.
-. Create a new HTTP Listener global element configuration and leave it with the default values.
-. Drag a HTTP endpoint onto the canvas and configure the following parameters:
+* Create a customer record.
+* Retrieve a customer record.
+* Delete a record.
+
+=== Prerequisites
+
+* Java 8
+* Anypoint Studio 7.0.x
+* Mule Runtime 4.0.x EE
+* DataWeave 2.0
+* Access to a NetSuite instance with credentials in the `mule-app.properties` file
+
+=== Deploy a Script as a RESTlet
+
+. Create a sample JavaScript script:
 +
-[options="header", width="100%"]
-|===
-|Parameter|Value
-|Connector Configuration| HTTP_Listener_Configuration
-|Path|/addEmployee
-|===
-+
-. Create a new NetSuite: Login Authentication global element configuration and fill with environment values.
-. Click Test to confirm that Mule can connect with the NetSuite instance. If the connection is successful, click OK to save the configuration. Otherwise, review or correct any invalid parameters and test again.
-. Select the NetSuite module and add addRecord operation next to the HTTP and in the Extension Configuration field select the configuration created in the previous section.
-. Configure the operation with the following values:
-+
-[options="header", width="100%"]
-|===
-|Parameter|Value
-|Display Name |Add record (or any other name you prefer)
-|Extension configuration |NetSuite_Config (name of the global element you have created)
-|Record Type |EMPLOYEE
-|===
-+
-. Drag a Transform Message component before the NetSuite connector, then click the component to open its properties editor. Once metadata has been retrieved, select the respective fields to populate for the Employee. The Transform script should look similar to the following:
-+
-[source,dataweave,linenums]
+[source,javascript,linenums]
 ----
-%dw 2.0
-output application/java
----
+// Get a standard NetSuite record
+function getRecord(datain)
 {
-	firstName: attributes.queryParams.firstName,
-	lastName: attributes.queryParams.lastName,
-    subsidiary: {
-        internalId: attributes.queryParams.internalId
-    } as Object {class: "org.mule.module.netsuite.extension.api.RecordRef"}
+    return nlapiLoadRecord(datain.recordtype, datain.id); 
+    // for example, recordtype="customer", id="769"
+}
+
+// Create a standard NetSuite record
+
+function createRecord(datain)
+{
+    var err = new Object();
+
+    // Validate if mandatory record type is set in the request
+    if (!datain.recordtype)
+    {
+        err.status = "failed";
+        err.message= "missing recordtype";
+        return err;
+    }
+
+    var record = nlapiCreateRecord(datain.recordtype);
+
+    for (var fieldname in datain)
+    {
+      if (datain.hasOwnProperty(fieldname))
+      {
+        if (fieldname != 'recordtype' && fieldname != 'id')
+        {
+          var value = datain[fieldname];
+            if (value && typeof value != 'object') 
+            // ignore other type of parameters
+            {
+              record.setFieldValue(fieldname, value);
+            }
+        }
+      }
+    }
+    var recordId = nlapiSubmitRecord(record);
+    nlapiLogExecution('DEBUG','id='+recordId);
+    var nlobj = nlapiLoadRecord(datain.recordtype,recordId);
+    return nlobj;
+}
+
+// Delete a standard NetSuite record
+function deleteRecord(datain)
+{
+  nlapiDeleteRecord(datain.recordtype, datain.id); 
+  // for example: recordtype="customer", id="769"
+
 }
 ----
 +
-. Add a Transform Message right after the NetSuite endpoint to capture the response and configure it for transform Object to JSON values.
-. Save and Run as Mule Application.
-. To test the application:
-.. From a web browser, enter the employee's internalId, fist name, and last name in the form of the following query parameters:
+. Enable SuiteScript and web services in your account. Log into NetSuite and click Set Up > Company > Enable Features > SuiteCloud.
 +
-[source, linenums]
+image:netsuite-enable-suitescript.png[Enable SuiteScript]
++
+. Create a new script and upload the file created before. Go to Customization > Scripting > Scripts > New.
+. Pick the script file, click Create Script Record, and select RESTlet.
++
+image:netsuite-script-type.png[Select Script Type]
++
+. Fill out the form using the content of the script you uploaded, and deploy the script.
++
+image:netsuite-setup-script.png[Setup Script]
++
+. After selecting your audience you see the following page. Take note of the script and deploy numbers in the external URL since you  need them to call the RESTlet.
++
+image:netsuite-script-deployment.png[Script Deployment]
+
+=== Import the Project
+
+* Go to File > Import.
+* Select Anypoint Studio Project from External Location under the Anypoint Studio parent folder.
+* Provide the root path to the demo project folder.
+* Select Mule Runtime (4.0.x EE) or later.
+* Click Finish.  
+* Configure the credentials, as well as the deployed script and deploy IDs, inside the file `src/main/resources/mule-app.properties`.
++
+[source,javascript,linenums]
 ----
-http://localhost:8081/addEmployee?fistName=<FIRST_NAME>&lastname=<LAST_NAME>&name=<FIRST_NAME>&internalId=<INTERNAL_ID>
+netsuite.email=
+netsuite.password=
+netsuite.account=
+netsuite.roleId=
+netsuite.applicationId=
+netsuite.subsidiary=
+netsuite.script=
+netsuite.deploy=
 ----
 +
-.. Mule conducts the query, and adds the Employee record to NetSuite.
+. Open the Global Element Configuration.
+. Click the Test Connection button to ensure there is connectivity with the sandbox.
++
+Test Connection is a crucial step. If you experience connectivity issues, you won't be able to execute any part of this use case, nor make use of DataSense.
++
+. A successful message should pop-up.
++
+image:netsuite-demo-connection-test.png[Test Connection]
++
+. Open a browser and access the URL `+http://localhost:8081+`. You should see the application deployed:
++
+image:netsuite-demo-main-page.png[Demo Index]
 
-== Use Case: XML
+=== About the flows
 
-[source, linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:netsuite="http://www.mulesoft.org/schema/mule/netsuite" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/netsuite http://www.mulesoft.org/schema/mule/netsuite/current/mule-netsuite.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
-   <configuration-properties file="mule-app.properties" doc:name="Configuration properties" />
-   <http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="7ab4c27b-8bb3-4dc8-bb1c-7633518a5a3b">
-      <http:listener-connection host="0.0.0.0" port="8081" />
-   </http:listener-config>
-   <netsuite:config name="NetSuite_Config" doc:name="NetSuite Config" doc:id="87f030c9-adb0-449b-83fe-024ab5144f1d">
-      <netsuite:login-authentication-connection email="${netsuite.email}" password="${netsuite.password}" account="${netsuite.account}" roleId="${netsuite.roleid}" applicationId="${netsuite.applicationId}" />
-   </netsuite:config>
-   <flow name="testFlow" doc:id="1e5e1844-9cf3-4184-91f2-9aee21c0e4a2">
-      <http:listener config-ref="HTTP_Listener_config" path="/addEmployee" doc:name="Listener" doc:id="e9c20950-b63a-471c-93cb-938200d72eeb" />
-      <ee:transform doc:name="Transform Message" doc:id="11989e2b-67be-42f1-88b4-25c97757f28c">
-         <ee:message>
-            <ee:set-payload><![CDATA[%dw 2.0
-output application/java
----
-{
-	firstName: attributes.queryParams.firstName,
-	lastName: attributes.queryParams.lastName,
-    subsidiary: {
-        internalId: attributes.queryParams.internalId
-    } as Object {class: "org.mule.module.netsuite.extension.api.RecordRef"}
-}]]></ee:set-payload>
-         </ee:message>
-      </ee:transform>
-      <netsuite:add-record config-ref="NetSuite_Config" doc:name="Add record" doc:id="bbbf6e3e-6ab7-454b-b5e1-3cdc944f8719" recordType="EMPLOYEE" />
-      <ee:transform doc:name="Object to JSON" doc:id="5c5e8f91-6f44-413e-9c05-366109d4fed1">
-         <ee:message>
-            <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-payload]]></ee:set-payload>
-         </ee:message>
-      </ee:transform>
-   </flow>
-</mule>
-----
+. html-form-flow: Renders the HTML form with a `parseTemplate` component.
++
+image:netsuite-html-form-flow.png[Flow HMTL Form]
++
+. restletGet: Calls the GET function of a RESTlet.
++
+image:netsuite-restlet-get.png[Flow HMTL Form]
++
+. restletPost: Calls the POST function of a RESTlet.
++
+image:netsuite-restlet-post.png[Flow Processor 1]
++
+. restletDelete: Calls the DELETE function of a RESTlet.
++
+image:netsuite-restlet-delete.png[Flow Processor 1]
 
-== Search Operation Tips
-
-In NetSuite, the `search` operation can be used to execute a Basic Search, Joined Search or an Advanced Search. To this end, you need to instantiate one of these three search types for the record type you want to query:
-
-[cols="30%,70%"]
-|===
-|`<Record>SearchBasic`|Used to execute a search on a record type based on search filter fields that are specific to that type.
-|`<Record>Search` +
-|Used to execute a search on a record type based on search filter fields specific to that type and others that are associated with a related record type.
-|`<Record>SearchAdvanced` +
-|Used to execute a search on a record type in which you specify search filter fields and/or search return columns or joined search columns. Using advanced search, you can also return an existing saved search.
-|===
-
-This also applies for the asynchronous equivalent of search, the `asyncSearch` operation.
-
-=== ItemSearchAdvanced and ReturnSearchColumns
-
-When using `search` the connector will output a list of maps representing the Record objects returned by your `search` operation. If using an advanced search and the `returnSearchColumns` flag is set to true, NetSuite will return a `SearchRowList` containing the search results. The connector would then be responsible for mapping `SearchRows` into the corresponding `Record` type object in order to facilitate usability.
-
-However, in the case of `ItemSearchAdvanced` the connector will not do this mapping and will simply provide the user with the SearchRows. This is the case due to the fact that ITEMs in NetSuite can be of various types and we cannot assume the item type from an `ItemSearchRow`. This issue would also occur with any other record type that behaves similar to `ITEM`, but we are currently not aware of others.
-
-=== Entity Fields
-
-[%header,cols="30%,70%"]
-|===
-|Record Type |Custom Field Placement
-|CONTACT |Contact > customFieldList > customField
-|CUSTOMER |Customer > customFieldList > customField
-|EMPLOYEE |Employee > customFieldList > customField
-|ENTITY_GROUP |EntityGroup > customFieldList > customField
-|PARTNER |Partner > customFieldList > customField
-|PROJECT_TASK |ProjectTask > customFieldList > customField
-|VENDOR |Vendor > customFieldList > customField
-|===
-
-=== Item Fields
-
-[%header,cols="30%,70%"]
-|===
-|Record Type |Custom Field Placement
-|ASSEMBLY_ITEM |AssemblyItem > customFieldList > customField
-|ENTITY_GROUP |EntityGroup > customFieldList > customField
-|INVENTORY_ITEM |InventoryItem > customFieldList > customField
-|KIT_ITEM |KitItem > customFieldList > customField
-|NON_INVENTORY_PURCHASE_ITEM |NonInventoryPurchaseItem > customFieldList > customField
-|NON_INVENTORY_RESALE_ITEM |NonInventoryResaleItem > customFieldList > customField
-|NON_INVENTORY_SALE_ITEM |NonInventorySaleItem > customFieldList > customField
-|OTHER_CHARGE_PURCHASE_ITEM |OtherChargePurchaseItem > customFieldList > customField
-|OTHER_CHARGE_RESALE_ITEM |OtherChargeResaleItem > customFieldList > customField
-|OTHER_CHARGE_SALE_ITEM |OtherChargeSaleItem > customFieldList > customField
-|SERVICE_PURCHASE_ITEM |ServicePurchaseItem > customFieldList > customField
-|SERVICE_RESALE_ITEM |ServiceResaleItem > customFieldList > customField
-|SERVICE_SALE_ITEM |ServiceSaleItem > customFieldList > customField
-|===
-
-=== CRM Fields
-
-[%header,cols="30%,70%"]
-|===
-|Record Type |Custom Field Placement
-|CALENDAR_EVENT |CalendarEvent > customFieldList > customField
-|CAMPAIGN |Campaign > customFieldList > customField
-|ISSUE |Issue > customFieldList > customField
-|MANUFACTURING_OPERATION_TASK |ManufacturingOperationTask > customFieldList > customField
-|PHONE_CALL |PhoneCall > customFieldList > customField
-|PROJECT_TASK |ProjectTask > customFieldList > customField
-|SOLUTION |Solution > customFieldList > customField
-|SUPPORT_CASE |SupportCase > customFieldList > customField
-|TASK |Task > customFieldList > customField
-|===
-
-=== Transaction Body Fields
-
-[%header,cols="30%,70%"]
-|===
-|Record Type |Custom Field Placement
-|ASSEMBLY_BUILD |AssemblyBuild > customFieldList > customField
-|CASH_SALE |CashSale > customFieldList > customField
-|CUSTOMER_PAYMENT |CustomerPayment > customFieldList > customField
-|DEPOSIT |Deposit > customFieldList > customField
-|ESTIMATE |Estimate > customFieldList > customField
-|EXPENSE_REPORT |ExpenseReport > customFieldList > customField
-|INVENTORY_ADJUSTMENT |InventoryAdjustment > customFieldList > customField
-|INVOICE |Invoice > customFieldList > customField
-|ITEM_FULFILLMENT |ItemFulfillment > customFieldList > customField
-|ITEM_RECEIPT |ItemReceipt > customFieldList > customField
-|JOURNAL_ENTRY |JournalEntry > customFieldList > customField
-|OPPORTUNITY |Opportunity > customFieldList > customField
-|PURCHASE_ORDER |PurchaseOrder > customFieldList > customField
-|PURCHASE_REQUISITION |PurchaseRequisition > customFieldList > customField
-|SALES_ORDER |SalesOrder > customFieldList > customField
-|TRANSFER_ORDER |TransferOrder > customFieldList > customField
-|VENDOR_BILL |VendorBill > customFieldList > customField
-|VENDOR_CREDIT |VendorCredit > customFieldList > customField
-|VENDOR_PAYMENT |VendorPayment > customFieldList > customField
-|VENDOR_RETURN_AUTHORIZATION |VendorReturnAuthorization > customFieldList > customField
-|WORK_ORDER |WorkOrder > customFieldList > customField
-|===
-
-=== Transaction Column Fields
-
-[%header,cols="30%,70%"]
-|===
-|Record Type |Custom Field Placement
-|CASH_SALE |CashSale > itemList > item > customFieldList > customField
-|ESTIMATE |Estimate > itemList > item > customFieldList > customField
-|EXPENSE_REPORT |ExpenseReport > expenseList > expense > customFieldList > customField
-|INVOICE |Invoice > itemList > item > customFieldList > customField
-|ITEM_FULFILLMENT |ItemFulfillment > itemList > item > customFieldList > customField
-|ITEM_RECEIPT |ItemReceipt > itemList > item > customFieldList > customField
-|JOURNAL_ENTRY |JournalEntry > lineList > line > customFieldList > customField
-|OPPORTUNITY |Opportunity > itemList > item > customFieldList > customField
-|PURCHASE_ORDER |PurchaseOrder > itemList > item > customFieldList > customField
-|PURCHASE_REQUISITION |PurchaseRequisition > itemList > item > customFieldList > customField
-|SALES_ORDER |SalesOrder > itemList > item > customFieldList > customField
-|TIME_BILL |TimeBill > customFieldList > customField
-|TRANSFER_ORDER |TransferOrder > itemList > item > customFieldList > customField
-|VENDOR_BILL |VendorBill > itemList > item > customFieldList > customField
-|VENDOR_CREDIT |VendorCredit > itemList > item > customFieldList > customField
-|VENDOR_PAYMENT |VendorPayment > itemList > item > customFieldList > customField
-|VENDOR_RETURN_AUTHORIZATION |VendorReturnAuthorization > itemList > item > customFieldList > customField
-|WORK_ORDER |WorkOrder > itemList > item > customFieldList > customField
-|===
-
-=== Other Custom Fields
-
-[%header,cols="30%,70%"]
-|===
-|Record Type |Custom Field Placement
-|ACCOUNT |Account > customFieldList > customField
-|BIN |Bin > customFieldList > customField
-|CLASSIFICATION |Classification > customFieldList > customField
-|EXPENSE_CATEGORY |ExpenseCategory > customFieldList > customField
-|ITEM_DEMAND_PLAN |ItemDemandPlan > customFieldList > customField
-|ITEM_SUPPLY_PLAN |ItemSupplyPlan > customFieldList > customField
-|LOCATION |Location > customFieldList > customField
-|MANUFACTURING_COST_TEMPLATE |ManufacturingCostTemplate > customFieldList > customField
-|MANUFACTURING_ROUTING |ManufacturingRouting > customFieldList > customField
-|NOTE |Note > customFieldList > customField
-|PROMOTION_CODE |PromotionCode > customFieldList > customField
-|SUBSIDIARY |Subsidiary > customFieldList > customField
-|===
-
-== To Make RESTlet Calls
-
-NetSuite RESTlets allow you to develop custom RESTful web services for your NetSuite account using JavaScript and SuiteScript.
-The example calls a script deployed as a RESTlet via the GET method. Here, we are attempting to get the CUSTOMER record with id = 700 using the RESTlet with script = 546 and deploy = 1.
-
-// image:netsuite_flow_restlet_calls.png[RESTlet Calls Flow]
-
-[source,xml,linenums]
-----
-<flow name="restletGet">
-    <http:listener config-ref="HTTP_Listener_Configuration" path="/get" doc:name="/get"/>
-    <dw:transform-message doc:name="Transform GET Input">
-        <dw:set-payload><![CDATA[%dw 1.0
-%output application/java
----
-{
-"id": "700",
-"recordtype": "customer"
-}]]></dw:set-payload>
-    </dw:transform-message>
-    <netsuite:call-restlet-get config-ref="NetSuite__Request_Level_Authentication" deploy="1" script="546" doc:name="NetSuite RESTlet (GET)"/>
-    <json:object-to-json-transformer doc:name="Map to JSON"/>
-    <logger level="INFO" doc:name="Logger"/>
-</flow>
-----
-
-== To Use DataWeave
-
-The NetSuite connector’s DataSense capability coupled with that of DataWeave via the Transform Message component makes integrating with your NetSuite environment straightforward. For the following two examples, we use a JSON input string and extract the necessary data from it to form our NetSuite request.
-
-This example code adds a Journal Entry to NetSuite from the following JSON input:
-
-[source,dataweave,linenums]
-----
-{
-   "tranId":"SampleJournal123",
-   "subsidiary":{
-      "internalId":"1"
-   },
-   "customFieldList":{
-      "customField":[
-         {
-            "StringCustomFieldRef__custbodytestbodyfield":"Sample Transaction Body Custom Field"
-         }
-      ]
-   },
-   "lineList":{
-      "line":[
-         {
-            "account":{
-               "internalId":"1"
-            },
-            "debit":100.0,
-            "customFieldList":{
-               "customField":[
-                  {
-                     "SelectCustomFieldRef__custcol_far_trn_relatedasset":{
-                         "internalId":"1"
-                     }
-                  },
-                  {
-                     "StringCustomFieldRef__custcoltestcolumnfield": "Sample Transaction Column Custom Field 1"
-                  }
-               ]
-            }
-         },
-         {
-            "account":{
-               "internalId":"1"
-            },
-            "credit":100.0,
-            "customFieldList":{
-               "customField":[
-                  {
-                     "SelectCustomFieldRef__custcol_far_trn_relatedasset":{
-                         "internalId":"2"
-                     }
-                  },
-                  {
-                     "StringCustomFieldRef__custcoltestcolumnfield": "Sample Transaction Column Custom Field 2"
-                  }
-               ]
-            }
-         }
-      ]
-   }
-}
-----
-
-
-The add operation for the connector expects a Map as input. The following DataWeave script can be added to the Transform Message DataWeave editor:
-
-[source,dataweave,linenums]
-----
-%dw 1.0
-%output application/java
----
-{
-	customFieldList: payload.customFieldList,
-	lineList: payload.lineList,
-	subsidiary: payload.subsidiary,
-	tranId: payload.tranId
-}
-----
-
-This example uses the same scenario for basic search as described in the previous section. However, instead of constructing the criteria in a Java component, it transforms a JSON string:
-
-
-[source,dataweave,linenums]
-----
-{
-   "companyName": {
-      "operator": "STARTS_WITH",
-      "searchValue": "A"
-   },
-   "isPerson": false,
-   "priority": {
-      "operator": "EQUAL_TO",
-      "searchValue": 50
-   }
-}
-----
-
-The DataWeave script can be added to the Transform Message DataWeave editor:
-
-[source,dataweave,linenums]
-----
-%dw 1.0
-%output application/java
----
-{
-	customFieldList: {
-		customField: [{
-			scriptId: "custentity_cust_priority",
-			operator: payload.priority.operator,
-			searchValue: payload.priority.searchValue
-		} as :object {
-			class : "com.netsuite.webservices.platform.core.SearchLongCustomField"
-		}]
-	} as :object {
-		class : "com.netsuite.webservices.platform.core.SearchCustomFieldList"
-	},
-	companyName: {
-		operator: payload.companyName.operator,
-		searchValue: payload.companyName.searchValue
-	} as :object {
-		class : "com.netsuite.webservices.platform.core.SearchStringField"
-	},
-	isPerson: {
-		searchValue: payload.isPerson
-	} as :object {
-		class : "com.netsuite.webservices.platform.core.SearchBooleanField"
-	}
-} as :object {
-	class : "com.netsuite.webservices.platform.common.CustomerSearchBasic"
-}
-----
 
 == See Also
 
