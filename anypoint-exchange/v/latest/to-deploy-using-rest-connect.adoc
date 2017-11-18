@@ -170,3 +170,97 @@ You can also add an OAS file through API Designer in Design Center. API Designer
 
 REST Connect generates metadata for each operation based on your schema definition in the request and response for each method in your RAML. REST Connect cannot generate metadata based on examples in the RAML.
 
+== Use OAuth2 in Design Center
+
+. Define an API with OAuth2 - Authorization Code and one operation in Design Center. You can use the following Github API example:
++
+[source,xml,linenums]
+----
+#%RAML 1.0
+version: v1
+title: Github API
+baseUri: https://api.github.com
+
+securitySchemes:
+ oauth_2_0:
+   description: |
+     OAuth2 is a protocol that lets external apps request authorization to private details 
+     in a user's GitHub account without getting their password. This is preferred over 
+     Basic Authentication because tokens can be limited to specific types of data, 
+     and can be revoked by users at any time.
+   type: OAuth 2.0
+   describedBy:
+     headers:
+       Authorization:
+         description: |
+           Used to send a valid OAuth 2 access token.
+     responses:
+       404:
+         description: Unauthorized
+   settings:
+     authorizationUri: https://github.com/login/oauth/authorize
+     accessTokenUri: https://github.com/login/oauth/access_token
+     authorizationGrants: [ authorization_code ]
+     scopes:
+       - "user"
+       - "user:email"
+       - "user:follow"
+       - "public_repo"
+       - "repo"
+       - "repo_deployment"
+       - "repo:status"
+       - "delete_repo"
+       - "notifications"
+       - "gist"
+       - "read:repo_hook"
+       - "write:repo_hook"
+       - "admin:repo_hook"
+       - "admin:org_hook"
+       - "read:org"
+       - "write:org"
+       - "admin:org"
+       - "read:public_key"
+       - "write:public_key"
+       - "admin:public_key"
+
+/search:
+ /issues:
+   get:
+     displayName: Get Issues
+     queryParameters:
+       q:
+         displayName: Query
+         description: |
+           The search terms.
+         type: string
+         required: true
+       sort:
+         displayName: Sort
+         description: |
+           The sort field. Can be comments, created, or updated. Default: results are sorted by best match.
+         type: string
+         required: false
+       order:
+         displayName: Order
+         description: |
+           The sort order if a sort parameter is provided. One of asc or desc. Default: desc
+         type: string
+         required: false
+     responses:
+       200:
+         description: |
+           Successful call
+         body:
+           application/json:
+             type: string
+----
++
+. Create a new API Specification project named GitHub API in Design Center, and copy and paste the example above. Publish it to Exchange.
+. Create a simple Mule application in Design Center. This app listens to `+https://my-app.cloudhub.io/getIssues+` and returns the results based on your search term.
+. Configure OAuth 2.0 - Authorization Code for a connector. As you can see, most of the fields are auto-populated based in the GitHub API Specification.
+. Get the Client ID and Client Secret for your GitHub Account. You can find your Client ID and Client Secret if you go to Settings > Developer settings in GitHub. If you don’t have an OAuth App in GitHub, you can  create one with “New OAuth App.”
+. Because Github API’s base URL is api.github.com, you can put “/” in the Base Path.
+. Match and modify your External Callback URL. The callback URL is used to receive an access token from GitHub. By default, the connector shows `+http://my-app.cloudhub.io/callback+`, but you need to modify it specific to your app. The demo app’s callback URL should be `+http://githubapp-smky.cloudhub.io/callback+` so I need to replace “my-app” with “githubapp-smky.” You can find this information to go to the menu and select “Copy link” in Design Center.
+. After you get your External Callback URL, specify the same URL in your GitHub settings.
+. You are ready to retrieve an access token from GitHub. In this case, go to `+http://githubapp-smky.cloudhub.io/authorize+` in a browser, but your case would be `+http://my-app.cloudhub.io/authorize+` - my-app.cloudhub.io should be replaced with the one you get with `Copy link`. When you reach this URL, your browser asks you to log in GitHub.
+. When your access token is issued properly, you can get issues related to Salesforce from GitHub by using `+http://my-app.cloudhub.io/getIssues+` - my-app.cloudhub.io should be replaced with the one you get with `Copy link`.
