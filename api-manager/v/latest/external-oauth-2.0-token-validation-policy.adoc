@@ -1,68 +1,26 @@
-= OAuth 2.0 Access Token Enforcement Using External Provider Policy
+= OAuth 2.0 Access Token Enforcement Policies (Nov 2017 and Jul 2017)
 :keywords: oauth, raml, token, validation, policy
 
-Using one of the following policies to secure an API in Anypoint Platform is recommended:
+To secure an API in Anypoint Platform using OAuth, use one of the following policies and the matching OAuth provider instead of the OAuth 2.0 Access Token Enforcement Using External Provider Policy and a Mule Provider:
 
 * OpenAM OAuth Token Enforcement policy
 * PingFederate OAuth Token Enforcement policy
 * OpenID Connect Access Token Enforcement Policy
 
-Alternatively, you can use the OAuth 2.0 Access Token Enforcement Using External Provider policy to secure an API in Anypoint Platform from client apps that try to access the API. However, if you want a Mule client app to access OAuth 2.0-protected resources outside Anypoint Platform, you configure link:/mule-user-guide/v/3.8/authentication-in-http-requests[the HTTP Requester connector]. In this case, you do not use the OAuth 2.0 Access Token Enforcement Using External Provider policy.
+Any of these token enforcement policies do _not work_ with a Mule client app to access OAuth 2.0-protected resources outside Anypoint Platform. You need to configure the HTTP Requester connector. 
 
-To use the OAuth 2.0 Access Token Enforcement Using External Provider policy, you need a Mule link:/api-manager/aes-oauth-faq[OAuth 2.0 provider] to provide an access token. You restrict access to your API service on Anypoint Platform by applying the OAuth 2.0 Access Token Enforcement Using External Provider policy. Like other API Manager-enforced policies, the API needs to be registered in API Manager to apply this policy.
+*Important:* To use the OAuth 2.0 Access Token Enforcement Using External Provider policy, you need a Mule OAuth 2.0 provider to provide an access token. You _cannot use_ any other OAuth 2.0 provider, such as Facebook, Google, or Azure. 
 
-== Applying the OAuth 2.0 Token Validation Policy
-
-To apply the OAuth 2.0 Access Token Enforcement Using External Provider policy to an API, use the general procedure for applying policies. Configure the optional scopes and required token validation endpoint URL as follows:
-
-* *Scopes*
-+
-In the optional Scopes field, you can enter a space-separated list of supported OAuth link:https://tools.ietf.org/html/rfc6749#page-23[scopes], such as `read write`. Specify scopes that match one or more of the scopes defined on the referenced OAuth 2.0 Provider application. If the OAuth 2.0 Provider application defines no scopes, leave this field blank. If you plan to use API Console to simulate the API, leave scopes blank and apply the CORS policy.
-+
-* *Access Token Validation Endpoint URL*
-+
-In the required *Access Token validation endpoint url* field, you must enter the URL of the external OAuth 2.0 Provider used for granting the access token, for example `+https://oauth2provider.cloudhub.io/validate+`.
-+
-image::external-oauth-2.0-token-validation-policy-ba3c0.png[external-oauth-2.0-token-validation-policy-ba3c0,height=375,width=404]
-
-== Configuring the Proxy Connection to External Authentication Provider
-
-In Mule 3.8.x, you optionally enable or disable the proxy network connection between the API and External Authentication Provider by setting the following parameter:
-
-`external_authentication_provider_enable_proxy_setting`
-
-This parameter is located in the following wrapper configuration file: `$MULE_HOME/conf/wrapper.conf`
-
-Set the parameter to true or false. For example:
-
-`wrapper.java.additional.<n>=-Dexternal_authentication_provider_enable_proxy_setting=true`
-
-// default changing in 3.9 
-
-By default, the parameter is false, so the proxy connection between the API and External Authentication Provider is disabled because the following proxy settings are ignored:
-
-----
-wrapper.java.additional.<n>=-Danypoint.platform.proxy_host=localhost
-wrapper.java.additional.<n>=-Danypoint.platform.proxy_port=8080
-----
-
-== Obtaining API User Information
-
-In some cases, you might want to get information about externally authenticated users who use your API. Place the following script between the inbound and outbound endpoints of the proxy application to which you applied the policy. The script executes after the enforcement of the policy:
-
-[source,xml,linenums]
-----
-<expression-component>
-    message.outboundProperties.put('X-Authenticated-userid', _muleEvent.session.securityContext.authentication.principal.username)
-</expression-component>
-----
-
-This script stores the user name in the mule message as an outbound-property named `X-Authenticated-userid`. The HTTP Connector, used to generate the proxy's output, transforms any outbound properties that reach it into HTTP message headers. In this way the message that reaches the API after passing through your proxy includes an HTTP header named `X-Authenticated-userid`, containing the user name.
-
-You can modify this code to change the name of the header being created.
+If for some reason, you cannot use one of the recommended providers, use OAuth 2.0 Access Token Enforcement Using External Provider Policy for protecting your APIs using OAuth. Like other API Manager-enforced policies, the API needs to be registered in API Manager to apply and OAuth 2.0 Access Token policy.
 
 == See Also
 
-link:/api-manager/using-policies#applying-and-removing-policies[General procedure for applying policies]
+
+* link:/mule-user-guide/v/3.8/authentication-in-http-requests[the HTTP Requester connector]
+* link:/api-manager/aes-oauth-faq[OAuth 2.0 provider]
+* link:/api-manager/openam-oauth-token-enforcement-policy[OpenAM OAuth Token Enforcement]
+* link:/api-manager/openid-oauth-token-enforcement-policy[OpenID Connect OAuth Token Enforcement]
+* link:/api-manager/pingfederate-oauth-token-enforcement-policy[PingFederate OAuth Token Enforcement]
+* link:/access-management/managing-api-clients[About Client Management for federated users and OpenID Connect introspection endpoint]
 
 
