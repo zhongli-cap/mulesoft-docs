@@ -1,10 +1,12 @@
 = OpenID Connect, OpenAM, or PingFederate OAuth Token Enforcement Policies (Jul 2017)
 
+// Not in TOC deliberately, just here to prevent a 404
+
 The authorization enforcement policy, which you apply to an API in Anypoint Platform, connects to an an OpenID Connect Token Introspection endpoint, OpenAM authorization server, or a PingFederate authorization server. The policy enforces access according to the configuration of the following things:
 
 * Scope of access (optional)
 * OAuth clients
-* The proxy connection to the authorization server (PingFederate only)
+* The proxy connection to the authorization server
 
 To apply the policy to an API, use the general procedure for applying policies. You configure scope of access as you apply the policy. 
 
@@ -18,7 +20,7 @@ In addition to configuration tasks, you can implement verification of the creden
 
 == Policy Implementation
 
-This diagram shows how the policy works with an existing OpenAM, OpenID Connect, or PingFederate authorization server to protect access to your API version. 
+This diagram shows how the policy works with an existing OpenAM or PingFederate authorization server, or OpenID Connect Token Introspection endpoint, to protect access to your API version. 
 
 image::openam-oauth-token-enforcement-policy-0fbb9.png[1 Authorize app to access API 2 Send user credentials 3 Send valid token 4 Call API 5 Check scope and token in header/parameter 6 Validate token in header/parameter and scope 7 API is called]
 
@@ -29,7 +31,7 @@ image::openam-oauth-token-enforcement-policy-0fbb9.png[1 Authorize app to access
 * The policy invokes the OpenAM authorization server, OpenID Connect Token Introspection endpoint, or PingFederate authorization server to validate the token and check scopes.
 * Finally, the API receives the call from the client application.
 
-To improve performance, Mule caches the call to the authorization server, which is only performed once during the lifetime of the token. If the OAuth token is not valid, the authorization server an error. For example:
+To improve performance, Mule caches the call to the authorization server, which is only performed once during the lifetime of the token. If the OAuth token is not valid, the authorization server returns an error. For example:
 
 * OpenAM 11.0.0 returns `404 NOT FOUND`
 * OpenAM 12.0.0 returns `400 BAD REQUEST`
@@ -53,19 +55,43 @@ Each type of client supports three of the four OAuth grant types. For this reaso
 
 A PingFederate client supports all four OAuth grant types: Implicit, Client Credentials, Resource Owner Password Credentials, and Authorization Code. As a PingFederate user, you can enable or disable grant types in any order you want. 
 
-== Obtaining User Credentials
+== Obtaining User Credentials 
 
-The policy returns a Mule message that includes outbound properties that provide information about what externally authenticated users or applications are using your API. Depending on the grant type of the incoming request token, this is expressed in different headers:
+Federation policies enrich the flow with user information stored in the OAuth Provider that can be used for user verification. This information is accessible from attributes.headers in Mule 4 or higher or outbound properties in earlier version. The elements that provide the information depend on the grant type used to retrieve the token.
 
-* If the token of the request is of Grant types resource owner credentials, implicit, or authorization code, the header X-AGW-userid contains the ID of the user that made the request.
-* If the token of the request is of Grant type client credentials, the header `X-AGW-client_id` contains the ID of the application that made the request.
+* The user ID is X-AGW-userid for these grant types:
+** Resource Owner Credentials
+** Implicit
+** Authorization Code
+* The user ID is X-AGW-client_id for the Client Credentials grant type.
 
-Either of the two properties are available to be referenced and used internally in your proxy by any component that follows it in the flow.
+This information is available to be referenced and used internally in your proxy by any component that follows it in the flow.
 
-The HTTP Connector that generates the proxy output transforms any received outbound properties in the HTTP message headers. The message that reaches your API after passing through your proxy includes one of the following HTTP headers:
+All user information enriched by the policy has the "X-AGW-" prefix.
 
-* X-AGW-userid with the username
-* X-AGW-client_id with a client ID
+== Deployments under Mule 3.x and Earlier 
+
+The HTTP Connector that generates the proxy output transforms any received outbound properties into HTTP message headers that  were returned to the requester.
+User information can be accessed from a map. Use MEL expressions to access the flow variable that contains the map `['_agwUser']`. If you want to access a particular value of the map you could use this expression, for example:
+
+`#[flowVars['_agwUser']['uid']]`
+
+== Deployments under Mule 4
+
+Policies that are called after the federated OAuth 2 policy, or in a flow, can use the `Authentication.properties` object. This object contains the following elements:
+
+* Raw response message
++
+`#[authentication.properties.tokenContext]`
++
+* Access Token
++
+`#[authentication.properties.accessToken]`
+* OAuth Provider response headers
++
+#[authentication.properties.userProperties]
+
+If you configure the policy to expose headers, information from this object arrives at the backend API as headers.
 
 === Token Validation Response Example
 
@@ -84,32 +110,6 @@ Transfer-Encoding: chunked
 {"uid":"john.doe","mail":"john.doe@example.com","scope":["uid","mail","cn","givenName"],"grant_type":"password","cn":"John Doe Full","realm":"/","token_type":"Bearer","expires_in":580,"givenName":"John","access_token":"fa017a0e-1bd5-214c-b19d-03efe9f9847e"}
 ----
 
-== Configuring the Proxy Connection
-
-In Mule 3.8.x and later, you optionally enable or disable the proxy network connection between the API and OpenAM authorization server, an OpenID Connect Token Introspection endpoint, or a PingFederate authorization server by setting the following parameter:
-
-`external_authentication_provider_enable_proxy_setting`
-
-This parameter is located in the following wrapper configuration file: `$MULE_HOME/conf/wrapper.conf`
-
-Set the parameter to true or false. For example:
-
-`wrapper.java.additional.<n>=-Dexternal_authentication_provider_enable_proxy_setting=true`
-
-In Mule 3.7.x, use the parameter in the wrapper configuration file. For example:
-
-`anypoint.platform.ping_federate_enable_proxy_setting`
-
-In API Gateway Runtime 2.1.x and 2.2.x, the wrapper configuration file is in `/conf/wrapper.conf`.
-
-// default changing in 3.9 
-
-By default, the parameter is false, so the proxy connection between the API and PingFederate is disabled because the following proxy settings are ignored:
-
-----
-wrapper.java.additional.<n>=-Danypoint.platform.proxy_host=localhost
-wrapper.java.additional.<n>=-Danypoint.platform.proxy_port=8080
-----
 
 == See Also
 
