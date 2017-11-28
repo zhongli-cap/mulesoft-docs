@@ -12,14 +12,19 @@ This document describes implementation examples within the context of Anypoint S
 
 == Installing the Connector in Studio
 
-You can install a connector in Anypoint Studio using the instructions in link:/anypoint-exchange/ex2-studio[Installing a Connector from Anypoint Exchange].
+. In Anypoint Studio, click the Exchange icon in the Studio taskbar.
+. Click Login in Anypoint Exchange.
+. Search for the connector and click Install.
+. Follow the prompts to install the connector.
+
+When Studio has an update, a message displays in the lower right corner, which you can click to install the update.
 
 However, to use the Workday Connector in a production environment, you must have *either*:
 
 * An *Enterprise license* to use Mule 
 * A *CloudHub* Starter, Professional, or Enterprise account
 
-Contact the mailto:info@mulesoft.com[MuleSoft Sales Team] to obtain either of these. (Read more about link:/mule-user-guide/v/3.7/installing-an-enterprise-license[Installing an Enterprise License].)
+Contact the mailto:info@mulesoft.com[MuleSoft Sales Team] to obtain either of these.
 
 Click *Restart Now* to complete the installation. Once you have installed the connector and restarted Studio you can see several new message processors available in the palette, all under the Connectors category.
 
@@ -55,7 +60,7 @@ userID@tenantID |user1@mulesoft_pt1
 ----
 |*Endpoint* a|URL where data server is hosted. It should follow this structure:
 
-`+https://{your Workday domain}+/ccx/service/\{your tenant name}/\{desired Workday Service}/\{desired Workday Service Version}` | `+https://services1.workday.com/ccx/service/acme/Human_Resources/v1+
+`+https://{your Workday domain}/ccx/service/\{your tenant name}/\{desired Workday Service}/\{desired Workday Service Version}+` | `+https://services1.workday.com/ccx/service/acme/Human_Resources/v1+
 |*wsdl* |Workday WSDL location. This is not required for the connector to function properly. | 
 |===
 
@@ -91,10 +96,8 @@ Default
 
 As a recruiter, I want to get a partial list of employees in my company and export the list to a file.
 
-[tabs]
-------
-[tab,title="Studio Visual Editor"]
-....
+=== Using the Studio Visual Editor
+
 
 . Drag an HTTP Endpoint into a new flow, and configure it with the following parameters:
 +
@@ -110,7 +113,7 @@ image:HTTP-GE.png[HTTP-GE]
 [TIP]
 To set the host for the HTTP connector, you need to add a connector configuration. Click the plus sign (*+*) next to *Connector Configuration* (outlined above) to display the global element properties for the HTTP connector. Then, set the value of the *Host* field to `localhost`.
 +
-The new flow is now reachable through the path http://localhost:8081/query-opportunities[http://localhost:8081/getWorker].
+The new flow is now reachable through the path `+http://localhost:8081/getWorker+`.
 . Add a Groovy transformer after the HTTP endpoint to deal with the message payload.
 . Add the following code into the Groovy transformer. This groovy script constructs the SOAP request to get workers out of Workday.
 +
@@ -147,7 +150,7 @@ image:WorkdayGEProps.png[WorkdayGEProps]
 |*Name* |A unique name for this global element to be referenced by connectors
 |*user* |User for connecting to Workday, formatted as <user>@<Tenant ID>
 |*password* |Workday password
-|*endpoint* |URL of your Workday server, in the form `+https://<Workday domain>/ccx/service/<your tenant name</<desired Workday Service>/<desired Workday Service Version>+`,  for example, `+https://services1.workday.com/ccx/service/acme/Human_Resources/v1+`.
+|*endpoint* |URL of your Workday server, in the form `+https://WORKDAY_DOMAIN/ccx/service/YOUR_TENANT_NAME/WORKDAY_SERVICE/WORKDAY_SERVICE_VERSION+`,  for example, `+https://services1.workday.com/ccx/service/acme/Human_Resources/v1+`.
 |===
 
 . Back in the properties editor of the Workday Human Resource connector in your application, configure the remaining parameters according to the table below.
@@ -205,12 +208,11 @@ Configure the File Endpoint as shown below.
 |===
 
 . Run the project as a Mule application.
-. From a browser, navigate to http://localhost:8081/query-opportunities[http://localhost:8081/getWorker].
+. From a browser, navigate to `+http://localhost:8081/getWorker+`.
 . Mule performs the query, produces a CSV file with a list of contacts matching the query criteria, and inserts the file in the output folder you specified.
 
-....
-[tab,title="XML Editor"]
-....
+=== Using the XML Editor
+
 
 . Add a *`wd-hr:config` global element* to your project, then configure its attributes and child elements according to the table below (see code below for a complete sample).
 +
@@ -379,7 +381,7 @@ image:DM.png[DM]
 
 . Add a `file:outbound-endpoint` in the flow after the DataMapper to output the payload into a CSV file. Configure its attributes according to the table below.
 +
-[source, xml, linenums]
+[source, xml]
 ----
 <file:outbound-endpoint path="/Users/mulesoft/AnypointStudio/workspace/workday/testfiles" responseTimeout="10000" doc:name="File"/>
 ----
@@ -399,13 +401,9 @@ Value
 . From a browser, navigate to http://localhost:8081/query-opportunities[http://localhost:8081/getWorker ].
 . Mule conducts the query, produces a CSV file with a list workers, and inserts the file in the output folder you specified.
 
-....
-------
 
-==== Example Code
+== Example Code
 
-[NOTE]
-====
 Keep in mind that for this example to work, you must manually configure the following values of the global Workday HR connector (`wd-hr:config` element):
 
 * hrUser
@@ -413,12 +411,12 @@ Keep in mind that for this example to work, you must manually configure the foll
 * hrEndpoint
 
 Moreover, adjust the filepath configuration to match a valid path on your local system and note that the DataMapper component must be configured manually using Studio's Visual Editor.
-====
+
 
 [source, xml, linenums]
 ----
 <mule xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:wd-hr="http://www.mulesoft.org/schema/mule/wd-hr" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-    xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.6.1"
+    xmlns:spring="http://www.springframework.org/schema/beans"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
