@@ -1,25 +1,79 @@
 = FAQ: Anypoint MQ
 :keywords: mq, faq, questions, answers
 
-This document lists frequently asked questions about link:/anypoint-mq[Anypoint MQ].
+This document lists frequently asked questions about Anypoint MQ.
 
 == Why is MQ not shown in Anypoint Platform?
 
-Anypoint MQ requires a separate Enterprise subscription and is not included in the Anypoint Platform trial version. https://support.mulesoft.com[Contact MuleSoft Support] for more information. If you don't have an Enterprise subscription,
-you can use the MuleSoft link:/mule-user-guide/v/3.8/amqp-connector[Active MQ] or link:https://www.rabbitmq.com/[Rabbit MQ].
+Anypoint MQ requires a separate Enterprise subscription and is not included in the Anypoint Platform trial version. Contact MuleSoft Support for more information. If you don't have an Enterprise subscription,
+you can use the MuleSoft Active MQ or Rabbit MQ.
 
 == How do I create and send messages into MQ from Mule?
 
-After you obtain an Enterprise subscription and contacted your MuleSoft representative to activate Anypoint MQ, you can use link:https://anypoint.mulesoft.com/#/signin[Anypoint Platform] to create a queue or message exchange, and send messages to it. For more information, see the link:/anypoint-mq/mq-tutorial[MQ Tutorial].
+After you obtain an Enterprise subscription and contacted your MuleSoft representative to activate Anypoint MQ, you can use Anypoint Platform to create a queue or message exchange, and send messages to it. For more information, see the link:/anypoint-mq/mq-tutorial[MQ Tutorial].
 
 == How does MQ encrypt messages?
 
-If you choose to link:/anypoint-mq/mq-queues#create-a-queue[encrypt messages], Anypoint MQ provides 
-password-based encryption using PBE with MD5 and Triple DES, and with a 168-bit key.
+MQ messages are always transported using in-flight HTTPS encryption with the latest Transport Layer Security (TLS) protocols.  Additionally, if your Anypoint MQ queues are configured for encryption at rest, then the payloads are encrypted server-side with password-based encryption using PBE with MD5 and Triple DES, and with a 168-bit key.
 
-== Can I share messages between regions?
+If your application requires an additional layer of encryption security, then you can encrypt the payloads yourself before publishing messages to Anypoint MQ, but in this scenario you must manage your own encryption keys for both the message publishers and the consumers.
 
-No, queues and message exchanges are unique to the region in which they were created and cannot share messages between regions. Developers can manually create custom programs that load balance between regions, but Anypoint MQ itself does not provide multi-region support.
+== Why do I see the message decrypted in the UI for my encrypted queues?
+
+When you have a queue encrypted, the messages are stored encrypted but they are decrypted when they are read - this is automatic and transparent to the final user. There's no option to disable the automatic decryption. If you need to encrypt the message so that the payload remains encrypted, manually encrypt the content.
+
+== Can I share messages or queues between regions?
+
+No, queues and message exchanges are unique to the region in which they were created and cannot share messages or queues between regions. Developers can manually create custom programs that load balance between regions, but Anypoint MQ itself does not provide multi-region support.
+
+Queues in each region are separate from those in other regions. You can name queues the same in each region, but queues can’t share messages across regions.
+
+== Are message exchanges and queues completely unique and only accessible in their created environment? 
+
+That is, how do we ensure message exchanges or queues created in one environment are not confused or connected to message exchanges or queues created in a different environment if they have the same name?
+
+You can have the same object name for queues and exchanges between environments, but the Client ID and Client Secret must be different. It's not possible to access a production queue from a development environment if they don't have the corresponding application client IDs.
+
+== How can I restrict access to a queue or message exchange?
+
+You can use Anypoint Platform > Access Management > Business Groups or Environments. Queues and message exchanges created in a business group or environment are only visible to those with access to the business group or environment.
+
+== Can I use Anypoint MQ on premises?
+
+You can publish a message from an on-premises system to Anypoint MQ and have another on-premises 
+subscriber pull messages off of Anypoint MQ. Currently Anypoint MQ cannot be deployed on-premises. 
+If you need a messaging source on-premises, you can use MuleSoft Active MQ instead.
+
+== How does Anypoint MQ handle disaster recovery and high availability failover?
+
+Within any given region, MQ services are deployed to multiple availability zones (AZs) to provide high availability (HA). If service in one availability zone goes down,  the Anypoint MQ service still operates normally in that region. If all of the availability zones go down in a region, then the MQ service is unavailable in that region until at least one of the availability zones comes back up. However, the storage solution for MQ is durable, which means that there is no message loss for messages that were already in the MQ system before service was interrupted.
+
+Anypoint MQ does not have built-in support for duplicating messages or queues across regions.
+
+== Can I use a retry strategy with the MQ connector?
+
+The Anypoint MQ connector does not exactly use a connection-based protocol,
+but uses REST behind the scenes, and therefore,
+you cannot use reconnection strategies with this connector.
+
+On the inbound side, you can easily mimic a retry strategy using a max redelivery attribute set to your maximum number of retries and an exception strategy to move to a DLQ when the limit is hit.
+
+On the outbound side, stick to the same triggering mechanism.
+Otherwise you can use the *until-successful* element with this connector.
+
+You should also configure the HTTP connector so that Global Element Properties > Set Max Redelivery is set to the `-1` value.
+
+== How do we recover and handle failover?
+
+The network that Anypoint MQ runs on provides high availability replications across its many datacenters.
+
+== How do we ensure a message is uniquely processed when failover occurs?
+
+If a server fails and failover occurs, messages continue to be processed on other servers in the network on which Anypoint MQ runs. Normal Anypoint MQ queues do not guarantee only-once message delivery, only FIFO queues support only-once message delivery. The high availability network deduplicates messages for FIFO queues automatically.
+
+== Does MQ guarantee message delivery?
+
+Yes, Anypoint MQ guarantees "at least once" delivery of messages to the destination.
 
 == How are API requests calculated?
 
@@ -31,7 +85,7 @@ Up to 10 messages can be retrieved from a single API call, which only bills as o
 
 There is no maximum transactions per second (TPS) for normal queues or exchanges. FIFO queues have a hard limit of 300 TPS.
 
-== Why can't I see FIFO Queue in the menu to create a queue or exchange?
+== Why can't I see FIFO Queue in the menu to create a queue?
 
 If the blue create button doesn't list *FIFO Queue*:
 
@@ -48,14 +102,6 @@ by a queue, but not deleted, that is, a message awaiting ACK or NACK, or a messa
 *Default Lock TTL* (time-to-live) setting. A single queue can contain an unlimited number of
 messages; however the number of in flight messages is limited. The maximum duration for any message, either in
 flight or not is 2 weeks, after which Anypoint MQ deletes the message.
-
-== Can I share queues across regions?
-
-Queues in each region are separate from those in other regions. You can name queues the same in each region, but they can’t share messages across regions.
-
-== How can I restrict access to a queue or message exchange?
-
-You can use Anypoint Platform > Access Management > link:/access-management/organization#business-groups[Business Groups] or link:/access-management/environments[Environments]. Queues and message exchanges created in a business group or environment are only visible to those with access to the business group or environment.
 
 == Does the MQ connector store the message and retry sending it?
 
@@ -77,12 +123,7 @@ The MQ connector can process at most 10 messages in a queue, but that’s relate
 
 Yes, the REST API supports the `batchSize` query parameter which lets you retrieve up to 10 messages in a single call (default value). The maximum number that can be retrieved are 10 messages in a single call, you can configure a lower value with the Prefetch Config parameter in the Anypoint MQ Connector. Note the number of messages retrieved by the connector can be less that the amount configured. A number higher that 10 can be configured but it is overriden.
 
-== Can I use Anypoint MQ on premises?
-
-You can publish a message from an on-premises system to Anypoint MQ and have another on-premises subscriber pull messages off of Anypoint MQ.
-Currently Anypoint MQ cannot be deployed on-premises. If you need a messaging source on-premises, you can use MuleSoft's  link:/mule-user-guide/v/3.8/amqp-connector[Active MQ] instead.
-
-== How can non-Mule applications interface with Anypoint MQ?
+== Can non-Mule applications interface with Anypoint MQ?
 
 If you have non-Mule applications, you can use our link:/anypoint-mq/mq-apis[MQ REST API] to send and receive messages.
 
@@ -125,37 +166,6 @@ Anypoint MQ provides direct access to the message ID and payload. You can see th
 == Add MQ connector support to Mule shared resources?
 
 The only officially supported connectors and transports for shared resources are: HTTP/HTTPS, VM, JMS, JMS Caching Connection Factory, Database, WMQ, JBoss Transaction Manager, and Bitronix Transaction Manager.
-
-== How does Anypoint MQ handle disaster recovery and high availability failover?
-
-Within any given region, MQ services are deployed to multiple availability zones (AZs) to provide high availability (HA). If service in one availability zone goes down,  the Anypoint MQ service still operates normally in that region. If all of the availability zones go down in a region, then the MQ service is unavailable in that region until at least one of the availability zones comes back up. However, the storage solution for MQ is durable, which means that there is no message loss for messages that were already in the MQ system before service was interrupted.
-
-Anypoint MQ does not have built-in support for duplicating messages or queues across regions.
-
-== Can I use a retry strategy with the MQ connector?
-
-The Anypoint MQ connector does not exactly use a connection-based protocol,
-but uses REST behind the scenes, and therefore,
-you cannot use reconnection strategies with this connector.
-
-On the inbound side, you can easily mimic a retry strategy using a max redelivery attribute set to your maximum number of retries and an exception strategy to move to a DLQ when the limit is hit.
-
-On the outbound side, stick to the same triggering mechanism.
-Otherwise you can use the *until-successful* element with this connector.
-
-You should also configure the HTTP connector so that Global Element Properties > Set Max Redelivery is set to the `-1` value.
-
-== How do we recover and handle failover?
-
-The network that Anypoint MQ runs on provides high availability replications across its many datacenters.
-
-== How do we ensure a message is uniquely processed when failover occurs?
-
-If a server fails and failover occurs, messages continue to be processed on other servers in the network on which Anypoint MQ runs. Normal Anypoint MQ queues do not guarantee only-once message delivery, only FIFO queues support only-once message delivery. The high availability network deduplicates messages for FIFO queues automatically.
-
-== Does MQ guarantee message delivery?
-
-Yes, Anypoint MQ guarantees "at least once" delivery of messages to the destination.
 
 == How do I create lots of queues and message exchanges?
 
@@ -224,17 +234,9 @@ image:mq-delete-exchange.png[mq-delete-exchange]
 +
 . Click *Delete Exchange*.
 
-== Why do I see the message decrypted in the UI for my encrypted queues?
-
-When you have a queue encrypted, the messages are stored encrypted but they are decrypted when they are read - this is automatic and transparent to the final user. There's no option to disable the automatic decryption. If you need to encrypt the message so that the payload remains encrypted, manually encrypt the content.
-
-== Are Exchanges and Queues completely unique and only accessible in their created environment? 
-
-That is, how do we ensure message exchanges or queues created in one environment are not confused or connected to message exchanges or queues created in a different environment if they have the same name?
-
-You can have the same object name for queues and exchanges between environments, but the Client ID and Client Secret must be different. It's not possible to access a production queue from a development environment if they don't have the corresponding application client IDs.
-
 == See Also
 
 * link:/anypoint-mq/[Anypoint MQ]
-
+* https://support.mulesoft.com[Contact MuleSoft Support]
+* link:/mule-user-guide/v/3.8/amqp-connector[MuleSoft Active MQ] 
+* link:https://www.rabbitmq.com/[Rabbit MQ]
