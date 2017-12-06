@@ -1,4 +1,5 @@
-= Apache Kafka Connector
+= Kafka Connector
+:imagesdir: ./_images
 
 _Select_
 
@@ -6,284 +7,216 @@ The Anypoint Connector for Apache Kafka allows you to interact with the Apache K
 
 Read through this user guide to understand how to set up and configure a basic Mule flow with the Apache Kafka connector.
 
-
 == Prerequisites
 
-This document assumes that you are familiar with Mule, Anypoint Connectors, 
-Anypoint Studio essentials, elements in a Mule flow, and global elements.
+This document assumes that you are familiar with Mule, Anypoint Connectors, Anypoint Studio, Mule concepts, elements in a Mule flow, and Global Elements.
 
-=== Compatibility
+You need login credentials to test your connection to your target resource.
 
-[%header%autowidth.spread]
-|===
-|Application/Service |Version
-|Mule Runtime | 4.0.0 and higher
-|Apache Kafka | 0.10.2.0
-|===
+For hardware and software requirements and compatibility
+information, see the Connector Release Notes.
 
+To use this connector with Maven, view the pom.xml dependency information in
+the Dependency Snippets in Anypoint Exchange.
 
-== Install the Kafka Connector
+== What's New in this Connector
+
+* Connection configuration - You can choose from the following types of conections for both the consumer and producer:
+** Basic - Gives you the flexibility of settings whatever property you need from properties accepted by Kafka.
+** SSL - Use this configuration when one or more brokers requires an SSL connection.
+** Kerberos - Use this configuration when one or more brokers requires a Kerberos with plaintext connection.
+** Kerberos SSL - Use this configuration when one or more brokers requires a Kerberos with SSL connection.
+* Consumer trigger - Use for Partition offsets where you have to provide a list of Offsets instead of a MEL that evaluates to a map.
+* Consumer trigger - The message produced has the following attributes associated: topic, key, partition, offset.
+
+== To Connect in Design Center
+
+. In Design Center, click Set Up > Upload, browse for and select the driver for this connector on your file system, and upload it. Alternatively, search for and select a driver that is already uploaded.
+. Click a trigger. You can create a global element by selecting this connector as they trigger.
+If a global element is not needed, you can use an HTTP Listener or Scheduler trigger.
+. To create an optional global element for the connector, set these fields:
+.. Basic:
+** Bootstap Servers - Comma-separated host-port pairs used for establishing the initial connection to the Kafka cluster. This is the same as the bootstrap.servers value you must provide to Kafka clients (producer/consumer).
+** Additional properties - Additional properties as key and value that you need for your connection. Here you can put whatever property Kafka supports.
++
+image:kafka-basic-dc-config.png[Basic DC Configuration]
++
+.. SSL:
+** All the parameters from Basic configuration.
+** Key Store Type - The file format of the key store file. This is optional and default value is "JKS".
+** Key Store Password - The store password for the key store file. This is optional and only needed if "keyStoreLocation" is configured.
+** Key Store Location - The location of the key store file. This is optional and can be used for two-way authentication for connector.
+** Trust Store Type - The file format of the trust store file.
+** Trust Store Password - The password for the trust store file.
+** Trust Store Location - The location of the trust store file.
++
+image:kafka-ssl-dc-config.png[SSL DC Configuration]
++
+.. Kerberos:
+** All the parameters from Basic configuration.
+** Principal - Kerberos principal
+** Keytab - Path to keytab file associated with "principal".
+** Service Name - The Kerberos principal name that Kafka Broker runs as.
+** Additional JAAS Properties - Additional parperties as key->value that you need to set on "sasl.jaas.config" and that you usually include in JAAS configuration file.
++
+image:kafka-kerberos-dc-config.png[Kerberos DC Configuration]
++
+.. Kerberos SSL:
+** All the parameters from Basic configuration.
+** All the parameters from SSL configuration.
+** All the parameters from Kerberos configuration.
++
+image:kafka-kerberos-ssl-dc-config.png[Kerberos SSL DC Configuration]
++
+[NOTE]
+When configuring a Consumer (trigger) for all the configurations, fill in:
++
+Consumer Partitions - The number of partitions to be used for the consumer and: +
+Group Id - A unique string that identifies the consumer group this consumer belongs to.
++
+. Select the plus sign to add a component.
+. Select the connector as a component.
+. Configure these fields:
+.. Consumer trigger:
+** Topic - name of Kafka topic to consume messages from.
+** Partition offsets(Optional) - list of Offset representing partitions offsets configuration. For each element in the list you have to specify partition index and offset.
++
+image:kafka-consumer-dc-config.png[Consumer on DC]
++
+.. Producer operation:
+** Topic - Topic to send the message to
+** Key - Key belonging to the message that is going to be sent
+** Message - Message to be sent
++
+image:kafka-producer-dc-config.png[Producer on DC]
+
+== Connect in Anypoint Studio 7
+
+You can use this connector in Anypoint Studio by first downloading it from Exchange
+and configuring it as needed.
+
+=== Install Connector in Studio
 
 . In Anypoint Studio, click the Exchange icon in the Studio taskbar.
 . Click Login in Anypoint Exchange.
-. Search for the connector and click Install.
-. Follow the prompts to install the connector.
+. Search for this connector and click Install.
+. Follow the prompts to install this connector.
 
-When Studio has an update, a message displays in the lower right corner, which you can click to install the update.
+When Studio has an update, a message displays in the lower right corner,
+which you can click to install the update.
 
-[[configure]]
-== Configure the Kafka Connector Global Element
+=== Configure in Studio
 
-To use the Apache Kafka connector in your Mule application, configure a global element for the Kafka connector. 
+. Drag and drop the connector to the Studio Canvas.
+. To create a global element for the connector, set these fields:
++
+.. Basic:
+** Bootstap Servers - Comma-separated host-port pairs used for establishing the initial connection to the Kafka cluster. This is the same as the "bootstrap.servers" value you must provide to Kafka clients 
+(producer/consumer).
+** Additional properties - Additional properties as key and value that you need for your connection. Here you can put whatever property Kafka supports.
++
+image:kafka-basic-studio-config.png[Basic Configuration]
++
+SSL:
+** All the parameters from Basic configuration.
+** Key Store Type - The file format of the key store file. This is optional and default value is "JKS".
+** Key Store Password - The store password for the key store file. This is optional and only needed if "keyStoreLocation" is configured.
+** Key Store Location - The location of the key store file. This is optional and can be used for two-way authentication for connector.
+** Trust Store Type - The file format of the trust store file.
+** Trust Store Password - The password for the trust store file.
+** Trust Store Location - The location of the trust store file.
++
+image:kafka-ssl-studio-config.png[SSL Configuration]
++
+.. Kerberos:
+** All the parameters from Basic configuration.
+** Principal - Kerberos principal
+** Keytab - Path to keytab file associated with "principal".
+** Service Name - The Kerberos principal name that Kafka Broker runs as.
+** Additional JAAS Properties - Additional parperties as key->value that you need to set on "sasl.jaas.config" and that you usually include in JAAS configuration file.
++
+image:kafka-kerberos-studio-config.png[Kerberos Configuration]
++
+.. Kerberos SSL:
+** All the parameters from Basic configuration.
+** All the parameters from SSL configuration.
+** All the parameters from Kerberos configuration.
++
+image:kafka-kerberos-ssl-studio-config.png[Kerberos SSL Configuration]
++
+. Based on the operation that you have dragged on the canvas, configure the following fields:
+.. Consumer trigger:
+** Topic - name of Kafka topic to consume messages from.
+** Partition offsets(Optional) - list of Offset representing partitions offsets configuration. For each element in the list you have to specify partition index and offset.
++
+image:kafka-consumer-studio-config.png[Consumer Studio Configuration]
++
+.. Producer operation:
+** Topic - Topic to send the message to
+** Key - Key belonging to the message that is going to be sent
+** Message - Message to be sent
++
+image:kafka-producer-studio-config.png[Producer Studio Configuration]
 
-Not all connector instances necessarily use the same global element/configuration. It is not uncommon to have multiple connectors in a flow, using different global elements/configurations to connect to one or different instances.
+== Use Case: Studio
 
-You must provide connection and other details in the Global Element Properties window - these settings are saved in a global element and referenced by applicable connector instances:
+Kafka connector can be used for either consuming messages from a partitcular topic and feed the flow with those messages or produce a message into a topic.
+In studio this is how it looks like:
 
-Example uses property placeholders - actual values are stored in `.properties` file.
+Consumer:
++
+image:kafka-consumer-studio-flow.png[Consumer on canvas]
++
+Producer:
++
+image:kafka-producer-studio-flow.png[Producer on canvas]
 
-// image:kafka-user-manual-config.png[Configuration]
-
-
-In the image above, the placeholder values refer to values saved in a `.properties` file, which exists by default in the `src/main/resources` folder of your project (See link:/mule-user-guide/v/4.0/configuring-properties[Configuring Properties]).
-
-For easy maintenance and re-usability of your connector properties, we recommend that you use a `.properties` file. Avoid hardcoding these in the global element if you need to deploy the app to different environments, such as production, development, and QA, where your access credentials might differ. 
-
-
-=== Global Element Properties for Kafka Connector
-
-[%header,cols="30a,70a"]
-|===
-|Field |Description
-|Name | Enter a name for this connector configuration to be able to reference it later.
-|Bootstrap Servers| Comma-separated host-port pairs for establishing the initial connection to the Kafka cluster -- same as `bootstrap.servers` you provide to Kafka clients (producer/consumer). If provided with Producer/Consumer Properties files this value is ignored and the one from the Properties file is used.
-|Key password| Key password.
-|Key store type| Key store type.
-|Key store password| Key store password.
-|Key store location| Key store file location.
-|Trust store type| Trust store type.
-|Trust store password| Trust store password.
-|Trust store location| Trust store file location.
-|Group id| Consumer group ID.
-|Security protocol| Security protocol.
-|===
-
-== Using the Kafka Connector
-
-A Kafka connector is based on the concept of the endpoint. The global element can be configured as:
-
-* Inbound endpoint for consuming messages from a topic.
-* Outbound connector for pushing new key/message pairs to a topic.
-
-
-=== Connector Namespace and Schema
-
-When designing your application in Studio, the act of dragging the connector from the palette onto the Anypoint Studio canvas should automatically populate the Mule application's XML code with the connector namespace and schema location.
-
-Namespace:
+== Use Case: XML
 
 [source, xml]
-----
-xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka"
-----
-
-Schema Location:
-
-[source, xml]
-----
-xsi:schemaLocation="http://www.mulesoft.org/schema/mule/kafka http://www.mulesoft.org/schema/mule/sfdc-composite/current/mule-kafka.xsd"
-----
-
-If you are manually coding the Mule application in Studio's XML editor or other text editor, define the namespace and schema location in the header of your Configuration XML, inside the `<mule>` tag.
-
-[source, xml,linenums]
-----
-<mule xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka"
-      xsi:schemaLocation="
-               http://www.mulesoft.org/schema/mule/core
-               http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-               http://www.mulesoft.org/schema/mule/kafka http://www.mulesoft.org/schema/mule/kafka/current/mule-kafka.xsd">
-
-      <!-- put your global configuration elements and flows here -->
-
-</mule>
-----
-
-
-== Kafka Connector Example Use Cases
-
-The example use case walkthroughs are geared toward Anypoint Studio users. For those writing and configuring the application in XML, jump straight to the example Mule application XML code to
-Consume Messages or Publish Messages to see how the Kafka global element and the connector are configured in the XML in each use case.
-
-=== Consume Messages from Kafka Topic
-
-See how to use the connector to consume messages from a topic and log each consumed message to console in the following format: "New message arrived: <message>".
-
-. Create a new Mule Project by clicking on File > New > Mule Project.
-. With your project open, search the Studio palette for the Kafka connector you should have already installed. Drag and drop a new Apache Kafka connector onto the canvas.
-+
-The Kafka Connector is going to be configured to consume messages from a topic in this case.
-+
-. Drag and drop a Logger after the Apache Kafka element to log incoming messages in the console.
-// +
-// image:kafka-consumer_raw_flow.png[Unconfigured consumer flow]
-+
-. Double-click the flow's header and rename it `consumer-flow`.
-// +
-// image:kafka-consumer_flow_config.png[Consumer flow configuration]
-+
-. Double-click the Apache Kafka connector element, and configure its properties as below.
-+
-[%header%autowidth.spread]
-|===
-|Field |Value
-|Display Name |Kafka consumer
-|Consumer Configuration |Apache_Kafka_Config (default name of a configuration, or any other configuration that you configured as explained in link:#configure[Configuration] section
-|Operation |Consumer
-|Topic |${consumer.topic}
-|===
-// +
-// image:kafka-consumer_config.png[Kafka consumer configuration]
-+
-. Select the logger and set its fields like so:
-// +
-// image:kafka-consumer_logger_config.png[Consumer logger configuration]
-+
-. Enter your valid Apache Kafka properties in /src/main/app/mule-app.properties and identify them there using property placeholders:
-.. If you configured Kafka global element as explained within the link:#configure[Configure the Kafka Connector Global Element] section then provide values for config.bootstrapServers, ssl.key.password, ssl.keystore.type, ssl.keystore.password, ssl.keystore.location, ssl.truststore.type, ssl.truststore.password, ssl.truststore.location, group.id, and security.protocol.
-.. Set `consumer.topic` to the name of an existing topic that you want to consume messages from.
-. Now you should be ready to deploy the app on Studio's embedded Mule runtime (Run As > Mule Application). When a new message is pushed into the topic you set consumer.topic to, you should see it logged in the console.
-
-[[consume-xml]]
-=== Consume Messages from Kafka Topic - XML
-
-Run this Mule application featuring the connector as a consumer using the full XML code that would be generated by the Studio work you did in the previous section:
-
-[source,xml,linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/kafka http://www.mulesoft.org/schema/mule/kafka/current/mule-kafka.xsd">
     <configuration-properties file="mule-app.properties"></configuration-properties>
-    <http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="04dbee09-75cb-49de-83ca-6b248ab8e9d2" >
+    <http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="DOC_ID" >
         <http:listener-connection host="0.0.0.0" port="8081" />
     </http:listener-config>
-    <kafka:kafka-consumer-config name="Apache_Kafka_Config" doc:name="Apache Kafka Apache Kafka" doc:id="04354ce1-4067-43af-9c81-19c2923d0794" >
-        <kafka:kafka-consumer-connection bootstrapServers="${config.bootstrapServers}" keyPassword="${ssl.key.password}" keyStorePassword="${ssl.keystore.password}" keyStoreLocation="${ssl.keystore.location}" trustStorePassword="${ssl.truststore.password}" trustStoreLocation="${ssl.truststore.location}" groupId="${group.id}" />
-    </kafka:kafka-consumer-config>
 
-    <flow name="consumer-flow" doc:id="82401076-f2fd-4f9a-9105-061c84875513">
-        <kafka:consumer config-ref="Apache_Kafka_Config" topic="${consumer.topic}" doc:name="Consumer" doc:id="71692b3a-6700-45aa-92bd-df96c770f8aa" />
-        <logger level="INFO" doc:name="Logger" doc:id="9b433ecf-4dd5-4f50-994a-d7552b8fad57" message="#['New message arrived: ' ++ payload]"/>
+    <kafka:kafka-consumer-config name="consumer-basic" doc:name="Consumer Basic" doc:id="DOC_ID" >
+    <kafka:basic-kafka-consumer-connection consumerPartitions="${consumer.topic.partitions}" groupId="${consumer.groupId}" bootstrapServers="${config.basic.bootstrapServers}" />
+  </kafka:kafka-consumer-config>
+  <kafka:kafka-producer-config name="producer-basic" doc:name="Producer Basic" doc:id="DOC_ID" >
+    <kafka:basic-kafka-producer-connection bootstrapServers="${config.basic.bootstrapServers}" />
+  </kafka:kafka-producer-config>
+
+    <flow name="consumer-flow" doc:id="DOC_ID">
+        <kafka:consumer config-ref="consumer-krb-plain" topic="${consumer.topic.name}" doc:name="Consumer" doc:id="DOC_ID"/>
+        <logger level="INFO" doc:name="Logger" doc:id="DOC_ID" message="#['New message arrived: ' ++ payload ++ &quot;, key:&quot; ++ attributes.key ++ &quot;, partition:&quot; ++ attributes.partition ++ &quot;, offset:&quot; ++ attributes.offset ]"/>
     </flow>
-
-</mule>
-----
-
-=== Publish Messages to Kafka Topic
-
-Use the connector to publish messages to a topic.
-
-. Create a new Mule Project by clicking on File > New > Mule Project.
-. Navigate through the project's structure and double-click on `src/main/app/<project-name>.xml` and follow the steps below:
-. Drag and drop a new HTTP element onto the canvas. This element is going to be the entry point for the flow and will provide data to be sent to the topic.
-. Drag and drop a new Logger element after the HTTP listener.
-. Drag and drop a new Apache Kafka element after the Logger.
-. Drag and drop a new Set Payload element after Apache Kafka. This Set Payload element is going to set the response to the HTTP request.
-// +
-// image:kafka-producer_raw_flow.png[Unconfigured producer flow]
-+
-. Double-click flow header (blue line) and change the name of the flow to "producer-flow".
-// +
-// image:kafka-producer_flow_config.png[Producer flow configuration]
-+
-. Select the HTTP element.
-. Click the plus sign next to the "Connector Configuration" dropdown.
-. A pop-up appears, accept the default configurations and click OK.
-. Set Path to `pushMessage`.
-. Set Display Name to `Push http endpoint`.
-// +
-// image:kafka-push_http_config.png[Push http configuration]
-+
-. Select the Logger element and set its properties as below:
-// +
-// image:kafka-producer_logger_config.png[Producer logger config]
-+
-. Select the Apache Kafka connector and set its properties as below:
-+
-[%header%autowidth.spread]
-|===
-|Display Name|Kafka producer
-|Consumer Configuration |Apache_Kafka_Producer_Config (default name of a configuration, or any other configuration that you configured as explained in Configuring the Kafka Connector Global Element. section)
-|Operation |Producer
-|Topic|`#[payload.topic]`
-|Key|`#[now()]`
-|Message|`#[payload.message]`
-|===
-// +
-// image:kafka-producer_config.png[Producer config]
-+
-. For the Set Payload element:
-.. Set Display Name to Set push response
-.. Set Value to Message successfully sent.
-// +
-// image:kafka-producer_response_config.png[Producer response configuration]
-+
-. Now we have to provide values for placeholders.
-. Open /src/main/app/mule-app.properties and provide values for following properties:
-.. If you configured the Kafka global element as explained within the link:#configure[Configuration section] then provide values for config.bootstrapServers, consumer.topic, group.id, ssl.truststore.location, ssl.truststore.password, ssl.keystore.location, ssl.keystore.password, ssl.key.password
-. Now you can deploy the app. (Run As > Mule Application)
-. To trigger the flow and push a message to a topic, use an HTTP client app and send a POST request with content-type application/x-www-form-urlencoded and body in urlencoded format to `localhost:8081/push`. The request should contain values for topic and message.
-
-
-You can use the following CURL command: 
-
-`curl -X POST -d "topic=<topic-name-to-send-to>" -d "message=<message to push>" localhost:8081/push`
-
-You can use the other example app defined later in this topic to consume the messages you are producing, and test that everything works.
-
-
-[[publish-xml]]
-=== Publish Messages to Kafka Topic - XML
-
-Run this application featuring the connector as a message publisher using the full XML code that would be generated by the Studio work you did in the previous section:
-
-[source,xml,linenums]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-
-<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/kafka http://www.mulesoft.org/schema/mule/kafka/current/mule-kafka.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
-    <configuration-properties file="mule-app.properties"></configuration-properties>
-    <http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="04dbee09-75cb-49de-83ca-6b248ab8e9d2" >
-        <http:listener-connection host="0.0.0.0" port="8081" />
-    </http:listener-config>
-    <kafka:kafka-producer-config name="Apache_Kafka_Producer_Config" doc:name="Apache Kafka Apache Kafka" doc:id="dbb3bd1e-903f-4413-90ba-77424f37996e" >
-        <kafka:kafka-producer-connection bootstrapServers="${config.bootstrapServers}" keyPassword="${ssl.key.password}" keyStorePassword="${ssl.keystore.password}" keyStoreLocation="${ssl.truststore.location}" trustStorePassword="${ssl.truststore.password}" trustStoreLocation="${ssl.truststore.location}" groupId="${group.id}" />
-    </kafka:kafka-producer-config>
-    <flow name="producer-flow" doc:id="c70ce5b5-8bfd-4e86-98d0-582748c9133d" >
-		<kafka:producer config-ref="Apache_Kafka_Producer_Config" topic="${payload.topic}" key="${now()}" doc:name="Producer" doc:id="5d4ee0ce-2a6a-419b-8403-fb93c52a3d39" >
-			<kafka:message ><![CDATA[#[payload.message]]]></kafka:message>
-		</kafka:producer>
-		<logger level="INFO" doc:name="Logger" doc:id="7f6fbad5-e6f8-441e-859f-6a15a360791b" message='#["Message: \" " ++ payload.message ++ "\" is going to be published to topic: \"" ++ payload.topic ++ "\"."]'/>
-		<set-payload value="Message successfully sent to Kafka topic." doc:name="Push response builder" doc:id="3d59a376-a533-4227-bc2f-826af2e1a234" />
+  <flow name="producer-flow" doc:id="DOC_ID" >
+        <http:listener config-ref="HTTP_Listener_config" path="/pushMessage" doc:name="Push message endpoint" doc:id="DOC_ID" />
+        <logger level="INFO" doc:name="Logger" doc:id="DOC_ID" message="#[&quot;Message: '&quot; ++ payload.message ++ &quot;' is going to be published to topic: '&quot; ++ payload.topic ++ &quot;'.&quot;]" />
+        <kafka:producer config-ref="producer-krb-plain" topic="#[payload.topic]"
+                        key="#[now()]"
+                        doc:name="Producer" doc:id="DOC_ID" >
+            <kafka:message ><![CDATA[#[payload.message]]]></kafka:message>
+        </kafka:producer>
+        <set-payload value="Message successfully sent to Kafka topic." doc:name="Push response builder" doc:id="DOC_ID" />
     </flow>
 </mule>
 ----
-
 
 == See Also
 
-* See the link:http://kafka.apache.org/documentation.html[Apache Kafka documentation]
+* link:/release-notes/kafka-connector-release-notes[Apache Kafka Connector Release Notes]
+* link:/connectors/kafka-connector-reference[Apache Kafka Module Documentation Reference]
+* https://kafka.apache.org/[Apache Kafka - kafka.apache.org]
+* https://www.mulesoft.com/legal/versioning-back-support-policy#anypoint-connectors[Select Support Policy]
