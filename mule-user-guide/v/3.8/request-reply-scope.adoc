@@ -22,48 +22,46 @@ Consider a very simple application:
 
 [source,xml,linenums]
 ----
-<flow name="AuctionService">
+<flow name="sampleFlow">
 
-  <http:listener config-ref="HTTP_Listener_Configuration" path="/auction"/>
+  <http:listener config-ref="HTTP_Listener_Configuration" path="/"/>
 
   <request-reply doc:name="Request-Reply">
-   <vm:outbound-endpoint exchange-pattern="one-way" path="split"/> //<1>
-   <vm:inbound-endpoint exchange-pattern="one-way" path="auction.service" /> //<3>
+   <vm:outbound-endpoint exchange-pattern="one-way" path="request"/> //<1>
+   <vm:inbound-endpoint exchange-pattern="one-way" path="reply" /> //<3>
   </request-reply>
 
 </flow>
 
-<flow name="splitBids">
-  <vm:inbound-endpoint exchange-pattern="one-way" path="split"/> //<2>
+<flow name="requestFlow">
+  <vm:inbound-endpoint exchange-pattern="one-way" path="request"/> //<2>
   <logger message="#[payload]" level="INFO"/>
 </flow>
 ----
-<1> After receiving an HTTP request, the VM outboud-endpoint processor sends the message to the /split path.
-<1> The VM inbound-endpoint processor with the /split path configured receives the message triggering the splitBids flow.
-<1> Only after splitBid finish processing, Mule automatically sends the message back to VM inbound-endpoint in the reply section of the Request-Reply scope.
+<1> After receiving an HTTP request, the VM outbound-endpoint processor sends the message to the /request path.
+<1> The VM inbound-endpoint processor with the /request path configured receives the message triggering the requestFlow processing.
+<1> Only after requestFlow finish processing, Mule automatically sends the message back to VM inbound-endpoint in the reply section of the Request-Reply scope.
 
 This is possible because Mule implicitly sets a MULE_REPLYTO message property to point to the processor in the reply section of the scope. +
-In this case, the VM inbound-endpoint processor in the splitBids flow source receives the message with the MULE_REPLYTO_REQUESTOR property set to auction.service, so Mule sends the message (or messages) resulting from the splitBids flow back to the requester. +
-This is important to note because if splitBids flow would have another VM outbound endpoint at the end pointing to a different flow, the VM processor inside the reply scope would still receive the message (or messages) from the splitBid flow. +
+In this case, the VM inbound-endpoint processor in requestFlow's source receives the message with the MULE_REPLYTO_REQUESTOR property set to "reply", so Mule sends the resulting message (or messages) back to the requester. +
+This is important to note because if the requested flow would have another VM outbound endpoint at the end pointing to a different flow, the VM processor inside the reply scope would still receive the message (or messages) from the triggered flow. +
 You can choose to disable this behavior by setting a MULE_REPLYTO variable:
 
 [source,xml,linenums]
 ----
-<flow name="AuctionService">
-  <http:listener config-ref="HTTP_Listener_Configuration" path="/auction"/>
+<flow name="sampleFlow">
+  <http:listener config-ref="HTTP_Listener_Configuration" path="/"/>
   <request-reply doc:name="Request-Reply">
-   <vm:outbound-endpoint exchange-pattern="one-way" path="split"/>
-   <vm:inbound-endpoint exchange-pattern="one-way" path="auction.service" />
+   <vm:outbound-endpoint exchange-pattern="one-way" path="request"/>
+   <vm:inbound-endpoint exchange-pattern="one-way" path="reply" />
   </request-reply>
 </flow>
 
-<flow name="splitBids">
+<flow name="requestFlow">
   <set-variable variableName="MULE_REPLYTO_STOP" value="true"/> //<1>
-  <vm:inbound-endpoint exchange-pattern="one-way" path="split"/>
+  <vm:inbound-endpoint exchange-pattern="one-way" path="request"/>
   <logger message="#[payload]" level="INFO"/>
 </flow>
-
-
 ----
 
 <1> Setting MULE_REPLYTO_STOP to true, tell Mule to not configure the  MULE_REPLYTO_REQUESTOR property in the received message.
