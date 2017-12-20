@@ -68,7 +68,7 @@ The following Smart Connector takes two numbers as parameters and has a single o
       <parameter name="numberB" type="integer"/>
     </parameters>
     <body>
-      <mule:set-payload value="#[parameters.numberA + parameters.numberB]"/>
+      <mule:set-payload value="#[vars.numberA + vars.numberB]"/>
     </body>
     <output type="integer"/>
   </operation>
@@ -214,7 +214,7 @@ The following Smart Connector sends requests to link:https://developer.github.co
   <httpn:request-config name="github-httpreq-config" basePath="/">
     <httpn:request-connection host="api.github.com" protocol="HTTPS" port="443">
       <httpn:authentication>
-        <httpn:basic-authentication username="#[properties.username]" password="#[properties.password]"/>
+        <httpn:basic-authentication username="#[vars.username]" password="#[vars.password]"/>
       </httpn:authentication>
     </httpn:request-connection>
   </httpn:request-config>
@@ -598,7 +598,7 @@ Lets assume there's a `<module>` that does some inserts and updates but first va
             <!-- validate the 'name' ... and so on -->
             <db:insert config-ref="dbConfig..">
                 <db:sql>INSERT INTO PLANET(NAME) VALUES (:name)</db:sql>
-                <db:input-parameters>#[{ 'name' : parameters.name }]</db:input-parameters>
+                <db:input-parameters>#[{ 'name' : vars.name }]</db:input-parameters>
             </db:insert>
         </body>
     </operation>
@@ -615,7 +615,7 @@ Lets assume there's a `<module>` that does some inserts and updates but first va
             <!-- validate the 'newName' and 'originalName' ... and so on -->
             <db:update config-ref="dbConfig..">
                 <db:sql>update PLANET set NAME= :newName where NAME=':originalName'</db:sql>
-                <db:input-parameters>#[{'originalName' : parameters.originalName, 'newName' : parameters.newName}]</db:input-parameters>
+                <db:input-parameters>#[{'originalName' : vars.originalName, 'newName' : vars.newName}]</db:input-parameters>
             </db:update>
         </body>
     </operation>
@@ -662,10 +662,10 @@ The complete module will be something like the following:
             <parameter name="name" type="string"/>
         </parameters>
         <body>
-            <tns:validate aParameter="#[parameters.name]"/>
+            <tns:validate aParameter="#[vars.name]"/>
             <db:insert config-ref="dbConfig..">
                 <db:sql>INSERT INTO PLANET(NAME) VALUES (:name)</db:sql>
-                <db:input-parameters>#[{ 'name' : parameters.name }]</db:input-parameters>
+                <db:input-parameters>#[{ 'name' : vars.name }]</db:input-parameters>
             </db:insert>
         </body>
     </operation>
@@ -676,11 +676,11 @@ The complete module will be something like the following:
             <parameter name="newName" type="string"/>
         </parameters>
         <body>
-            <tns:validate aParameter="#[parameters.originalName]"/>
-            <tns:validate aParameter="#[parameters.newName]"/>
+            <tns:validate aParameter="#[vars.originalName]"/>
+            <tns:validate aParameter="#[vars.newName]"/>
             <db:update config-ref="dbConfig..">
                 <db:sql>update PLANET set NAME= :newName where NAME=':originalName'</db:sql>
-                <db:input-parameters>#[{'originalName' : parameters.originalName, 'newName' : parameters.newName}]</db:input-parameters>
+                <db:input-parameters>#[{'originalName' : vars.originalName, 'newName' : vars.newName}]</db:input-parameters>
             </db:update>
         </body>
     </operation>
@@ -714,7 +714,7 @@ Let's take a simple example of a `<module name="module-using-file">` that depend
 
     <property name="workingDir" type="string"/>
     <file:config name="fileConfig">
-        <file:connection workingDir="#[properties.workingDir]"/>
+        <file:connection workingDir="#[vars.workingDir]"/>
     </file:config>
 </module>
 ----
@@ -734,11 +734,11 @@ If two, or more, global elements are being used in a `<module>` and provide test
 
     <!-- notice how the following global element is marked for test connection -->
     <file:config name="fileConfig" xmlns:connection="true">
-        <file:connection workingDir="#[properties.workingDir]"/>
+        <file:connection workingDir="#[vars.workingDir]"/>
     </file:config>
 
     <file:config name="anotherFileConfig">
-        <file:connection workingDir="#[properties.workingDir]"/>
+        <file:connection workingDir="#[vars.workingDir]"/>
     </file:config>
 </module>
 ----
@@ -823,9 +823,9 @@ Once placed, we can start leveraging `type`s to the defined ones in the catalog 
           %output application/json encoding='UTF-8'
           ---
           {
-            "name" : parameters.content.person.name,
-            "lastname" : parameters.content.person.lastName,
-            "age" : parameters.content.person.age as Number
+            "name" : vars.content.person.name,
+            "lastname" : vars.content.person.lastName,
+            "age" : vars.content.person.age as Number
           }
           ]]></ee:set-payload>
       </ee:transform>
@@ -842,7 +842,7 @@ Once placed, we can start leveraging `type`s to the defined ones in the catalog 
           %dw 2.0
           %output application/xml
           ---
-          person : parameters.content
+          person : vars.content
           ]]></ee:set-payload>
       </ee:transform>
     </body>
@@ -921,9 +921,9 @@ It might be common that for parameterizing values that are not primitive types, 
           %output application/json encoding='UTF-8'
           ---
           {
-            "name" : parameters.content.person.name,
-            "lastname" : parameters.content.person.lastName,
-            "age" : parameters.content.person.age as Number
+            "name" : vars.content.person.name,
+            "lastname" : vars.content.person.lastName,
+            "age" : vars.content.person.age as Number
           }
           ]]></ee:set-payload>
       </ee:transform>
@@ -1166,16 +1166,16 @@ Location `link:https://github.com/mulesoft-labs/smart-connectors-integration-tes
     <property name="filenamePattern" type="string"/>
 
     <file:config name="file">
-        <file:connection workingDir="#[properties.workingDir]"/>
+        <file:connection workingDir="#[vars.workingDir]"/>
     </file:config>
-    <file:matcher name="globalMatcher" directories="REQUIRE" filenamePattern="#[properties.filenamePattern]" />
+    <file:matcher name="globalMatcher" directories="REQUIRE" filenamePattern="#[vars.filenamePattern]" />
 
     <operation name="list">
         <parameters>
             <parameter name="path" type="string"/>
         </parameters>
         <body>
-            <file:list directoryPath="#[parameters.path]" config-ref="file" matcher="globalMatcher"/>
+            <file:list directoryPath="#[vars.path]" config-ref="file" matcher="globalMatcher"/>
         </body>
         <output type="string"/>
     </operation>
@@ -1206,7 +1206,7 @@ Location `link:https://github.com/mulesoft-labs/smart-connectors-integration-tes
     <httpn:request-config name="github-httpreq-config" basePath="/">
         <httpn:request-connection host="api.github.com" protocol="HTTPS" port="443">
             <httpn:authentication>
-                <httpn:basic-authentication username="#[properties.username]" password="#[properties.password]"/>
+                <httpn:basic-authentication username="#[vars.username]" password="#[vars.password]"/>
             </httpn:authentication>
         </httpn:request-connection>
     </httpn:request-config>
@@ -1217,10 +1217,10 @@ Location `link:https://github.com/mulesoft-labs/smart-connectors-integration-tes
             <parameter name="since" type="string" defaultValue="2017-02-06T09:29:49Z" doc:description="date from which restoring issues, sample: 2016-07-31T12:37:07Z"/>
         </parameters>
         <body>
-            <mule:logger level="ERROR" doc:name="Logger" message="#['repo:[' ++ parameters.repo + '], since:[' + parameters.since ++']']" />
+            <mule:logger level="ERROR" doc:name="Logger" message="#['repo:[' ++ vars.repo + '], since:[' + vars.since ++']']" />
             <httpn:request config-ref="github-httpreq-config" path="search/issues" method="GET" >
                 <httpn:query-params>
-                    #[{q : 'repo: $(parameters.repo) created:>=$(parameters.since)', type: 'Issues'}]
+                    #[{q : 'repo: $(vars.repo) created:>=$(vars.since)', type: 'Issues'}]
                 </httpn:query-params>
             </httpn:request>
             <mule:set-payload value="#[payload]" mimeType="application/json" />
@@ -1274,7 +1274,7 @@ Location `link:https://github.com/mulesoft-labs/smart-connectors-integration-tes
             <parameter name="inputEmail" type="string"/>
         </parameters>
         <body>
-            <validation:is-email email="#[parameters.inputEmail]"/>
+            <validation:is-email email="#[vars.inputEmail]"/>
         </body>
         <output type="boolean"/>
     </operation>
