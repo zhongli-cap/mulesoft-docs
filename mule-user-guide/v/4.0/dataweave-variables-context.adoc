@@ -1,19 +1,21 @@
-= DataWeave Variables for Retrieving Mule Contexts
+= Mule Runtime DataWeave Variables
 
-DataWeave expressions accept variables that can retrieve values from a variety of Mule contexts. Commonly used variables include `attributes`, `payload`, and `vars`, the main parts of the Mule event.
+DataWeave expressions accept variables that can retrieve values from a variety of Mule Runtime objects. Commonly used variables include `attributes`, `payload`, and `vars`, the main parts of the Mule event.
 
 [%header,cols="2s,3,4a"]
 |===
 |Variables |Description |Fields and Examples
 
 |`app`
-|A DataWeave artifact context for the Mule app.
+|The Mule artifact in context.
 |
 [%hardbreaks]
 * Fields:
 ** `encoding`: Encoding used by the Mule message processor.
 ** `name`: Name of your project and Mule app.
+//Yes, it is supported. It should give you access to the application components/beans
 //`registry`: IS THIS STILL SUPPORTED? I GOT AN ERROR WITH app.registry.
+//I don't think this makes sense for users
 ** `standalone`: _TODO_: Returns `true` or `false`.
 ** `workDir`: Working directory for the Mule app. For Studio, this is an Eclipse plugin directory.
 * Example: `#[app.encoding]` might return `UTF-8`.
@@ -26,6 +28,7 @@ DataWeave expressions accept variables that can retrieve values from a variety o
 * Example: `\#[attributes]` returns message attributes. For an HTTP request, `#[attributes.header]` returns HTTP header metadata, and `#[attributes.version]` might return `HTTP/1.1`.
 
 |`authentication`
+//Provides access to the authentication information. See https://github.com/mulesoft/mule-api/blob/master/src/main/java/org/mule/runtime/api/security/Authentication.java but ask Gateway team whether this should be documented
 |Either authentication _TODO_ or `null`.
 |
 [%hardbreaks]
@@ -33,6 +36,7 @@ DataWeave expressions accept variables that can retrieve values from a variety o
 * Example: `_TODO_`
 
 |`correlationId`
+// Ask Dan Feist to provide description
 |_TODO_
 |
 [%hardbreaks]
@@ -43,6 +47,7 @@ DataWeave expressions accept variables that can retrieve values from a variety o
 |Data type of the message payload.
 |
 [%hardbreaks]
+// It does have fields. See https://github.com/mulesoft/mule-api/blob/master/src/main/java/org/mule/runtime/api/metadata/DataType.java
 * Fields: No fields.
 * Example: `#[dataType]` might return `SimpleDataType`.
 
@@ -50,31 +55,27 @@ DataWeave expressions accept variables that can retrieve values from a variety o
 |Error associated with a Mule message object.
 |
 [%hardbreaks]
+// See https://github.com/mulesoft/mule-api/blob/master/src/main/java/org/mule/runtime/api/message/Error.java
 * Fields: _TODO_
 * Example: `_TODO_`
 
 |`flow`
-|An accessor to the flow.
+|An accessor to the flow that provides the current's name.
 |
 [%hardbreaks]
-* Fields: _TODO_
-* Example: `_TODO_`
+* Fields: 
+** `name`
+* Example: `#[flow.name]` will return `testFlow` when executed within a Flow named `testFlow`
 
 |`message`
-|Package (`payload` and `attributes`) that the message processor is processing.
+|Package (`payload` and `attributes`) being processed.
 |
 [%hardbreaks]
 * Fields:
-** `correlationId`: The message `correlationId`.
-** `correlationSequence`: The message correlation sequence number.
-** `correlationGroupSize`: The message correlation group size.
-** `dataType`: The message data type.
-** `replyTo`: The message reply to destination.
 ** `payload`: The message payload, or `null` if the payload is null.
-** `inboundProperties`: Map of inbound message properties.
-** `outboundProperties`: Map of outbound message properties.
-** `inboundAttachments`: Map of inbound message attachments.
-** `outboundAttachments`: Map of outbound message attachments.
+** `dataType`: The message payload's data type.
+** `attributes`: The message attributes, or `null` if the attributes are null.
+
 * Example: `\#[message]`
 
 |`mule`
@@ -82,6 +83,7 @@ DataWeave expressions accept variables that can retrieve values from a variety o
 |
 [%hardbreaks]
 * Fields:
+// This refers to the ID of the cluster when executing in High Availability (cluster) mode.
 ** `clusterId`: Cluster ID. _TODO: what cluster?_
 ** `home`: Home directory.
 ** `nodeId`: Cluster Node ID.
@@ -92,11 +94,11 @@ DataWeave expressions accept variables that can retrieve values from a variety o
 |The body of a Mule message object (`message`).
 |
 [%hardbreaks]
-* Fields: No fields.
+* Fields: Depends on the current payload.
 * Example: `#[payload]` returns the body of the message.
 
 |`server`
-|The operating system on which the message processor is running. It exposes information about both the physical server and JRE on which Mule runs.
+|The operating system on which the Mule instance is running. It exposes information about both the physical server and JRE on which Mule runs.
 |
 [%hardbreaks]
 * Fields:
@@ -107,7 +109,7 @@ DataWeave expressions accept variables that can retrieve values from a variety o
 ** `locale`: Default locale (`java.util.Locale`) of the JRE. Can be used language (`locale.language`), country (`locale.country`).
 ** `javaVendor`: JRE version
 ** `javaVersion`: JRE vendor name
-// `nanoSeconds`  removed from Mule 4?
+// `nanoSeconds`  removed from Mule 4? Yes, because DW provides this already
 ** `osArch`: Operating system architecture.
 ** `osName`: Operating system name.
 ** `osVersion`: Operating system version.
@@ -120,7 +122,7 @@ DataWeave expressions accept variables that can retrieve values from a variety o
 * Example: `#[server.osName]` might return `Mac OS X`.
 
 |`vars`
-|A variable set on the Mule event. These variables only exist within the scope of the flow in which they are created.
+|A variable set on the Mule event.
 |
 [%hardbreaks]
 * Fields: No fields.
@@ -129,14 +131,14 @@ DataWeave expressions accept variables that can retrieve values from a variety o
 
 ////
 _TODO_: For MIGRATION guide?
-* message.`flowVars` and message.`sessionVars` not in Mule4
-* apps.registry supported anymore?
-* these message fields:
+* message.`flowVars` and message.`sessionVars` not in Mule4 -> Yes, best not mention them
+* apps.registry supported anymore? -> Yes. It's `app.registry`
+* these message fields: -> I would not document them other than explaining they are only for compatibility
 `id`
 `rootId`
 `inboundProperties`
 `inboundAttachments`
 `outboundProperties`
 `outboundAttachments`
-* server: `server.dateTime` removed from Mule 4?
+* server: `server.dateTime` removed from Mule 4? -> Yes, DW provides date methods already
 ////
