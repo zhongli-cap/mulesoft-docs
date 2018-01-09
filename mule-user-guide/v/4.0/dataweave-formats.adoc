@@ -54,7 +54,7 @@ output application/xml
 == Cobol Copybook
 
 // TODO: <<flat file>>
-Copybook types are technically considered a type of Flat File format, but when selecting this option the Transform component offers you settings that are better tailored to the needs of this format.
+Copybook types are technically considered a type of Flat File format, but when selecting this option the Transform component offers you settings that are more tailored to the needs of this format.
 
 === Reader Properties (for Cobol Copybook)
 
@@ -520,33 +520,144 @@ payload
 
 === Defining a Metadata Type (for Flat File)
 
-In the Transform component, you can define a Flat File type through the following methods:
+In the Transform component, you can define a Flat File type by pointing to a schema file.
 
-* By pointing to a schema file.
+TODO, TODO
+
 
 [[format_form_data]]
 == Form Data (Multipart format)
 
 Format: `multipart/form-data`
 
-Multi-part formats is an HTTP message with multiple parts, separated by boundaries that can be named. These parts can include attachments.
+This format refers to an HTTP message with multiple parts separated by boundaries that can be named. These parts can include attachments. You can use a DataWeave script to extract and transform data any of the parts. For example, you might retrieve data from the HTTP header and transform data from an attachment.
 
-Here is an example with named parts, such as `text`, `file1`, and `file2`:
+.Sample HTTP Message with Extracted Form Data
+image::postman-multipart.png[Multipart Example]
 
-.Input (Multipart Document)
+The example above uses the Postman API web development app to create and post a part of a multi-part message, including an attachment. A DataWeave script in a Mule app extracts the portion of the message shown in the Postman body.
+
+To create this example:
+
+. Use Postman to create the multi-part message:
+.. Create two keys for the Body of an HTTP message to POST, such as `foo` and `bar`.
+.. For `foo`, type in a text value such as `my value`.
+.. For `bar`, load a file, such as a JSON file with content like this:
++
 ----
-TODO
+{
+  "title": "Java 8 in Action",
+  "author": "Mario Fusco",
+  "year": 2014
+}
 ----
-
-.DataWeave
++
+.. Without sending the message yet, type a locally hosted URL to use for posting the message, for example: `localhost:8082/post`
++
+image::postman-multipart-setup.png[Multipart Example]
++
+. In Studio:
+.. Add an HTTP Listener with these general settings:
++
+* Host: `0.0.0.0`
+* Port: `8082`
+* Path: `/post`
+.. Add a Transform component with this output script:
++
+//payload.parts.bar.content.properties
++
 ----
-
-output multipart/form-data TODO
+%dw 2.0
+output application/json
 ---
-in0
+{ "multipart-example":
+  [
+    "content-type": payload.parts.bar.headers."Content-Type",
+    "foo": payload.parts.foo.content,
+    "bar": payload.parts.bar.content
+  ]
+}
+----
++
+.. Save and Run the Mule app.
+. In Postman, post your message to the HTTP Listener using this URL: `localhost:8082/post`.
++
+Make sure to set Postman to POST. After sending the message, the body of the message should look like this in Postman's Pretty view:
++
+----
+{
+  "multipart-example": [
+    {
+      "content-type": "application/json"
+    },
+    {
+      "foo": "my value"
+    },
+    {
+      "bar": {
+        "title": "Java 8 in Action",
+        "author": "Mario Fusco",
+        "year": 2014
+      }
+    }
+  ]
+}
 ----
 
+To see the entire structure of your multipart message, you can change (and save) the output script in the Transform component to something like this:
 
+.DataWeave Script in Transform Component
+----
+%dw 2.0
+output application/json
+---
+{ "multipart-example":
+  [
+    "foo": payload.parts.foo,
+    "bar": payload.parts.bar
+  ]
+}
+----
+
+If you post the same message to the HTTP Listener, the Postman body looks like this:
+
+.Postman Pretty Print Output
+----
+{
+  "multipart-example": [
+    {
+      "foo": {
+        "headers": {
+          "Content-Disposition": {
+            "name": "foo",
+            "subtype": "form-data"
+          }
+        },
+        "content": "my value"
+      }
+    },
+    {
+      "bar": {
+        "headers": {
+          "Content-Disposition": {
+            "name": "bar",
+            "filename": "sample_json.json",
+            "subtype": "form-data"
+          },
+          "Content-Type": "application/json"
+        },
+        "content": {
+          "title": "Java 8 in Action",
+          "author": "Mario Fusco",
+          "year": 2014
+        }
+      }
+    }
+  ]
+}
+----
+
+////
 .Output
 ----
 {
@@ -586,6 +697,7 @@ in0
   }
 }
 ----
+////
 
 == Reader Properties (for Form Data)
 
@@ -633,19 +745,37 @@ Format: `application/java`
 The mapping between Java objects to DataWeave types is quite simple:
 
 [cols="3,1", options="header"]
-|=======================
-|Java Type |DataWeave Type
-|`Collections/Array/Iterator/Iterable` | link:dataweave-types#array[Array]
-|`String/CharSequence/Char/Enum/Class` | link:dataweave-types#string[String]
-|`int/Short/Long/BigInteger/Flat/Double/BigDecimal`|link:dataweave-types#number[Number]
-|`Calendar/XmlGregorainCalendar`|link:dataweave-types#datetime[DateTime]
-|`TimeZone`|link:dataweave-types#timezone[TimeZone]
-|`sql.Date/util.Date`|link:dataweave-types#date[Date]
-|`Bean/Map`|link:dataweave-types#object[Object]
-|`InputStream/Array[Byte]`|link:dataweave-types#binary[Binary]
-|`java.lang.Boolean`|link:dataweave-types#boolean[Boolean]
+|==
+|Java Type
+|DataWeave Type
 
-|=======================
+|`Collections/Array/Iterator/Iterable`
+| link:dataweave-types#array[Array]
+
+|`String/CharSequence/Char/Enum/Class`
+| link:dataweave-types#string[String]
+
+|`int/Short/Long/BigInteger/Flat/Double/BigDecimal`
+|link:dataweave-types#number[Number]
+
+|`Calendar/XmlGregorainCalendar`
+|link:dataweave-types#datetime[DateTime]
+
+|`TimeZone`
+|link:dataweave-types#timezone[TimeZone]
+
+|`sql.Date/util.Date`
+|link:dataweave-types#date[Date]
+
+|`Bean/Map`
+|link:dataweave-types#object[Object]
+
+|`InputStream/Array[Byte]`
+|link:dataweave-types#binary[Binary]
+
+|`java.lang.Boolean`
+|link:dataweave-types#boolean[Boolean]
+|==
 
 === Custom Types (for Java)
 
