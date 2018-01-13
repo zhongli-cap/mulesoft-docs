@@ -210,6 +210,121 @@ http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/m
 <api-gateway:autodiscovery apiId="${autodiscovery.api.id}" flowRef="api-product-main" doc:name="API Autodiscovery"/>
 ----
 
+== Migrating _delete-product-flow_
+
+// Now do the same for the next migrated feature, and so on.
+`delete-product-flow` deletes the product record from the MySQL database with the `id` specified as a `URI parameter` returning an HTTP 204 status code.
+
+.Configuration XML for delete-product-flow in Studio 6.
+[source,xml,linenums]
+----
+<flow name="delete-product-flow">
+  <transactional action="ALWAYS_BEGIN" doc:name="Transactional">
+    <db:delete config-ref="MySQL_Configuration" doc:name="Delete Product">
+      <db:parameterized-query><![CDATA[delete from product where id=#[id]]]></db:parameterized-query>
+    </db:delete>
+  </transactional>
+  <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+  <set-property propertyName="http.status" value="204" doc:name="Set Status"/>
+</flow>
+----
+
+// Explain what changed for Mule 4 in Studio 7, including any different modules, component you needed to use.
+. There are no changes regarding `delete-product-flow` definition.
++
+
+[source,xml,linenums]
+----
+<flow name="delete-product-flow" />
+----
+
+. As `Dataweave 2.0` is the default `Mule Runtime 4.x` expression language, add a `Transform component` for writing a DW script that sets a variable with the `productId` value received as a `URI parameter`.
++
+
+[source,xml,linenums]
+----
+<ee:transform doc:name="Set productId variable">
+  <ee:message />
+  <ee:variables>
+    <ee:set-variable variableName="productId" ><![CDATA[%dw 2.0
+output application/java
+---
+attributes.uriParams.id]]>
+    </ee:set-variable>
+  </ee:variables>
+</ee:transform>
+----
+
+. For configuring the details of the transaction, replace the Mule 3.x `transactional` scope with the new `try` scope and set the `transactionalAction` attribute to `ALWAYS_BEGIN`.
++
+
+[source,xml,linenums]
+----
+<try doc:name="Try" transactionalAction="ALWAYS_BEGIN">
+</try>
+----
+
+. Add a `db:delete` element into the `Try scope`, referencing the MySQL Global Configuration. Parameters must be supplied as key-value pairs into the `db:input-parameters` element. Opposite to Mule 3.x, the previously defined `productId` flow variable must be accessed as `vars.productId` instead of `flowVars.productId`.
++
+
+[source,xml,linenums]
+----
+<try doc:name="Try" transactionalAction="ALWAYS_BEGIN">
+  <db:delete config-ref="MySQL_Configuration" doc:name="Delete Product">
+    <db:sql>delete from product where id=:productId</db:sql>
+    <db:input-parameters><![CDATA[#[{'productId' : vars.productId}]]]></db:input-parameters>
+  </db:delete>
+</try>
+----
+
+. Set `httpStatus` variable with the value `204` using a `Transform Component` for defining a `NO CONTENT` response code.
++
+
+[source,xml,linenums]
+----
+<ee:transform doc:name="Set Status" doc:id="a96f6930-5f34-4f03-8ad6-766ed77dc615">
+  <ee:message />
+  <ee:variables>
+    <ee:set-variable variableName="httpStatus"><![CDATA[%dw 2.0
+output application/java
+---
+204]]></ee:set-variable>
+  </ee:variables>
+</ee:transform>
+----
+
+.Configuration XML for delete-product-flow in Studio 7.
+[source,xml,linenums]
+----
+<flow name="delete-product-flow">
+  <ee:transform doc:name="Set productId variable">
+    <ee:message />
+    <ee:variables>
+      <ee:set-variable variableName="productId" ><![CDATA[%dw 2.0
+output application/java
+---
+attributes.uriParams.id]]>
+      </ee:set-variable>
+    </ee:variables>
+  </ee:transform>
+  <try doc:name="Try" transactionalAction="ALWAYS_BEGIN">
+    <db:delete config-ref="MySQL_Configuration" doc:name="Delete Product">
+      <db:sql>delete from product where id=:productId</db:sql>
+      <db:input-parameters><![CDATA[#[{'productId' : vars.productId}]]]></db:input-parameters>
+    </db:delete>
+  </try>
+  <ee:transform doc:name="Set Status" doc:id="a96f6930-5f34-4f03-8ad6-766ed77dc615">
+    <ee:message />
+      <ee:variables>
+        <ee:set-variable variableName="httpStatus"><![CDATA[%dw 2.0
+output application/java
+---
+204]]></ee:set-variable>
+    </ee:variables>
+  </ee:transform>
+</flow>
+----
+
 ////
 == Migrating Feature_2
 
