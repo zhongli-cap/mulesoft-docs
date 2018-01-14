@@ -210,6 +210,231 @@ http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/m
 <api-gateway:autodiscovery apiId="${autodiscovery.api.id}" flowRef="api-product-main" doc:name="API Autodiscovery"/>
 ----
 
+== Migrating _get-products-flow_
+
+// Now do the same for the next migrated feature, and so on.
+`get-products-flow` returns products from the database filtering by `Product Category` and/or `Product Name` also supporting paginated queries with `offset` and `maxResults` parameters.
+
+.Configuration XML for get-products-flow in Studio 6.
+[source,xml,linenums]
+----
+<flow name="get-products-flow">
+  <message-properties-transformer doc:name="Get Query Params" scope="invocation">
+    <add-message-property key="queryOffset" value="#[Integer.valueOf(message.inboundProperties.'http.query.params'.offset)]" />
+    <add-message-property key="queryLimit" value="#[Integer.valueOf(message.inboundProperties.'http.query.params'.maxResults)]" />
+    <add-message-property key="queryName" value="#[ (message.inboundProperties.'http.query.params'.name != null) ? ('%'+message.inboundProperties.'http.query.params'.name+'%') : '%%']" />
+    <add-message-property key="queryCategory" value="#[ (message.inboundProperties.'http.query.params'.category != null) ? ('%'+message.inboundProperties.'http.query.params'.category+'%') : '%%']" />
+  </message-properties-transformer>
+  <db:select config-ref="MySQL_Configuration" doc:name="Query Products">
+    <db:parameterized-query><![CDATA[SELECT  p.id, p.name, p.description, p.product_number, p.manufactured, p.colors, p.categories, p.stock, p.safety_stock_level, p.standard_cost, p.list_price, p.size, p.size_unit_measure_code, p.weight, p.weight_unit_measure_code, p.days_to_manufacture, p.images,  p.modified_date, p.created_date
+FROM product p
+WHERE LOWER(p.name) like #[flowVars.queryName.toLowerCase()] AND LOWER(p.categories) like #[flowVars.queryCategory.toLowerCase()]
+LIMIT #[flowVars.queryLimit]
+OFFSET #[flowVars.queryOffset]]]>
+    </db:parameterized-query>
+  </db:select>
+  <dw:transform-message doc:name="Products to JSON">
+    <dw:set-payload resource="classpath:mappings/get-products-response.dwl"/>
+  </dw:transform-message>
+</flow>
+----
+
+// Explain what changed for Mule 4 in Studio 7, including any different modules, component you needed to use.
+. There are no changes regarding `get-products-flow` definition.
++
+
+[source,xml,linenums]
+----
+<flow name="get-products-flow">
+----
+
+. Add a `Transform component` to replace the logic inside `message-properties-transformer` and set the variables `queryOffset`, `queryLimit`, `queryName` and `queryCategory` with the values received as `query-parameters`.
+. Due to new Mule Message Structure notice how the old expression `inboundProperties."http.query.params".offset` should be rewritten as `attributes.queryParams.offset` for accessing `query-parameters`.
++
+
+[source,xml,linenums]
+----
+<ee:transform doc:name="Get Query Params">
+  <ee:message />
+    <ee:variables>
+      <ee:set-variable variableName="queryOffset"><![CDATA[%dw 2.0
+output application/java
+---
+attributes.queryParams.offset as Number]]></ee:set-variable>
+      <ee:set-variable variableName="queryLimit"><![CDATA[%dw 2.0
+output application/java
+---
+attributes.queryParams.maxResults as Number]]></ee:set-variable>
+      <ee:set-variable variableName="queryName"><![CDATA[%dw 2.0
+output application/java
+var queryName = attributes.queryParams.name
+---
+if (queryName != null)
+	queryName
+else
+	'%%']]></ee:set-variable>
+      <ee:set-variable variableName="queryCategory"><![CDATA[%dw 2.0
+output application/java
+var queryCategory = attributes.queryParams.category
+---
+if (queryCategory != null)
+	queryCategory
+else
+	'%%']]></ee:set-variable>
+  </ee:variables>
+</ee:transform>
+----
+
+. Add a `db:select` element, referencing the MySQL Global Configuration. Use the colon (:) syntax in parametrized queries. Parameters must be supplied as key-value pairs into the `db:input-parameters` element.
++
+
+[source,xml,linenums]
+----
+<db:select config-ref="MySQL_Configuration" doc:name="Query Products">
+  <db:sql >SELECT  p.id, p.name, p.description, p.product_number, p.manufactured, p.colors, p.categories, p.stock, p.safety_stock_level, p.standard_cost, p.list_price, p.size, p.size_unit_measure_code, p.weight, p.weight_unit_measure_code, p.days_to_manufacture, p.images,  p.modified_date, p.created_date
+FROM product p
+WHERE LOWER(p.name) like :name AND LOWER(p.categories) like :category
+LIMIT :limit
+OFFSET :offset</db:sql>
+  <db:input-parameters ><![CDATA[#[{'name' : lower(vars.queryName), 'category': lower(vars.queryCategory), 'limit': vars.queryLimit, 'offset': vars.queryOffset}]]]></db:input-parameters>
+</db:select>
+----
+
+. Migrate `get-products-response.dwl` DW 1.0 script to DW 2.0.
++
+
+.Transformation for get-products-response in DW 1.0.
+----
+%dw 1.0
+%output application/json
+---
+payload map {
+	id: $.id,
+	categories: ($.categories default "") splitBy ",",
+	colors: ($.colors default "") splitBy ",",
+	images: ($.images default "") splitBy ",",
+	createdDate: $.created_date as :string {format: "yyyy-MM-dd"},
+	modifiedDate: $.modified_date as :string {format: "yyyy-MM-dd"},
+	safetyStockLevel: $.safety_stock_level as :number,
+	stock: $.stock as :number,
+	daysToManufacture: $.days_to_manufacture,
+	name: $.name,
+	description: $.description,
+	listPrice: $.list_price,
+	manufactured: $.manufactured,
+	productNumber: $.product_number,
+	size: $.size,
+	sizeUnitMeasureCode: $.size_unit_measure_code,
+	standardCost: $.standard_cost,
+	weightUnitMeasureCode: $.weight_unit_measure_code,
+	weight: $.weight
+}
+----
+
+.Transformation for get-products-response in DW 2.0.
+----
+%dw 2.0
+output application/json
+---
+payload map {
+	id: $.id,
+	categories: ($.categories default "") splitBy ",",
+	colors: ($.colors default "") splitBy ",",
+	images: ($.images default "") splitBy ",",
+	createdDate: $.created_date as String {format: "yyyy-MM-dd"},
+	modifiedDate: $.modified_date as String {format: "yyyy-MM-dd"},
+	safetyStockLevel: $.safety_stock_level as Number,
+	stock: $.stock as Number,
+	daysToManufacture: $.days_to_manufacture,
+	name: $.name,
+	description: $.description,
+	listPrice: $.list_price,
+	manufactured: $.manufactured,
+	productNumber: $.product_number,
+	size: $.size,
+	sizeUnitMeasureCode: $.size_unit_measure_code,
+	standardCost: $.standard_cost,
+	weightUnitMeasureCode: $.weight_unit_measure_code,
+	weight: $.weight
+}
+----
+
+.Configuration XML for get-products-flow in Studio 7.
+[source,xml,linenums]
+----
+<flow name="get-products-flow">
+	<ee:transform doc:name="Get Query Params">
+    <ee:message />
+    <ee:variables>
+      <ee:set-variable variableName="queryOffset"><![CDATA[%dw 2.0
+output application/java
+---
+attributes.queryParams.offset as Number]]></ee:set-variable>
+      <ee:set-variable variableName="queryLimit"><![CDATA[%dw 2.0
+output application/java
+---
+attributes.queryParams.maxResults as Number]]></ee:set-variable>
+      <ee:set-variable variableName="queryName"><![CDATA[%dw 2.0
+output application/java
+var queryName = attributes.queryParams.name
+---
+if (queryName != null)
+	queryName
+else
+	'%%']]></ee:set-variable>
+      <ee:set-variable variableName="queryCategory"><![CDATA[%dw 2.0
+output application/java
+var queryCategory = attributes.queryParams.category
+---
+if (queryCategory != null)
+	queryCategory
+else
+	'%%']]></ee:set-variable>
+    </ee:variables>
+  </ee:transform>
+  <db:select config-ref="MySQL_Configuration" doc:name="Query Products">
+    <db:sql>SELECT p.id, p.name, p.description, p.product_number,
+				p.manufactured, p.colors, p.categories, p.stock,
+				p.safety_stock_level, p.standard_cost, p.list_price, p.size,
+				p.size_unit_measure_code, p.weight, p.weight_unit_measure_code,
+				p.days_to_manufacture, p.images, p.modified_date, p.created_date
+				FROM product p
+				WHERE LOWER(p.name) like :name AND LOWER(p.categories) like :category
+				LIMIT :limit
+				OFFSET :offset</db:sql>
+    <db:input-parameters><![CDATA[#[{'name' : lower(vars.queryName), 'category': lower(vars.queryCategory), 'limit': vars.queryLimit, 'offset': vars.queryOffset}]]]></db:input-parameters>
+  </db:select>
+	<ee:transform doc:name="Products to JSON">
+    <ee:message>
+      <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload map {
+	id: $.id,
+	categories: ($.categories default "") splitBy ",",
+	colors: ($.colors default "") splitBy ",",
+	images: ($.images default "") splitBy ",",
+	createdDate: $.created_date as String {format: "yyyy-MM-dd"},
+	modifiedDate: $.modified_date as String {format: "yyyy-MM-dd"},
+	safetyStockLevel: $.safety_stock_level as Number,
+	stock: $.stock as Number,
+	daysToManufacture: $.days_to_manufacture,
+	name: $.name,
+	description: $.description,
+	listPrice: $.list_price,
+	manufactured: $.manufactured,
+	productNumber: $.product_number,
+	size: $.size,
+	sizeUnitMeasureCode: $.size_unit_measure_code,
+	standardCost: $.standard_cost,
+	weightUnitMeasureCode: $.weight_unit_measure_code,
+	weight: $.weight
+}]]></ee:set-payload>
+    </ee:message>
+  </ee:transform>
+</flow>
+----
+
 == Migrating _delete-product-flow_
 
 // Now do the same for the next migrated feature, and so on.
