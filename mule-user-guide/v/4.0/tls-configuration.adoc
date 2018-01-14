@@ -74,19 +74,21 @@ Using the insecure property, described later in this document, you can disable v
 </tls:context>
 ----
 
-For more information, see the XML reference later in this document.
+For more information about configuring TLS, see the XML reference later in this document.
 
 == Keystores and Truststores
 
 A TLS service needs to have a private key and a public certificate. The private key never leaves the server. The public certificate is exposed through TLS. Clients can verify that they trust the server.
 
+There is no default Java keystore in the standard JDK distribution, so you must generate your own key. You likely already have corporate certificates for your client apps and don't need to create them. Often, these certificates work with the JRE truststore, so no set up is required for the client app.
+
 A well-known Certificate Authority (CA) can generate certificates, or you can generate a certificate locally without external approval (self-signed certificate). A truststore stores certificates from trusted CAs that the client uses to verify a certificate presented by the server. 
 
 You import certificates and private keys into a keystore file that Mule uses. Truststore files are also keystores that by convention include only public certificates of trusted servers.
 
-The 'tls:trust-store' and 'tls:key-store' elements must reference existing certificates. If you don't provide any values for the trust-store, the default Java truststore is used. The default truststore is updated with the Java version, so it's recommended that you use an updated Java version to be sure it includes updates to well known CA certificates.
+The tls:trust-store and tls:key-store elements in a Mule configuration can reference a specific certificate and key, but if you don't provide a values for the trust-store, Mule uses the default Java truststore. Java updates the default truststore when you update Java, so getting regular updates is recommended to keep well-known CA certificates up-to-date.
 
-Mule supports many types of keystores. The following types of keystores are typically used:
+Mule supports many types of keystores, including the following ones:
 
 * JCEKS
 * PKCS12
@@ -98,72 +100,39 @@ If you already have a corporate certificate to use for your client app, it might
 
 `+https://docs.oracle.com/javase/8/docs/technotes/tools/unix/keytool.html+`
 
-////
 === Generating a Keystore
 
-. To generate a keystore that exposes your server's credentials, run the command:
+You can use the Oracle keytool to generate the keystore and perform the other tasks mentioned in this procedure.
 
+. Generate a keystore that exposes your server's credentials. 
 +
-[source, code, linenums]
-----
-keytool -genkey -alias serverkey -keyalg RSA -keystore server.jks
-----
-
-The generated keystore will contain a private key and a public certificate. This certificate is self signed so it will be not be trusted by clients unless you share the public certificate with them.
-
-Keytool generates certificates using the DSA algorithm by default. You can instead specify it to use the RSA algorithm as in the example above through the '-keyalg RSA' argument.
-
-. You will then be prompted for additional details, along with the store password and key password.
-​
-. Once this is done, you must export the server's certificate from the keystore so that it can be shared with clients. To do this, use the following command:
+The generated keystore contains a private key and a public certificate. This certificate is self signed so it is not be trusted by clients unless you share the public certificate with them.
 +
-[source, code, linenums]
-----
-keytool -export -alias serverkey -keystore server.jks -file server_cert.cer
-----
-
-[NOTE]
-There is no default Java key store in the standard JDK distribution, so you must generate your own certificates in order to use this element.
-
-If you also wish to get signed by a Certification Authority (CA), you must export your certificate in the standard CSR format. To do so you can run this command:
-
-[source, code, linenums]
-----
-keytool -certreq -keystore server.jks -alias example.com -file certificate_file
-----
-
-Here, '-file' refers to the name you wish to give to your certificate file. Once generated, send the CSR file to the CA and follow their instructions to obtain their signature.
-
-Once you have obtained the CA's signature, you can import the signed certificate file through the following command:
-
-[source, code, linenums]
-----
-keytool -import -keystore keystore -alias example.com -file signed_certificate_file
-----
-
-The alias you assign when importing must not be linked to any existing key or the process will fail.
+Keytool generates certificates using the DSA algorithm by default. You can instead specify it to use the RSA algorithm.
+​+
+. Export the server's certificate from the keystore to share with clients.
++
+The standard JDK distribution does not include a keystore by default, so you generate your own.
++
+If you also want to get the certificate signed by a Certification Authority (CA), you export your certificate in the standard CSR format. You specify the name you want to give to your certificate file. You send the CSR file to the CA and follow their instructions to obtain their signature.
+. After you have obtained the CA's signature, you can import the signed certificate file.
++
+The alias you assign when importing must not be linked to any existing key or the process fails.
 
 === Generating a Trust Store
 
-The standard JRE distribution includes a *default trust store* with certificates for several major certificate authorities (CA's) which is used by default in the 'tls:trust-store' element, but you can generate your own if you want to have greater security or when using self-signed certificates.
+The standard JRE distribution includes a default trust store with certificates for several major certificate authorities (CA's) which is used by default in the 'tls:trust-store' element, but you can generate your own if you want to have greater security or if you use self-signed certificates.
 
-. To create a trustStore, run the command:
-+
-[source, code, linenums]
-----
-keytool -import -alias serverkey -keystore client_truststore.ts -file server_cert.cer
-----
+To create a trustStore, you can use the Java keytool.
 
-The client will trust the server if a chain of trust can be established, either directly to the server (in case its certificate is in the trust store) or through a signing CA whose certificate is present in the trust store, failing otherwise. This means that a trust store must be defined when using self-signed certificates.
-
-////
+The client trusts the server if a chain of trust can be established, either directly to the server (in case its certificate is in the truststore) or through a signing CA whose certificate is present in the truststore; otherwise, the connection fails. A trust store must be defined when using self-signed certificates.
 
 == Configuring TLS
 
-Adding a truststore or a keystore to a TLS configuration implicitly implements the corresponding kind of authentication:
+Adding a truststore or a keystore to a TLS configuration implicitly implements the one of the following forms of authentication:
 
-* Security based on certificates from a CA
-* Security based on a private key and self-signed certificate
+* Truststore: Security based on certificates from a CA
+* Keystore: Security based on a private key and self-signed certificate
 
 Adding both a keystore and a trust store to the configuration implicitly implements two-way TLS authentication, also known as mutual authentication.
 
@@ -176,7 +145,7 @@ The keystore contains the private and public key of the server.
 
 The keystore might contain two passwords, as one of them can serve to access the entire keystore file. The other (keyPassword) can serve to access the server’s private key, which is inside this file.
 
-=== Server Side Configuration
+=== Configuration for Sending a Request
 
 If the `tls:context` is empty (no key-store or trust-store defined), then the default values of the JVM are used, which likely already include a trust store with certificates for all the major certifying authorities.
 
@@ -184,19 +153,12 @@ If the client requires a certificate from the server that it is trying to connec
 
 If the server validates certificates from the clients, then the `<tls:key-store>` element should be also added with the path field set to the location of the keystore file that contains the private/public keys of the client.
 
-////
-A `request-config` element from the new HTTP connector may reference a `tls:context` element in order to implement HTTPS.
-////
 
-=== Client Side Configuration
+=== Configuration for Listening for a Request
 
-The `tls:context` is required to contain a `tls:key-store` element. You set the path field to the location of the keystore file that contains the private/public keys of the server.
+The `tls:context` is required to contain a `tls:key-store` element to listen for a request using a secure connection  (HTTPS). You set the path field to the location of the keystore file that contains the private/public keys of the server.
 
 If the server needs to validate certificates from clients, you need to add a `tls:trust-store` element. You set the path field to the location of the trust store file that contains the certificates of the trusted clients.
-
-////
-A listener-config element from the new HTTP connector may reference a `tls:context` element in order to configure HTTPS. 
-////
 
 == Protocols and Cipher Suites
 
@@ -229,8 +191,6 @@ In the tls:context element, you cannot reference protocols or cipher suites here
 
 Cipher suite names can be long and impact the readability of your XML code. To improve readability, keep these names in an external properties file in your Mule project and refer to it.
 
-image:tls-cipher-property.png[cipher suite]
-
 You can then reference your properties using the following syntax:
 
 [source, xml, linenums]
@@ -244,9 +204,9 @@ This following tls:context element and attributes define TLS communication in a 
 
 === Globally Defined TLS Element
 
-The `tls:context` element defines a configuration for TLS, which can be used from both the client and server sides. It can be referenced by other configuration objects of other modules (or defined as a nested element of one of them).
+The tls:context element defines a configuration for TLS, which can be used from both the client and server sides. It can be referenced by other configuration objects of other modules (or defined as a nested element of one of them).
 
-Inside it, you can include two nested elements: `key-store` and `trust-store`. You don't need to include both, but at least one of the two must be present.
+You can include two nested elements: key-store and trust-store. Including one is required.
 
 [source, xml, linenums]
 ----
@@ -257,64 +217,34 @@ password="mulepassword"/>
  </tls:context>
 ----
 
-=== Nested TLS Element Listener Example
-
-[source, xml, linenums]
-----
-<http:listener-config name="globalConfig" protocol="HTTPS" host="localhost" port="8443">
-        <tls:context>
-            <tls:trust-store path="trustStoreFile" password="1234"/>
-            <tls:key-store path="keyStoreFile" keyPassword="123" password="456"/>
-        </tls:context>
-    </http:listener>
-----
-
-=== Nested TLS Element Request Example
-
-[source, xml, linenums]
-----
-<http:request-config name="globalConfig" protocol="HTTPS" host="localhost" port="8443">
-        <tls:context>
-            <tls:trust-store path="trustStoreFile" password="1234"/>
-            <tls:key-store path="keyStoreFile" keyPassword="123" password="456"/>
-        </tls:context>
-    </http:request-config>
-----
-
 === Attributes of the tls-context Element
 
-[cols="10a,80a,10a"]
-|===
-|*Attribute* |*Description* |*Required*
-|enabledProtocols| Specifies which protocols to enable, out of the list of protocols set in the <<Global TLS configuration>> |Optional
-|enabledCipherSuites | Specifies which cipher suites to enable, out of the list in Global TLS configuration |Optional
-|===
+The attributes are optional.
+
+* enabledProtocols: The protocols named in the the global TLS configuration to enable
+* enabledCipherSuites: The cipher suites named in global TLS configuration to enable
 
 === Attributes of the trust-store Element
 
-[cols="10a,80a,10a"]
-|===
-|*Attribute* |*Description* |*Required*
-|path |Path to the file that contains the trust store. |Required
-|type |The type of the trust store (default JKS) + |Optional
-|password |The trust store password. + |Optional
-|algorithm |The algorithm used in the trust store (default SunX509) |Optional
-|insecure | Boolean that determines if validations against the trust-store are to be done at all. If set to `true`, all certificates are accepted without any validation. If not set, it defaults to 'false' |Optional
-|===
+The attributes other than the path attribute are optional. 
+
+* path: The path to the file that contains the trust store (required)
+* type: The type of the trust store. Default = JKS
+* password: The trust store password
+* algorithm: The algorithm the trust store uses. Default = SunX509
+* insecure: Boolean that determines whether or not to validate the trust-store. If set to true, no validation occurs. Default = false
 
 Setting 'insecure' to 'true' renders connections vulnerable to attacks and is recommended only for prototyping and testing purposes.
 
 === Attributes of the key-store Element
 
-[cols="10a,80a,10a"]
-|===
-|*Attribute* |*Description* |*Required*
-|path |Path to the file that contains the key store. |Required
-|type |The type of the key store (default JKS) |Optional
-|password |The key store password |Optional
-|keyPassword |The key manager password (password for the private key inside the key store) |Optional
-|algorithm |The algorithm used in the key store (default SunX509) |Optional
-|===
+The attributes other than the path attribute are optional.
+
+* path: The path to the file that contains the keystore (required)
+* type: The type of the keystore (default JKS)
+* password: The keystore password
+* keyPassword: The key manager password, which is the password for the private key inside the keystore
+* algorithm: The algorithm used in the key store. Default = SunX509
 
 == Using a UI to Configure TLS
 
