@@ -1,47 +1,84 @@
 // sme: MG?, author: sduke?
 = Migrating the Enricher to a Target Variable
 
-////
-MG: This is completed
-////
-
 // Explain generally how and why things changed between Mule 3 and Mule 4.
-Intro here.
+The Message Enricher is replaced by the Target Variable. The enricher provided a way to add information not provided by the source system. In Mule 4, several modules (including Flow Ref, Object Store, HTTP, FTP SFTP, Database, and others) can store and output a Target Variable for such data in a variable (such as `myVar`). Other components in a Mule flow can then access that data from the Mule event through a DataWeave selector (for example, `vars.myVar`).
 
-What's covered in this section:
-
-* <<topic_1>>
-* <<topic_2>>
-
-[[topic_1]]
-=== Topic_1
-
-Describe what changed from 3.x to 4.x.
+Consider a message from a source system contains a zip code but the target system needs the two letter state. A Message Enricher can be used to lookup the state using the zip code from an enrichment resource. The enricher calls out to the enrichment resource with the current message (containing the zip code) then enriches the current message with the result.
 
 .Mule 3 example
 ----
-Mule 3 example goes here.
+<flow name="orderProcessingFlow">
+   <inbound-endpoint ref="orderEndpoint"/>
+   <enricher target="#[variable:state]">
+       <outbound-endpoint ref="stateLookup"/>
+   </enricher>
+   <outbound-endpoint ref="orderStep2"/>
+</flow>
 ----
+
+In Mule 4, you instead create a
 
 .Mule 4 example
 ----
-Mule 4 example goes here.
+<flow name="orderProcessingFlow">
+   <some_trigger/>
+   <enricher target="#[var:state]">
+       <outbound-endpoint ref="stateLookup"/>
+   </enricher>
+   <outbound-endpoint ref="orderStep2"/>
+</flow>
 ----
 
 [[topic_2]]
 === Topic_2
 
-Describe what changed from 3.x to 4.x.
+In this particular example the 'addressLookup' endpoint receives the full message, in some cases this might be a generic service that doesn’t know how to parse our order message but rather just a zip string. It is very easy to improve the configuration to support this, consider the following snippet:
 
 .Mule 3 example
 ----
-Mule 3 example goes here.
+<flow name="orderProcessingFlow">
+   <inbound-endpoint ref="orderconnector"/>
+   <enricher target="#[variable:address]">
+       <outbound-endpoint ref="addressLookup">
+           <expression-transformer evaluator="xpath" expression="/order/address/zip" />
+       </outbound-endpoint>
+   </enricher>
+   <outbound-endpoint ref="orderStep2"/>
+</flow>
 ----
 
 .Mule 4 example
 ----
 Mule 4 example goes here.
 ----
+
+[[topic_3]]
+== Topic_3
+
+TODO...
+
+For example, if you have a requirement to validate the credit card used for the order as well as add the full address using the ZIP code.  The credit card validation process should populate a header call “paymentValidated” with either true or false, this will be used later on.  We can easily perform credit card validation by calling out to an authorization service like Authorize.Net to perform this validation, but we have a problem this cloud connector returns more than just a boolean.
+
+The solution is to use the enrichers ‘source‘ attribute which will select a value from the result message before using it to enrich the target.
+
+.Mule 3 Example
+----
+<flow name="orderProcessingFlow">
+   <inbound-endpoint ref="orderconnector"/>
+   <enricher target="#[variable:paymentValidated]" source="/authorizenet/authorization/@valid">
+       <authorizenet:authorize cardNumber="/order/cc/number" />
+   </enricher>
+   <outbound-endpoint ref="orderStep2"/>
+</flow>
+----
+
+.Mule 4 Example
+----
+TODO
+----
+
+
 
 == See Also
 
