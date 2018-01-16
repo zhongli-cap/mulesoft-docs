@@ -248,41 +248,69 @@ OFFSET #[flowVars.queryOffset]]]>
 <flow name="get-products-flow">
 ----
 
-. Add a `Transform component` to replace the logic inside `message-properties-transformer` and set the variables `queryOffset`, `queryLimit`, `queryName` and `queryCategory` with the values received as `query-parameters`.
-. Due to new Mule Message Structure notice how the old expression `inboundProperties."http.query.params".offset` should be rewritten as `attributes.queryParams.offset` for accessing `query-parameters`.
+. Create a package with the name `variables` under `src/main/resources` folder.
 +
 
-[source,xml,linenums]
-----
-<ee:transform doc:name="Get Query Params">
-  <ee:message />
-    <ee:variables>
-      <ee:set-variable variableName="queryOffset"><![CDATA[%dw 2.0
-output application/java
----
-attributes.queryParams.offset as Number]]></ee:set-variable>
-      <ee:set-variable variableName="queryLimit"><![CDATA[%dw 2.0
-output application/java
----
-attributes.queryParams.maxResults as Number]]></ee:set-variable>
-      <ee:set-variable variableName="queryName"><![CDATA[%dw 2.0
-output application/java
-var queryName = attributes.queryParams.name
----
-if (queryName != null)
-	queryName
-else
-	'%%']]></ee:set-variable>
-      <ee:set-variable variableName="queryCategory"><![CDATA[%dw 2.0
+. Create the file `set-queryCategory-variable.dwl` under `src/main/resources/variables` folder and write a DW script for setting `queryCategory` flow variable.
++
+....
+%dw 2.0
 output application/java
 var queryCategory = attributes.queryParams.category
 ---
 if (queryCategory != null)
 	queryCategory
 else
-	'%%']]></ee:set-variable>
-  </ee:variables>
-</ee:transform>
+	'%%'
+....
+
+. Create the file `set-queryLimit-variable.dwl` under `src/main/resources/variables` folder and write a DW script for setting `queryLimit` flow variable.
++
+....
+%dw 2.0
+output application/java
+---
+attributes.queryParams.maxResults as Number
+....
+
+. Create the file `set-queryName-variable.dwl` under `src/main/resources/variables` folder and write a DW script for setting `queryName` flow variable.
++
+....
+%dw 2.0
+output application/java
+var queryName = attributes.queryParams.name
+---
+if (queryName != null)
+	queryName
+else
+	'%%'
+....
+
+. Create the file `set-queryOffset-variable.dwl` under `src/main/resources/variables` folder and write a DW script for setting `queryOffset` flow variable.
++
+....
+%dw 2.0
+output application/java
+---
+attributes.queryParams.offset as Number
+....
+
+. Add a `Transform component` to replace the logic inside `message-properties-transformer` and set the variables `queryOffset`, `queryLimit`, `queryName` and `queryCategory` referencing to its DW script.
++
+
+[source,xml,linenums]
+----
+<flow name="get-products-flow">
+  <ee:transform doc:name="Get Query Params" doc:id="ab756164-e1df-4fc5-8fbe-8f4f8cafc2f6">
+    <ee:message />
+    <ee:variables>
+     <ee:set-variable variableName="queryOffset" resource="variables/set-queryOffset-variable.dwl" />
+     <ee:set-variable variableName="queryLimit" resource="variables/set-queryLimit-variable.dwl" />
+     <ee:set-variable variableName="queryName" resource="variables/set-queryName-variable.dwl" />
+     <ee:set-variable variableName="queryCategory" resource="variables/set-queryCategory-variable.dwl" />
+   </ee:variables>
+ </ee:transform>
+</flow>
 ----
 
 . Add a `db:select` element, referencing the MySQL Global Configuration. Use the colon (:) syntax in parametrized queries. Parameters must be supplied as key-value pairs into the `db:input-parameters` element.
@@ -299,6 +327,12 @@ OFFSET :offset</db:sql>
   <db:input-parameters ><![CDATA[#[{'name' : lower(vars.queryName), 'category': lower(vars.queryCategory), 'limit': vars.queryLimit, 'offset': vars.queryOffset}]]]></db:input-parameters>
 </db:select>
 ----
+
+. Create a package with the name `mappings` under `src/main/resources` folder.
++
+
+. Create the file `get-products-response.dwl` under `src/main/resources/mappings` folder.
++
 
 . Migrate `get-products-response.dwl` DW 1.0 script to DW 2.0.
 +
@@ -359,41 +393,35 @@ payload map {
 }
 ----
 
+. Add a `Transform component` that sets the payload using the DW 2.0 transformation.
++
+
+....
+<flow name="get-products-flow">
+		<!-- more logic here -->
+		<ee:transform doc:name="Products to JSON">
+			<ee:message>
+				<ee:set-payload resource="mappings/get-products-response.dwl" />
+			</ee:message>
+		</ee:transform>
+	</flow>
+....
+
 .Configuration XML for get-products-flow in Studio 7.
 [source,xml,linenums]
 ----
 <flow name="get-products-flow">
-	<ee:transform doc:name="Get Query Params">
-    <ee:message />
-    <ee:variables>
-      <ee:set-variable variableName="queryOffset"><![CDATA[%dw 2.0
-output application/java
----
-attributes.queryParams.offset as Number]]></ee:set-variable>
-      <ee:set-variable variableName="queryLimit"><![CDATA[%dw 2.0
-output application/java
----
-attributes.queryParams.maxResults as Number]]></ee:set-variable>
-      <ee:set-variable variableName="queryName"><![CDATA[%dw 2.0
-output application/java
-var queryName = attributes.queryParams.name
----
-if (queryName != null)
-	queryName
-else
-	'%%']]></ee:set-variable>
-      <ee:set-variable variableName="queryCategory"><![CDATA[%dw 2.0
-output application/java
-var queryCategory = attributes.queryParams.category
----
-if (queryCategory != null)
-	queryCategory
-else
-	'%%']]></ee:set-variable>
-    </ee:variables>
-  </ee:transform>
-  <db:select config-ref="MySQL_Configuration" doc:name="Query Products">
-    <db:sql>SELECT p.id, p.name, p.description, p.product_number,
+		<ee:transform doc:name="Get Query Params" doc:id="ab756164-e1df-4fc5-8fbe-8f4f8cafc2f6">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="queryOffset" resource="variables/set-queryOffset-variable.dwl" />
+				<ee:set-variable variableName="queryLimit" resource="variables/set-queryLimit-variable.dwl" />
+				<ee:set-variable variableName="queryName" resource="variables/set-queryName-variable.dwl" />
+				<ee:set-variable variableName="queryCategory" resource="variables/set-queryCategory-variable.dwl" />
+			</ee:variables>
+		</ee:transform>
+		<db:select config-ref="MySQL_Configuration" doc:name="Query Products">
+			<db:sql>SELECT p.id, p.name, p.description, p.product_number,
 				p.manufactured, p.colors, p.categories, p.stock,
 				p.safety_stock_level, p.standard_cost, p.list_price, p.size,
 				p.size_unit_measure_code, p.weight, p.weight_unit_measure_code,
@@ -402,37 +430,14 @@ else
 				WHERE LOWER(p.name) like :name AND LOWER(p.categories) like :category
 				LIMIT :limit
 				OFFSET :offset</db:sql>
-    <db:input-parameters><![CDATA[#[{'name' : lower(vars.queryName), 'category': lower(vars.queryCategory), 'limit': vars.queryLimit, 'offset': vars.queryOffset}]]]></db:input-parameters>
-  </db:select>
-	<ee:transform doc:name="Products to JSON">
-    <ee:message>
-      <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-payload map {
-	id: $.id,
-	categories: ($.categories default "") splitBy ",",
-	colors: ($.colors default "") splitBy ",",
-	images: ($.images default "") splitBy ",",
-	createdDate: $.created_date as String {format: "yyyy-MM-dd"},
-	modifiedDate: $.modified_date as String {format: "yyyy-MM-dd"},
-	safetyStockLevel: $.safety_stock_level as Number,
-	stock: $.stock as Number,
-	daysToManufacture: $.days_to_manufacture,
-	name: $.name,
-	description: $.description,
-	listPrice: $.list_price,
-	manufactured: $.manufactured,
-	productNumber: $.product_number,
-	size: $.size,
-	sizeUnitMeasureCode: $.size_unit_measure_code,
-	standardCost: $.standard_cost,
-	weightUnitMeasureCode: $.weight_unit_measure_code,
-	weight: $.weight
-}]]></ee:set-payload>
-    </ee:message>
-  </ee:transform>
-</flow>
+			<db:input-parameters><![CDATA[#[{'name' : lower(vars.queryName), 'category': lower(vars.queryCategory), 'limit': vars.queryLimit, 'offset': vars.queryOffset}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Products to JSON">
+			<ee:message>
+				<ee:set-payload resource="mappings/get-products-response.dwl" />
+			</ee:message>
+		</ee:transform>
+	</flow>
 ----
 
 == Migrating _delete-product-flow_
