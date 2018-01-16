@@ -1,0 +1,43 @@
+= Mule 4 for Mule Users: the Mule Message
+
+Mule 4 includes a simplified Mule Message model. In this simplified model, Mule Events have a Message and variables associated with it. A Message is composed of a payload and its attributes (metadata, such as files size). Variables hold arbitrary information such as Messages, payload data, or attributes. This simplified message model makes it easier to work with data in a consistent way across connectors without information being overwritten.
+
+== Inbound Properties are now attributes
+
+In Mule 3, metadata from a connector was stored in inbound properties. Attributes are the successor to these, and have two advantages: 1) they are strongly typed, so you can easily see what data is available and 2) They can easily be stored in a variables for access througout your flow. Here's an example of a typical Mule Message in Mule 4, which is from an HTTP Listener:
+
+image:mule-message.png[Mule Message structure in Mule 4]
+
+Attributes can be easily accessed via expressions, just as inbound properties were, for example:
+[source,linenums]
+----
+attributes.requestPath
+attributes.queryParams.searchCriteria
+----
+
+== Outbound Properties
+To send data across protocol barriers like session properties did, you must explicitly specify what parameters you want to send. For example, with the HTTP listener, you may want to specify the outgoing status code response or headers. You can do this by mapping these to variables in your message:
+
+[source,xml,linenums]
+----
+<http:listener config-ref="api-httpListenerConfig" path="/api/*" doc:name="Listener">
+    <http:response statusCode="#[vars.httpStatus default 200]">
+        <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+    </http:response>
+    <http:error-response statusCode="#[vars.httpStatus default 500]">
+        <http:body>#[payload]</http:body>
+        <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+    </http:error-response>
+</http:listener>
+----
+
+This enables you to set those variables elsewhere in your flow, without having to worry about them being overwritten by another connector, as you did in Mule 3. For example:
+[source,xml,linenums]
+----
+<set-variable variableName="httpStatus" value="#[200]"/>
+----
+
+== Session Properties
+Session properties have been removed in Mule 4. Instead, users should store data in outbound properties and explicitly
+map the data that they want sent through session boundaries. This provides a more secure out of the box experience and
+less unexpected behavior for users.
