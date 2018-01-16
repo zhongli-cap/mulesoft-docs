@@ -396,16 +396,17 @@ payload map {
 . Add a `Transform component` that sets the payload using the DW 2.0 transformation.
 +
 
-....
+[source,xml,linenums]
+----
 <flow name="get-products-flow">
-		<!-- more logic here -->
-		<ee:transform doc:name="Products to JSON">
-			<ee:message>
-				<ee:set-payload resource="mappings/get-products-response.dwl" />
-			</ee:message>
-		</ee:transform>
-	</flow>
-....
+	<!-- more logic here -->
+	<ee:transform doc:name="Products to JSON">
+		<ee:message>
+			<ee:set-payload resource="mappings/get-products-response.dwl" />
+		</ee:message>
+	</ee:transform>
+</flow>
+----
 
 .Configuration XML for get-products-flow in Studio 7.
 [source,xml,linenums]
@@ -468,21 +469,28 @@ payload map {
 <flow name="delete-product-flow" />
 ----
 
-. As `Dataweave 2.0` is the default `Mule Runtime 4.x` expression language, add a `Transform component` for writing a DW script that sets a variable with the `productId` value received as a `URI parameter`.
+. Create `set-productId-variable.dwl` under `src/main/resources/variables` folder. Add the following logic for getting the `id` from `uriParams`.
++
+....
+%dw 2.0
+output application/java
+---
+attributes.uriParams.id
+....
+
+. Add a `Transform component` that references the DW script that sets a variable with the `productId` value received as a `URI parameter`.
 +
 
 [source,xml,linenums]
 ----
-<ee:transform doc:name="Set productId variable">
-  <ee:message />
-  <ee:variables>
-    <ee:set-variable variableName="productId" ><![CDATA[%dw 2.0
-output application/java
----
-attributes.uriParams.id]]>
-    </ee:set-variable>
-  </ee:variables>
-</ee:transform>
+<flow name="delete-product-flow">
+  <ee:transform doc:name="Set productId variable">
+    <ee:message />
+    <ee:variables>
+      <ee:set-variable variableName="productId" resource="variables/set-productId-variable.dwl" />
+    </ee:variables>
+  </ee:transform>
+</flow>
 ----
 
 . For configuring the details of the transaction, replace the Mule 3.x `transactional` scope with the new `try` scope and set the `transactionalAction` attribute to `ALWAYS_BEGIN`.
@@ -507,21 +515,30 @@ attributes.uriParams.id]]>
 </try>
 ----
 
+. Create a `set-httpStatus-with-204.dwl` file under `src/main/resources/variables` as follows.
++
+
+....
+%dw 2.0
+output application/java
+---
+204
+....
+
 . Set `httpStatus` variable with the value `204` using a `Transform Component` for defining a `NO CONTENT` response code.
 +
 
 [source,xml,linenums]
 ----
-<ee:transform doc:name="Set Status" doc:id="a96f6930-5f34-4f03-8ad6-766ed77dc615">
+<ee:transform doc:name="Set 204 HTTP Status code">
   <ee:message />
   <ee:variables>
-    <ee:set-variable variableName="httpStatus"><![CDATA[%dw 2.0
-output application/java
----
-204]]></ee:set-variable>
+    <ee:set-variable variableName="httpStatus" resource="variables/set-httpStatus-with-204.dwl" />
   </ee:variables>
 </ee:transform>
 ----
+
+To return a specific HTTP Status code, instead of setting a `http.status` property, Mule 4 requires a to set a variable with the name `httpStatus`.
 
 .Configuration XML for delete-product-flow in Studio 7.
 [source,xml,linenums]
@@ -530,11 +547,7 @@ output application/java
   <ee:transform doc:name="Set productId variable">
     <ee:message />
     <ee:variables>
-      <ee:set-variable variableName="productId" ><![CDATA[%dw 2.0
-output application/java
----
-attributes.uriParams.id]]>
-      </ee:set-variable>
+      <ee:set-variable variableName="productId" resource="variables/set-productId-variable.dwl" />
     </ee:variables>
   </ee:transform>
   <try doc:name="Try" transactionalAction="ALWAYS_BEGIN">
@@ -543,13 +556,10 @@ attributes.uriParams.id]]>
       <db:input-parameters><![CDATA[#[{'productId' : vars.productId}]]]></db:input-parameters>
     </db:delete>
   </try>
-  <ee:transform doc:name="Set Status" doc:id="a96f6930-5f34-4f03-8ad6-766ed77dc615">
+  <ee:transform doc:name="Set 204 HTTP Status code">
     <ee:message />
-      <ee:variables>
-        <ee:set-variable variableName="httpStatus"><![CDATA[%dw 2.0
-output application/java
----
-204]]></ee:set-variable>
+    <ee:variables>
+      <ee:set-variable variableName="httpStatus" resource="variables/set-httpStatus-with-204.dwl" />
     </ee:variables>
   </ee:transform>
 </flow>
