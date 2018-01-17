@@ -210,6 +210,28 @@ http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/m
 <api-gateway:autodiscovery apiId="${autodiscovery.api.id}" flowRef="api-product-main" doc:name="API Autodiscovery"/>
 ----
 
+== Migrating Global Validation Configuration
+
+// Now do the same for the next migrated feature, and so on.
+
+.Configuration XML for Global Validation Configuration in Studio 6.
+[source,xml,linenums]
+----
+<validation:config name="Validation_Configuration" doc:name="Validation Configuration"/>
+----
+
+// Explain what changed for Mule 4 in Studio 7, including any different modules, component you needed to use.
+Opposite to Mule Runtime 3.x, adding the Validation Module to the Mule Palette is required to proceed with the configuration.
+
+. In the Mule Palette, click `Add Module` and select `Validation Module` among the available modules.
+. Add a `Validation Config` Global Configuration Element.
+
+.Configuration XML for Global Validation Configuration in Studio 7.
+[source,xml,linenums]
+----
+<validation:config name="Validation_Config" doc:name="Validation Config" />
+----
+
 == Migrating _get-products-flow_
 
 // Now do the same for the next migrated feature, and so on.
@@ -440,6 +462,180 @@ Finally, add a `Transform component` that sets the payload using the DW 2.0 tran
 	</flow>
 ----
 
+== Migrating _get-product-by-id-flow_
+
+// Now do the same for the next migrated feature, and so on.
+
+.Configuration XML for get-product-by-id-flow in Studio 6.
+[source,xml,linenums]
+----
+<flow name="get-product-by-id-flow">
+  <db:select config-ref="MySQL_Configuration" doc:name="Get by Id">
+    <db:parameterized-query><![CDATA[SELECT p.id, p.name, p.description, p.product_number, p.manufactured, p.colors, p.categories, p.stock, p.safety_stock_level, p.standard_cost, p.list_price, p.size, p.size_unit_measure_code, p.weight, p.weight_unit_measure_code, p.days_to_manufacture, p.images,  p.modified_date, p.created_date FROM product p where p.id = #[id]]]></db:parameterized-query>
+  </db:select>
+  <validation:is-true config-ref="Validation_Configuration" doc:name="Is Not Empty" exceptionClass="org.mule.module.apikit.exception.NotFoundException" expression="#[payload.size() &gt; 0]"/>
+  <dw:transform-message doc:name="Product to JSON">
+    <dw:set-payload resource="classpath:mappings/get-product-by-id-response.dwl"/>
+  </dw:transform-message>
+</flow>
+----
+
+// Explain what changed for Mule 4 in Studio 7, including any different modules, component you needed to use.
+. There are no changes regarding `get-product-by-id-flow` definition.
++
+[source,xml,linenums]
+----
+<flow name="get-product-by-id-flow" />
+----
+
+. Create `set-productId-variable.dwl` under `src/main/resources/variables` folder. Add the following logic for getting the `id` from `uriParams`.
++
+....
+%dw 2.0
+output application/java
+---
+attributes.uriParams.id
+....
+
+. Add a `Transform component` that references the DW script that sets a variable with the `productId` value received as a `URI parameter`.
++
+[source,xml,linenums]
+----
+<flow name="get-product-by-id-flow">
+  <ee:transform doc:name="Get Uri Params">
+    <ee:message />
+    <ee:variables>
+      <ee:set-variable variableName="id" resource="variables/set-productId-variable.dwl" />
+    </ee:variables>
+  </ee:transform>
+</flow>
+----
+
+. Add a `db:select` element, referencing the MySQL Global Configuration. Use the colon (:) syntax in parametrized queries. Parameters must be supplied as key-value pairs into the `db:input-parameters` element.
++
+[source,xml,linenums]
+----
+<db:select config-ref="MySQL_Configuration" doc:name="Get by Id">
+  <db:sql>SELECT p.id, p.name, p.description, p.product_number, p.manufactured, p.colors, p.categories, p.stock, p.safety_stock_level, p.standard_cost, p.list_price, p.size, p.size_unit_measure_code, p.weight, p.weight_unit_measure_code, p.days_to_manufacture, p.images,  p.modified_date, p.created_date
+FROM product p
+where p.id = :id</db:sql>
+  <db:input-parameters><![CDATA[#[{'id' : vars.id}]]]></db:input-parameters>
+</db:select>
+----
+
+. Add a `validation:is-true` element after the `db:select` that checks if the query has returned results. If not, throw an `APP:NOT_FOUND` error. Notice that as `MEL` has been replaced by `DataWeave` as the default expression language, `#[payload.size() &gt; 0]` is rewritten as `#[sizeOf(payload) &gt; 0]`.
++
+[source,xml,linenums]
+----
+<validation:is-true doc:name="Is Not Empty" config-ref="Validation_Config" expression="#[sizeOf(payload) &gt; 0]">
+  <error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="APP:NOT_FOUND" />
+</validation:is-true>
+----
+
+. Create `get-product-by-id-response.dwl` file under `src/main/resources/mappings` folder and migrate DataWeave script for building JSON response from 1.0 to 2.0.
++
+
+.Transformation for get-product-by-id-response in DW 1.0.
+----
+%dw 1.0
+%output application/json
+%var product = payload[0]
+---
+{
+	id: product.id,
+	name: product.name,
+	description: product.description,
+	manufactured: product.manufactured,
+	productNumber: product.product_number,
+	colors: (product.colors default "") splitBy "," ,
+	categories:(product.categories default "") splitBy "," ,
+	safetyStockLevel: product.safety_socket_level,
+	standardCost: (product.standard_cost default "0.0") as :string {format: "##.##"} as :number,
+	listPrice: (product.list_price default "0.0") as :string {format: "##.##"} as :number,
+	stock: product.stock,
+	safetyStockLevel: product.safety_stock_level,
+	daysToManufacture: product.days_to_manufacture,
+	size: product.size,
+	sizeUnitMeasureCode: product.size_unit_measure_code,
+	weight: product.weight,
+	weightUnitMeasureCode: product.weight_unit_measure_code,
+	daysToManufacture: product.days_to_manufacture,
+	images: (product.images splitBy "," default null),
+	modifiedDate: (product.modified_date default "") as :date {format: "yyyy-MM-dd"},
+	createdDate: (product.created_date default "") as :date {format: "yyyy-MM-dd"}
+
+}
+----
+
+.Transformation for get-product-by-id-response.dwl in DW 2.0.
+----
+%dw 2.0
+output application/json
+var product = payload[0]
+---
+{
+	id: product.id,
+	name: product.name,
+	description: product.description,
+	manufactured: product.manufactured,
+	productNumber: product.product_number,
+	colors: (product.colors default "") splitBy "," ,
+	categories:(product.categories default "") splitBy "," ,
+	safetyStockLevel: product.safety_socket_level,
+	standardCost: (product.standard_cost default "0.0") as String {format: "##.##"} as Number,
+	listPrice: (product.list_price default "0.0") as String {format: "##.##"} as Number,
+	stock: product.stock,
+	safetyStockLevel: product.safety_stock_level,
+	daysToManufacture: product.days_to_manufacture,
+	size: product.size,
+	sizeUnitMeasureCode: product.size_unit_measure_code,
+	weight: product.weight,
+	weightUnitMeasureCode: product.weight_unit_measure_code,
+	daysToManufacture: product.days_to_manufacture,
+	images: (product.images splitBy "," default null),
+	modifiedDate: (product.modified_date default "") as Date {format: "yyyy-MM-dd"},
+	createdDate: (product.created_date default "") as Date {format: "yyyy-MM-dd"}
+}
+----
+
+Finally, add a `Transform component` that sets the payload using the DW 2.0 transformation.
+
+[source,xml,linenums]
+----
+<ee:transform doc:name="Product to JSON">
+  <ee:message>
+    <ee:set-payload resource="mappings/get-product-by-id-response.dwl" />
+  </ee:message>
+</ee:transform>
+----
+
+.Configuration XML for get-product-by-id-flow in Studio 7.
+[source,xml,linenums]
+----
+<flow name="get-product-by-id-flow">
+  <ee:transform doc:name="Get Uri Params">
+    <ee:message />
+    <ee:variables>
+      <ee:set-variable variableName="id" resource="variables/set-productId-variable.dwl" />
+    </ee:variables>
+  </ee:transform>
+  <db:select config-ref="MySQL_Configuration" doc:name="Get by Id">
+    <db:sql>SELECT p.id, p.name, p.description, p.product_number, p.manufactured, p.colors, p.categories, p.stock, p.safety_stock_level, p.standard_cost, p.list_price, p.size, p.size_unit_measure_code, p.weight, p.weight_unit_measure_code, p.days_to_manufacture, p.images,  p.modified_date, p.created_date
+FROM product p
+where p.id = :id</db:sql>
+    <db:input-parameters><![CDATA[#[{'id' : vars.id}]]]></db:input-parameters>
+  </db:select>
+  <validation:is-true doc:name="Is Not Empty" config-ref="Validation_Config" expression="#[sizeOf(payload) &gt; 0]">
+    <error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="APP:NOT_FOUND" />
+  </validation:is-true>
+  <ee:transform doc:name="Product to JSON">
+    <ee:message>
+      <ee:set-payload resource="mappings/get-product-by-id-response.dwl" />
+    </ee:message>
+  </ee:transform>
+</flow>
+----
+
 == Migrating _delete-product-flow_
 
 // Now do the same for the next migrated feature, and so on.
@@ -467,15 +663,6 @@ Finally, add a `Transform component` that sets the payload using the DW 2.0 tran
 ----
 <flow name="delete-product-flow" />
 ----
-
-. Create `set-productId-variable.dwl` under `src/main/resources/variables` folder. Add the following logic for getting the `id` from `uriParams`.
-+
-....
-%dw 2.0
-output application/java
----
-attributes.uriParams.id
-....
 
 . Add a `Transform component` that references the DW script that sets a variable with the `productId` value received as a `URI parameter`.
 +
