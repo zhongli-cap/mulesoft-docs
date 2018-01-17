@@ -210,6 +210,28 @@ http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/m
 <api-gateway:autodiscovery apiId="${autodiscovery.api.id}" flowRef="api-product-main" doc:name="API Autodiscovery"/>
 ----
 
+== Migrating Global Validation Configuration
+
+// Now do the same for the next migrated feature, and so on.
+
+.Configuration XML for Global Validation Configuration in Studio 6.
+[source,xml,linenums]
+----
+<validation:config name="Validation_Configuration" doc:name="Validation Configuration"/>
+----
+
+// Explain what changed for Mule 4 in Studio 7, including any different modules, component you needed to use.
+Opposite to Mule Runtime 3.x, adding the Validation Module to the Mule Palette is required to proceed with the configuration.
+
+. In the Mule Palette, click `Add Module` and select `Validation Module` among the available modules.
+. Add a `Validation Config` Global Configuration Element.
+
+.Configuration XML for Global Validation Configuration in Studio 7.
+[source,xml,linenums]
+----
+<validation:config name="Validation_Config" doc:name="Validation Config" />
+----
+
 == Migrating _get-products-flow_
 
 // Now do the same for the next migrated feature, and so on.
@@ -248,41 +270,69 @@ OFFSET #[flowVars.queryOffset]]]>
 <flow name="get-products-flow">
 ----
 
-. Add a `Transform component` to replace the logic inside `message-properties-transformer` and set the variables `queryOffset`, `queryLimit`, `queryName` and `queryCategory` with the values received as `query-parameters`.
-. Due to new Mule Message Structure notice how the old expression `inboundProperties."http.query.params".offset` should be rewritten as `attributes.queryParams.offset` for accessing `query-parameters`.
+. Create a package with the name `variables` under `src/main/resources` folder.
 +
 
-[source,xml,linenums]
-----
-<ee:transform doc:name="Get Query Params">
-  <ee:message />
-    <ee:variables>
-      <ee:set-variable variableName="queryOffset"><![CDATA[%dw 2.0
-output application/java
----
-attributes.queryParams.offset as Number]]></ee:set-variable>
-      <ee:set-variable variableName="queryLimit"><![CDATA[%dw 2.0
-output application/java
----
-attributes.queryParams.maxResults as Number]]></ee:set-variable>
-      <ee:set-variable variableName="queryName"><![CDATA[%dw 2.0
-output application/java
-var queryName = attributes.queryParams.name
----
-if (queryName != null)
-	queryName
-else
-	'%%']]></ee:set-variable>
-      <ee:set-variable variableName="queryCategory"><![CDATA[%dw 2.0
+. Create the file `set-queryCategory-variable.dwl` under `src/main/resources/variables` folder and write a DW script for setting `queryCategory` flow variable.
++
+....
+%dw 2.0
 output application/java
 var queryCategory = attributes.queryParams.category
 ---
 if (queryCategory != null)
 	queryCategory
 else
-	'%%']]></ee:set-variable>
-  </ee:variables>
-</ee:transform>
+	'%%'
+....
+
+. Create the file `set-queryLimit-variable.dwl` under `src/main/resources/variables` folder and write a DW script for setting `queryLimit` flow variable.
++
+....
+%dw 2.0
+output application/java
+---
+attributes.queryParams.maxResults as Number
+....
+
+. Create the file `set-queryName-variable.dwl` under `src/main/resources/variables` folder and write a DW script for setting `queryName` flow variable.
++
+....
+%dw 2.0
+output application/java
+var queryName = attributes.queryParams.name
+---
+if (queryName != null)
+	queryName
+else
+	'%%'
+....
+
+. Create the file `set-queryOffset-variable.dwl` under `src/main/resources/variables` folder and write a DW script for setting `queryOffset` flow variable.
++
+....
+%dw 2.0
+output application/java
+---
+attributes.queryParams.offset as Number
+....
+
+. Add a `Transform component` to replace the logic inside `message-properties-transformer` and set the variables `queryOffset`, `queryLimit`, `queryName` and `queryCategory` referencing to its DW script.
++
+
+[source,xml,linenums]
+----
+<flow name="get-products-flow">
+  <ee:transform doc:name="Get Query Params" doc:id="ab756164-e1df-4fc5-8fbe-8f4f8cafc2f6">
+    <ee:message />
+    <ee:variables>
+     <ee:set-variable variableName="queryOffset" resource="variables/set-queryOffset-variable.dwl" />
+     <ee:set-variable variableName="queryLimit" resource="variables/set-queryLimit-variable.dwl" />
+     <ee:set-variable variableName="queryName" resource="variables/set-queryName-variable.dwl" />
+     <ee:set-variable variableName="queryCategory" resource="variables/set-queryCategory-variable.dwl" />
+   </ee:variables>
+ </ee:transform>
+</flow>
 ----
 
 . Add a `db:select` element, referencing the MySQL Global Configuration. Use the colon (:) syntax in parametrized queries. Parameters must be supplied as key-value pairs into the `db:input-parameters` element.
@@ -299,6 +349,12 @@ OFFSET :offset</db:sql>
   <db:input-parameters ><![CDATA[#[{'name' : lower(vars.queryName), 'category': lower(vars.queryCategory), 'limit': vars.queryLimit, 'offset': vars.queryOffset}]]]></db:input-parameters>
 </db:select>
 ----
+
+. Create a package with the name `mappings` under `src/main/resources` folder.
++
+
+. Create the file `get-products-response.dwl` under `src/main/resources/mappings` folder.
++
 
 . Migrate `get-products-response.dwl` DW 1.0 script to DW 2.0.
 +
@@ -359,41 +415,35 @@ payload map {
 }
 ----
 
+Finally, add a `Transform component` that sets the payload using the DW 2.0 transformation.
+
+[source,xml,linenums]
+----
+<flow name="get-products-flow">
+	<!-- more logic here -->
+	<ee:transform doc:name="Products to JSON">
+		<ee:message>
+			<ee:set-payload resource="mappings/get-products-response.dwl" />
+		</ee:message>
+	</ee:transform>
+</flow>
+----
+
 .Configuration XML for get-products-flow in Studio 7.
 [source,xml,linenums]
 ----
 <flow name="get-products-flow">
-	<ee:transform doc:name="Get Query Params">
-    <ee:message />
-    <ee:variables>
-      <ee:set-variable variableName="queryOffset"><![CDATA[%dw 2.0
-output application/java
----
-attributes.queryParams.offset as Number]]></ee:set-variable>
-      <ee:set-variable variableName="queryLimit"><![CDATA[%dw 2.0
-output application/java
----
-attributes.queryParams.maxResults as Number]]></ee:set-variable>
-      <ee:set-variable variableName="queryName"><![CDATA[%dw 2.0
-output application/java
-var queryName = attributes.queryParams.name
----
-if (queryName != null)
-	queryName
-else
-	'%%']]></ee:set-variable>
-      <ee:set-variable variableName="queryCategory"><![CDATA[%dw 2.0
-output application/java
-var queryCategory = attributes.queryParams.category
----
-if (queryCategory != null)
-	queryCategory
-else
-	'%%']]></ee:set-variable>
-    </ee:variables>
-  </ee:transform>
-  <db:select config-ref="MySQL_Configuration" doc:name="Query Products">
-    <db:sql>SELECT p.id, p.name, p.description, p.product_number,
+		<ee:transform doc:name="Get Query Params" doc:id="ab756164-e1df-4fc5-8fbe-8f4f8cafc2f6">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="queryOffset" resource="variables/set-queryOffset-variable.dwl" />
+				<ee:set-variable variableName="queryLimit" resource="variables/set-queryLimit-variable.dwl" />
+				<ee:set-variable variableName="queryName" resource="variables/set-queryName-variable.dwl" />
+				<ee:set-variable variableName="queryCategory" resource="variables/set-queryCategory-variable.dwl" />
+			</ee:variables>
+		</ee:transform>
+		<db:select config-ref="MySQL_Configuration" doc:name="Query Products">
+			<db:sql>SELECT p.id, p.name, p.description, p.product_number,
 				p.manufactured, p.colors, p.categories, p.stock,
 				p.safety_stock_level, p.standard_cost, p.list_price, p.size,
 				p.size_unit_measure_code, p.weight, p.weight_unit_measure_code,
@@ -402,34 +452,185 @@ else
 				WHERE LOWER(p.name) like :name AND LOWER(p.categories) like :category
 				LIMIT :limit
 				OFFSET :offset</db:sql>
-    <db:input-parameters><![CDATA[#[{'name' : lower(vars.queryName), 'category': lower(vars.queryCategory), 'limit': vars.queryLimit, 'offset': vars.queryOffset}]]]></db:input-parameters>
+			<db:input-parameters><![CDATA[#[{'name' : lower(vars.queryName), 'category': lower(vars.queryCategory), 'limit': vars.queryLimit, 'offset': vars.queryOffset}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Products to JSON">
+			<ee:message>
+				<ee:set-payload resource="mappings/get-products-response.dwl" />
+			</ee:message>
+		</ee:transform>
+	</flow>
+----
+
+== Migrating _get-product-by-id-flow_
+
+// Now do the same for the next migrated feature, and so on.
+
+.Configuration XML for get-product-by-id-flow in Studio 6.
+[source,xml,linenums]
+----
+<flow name="get-product-by-id-flow">
+  <db:select config-ref="MySQL_Configuration" doc:name="Get by Id">
+    <db:parameterized-query><![CDATA[SELECT p.id, p.name, p.description, p.product_number, p.manufactured, p.colors, p.categories, p.stock, p.safety_stock_level, p.standard_cost, p.list_price, p.size, p.size_unit_measure_code, p.weight, p.weight_unit_measure_code, p.days_to_manufacture, p.images,  p.modified_date, p.created_date FROM product p where p.id = #[id]]]></db:parameterized-query>
   </db:select>
-	<ee:transform doc:name="Products to JSON">
-    <ee:message>
-      <ee:set-payload><![CDATA[%dw 2.0
-output application/json
+  <validation:is-true config-ref="Validation_Configuration" doc:name="Is Not Empty" exceptionClass="org.mule.module.apikit.exception.NotFoundException" expression="#[payload.size() &gt; 0]"/>
+  <dw:transform-message doc:name="Product to JSON">
+    <dw:set-payload resource="classpath:mappings/get-product-by-id-response.dwl"/>
+  </dw:transform-message>
+</flow>
+----
+
+// Explain what changed for Mule 4 in Studio 7, including any different modules, component you needed to use.
+. There are no changes regarding `get-product-by-id-flow` definition.
++
+[source,xml,linenums]
+----
+<flow name="get-product-by-id-flow" />
+----
+
+. Create `set-productId-variable.dwl` under `src/main/resources/variables` folder. Add the following logic for getting the `id` from `uriParams`.
++
+....
+%dw 2.0
+output application/java
 ---
-payload map {
-	id: $.id,
-	categories: ($.categories default "") splitBy ",",
-	colors: ($.colors default "") splitBy ",",
-	images: ($.images default "") splitBy ",",
-	createdDate: $.created_date as String {format: "yyyy-MM-dd"},
-	modifiedDate: $.modified_date as String {format: "yyyy-MM-dd"},
-	safetyStockLevel: $.safety_stock_level as Number,
-	stock: $.stock as Number,
-	daysToManufacture: $.days_to_manufacture,
-	name: $.name,
-	description: $.description,
-	listPrice: $.list_price,
-	manufactured: $.manufactured,
-	productNumber: $.product_number,
-	size: $.size,
-	sizeUnitMeasureCode: $.size_unit_measure_code,
-	standardCost: $.standard_cost,
-	weightUnitMeasureCode: $.weight_unit_measure_code,
-	weight: $.weight
-}]]></ee:set-payload>
+attributes.uriParams.id
+....
+
+. Add a `Transform component` that references the DW script that sets a variable with the `productId` value received as a `URI parameter`.
++
+[source,xml,linenums]
+----
+<flow name="get-product-by-id-flow">
+  <ee:transform doc:name="Get Uri Params">
+    <ee:message />
+    <ee:variables>
+      <ee:set-variable variableName="id" resource="variables/set-productId-variable.dwl" />
+    </ee:variables>
+  </ee:transform>
+</flow>
+----
+
+. Add a `db:select` element, referencing the MySQL Global Configuration. Use the colon (:) syntax in parametrized queries. Parameters must be supplied as key-value pairs into the `db:input-parameters` element.
++
+[source,xml,linenums]
+----
+<db:select config-ref="MySQL_Configuration" doc:name="Get by Id">
+  <db:sql>SELECT p.id, p.name, p.description, p.product_number, p.manufactured, p.colors, p.categories, p.stock, p.safety_stock_level, p.standard_cost, p.list_price, p.size, p.size_unit_measure_code, p.weight, p.weight_unit_measure_code, p.days_to_manufacture, p.images,  p.modified_date, p.created_date
+FROM product p
+where p.id = :id</db:sql>
+  <db:input-parameters><![CDATA[#[{'id' : vars.id}]]]></db:input-parameters>
+</db:select>
+----
+
+. Add a `validation:is-true` element after the `db:select` that checks if the query has returned results. If not, throw an `APP:NOT_FOUND` error. Notice that as `MEL` has been replaced by `DataWeave` as the default expression language, `#[payload.size() &gt; 0]` is rewritten as `#[sizeOf(payload) &gt; 0]`.
++
+[source,xml,linenums]
+----
+<validation:is-true doc:name="Is Not Empty" config-ref="Validation_Config" expression="#[sizeOf(payload) &gt; 0]">
+  <error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="APP:NOT_FOUND" />
+</validation:is-true>
+----
+
+. Create `get-product-by-id-response.dwl` file under `src/main/resources/mappings` folder and migrate DataWeave script for building JSON response from 1.0 to 2.0.
++
+
+.Transformation for get-product-by-id-response in DW 1.0.
+----
+%dw 1.0
+%output application/json
+%var product = payload[0]
+---
+{
+	id: product.id,
+	name: product.name,
+	description: product.description,
+	manufactured: product.manufactured,
+	productNumber: product.product_number,
+	colors: (product.colors default "") splitBy "," ,
+	categories:(product.categories default "") splitBy "," ,
+	safetyStockLevel: product.safety_socket_level,
+	standardCost: (product.standard_cost default "0.0") as :string {format: "##.##"} as :number,
+	listPrice: (product.list_price default "0.0") as :string {format: "##.##"} as :number,
+	stock: product.stock,
+	safetyStockLevel: product.safety_stock_level,
+	daysToManufacture: product.days_to_manufacture,
+	size: product.size,
+	sizeUnitMeasureCode: product.size_unit_measure_code,
+	weight: product.weight,
+	weightUnitMeasureCode: product.weight_unit_measure_code,
+	daysToManufacture: product.days_to_manufacture,
+	images: (product.images splitBy "," default null),
+	modifiedDate: (product.modified_date default "") as :date {format: "yyyy-MM-dd"},
+	createdDate: (product.created_date default "") as :date {format: "yyyy-MM-dd"}
+
+}
+----
+
+.Transformation for get-product-by-id-response.dwl in DW 2.0.
+----
+%dw 2.0
+output application/json
+var product = payload[0]
+---
+{
+	id: product.id,
+	name: product.name,
+	description: product.description,
+	manufactured: product.manufactured,
+	productNumber: product.product_number,
+	colors: (product.colors default "") splitBy "," ,
+	categories:(product.categories default "") splitBy "," ,
+	safetyStockLevel: product.safety_socket_level,
+	standardCost: (product.standard_cost default "0.0") as String {format: "##.##"} as Number,
+	listPrice: (product.list_price default "0.0") as String {format: "##.##"} as Number,
+	stock: product.stock,
+	safetyStockLevel: product.safety_stock_level,
+	daysToManufacture: product.days_to_manufacture,
+	size: product.size,
+	sizeUnitMeasureCode: product.size_unit_measure_code,
+	weight: product.weight,
+	weightUnitMeasureCode: product.weight_unit_measure_code,
+	daysToManufacture: product.days_to_manufacture,
+	images: (product.images splitBy "," default null),
+	modifiedDate: (product.modified_date default "") as Date {format: "yyyy-MM-dd"},
+	createdDate: (product.created_date default "") as Date {format: "yyyy-MM-dd"}
+}
+----
+
+Finally, add a `Transform component` that sets the payload using the DW 2.0 transformation.
+
+[source,xml,linenums]
+----
+<ee:transform doc:name="Product to JSON">
+  <ee:message>
+    <ee:set-payload resource="mappings/get-product-by-id-response.dwl" />
+  </ee:message>
+</ee:transform>
+----
+
+.Configuration XML for get-product-by-id-flow in Studio 7.
+[source,xml,linenums]
+----
+<flow name="get-product-by-id-flow">
+  <ee:transform doc:name="Get Uri Params">
+    <ee:message />
+    <ee:variables>
+      <ee:set-variable variableName="id" resource="variables/set-productId-variable.dwl" />
+    </ee:variables>
+  </ee:transform>
+  <db:select config-ref="MySQL_Configuration" doc:name="Get by Id">
+    <db:sql>SELECT p.id, p.name, p.description, p.product_number, p.manufactured, p.colors, p.categories, p.stock, p.safety_stock_level, p.standard_cost, p.list_price, p.size, p.size_unit_measure_code, p.weight, p.weight_unit_measure_code, p.days_to_manufacture, p.images,  p.modified_date, p.created_date
+FROM product p
+where p.id = :id</db:sql>
+    <db:input-parameters><![CDATA[#[{'id' : vars.id}]]]></db:input-parameters>
+  </db:select>
+  <validation:is-true doc:name="Is Not Empty" config-ref="Validation_Config" expression="#[sizeOf(payload) &gt; 0]">
+    <error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="APP:NOT_FOUND" />
+  </validation:is-true>
+  <ee:transform doc:name="Product to JSON">
+    <ee:message>
+      <ee:set-payload resource="mappings/get-product-by-id-response.dwl" />
     </ee:message>
   </ee:transform>
 </flow>
@@ -463,21 +664,19 @@ payload map {
 <flow name="delete-product-flow" />
 ----
 
-. As `Dataweave 2.0` is the default `Mule Runtime 4.x` expression language, add a `Transform component` for writing a DW script that sets a variable with the `productId` value received as a `URI parameter`.
+. Add a `Transform component` that references the DW script that sets a variable with the `productId` value received as a `URI parameter`.
 +
 
 [source,xml,linenums]
 ----
-<ee:transform doc:name="Set productId variable">
-  <ee:message />
-  <ee:variables>
-    <ee:set-variable variableName="productId" ><![CDATA[%dw 2.0
-output application/java
----
-attributes.uriParams.id]]>
-    </ee:set-variable>
-  </ee:variables>
-</ee:transform>
+<flow name="delete-product-flow">
+  <ee:transform doc:name="Set productId variable">
+    <ee:message />
+    <ee:variables>
+      <ee:set-variable variableName="productId" resource="variables/set-productId-variable.dwl" />
+    </ee:variables>
+  </ee:transform>
+</flow>
 ----
 
 . For configuring the details of the transaction, replace the Mule 3.x `transactional` scope with the new `try` scope and set the `transactionalAction` attribute to `ALWAYS_BEGIN`.
@@ -502,21 +701,30 @@ attributes.uriParams.id]]>
 </try>
 ----
 
+. Create a `set-httpStatus-with-204.dwl` file under `src/main/resources/variables` as follows.
++
+
+....
+%dw 2.0
+output application/java
+---
+204
+....
+
 . Set `httpStatus` variable with the value `204` using a `Transform Component` for defining a `NO CONTENT` response code.
 +
 
 [source,xml,linenums]
 ----
-<ee:transform doc:name="Set Status" doc:id="a96f6930-5f34-4f03-8ad6-766ed77dc615">
+<ee:transform doc:name="Set 204 HTTP Status code">
   <ee:message />
   <ee:variables>
-    <ee:set-variable variableName="httpStatus"><![CDATA[%dw 2.0
-output application/java
----
-204]]></ee:set-variable>
+    <ee:set-variable variableName="httpStatus" resource="variables/set-httpStatus-with-204.dwl" />
   </ee:variables>
 </ee:transform>
 ----
+
+To return a specific HTTP Status code, instead of setting a `http.status` property, Mule 4 requires a to set a variable with the name `httpStatus`.
 
 .Configuration XML for delete-product-flow in Studio 7.
 [source,xml,linenums]
@@ -525,11 +733,7 @@ output application/java
   <ee:transform doc:name="Set productId variable">
     <ee:message />
     <ee:variables>
-      <ee:set-variable variableName="productId" ><![CDATA[%dw 2.0
-output application/java
----
-attributes.uriParams.id]]>
-      </ee:set-variable>
+      <ee:set-variable variableName="productId" resource="variables/set-productId-variable.dwl" />
     </ee:variables>
   </ee:transform>
   <try doc:name="Try" transactionalAction="ALWAYS_BEGIN">
@@ -538,13 +742,10 @@ attributes.uriParams.id]]>
       <db:input-parameters><![CDATA[#[{'productId' : vars.productId}]]]></db:input-parameters>
     </db:delete>
   </try>
-  <ee:transform doc:name="Set Status" doc:id="a96f6930-5f34-4f03-8ad6-766ed77dc615">
+  <ee:transform doc:name="Set 204 HTTP Status code">
     <ee:message />
-      <ee:variables>
-        <ee:set-variable variableName="httpStatus"><![CDATA[%dw 2.0
-output application/java
----
-204]]></ee:set-variable>
+    <ee:variables>
+      <ee:set-variable variableName="httpStatus" resource="variables/set-httpStatus-with-204.dwl" />
     </ee:variables>
   </ee:transform>
 </flow>
