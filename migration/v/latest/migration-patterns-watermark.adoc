@@ -8,20 +8,17 @@ We’ll take this example since it’s not only representative on a real life Ob
 
 For an explanation of what watermarks are and how we used to approach that problem in Mule 3, see this blog post: link:https://blogs.mulesoft.com/dev/anypoint-platform-dev/data-synchronizing-made-easy-with-mule-watermarks/[Data Synchronizing made easy with Watermarks].
 
-Here's the XML example from that blog:
+Here's the Mule 3 watermark example from that blog:
 
 ----
 
 <flow name="syncWithWatermark" processingStrategy="synchronous">
-	<poll doc:name="Poll">
-		<fixed-frequency-scheduler frequency="1" timeUnit="HOURS" />
-		<watermark variable="timestamp"
-  			default-expression="#[server.dateTime.format(&quot;yyyy-MM-dd'T'HH:mm:ss.SSS'Z'&quot;)]"
-  			selector="MAX" selector-expression="#[payload.LastModifiedDate]" />
-		<sfdc:query config-ref="Salesforce"
-			query="select Id, LastModifiedDate from Contact where LastModifiedDate &amp;gt; #[flowVars['timestamp']]" />
-	</poll>
-	<flow-ref name="doYourSyncMagic" doc:name="do sync" />
+  <poll doc:name="Poll">
+    <fixed-frequency-scheduler frequency="1" timeUnit="HOURS" />
+      <watermark variable="timestamp" default-expression="#[server.dateTime.format(&quot;yyyy-MM-dd'T'HH:mm:ss.SSS'Z'&quot;)]" selector="MAX" selector-expression="#[payload.LastModifiedDate]" />
+    <sfdc:query config-ref="Salesforce" query="select Id, LastModifiedDate from Contact where LastModifiedDate &amp;gt; #[flowVars['timestamp']]" />
+  </poll>
+  <flow-ref name="doYourSyncMagic" doc:name="do sync" />
 </flow>
 ----
 
@@ -44,23 +41,22 @@ Then, the new way of achieving the same use case described in the Mule 3 blog po
 <os:object-store name="watermarkStore" persistent="true"/>
 
 <flow name="watermark">
-    <os:retrieve key="watermark" objectStore="watermarkStore" target="watermark">
-        <os:default-value>2017-09-11T00:00:00.000Z</os:default-value>
-    </os:retrieve>
-    <sfdc:query config-ref="config">
-        <sfdc:salesforce-query>
-            <![CDATA[
-                #["Select Id, Name, BillingCity,Phone,Website,LastModifiedDate from account WHERE LastModifiedDate > " ++ vars.watermark]
-           ]]>
-       </sfdc:salesforce-query>
-    </sfdc:query>
-    <flow-ref name="doYourIntegrationLogic" />
-<os:store key="watermark" failIfPresent="false" failOnNullValue="false" objectStore="watermarkStore">
-        <os:value>#[max(payload map $.LastModifiedDate)]</os:value>
-    </os:store>
+  <os:retrieve key="watermark" objectStore="watermarkStore" target="watermark">
+    <os:default-value>2017-09-11T00:00:00.000Z</os:default-value>
+  </os:retrieve>
+  <sfdc:query config-ref="config">
+    <sfdc:salesforce-query>
+      <![CDATA[
+        #["Select Id, Name, BillingCity,Phone,Website,LastModifiedDate from account WHERE LastModifiedDate > " ++ vars.watermark]
+      ]]>
+    </sfdc:salesforce-query>
+  </sfdc:query>
+  <flow-ref name="doYourIntegrationLogic" />
+  <os:store key="watermark" failIfPresent="false" failOnNullValue="false" objectStore="watermarkStore">
+    <os:value>#[max(payload map $.LastModifiedDate)]</os:value>
+  </os:store>
 </flow>
 ----
-
 
 Let’s break the example down step by step:
 
