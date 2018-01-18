@@ -730,7 +730,7 @@ fun getManufacturedCode(value) =
 }
 ----
 +
-. Add a `Transform component` that sets `originalPayload` and `newPayload` using the using the previously created DataWeave transformations.
+. Add a `Transform component` that sets `originalPayload` and `newPayload` using the previously created DataWeave transformations.
 +
 [source,xml,linenums]
 ----
@@ -802,7 +802,7 @@ vars.originalPayload ++
 id: payload.generatedKeys.GENERATED_KEY
 ----
 +
-. Add a `Transform component` and set the payload with the DataWeave scrit.
+. Add a `Transform component` and set the payload with the DataWeave script.
 +
 [source,xml,linenums]
 ----
@@ -880,16 +880,135 @@ id: payload.generatedKeys.GENERATED_KEY
 // Explain what changed for Mule 4 in Studio 7, including any different modules, component you needed to use.
 . There are no changes regarding `put-product-flow` definition.
 +
-
 [source,xml,linenums]
 ----
 <flow name="put-product-flow" />
 ----
 
+. Create a `put-json-product-to-java.dwl` file under `src/main/resources/mappings` folder and migrate the original script from DW 1.0 to 2.0.
++
+.Transformation for put-json-product-to-java.dwl in DW 1.0.
+----
+%dw 1.0
+%output application/java
+---
+{
+	categories: payload.categories joinBy ",",
+	colors: payload.colors joinBy ",",
+	daysToManufacture: payload.daysToManufacture,
+	description: payload.description,
+	images: payload.images joinBy ",",
+	listPrice: payload.listPrice,
+	manufactured: payload.manufactured,
+	name: payload.name,
+	productNumber: payload.productNumber,
+	safetyStockLevel: payload.safetyStockLevel,
+	size: payload.size,
+	sizeUnitMeasureCode: payload.sizeUnitMeasureCode,
+	standardCost: payload.standardCost,
+	stock: payload.stock,
+	weight: payload.weight,
+	weightUnitMeasureCode: payload.weightUnitMeasureCode
+}
+----
++
+.Transformation for put-json-product-to-java.dwl in DW 2.0.
+----
+%dw 2.0
+output application/java
+---
+{
+	categories: payload.categories joinBy ",",
+	colors: payload.colors joinBy ",",
+	daysToManufacture: payload.daysToManufacture,
+	description: payload.description,
+	images: payload.images joinBy ",",
+	listPrice: payload.listPrice,
+	manufactured: payload.manufactured,
+	name: payload.name,
+	productNumber: payload.productNumber,
+	safetyStockLevel: payload.safetyStockLevel,
+	size: payload.size,
+	sizeUnitMeasureCode: payload.sizeUnitMeasureCode,
+	standardCost: payload.standardCost,
+	stock: payload.stock,
+	weight: payload.weight,
+	weightUnitMeasureCode: payload.weightUnitMeasureCode
+}
+----
++
+. Add a `Transform component` that sets `updatePayload` using the previously created DataWeave transformation and `id` with `variables/set-productId-variable.dwl` script.
++
+[source,xml,linenums]
+----
+<flow name="put-product-flow">
+  <ee:transform doc:name="JSon to Product">
+    <ee:message />
+    <ee:variables >
+      <ee:set-variable variableName="updatePayload" resource="mappings/put-json-product-to-java.dwl" />
+      <ee:set-variable variableName="id" resource="variables/set-productId-variable.dwl" />
+    </ee:variables>
+  </ee:transform>
+</flow>
+----
+. For configuring the details of the transaction, replace the Mule 3.x `transactional` scope with the new `try` scope and set the `transactionalAction` attribute to `ALWAYS_BEGIN`.
++
+[source,xml,linenums]
+----
+<try doc:name="Try" transactionalAction="ALWAYS_BEGIN">
+</try>
+----
+. Add a `db:update` element into the `Try scope`, referencing the MySQL Global Configuration. Parameters must be supplied as key-value pairs into the `db:input-parameters` element.
++
+[source,xml,linenums]
+----
+<try doc:name="Try" transactionalAction="ALWAYS_BEGIN">
+  <db:update config-ref="MySQL_Configuration" doc:name="Update Product">
+    <db:sql >update product
+set name = :name, description = :description, product_number = :product_number, manufactured = :manufactured, colors = :colors, categories= :categories, stock = :stock, safety_stock_level = :safety_stock_level, standard_cost = :standard_cost, list_price = :list_price, size = :size, size_unit_measure_code = :size_unit_measure_code, weight = :weight, weight_unit_measure_code = :weight_unit_measure_code, days_to_manufacture = :days_to_manufacture, images = :images,  modified_date = CURDATE()
+where id = :id</db:sql>
+    <db:input-parameters ><![CDATA[#[{'name': vars.updatePayload.name, 'description': vars.updatePayload.description, 'product_number': vars.updatePayload.productNumber, 'manufactured': vars.updatePayload.manufactured, 'colors': vars.updatePayload.colors, 'categories': vars.updatePayload.categories, 'stock': vars.updatePayload.stock, 'safety_stock_level': vars.updatePayload.safetyStockLevel, 'standard_cost': vars.updatePayload.standardCost, 'list_price': vars.updatePayload.listPrice, 'size': vars.updatePayload.size, 'size_unit_measure_code': vars.updatePayload.sizeUnitMeasureCode, 'weight': vars.updatePayload.weight, 'weight_unit_measure_code': vars.updatePayload.weightUnitMeasureCode, 'days_to_manufacture': vars.updatePayload.daysToManufacture, 'images': vars.updatePayload.images, 'id': vars.id}]]]></db:input-parameters>
+  </db:update>
+</try>
+----
+. Add a `Transform component` and set the `httpStatus` variable with `204` using `set-httpStatus-with-204.dwl` file into `src/main/resources/variables`.
++
+[source,xml,linenums]
+----
+<ee:transform doc:name="Set Status">
+  <ee:message />
+  <ee:variables >
+    <ee:set-variable variableName="httpStatus" resource="variables/set-httpStatus-with-204.dwl" />
+  </ee:variables>
+</ee:transform>
+----
+
 .Configuration XML for put-product-flow in Studio 7.
 [source,xml,linenums]
 ----
-PASTE_XML_HERE
+<flow name="put-product-flow">
+  <ee:transform doc:name="JSon to Product">
+    <ee:message />
+    <ee:variables >
+      <ee:set-variable variableName="updatePayload" resource="mappings/put-json-product-to-java.dwl" />
+      <ee:set-variable variableName="id" resource="variables/set-productId-variable.dwl" />
+    </ee:variables>
+  </ee:transform>
+  <try doc:name="Try" transactionalAction="ALWAYS_BEGIN">
+    <db:update config-ref="MySQL_Configuration" doc:name="Update Product">
+      <db:sql >update product
+set name = :name, description = :description, product_number = :product_number, manufactured = :manufactured, colors = :colors, categories= :categories, stock = :stock, safety_stock_level = :safety_stock_level, standard_cost = :standard_cost, list_price = :list_price, size = :size, size_unit_measure_code = :size_unit_measure_code, weight = :weight, weight_unit_measure_code = :weight_unit_measure_code, days_to_manufacture = :days_to_manufacture, images = :images,  modified_date = CURDATE()
+where id = :id</db:sql>
+      <db:input-parameters ><![CDATA[#[{'name': vars.updatePayload.name, 'description': vars.updatePayload.description, 'product_number': vars.updatePayload.productNumber, 'manufactured': vars.updatePayload.manufactured, 'colors': vars.updatePayload.colors, 'categories': vars.updatePayload.categories, 'stock': vars.updatePayload.stock, 'safety_stock_level': vars.updatePayload.safetyStockLevel, 'standard_cost': vars.updatePayload.standardCost, 'list_price': vars.updatePayload.listPrice, 'size': vars.updatePayload.size, 'size_unit_measure_code': vars.updatePayload.sizeUnitMeasureCode, 'weight': vars.updatePayload.weight, 'weight_unit_measure_code': vars.updatePayload.weightUnitMeasureCode, 'days_to_manufacture': vars.updatePayload.daysToManufacture, 'images': vars.updatePayload.images, 'id': vars.id}]]]></db:input-parameters>
+    </db:update>
+  </try>
+  <ee:transform doc:name="Set Status">
+    <ee:message />
+    <ee:variables >
+      <ee:set-variable variableName="httpStatus" resource="variables/set-httpStatus-with-204.dwl" />
+    </ee:variables>
+  </ee:transform>
+</flow>
 ----
 
 == Migrating _delete-product-flow_
@@ -1005,6 +1124,47 @@ To return a specific HTTP Status code, instead of setting a `http.status` proper
     </ee:variables>
   </ee:transform>
 </flow>
+----
+
+== Extending default APIkit Global Exception Strategies
+
+// Now do the same for the next migrated feature, and so on.
+. Add a Generic ApiKit Mapping 500 for all the non previously managed exceptions.
++
+.Configuration XML for Generic ApiKit Mapping 500 in Studio 6.
+[source,xml,linenums]
+----
+<apikit:mapping-exception-strategy name="api-apiKitGlobalExceptionMapping">
+  <!-- other exception strategies here -->
+  <apikit:mapping statusCode="500">
+    <apikit:exception value="java.lang.Exception" />
+    <set-property propertyName="Content-Type" value="application/json" doc:name="Property" />
+    <set-payload value="{ &quot;message&quot;: &quot;Internal Server Error&quot; }" doc:name="Set Payload" />
+  </apikit:mapping>
+</apikit:mapping-exception-strategy>
+----
+
+// Explain what changed for Mule 4 in Studio 7, including any different modules, component you needed to use.
+
+.Configuration XML for Generic ApiKit Mapping 500 in Studio 7.
+[source,xml,linenums]
+----
+<error-handler>
+  <!-- other exception strategies here -->
+  <on-error-propagate doc:name="On Error Propagate" enableNotifications="true" logException="true">
+    <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" doc:id="7e8049ff-cae6-4937-8569-c36bb7f06dad">
+      <ee:message>
+        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Internal Server Error"}]]></ee:set-payload>
+      </ee:message>
+      <ee:variables>
+        <ee:set-variable variableName="httpStatus"><![CDATA[500]]></ee:set-variable>
+      </ee:variables>
+    </ee:transform>
+  </on-error-propagate>
+</error-handler>
 ----
 
 ////
