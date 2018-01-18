@@ -1,1 +1,69 @@
-= Mule 4 for Mule 3 Users: Data Types, Transformations, and Streaming
+= Mule 4 for Mule 3 Users: Transformations and Streaming
+
+The way to think about data in Mule 4 is fundamentally different in Mule 3. In Mule 3, you
+often needed to know about the underlying Java types, how to manage InputStreams, whether
+a payload was larger than memory and how to convert data into Java objects so they could be accessed by MEL.
+
+For Mule 4, the following best practices are recommended:
+
+* Avoid unnecessary conversions to Java data types, and work with data directly
+* Let the runtime handle stream memory management for you
+* Not convert binary data types to String, byte[] or InputStream unless doing direct integration with custom Java code
+
+== Automatic Memory management
+
+In the previous section, we saw how we can work with data directly with DataWeave, without having to first convert it to Java objects.
+The reason this works is because Mule now takes care of data streams for you automatically.
+This greatly simplifies working with data in the runtime because:
+
+* Data can be read multiple times or accessed randomly using the DataWeave expression language without side effects.
+* Data can be sent to multiple places, without the user caching that data in memory first.
+* Users can transparently access larger than memory data.
+
+Streams can be controlled via streaming strategy configuration on the connector operations. You can configure it to be
+automatic, in memory only, or stored on disk only.
+[source,xml,linenums]
+----
+<file:read path="bigFile.json">
+  <repeatable-in-memory-stream initialBufferSize="512"
+                               bufferSizeIncrement="256"
+                               maxBufferSize="2048"
+                               bufferUnit="KB"/>
+</file:read>
+----
+
+== Data Types and Object to String/Byte/InputStream transformers
+
+Because Mule is now managing the data streams for you, data access becomes simpler. You do not
+need to be concerned with what the underlying Java representation of that type is.
+Whether it is a byte[], InputStream, String or other format.
+
+A common pattern that was observed in Mule 3 applications, is that users would convert things to strings to log them or
+send them via some transport.
+
+[source,xml,linenums]
+----
+<http:listener ... /> <!-- set the payload to an InputStream -->
+<object-to-string/> <!-- convert it to a String -->
+<logger message="#[payload]"/> <!-- log the String -->
+<jms:outbound-endoint .../> <!-- send the String -->
+----
+
+As a Mule 4 user, you should not have to worry about this anymore. As such, you can simply log or send the data,
+and not have to worry about the underlying type. Instead of thinking about InputStreams, you should just think
+about the payload as Binary data. Or, if the content type is known, you can think about it directly as JSON, XML,
+or whatever data type corresponds to the content type.
+
+[source,xml,linenums]
+----
+<http:listener ... /> <!-- payload is JSON document -->
+<logger message="#[payload]"/> <!-- log the JSON document -->
+<jms:outbound-endoint .../> <!-- send the JSON document -->
+----
+
+
+
+
+
+
+
