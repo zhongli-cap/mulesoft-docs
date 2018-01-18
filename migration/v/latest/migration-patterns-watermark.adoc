@@ -8,6 +8,7 @@ We’ll take this example since it’s not only representative on a real life Ob
 
 For an explanation of what watermarks are and how we used to approach that problem in Mule 3, see this blog post: link:https://blogs.mulesoft.com/dev/anypoint-platform-dev/data-synchronizing-made-easy-with-mule-watermarks/[Data Synchronizing made easy with Watermarks].
 
+////
 Here's the Mule 3 watermark example from that blog:
 
 ----
@@ -15,14 +16,18 @@ Here's the Mule 3 watermark example from that blog:
 <flow name="syncWithWatermark" processingStrategy="synchronous">
   <poll doc:name="Poll">
     <fixed-frequency-scheduler frequency="1" timeUnit="HOURS" />
-      <watermark variable="timestamp" default-expression="#[server.dateTime.format(&quot;yyyy-MM-dd'T'HH:mm:ss.SSS'Z'&quot;)]" selector="MAX" selector-expression="#[payload.LastModifiedDate]" />
+      <watermark variable="timestamp"
+       default-expression="#[server.dateTime.format(&quot;yyyy-MM-dd'T'HH:mm:ss.SSS'Z'&quot;)]"
+       selector="MAX"
+			 selector-expression="#[payload.LastModifiedDate]" />
     <sfdc:query config-ref="Salesforce" query="select Id, LastModifiedDate from Contact where LastModifiedDate &amp;gt; #[flowVars['timestamp']]" />
   </poll>
   <flow-ref name="doYourSyncMagic" doc:name="do sync" />
 </flow>
 ----
+////
 
-That approach was really old, back from Mule 3.5 in year 2013, and at the time it made tons of sense. As the Anypoint platform grew and our use cases became more complicated, limitations started to appear:
+That approach in the blog is from Mule 3.5 in year 2013, and at the time it made tons of sense. As the Anypoint platform grew and our use cases became more complicated, limitations started to appear:
 
 * Although the old `<watermark>` component did allow for setting a custom ObjectStore, there was no easy way to create it. This is a problem we already addressed in this document and know the new ObjectStore connector fixes
 * The <watermark> element required the <poll> component (now replaced with <scheduler>) to return an iterable payload. Furthermore, you were required to fully iterate that payload in order to obtain the new watermark value. Failure to do so, would result in the value being wrongfully updated or not updated at all
