@@ -2,11 +2,9 @@
 = Migrating Watermarks
 
 // Explain generally how and why things changed between Mule 3 and Mule 4.
-Watermarking is a technique for storing and retrieving the point from which a periodic synchronization should resume the next time it executes. Watermarking is a typical use for the object store.
+Watermarking is typically used to perform data synchronization, for example, when polling a legacy resource to retrieve new data and to sync it with another destination endpoint. The watermarking technique stores and retrieves the point at which a periodic synchronization resumes the next time it executes. Watermarking is a typical use for the ObjectStore.
 
-We’ll take this example since it’s not only representative on a real life ObjectStore, but also to highlight how the experience is improved compared with Mule 3. This task is often needed when synchronizing data, for example, when polling a legacy resource to retrieve new data and to sync it with another destination endpoint.
-
-For an explanation of what watermarks are and how we used to approach that problem in Mule 3, see this blog post: link:https://blogs.mulesoft.com/dev/anypoint-platform-dev/data-synchronizing-made-easy-with-mule-watermarks/[Data Synchronizing made easy with Watermarks].
+For the Mule 3 approach, see this MuleSoft blog: link:https://blogs.mulesoft.com/dev/anypoint-platform-dev/data-synchronizing-made-easy-with-mule-watermarks/[Data Synchronizing made easy with Watermarks].
 
 ////
 Here's the Mule 3 watermark example from that blog:
@@ -27,19 +25,19 @@ Here's the Mule 3 watermark example from that blog:
 ----
 ////
 
-That approach in the blog is from Mule 3.5 in year 2013, and at the time it made tons of sense. As the Anypoint platform grew and our use cases became more complicated, limitations started to appear:
+As the Anypoint Platform grew and our use cases became more complicated, limitations started to appear in the Mule 3 approach:
 
 * Although the old `<watermark>` component did allow for setting a custom ObjectStore, there was no easy way to create it. This is a problem we already addressed in this document and know the new ObjectStore connector fixes
-* The <watermark> element required the <poll> component (now replaced with <scheduler>) to return an iterable payload. Furthermore, you were required to fully iterate that payload in order to obtain the new watermark value. Failure to do so, would result in the value being wrongfully updated or not updated at all
-* There was no way to update the watermark with a contingency value in case of the flow throwing an error
-How and when the value got updated was not completely clear.
+* The `<watermark>` element required the `<poll>` component (now replaced with `<scheduler>``) to return an iterable payload. Furthermore, you were required to fully iterate over that payload to obtain the new watermark value. Failure to do so resulted in the value being wrongfully updated or not updated at all.
+* There was no way to update the watermark with a contingency value in case of the flow throwing an error.
+* How and when the value got updated was not completely clear.
 
 When we sat down to figure out how to improve this use case, we realised that the real root of the problem was that in reality the <watermark> shouldn’t be necessary at all. It’s existence was just a consequence of limitations in other components:
 
 * The watermark’s artificial iteration was just a way to compensate for the fact that many data sets could only be iterated once, specially when dealing with binary streams or with connectors doing auto paging. This problem is now fixed in Mule 4 thanks to the repeatable streaming feature
 * The component’s automatic handling of the ObjectStore was just to compensate for UX problems on the old ObjectStore support. If the new connector were to provide easier semantics, it wouldn’t be needed at all.
 
-Then, the new way of achieving the same use case described in the Mule 3 blog post is this:
+In Mule 4, you can perform the use case described in the Mule 3 blog post above like this:
 
 [source, xml, linenums]
 ----
