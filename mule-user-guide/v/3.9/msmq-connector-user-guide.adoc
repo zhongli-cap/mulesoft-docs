@@ -11,8 +11,6 @@ The following is a high-level diagram of the solution architecture:
 
 image:msmq3-windows-gateway.png[Windows Gateway]
 
-For more information, see the Windows Gateway Services Guide.
-
 == Invalid Message Processing
 
 Unreadable messages are moved to the invalid-queue-name sub queue. You can change this queue’s name using the Windows Gateway service configuration file. You can also change the timeout for invalid messages for when a payload of a message is parsed with an incorrect formatter.
@@ -28,18 +26,18 @@ Unreadable messages are moved to the invalid-queue-name sub queue. You can chan
 
 === Enable Exactly-Once and In-Order Support
 
-To enable Exactly-Once and In-Order (EOIO) support, you must select the flow containing the MSMQ connector in Anypoint Studio and set the default operation Processing Strategy to synchronous. Otherwise, the connector processes messages as they are received in the ESB and ignores the original order in the queue.
+To enable Exactly-Once and In-Order (EOIO) support, you must select the flow containing the MSMQ connector in Anypoint Studio and set the default operation Processing Strategy to synchronous. Otherwise, the connector processes messages as they are received in the Mule RUntime and ignores the original order in the queue.
 
 image:msmq3-flow-configuration.png[FlowConfiguration]
 
 This setting appears in the XML as:
 
-[source, xml, linenums]
+[source, xml]
 ----
 <flow name="myMSMQFlow" doc:name="myMSMQFlow" processingStrategy="synchronous">
 ----
 
-More related info at <<Message delivery>> section ahead.
+For more information, see the Message Delivery section below.
 
 == Primary Use Cases
 
@@ -50,7 +48,7 @@ The MSMQ connector supports two primary use cases:
 
 === HTTP POST Scenario
 
-In the POST scenario, Mule ESB uses the connector to send a raw representation of the Mule Message in the current flow to MSMQ using HTTP to the Windows Gateway. The message is sent as an HTTP POST. The payload of the HTTP request is the serialized payload of the Mule message (binary or text). The Web API runs on the Windows Gateway and forwards the message to a queue using MSMQ.
+In the POST scenario, Mule Runtime uses the connector to send a raw representation of the Mule Message in the current flow to MSMQ using HTTP to the Windows Gateway. The message is sent as an HTTP POST. The payload of the HTTP request is the serialized payload of the Mule message (binary or text). The Web API runs on the Windows Gateway and forwards the message to a queue using MSMQ.
 
 The following messages show the structure of the HTTP POST request.
 
@@ -67,14 +65,14 @@ Body: THIS IS A SAMPLE MESSAGE
 
 POST Response Message
 
-[source, code, linenums]
+[source]
 ----
 Http /1.1 201 Created
 ----
 
 === HTTP GET Scenario
 
-In the GET scenario, Mule ESB uses the connector to receive one or more messages from MSMQ. This is done as an HTTP GET to the Windows Gateway. The Web API runs in the gateway and returns the available messages in a MSMQ queue. The messages are returned in a single HTTP response using a MIME multipart/mixed content type.
+In the GET scenario, Mule Runtime uses the connector to receive one or more messages from MSMQ. This is done as an HTTP GET to the Windows Gateway. The Web API runs in the gateway and returns the available messages in a MSMQ queue. The messages are returned in a single HTTP response using a MIME multipart/mixed content type.
 
 The following messages illustrate the structure of the HTTP GET request.
 
@@ -126,7 +124,7 @@ THIS IS A MESSAGE
 
 The HTTP headers used for sending and receiving messages to and from the Gateway service are discussed more in detail later in this document.
 
-==  Message delivery
+==  Message Delivery
 
 The MSMQ connector can use a two-phase protocol to ensure zero-message-loss communication with the gateway, or it can be set to use a no-acknowledgment protocol when you want to achieve high throughput and do not need to ensure receiving each message at least once.
 
@@ -134,9 +132,9 @@ Message delivery can be chosen from two different options. The Message delivery 
 
 === No Acknowledgment
 
-In a traditional scenario, after a message is read in the gateway, it is deleted from the queue. If there is a connection failure or another issue in the ESB that prevents the message from being read, that message is lost (this message delivery mode can be set by choosing the NoAcknowledgment value at the corresponding configuration setting). Nevertheless, this delivery mode is the fastest one and you should select it if you don't need each message to be delivered at least once.
+In a traditional scenario, after a message is read in the gateway, it is deleted from the queue. If there is a connection failure or another issue in the Mule Runtime that prevents the message from being read, that message is lost (this message delivery mode can be set by choosing the NoAcknowledgment value at the corresponding configuration setting). Nevertheless, this delivery mode is the fastest one and you should select it if you don't need each message to be delivered at least once.
 
-=== At Least Once (default)
+=== At Least Once (Default)
 
 In a scenario with a two-phase commit protocol, the messages read from the main queue are kept in a sub-queue as backup. After the connector receives a copy of the message, it sends an additional request to the gateway to remove the message from the sub-queue. When this commit action is not completed, the message remains in the sub-queue. After a period of time, messages in the sub queue, considered as orphans, are moved back to their parent queue where they are retried. To be clear, this mechanism should not be affected by external exceptions happening in the flow unless the flow is interrupted before the commit phase is completed (this message delivery mode can be set by choosing the AtLeastOnce value at the corresponding configuration setting).
 
@@ -265,7 +263,7 @@ This following table shows the properties in this element:
 |userName |The name of the user that is used to impersonate the call when accessing MSMQ from the Gateway. Overrides the user name set in the Global element. Optional.
 |password |The password of the user to use to impersonate the call when accessing MSMQ from the Gateway. Overrides the password set in the Global element. Optional.
 |messageFormatter |The message formatter to be used in MSMQ for serializing and deserializing the message. Optional.
-|messageDelivery |The message delivery working mode. Overrides the message delivery set in the Global element. Optional. For detailed info on how this works refer to <<Message delivery>> section above.
+|messageDelivery |The message delivery working mode. Overrides the message delivery set in the Global element. Optional. For detailed info on how this works refer to Message Delivery section above.
 |===
 
 === Configuration of the msmq:send Element
@@ -369,7 +367,7 @@ Body: THIS IS A SAMPLE MESSAGE
 The following table summarizes all supported properties on the receive operation, and the mapping of the HTTP headers.
 
 [%header%autowidth.spread]
-|==============
+|===
 |Property |HTTP header |Usage
 |msmq.acknowledgment.type |msmq-acknowledgment-type |Sets the type of acknowledgment message to return to the sending application.
 |msmq.acknowledgment |mule-msmq-acknowledgment |Sets the queue that receives the acknowledgment messages that Message Queuing generates.
@@ -385,12 +383,12 @@ For example: `66785f20-a2f3-42a3-bdcd-9ac5a937ac52\1`
 |msmq.priority |mule-msmq-priority |Gets or sets the message priority, which indicates where to place a message in the queue.
 |msmq.extension |mule-msmq-extension |Sets additional, application-defined information associated with a message. Encode this as base64.
 |msmq.app.specific |mule-msmq-app-specific |Sets additional, application-specific information.
-|==============
+|===
 
 The following table summarizes all supported properties on the send operation, and the mapping with the HTTP headers.
 
 [%header%autowidth.spread]
-|========
+|===
 |Property |HTTP header |Usage
 |msmq.body.type |mule-msmq-body-type |Sets the type of data that the message body contains.
 |msmq.label |mule-msmq-label |Sets an application-defined unicode string that describes the message.
@@ -408,34 +406,34 @@ For example: `66785f20-a2f3-42a3-bdcd-9ac5a937ac52\1`
 |msmq.app.specific |mule-msmq-app-specific |Sets additional, application-specific information.
 |msmq.queue.override.transactional |mule-msmq-queue-override-transactional |When working with remote transactional queues the MSMQ API might not access these settings due to lack of permissions. This value is used to indicate to the Gateway that the target queue is transactional and the message should be sent within a transaction scope (otherwise it ends at the dead-letter queue).
 |msmq.queue.override.authenticate |mule-msmq-queue-override-authenticate |When working with remote authenticated queues the MSMQ API might not access these settings due to lack of permissions. This value is used to indicate to the Gateway that the target queue requires an authenticated message to be sent.
-|========
+|===
 
 The following example shows how the “set-payload” component sets the label for an MSMQ message.
 
-[source, xml, linenums]
+[source, xml]
 ----
 <set-property propertyName="msmq.label" value="message_from_mule" doc:name="Label"/>
 ----
  
 The following sample indicates that the Gateway for the target queue is transactional (that is, the message sends within a transaction scope).
 
-[source, xml, linenums]
+[source, xml]
 ----
 <set-property propertyName="msmq.queue.override.transactional" value="true" doc:name="TxQueue"/>
 ----
 
 == MSMQ Connector Troubleshooting
 
-The MSMQ connector is integrated with the Mule ESB logging infrastructure for logging errors and relevant information for the user.
+The MSMQ connector is integrated with the Mule Runtime logging infrastructure for logging errors and relevant information for the user.
 
 The following table lists common errors that can occur while using the MSMQ connector:
 
 [%header%autowidth.spread]
 |===
 |Error |Cause
-|Unauthorized. "Authentication with the proxy failed". |The security token configured on the connector and the one on the gateway do not match. Verify the token configured on the MSMQ connector within Mule and in the Windows Gateway service configuration file.
-|Forbidden. "Access Forbidden to write in queue [Queue Name]" |The user with the credentials specified in username and password does not have permissions for writing to or reading the queue. Verify the queue access permissions.
-|Not Acceptable. "The connector and proxy versions do not match" |This is unlikely to happen. The version of the connector running in the Mule Runtime is not compatible with the version of the Windows Gateway. Make sure to update the connector or gateway to use the same version.
+|Unauthorized. Authentication with the proxy failed. |The security token configured on the connector and the one on the gateway do not match. Verify the token configured on the MSMQ connector within Mule and in the Windows Gateway service configuration file.
+|Forbidden. Access Forbidden to write in queue [Queue Name] |The user with the credentials specified in username and password does not have permissions for writing to or reading the queue. Verify the queue access permissions.
+|Not Acceptable. The connector and proxy versions do not match |This is unlikely to happen. The version of the connector running in the Mule Runtime is not compatible with the version of the Windows Gateway. Make sure to update the connector or gateway to use the same version.
 |Not Found. Queue Not Found [Queue Name] |The queue configured in the connector could not be found.
 |Not Found. |The Gateway address and port configured in the connector are incorrect. Verify the Gateway configuration to determine the right server name and port.
 |Internal Server Error |An unexpected error occurred in the Gateway. Check the Gateway traces to determine the cause of this issue.
@@ -485,7 +483,7 @@ Sending Message 4 to .\private$\sampleq
 [source, code, linenums]
 ----
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-+ Started app 'msmq-demo-ack' + 
++ Started app 'msmq-demo-ack'                              + 
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ----
 +
@@ -618,7 +616,7 @@ image:msmq3-ch-success.png[MSMQCHsuccess] 
 +
 image:msmq3-info.png[MSMQinfo] 
 
-=== Support for load balancer scenarios
+=== Support for Load Balancer Scenarios
 
 Multiple instances of the gateway can be configured under an HTTP load balancer to scale up horizontally. Since the MSMQ connector uses HTTP to communicate with the gateway, no additional configuration is required from a networking perspective. However, this slightly changes the behavior of a background process in the gateway for supporting the two-phase commit protocol.
 
