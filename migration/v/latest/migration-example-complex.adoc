@@ -1,6 +1,6 @@
 // Andres Alleva
 = Example: Migrating an APIkit-based application
-
+:imagesdir: ./_images
 ////
 This example migrates a Mule app to Mule 4 from Mule 3.
 // Writer: Please explain the features or use cases you are going
@@ -44,7 +44,21 @@ This migration follows these basic steps:
 
 This example covers the necessary steps for successfully migrate an APIkit-based application from Mule 3 to Mule 4. The following REST API performs CRUD (create, read, update and delete) operations over a MySQL database.
 
-image:m3-apikit-based-example-console.png[api-main in Studio 6]
+image::m3-apikit-based-example-main.png[api-main in Studio 6]
+
+image::m3-apikit-based-example-console.png[api-console in Studio 6]
+
+image::m3-apikit-based-example-get-products.png[get:/product:api-config flow in Studio 6]
+
+image::m3-apikit-based-example-get-product-id.png[get:/product/{id}:api-config flow in Studio 6]
+
+image::m3-apikit-based-example-post-product.png[post:/product:application/json:api-config flow in Studio 6]
+
+image::m3-apikit-based-example-delete-product.png[delete:/product/{id}:api-config flow in Studio 6]
+
+image::m3-apikit-based-example-put-product.png[put:/product/{id}:application/json:api-config flow in Studio 6]
+
+image::m3-apikit-based-example-GlobalExceptionMapping.png[api-apiKitGlobalExceptionMapping flow in Studio 6]
 
 == Migrating Property Placeholders
 
@@ -241,6 +255,9 @@ Opposite to Mule Runtime 3.x, adding the Validation Module to the Mule Palette i
 // Now do the same for the next migrated feature, and so on.
 `get-products-flow` returns products from the database filtering by `Product Category` and/or `Product Name` also supporting paginated queries with `offset` and `maxResults` parameters.
 
+.get-products-flow in Studio 6
+image::m3-apikit-based-example-get-products-flow.png[get-products-flow in Studio 6]
+
 .Configuration XML for get-products-flow in Studio 6.
 [source,xml,linenums]
 ----
@@ -436,17 +453,17 @@ payload map {
 [source,xml,linenums]
 ----
 <flow name="get-products-flow">
-		<ee:transform doc:name="Get Query Params" doc:id="ab756164-e1df-4fc5-8fbe-8f4f8cafc2f6">
-			<ee:message />
-			<ee:variables>
-				<ee:set-variable variableName="queryOffset" resource="variables/set-queryOffset-variable.dwl" />
-				<ee:set-variable variableName="queryLimit" resource="variables/set-queryLimit-variable.dwl" />
-				<ee:set-variable variableName="queryName" resource="variables/set-queryName-variable.dwl" />
-				<ee:set-variable variableName="queryCategory" resource="variables/set-queryCategory-variable.dwl" />
-			</ee:variables>
-		</ee:transform>
-		<db:select config-ref="MySQL_Configuration" doc:name="Query Products">
-			<db:sql>SELECT p.id, p.name, p.description, p.product_number,
+  <ee:transform doc:name="Get Query Params" doc:id="ab756164-e1df-4fc5-8fbe-8f4f8cafc2f6">
+    <ee:message />
+    <ee:variables>
+      <ee:set-variable variableName="queryOffset" resource="variables/set-queryOffset-variable.dwl" />
+      <ee:set-variable variableName="queryLimit" resource="variables/set-queryLimit-variable.dwl" />
+      <ee:set-variable variableName="queryName" resource="variables/set-queryName-variable.dwl" />
+      <ee:set-variable variableName="queryCategory" resource="variables/set-queryCategory-variable.dwl" />
+    </ee:variables>
+  </ee:transform>
+  <db:select config-ref="MySQL_Configuration" doc:name="Query Products">
+    <db:sql>SELECT p.id, p.name, p.description, p.product_number,
 				p.manufactured, p.colors, p.categories, p.stock,
 				p.safety_stock_level, p.standard_cost, p.list_price, p.size,
 				p.size_unit_measure_code, p.weight, p.weight_unit_measure_code,
@@ -455,20 +472,26 @@ payload map {
 				WHERE LOWER(p.name) like :name AND LOWER(p.categories) like :category
 				LIMIT :limit
 				OFFSET :offset</db:sql>
-			<db:input-parameters><![CDATA[#[{'name' : lower(vars.queryName), 'category': lower(vars.queryCategory), 'limit': vars.queryLimit, 'offset': vars.queryOffset}]]]></db:input-parameters>
-		</db:select>
-		<ee:transform doc:name="Products to JSON">
-			<ee:message>
-				<ee:set-payload resource="mappings/get-products-response.dwl" />
-			</ee:message>
-		</ee:transform>
-	</flow>
+    <db:input-parameters><![CDATA[#[{'name' : lower(vars.queryName), 'category': lower(vars.queryCategory), 'limit': vars.queryLimit, 'offset': vars.queryOffset}]]]></db:input-parameters>
+  </db:select>
+  <ee:transform doc:name="Products to JSON">
+    <ee:message>
+      <ee:set-payload resource="mappings/get-products-response.dwl" />
+    </ee:message>
+  </ee:transform>
+</flow>
 ----
+
+.get-products-flow in Studio 7
+image::m4-apikit-based-example-get-products-flow.png[get-products-flow in Studio 7]
 
 == Migrating _get-product-by-id-flow_
 
 // Now do the same for the next migrated feature, and so on.
 `get-product-by-id-flow` returns a product from the database filtering by `id`. If there isn't a product with the required id, an `HTTP 404 Not Found` error is returned.
+
+.get-product-by-id-flow in Studio 6
+image::m3-apikit-based-example-get-product-by-id-flow.png[get-product-by-id-flow in Studio 6]
 
 .Configuration XML for get-product-by-id-flow in Studio 6.
 [source,xml,linenums]
@@ -635,10 +658,16 @@ where p.id = :id</db:sql>
 </flow>
 ----
 
+.get-product-by-id-flow in Studio 7
+image::m4-apikit-based-example-get-product-by-id-flow.png[get-product-by-id-flow in Studio 7]
+
 == Migrating _post-product-flow_
 
 // Now do the same for the next migrated feature, and so on.
 `post-product-flow` inserts a product in the database.
+
+.post-product-flow in Studio 6
+image::m3-apikit-based-example-post-product-flow.png[post-product-flow in Studio 6]
 
 .Configuration XML for post-product-flow in Studio 6.
 [source,xml,linenums]
@@ -859,10 +888,16 @@ id: payload.generatedKeys.GENERATED_KEY
 </flow>
 ----
 
+.post-product-flow in Studio 7
+image::m4-apikit-based-example-post-product-flow.png[post-product-flow in Studio 7]
+
 == Migrating _put-product-flow_
 
 // Now do the same for the next migrated feature, and so on.
 `put-product-flow` updates a product in the database based on the specified `id`.
+
+.put-product-flow in Studio 6
+image::m3-apikit-based-example-put-product-flow.png[put-product-flow in Studio 6]
 
 .Configuration XML for put-product-flow in Studio 6.
 [source,xml,linenums]
@@ -1015,10 +1050,16 @@ where id = :id</db:sql>
 </flow>
 ----
 
+.put-product-flow in Studio 7
+image::m4-apikit-based-example-put-product-flow.png[put-product-flow in Studio 7]
+
 == Migrating _delete-product-flow_
 
 // Now do the same for the next migrated feature, and so on.
 `delete-product-flow` deletes the product record from the MySQL database with the `id` specified as a `URI parameter` returning an HTTP 204 status code.
+
+.delete-product-flow in Studio 6
+image::m3-apikit-based-example-delete-product-flow.png[delete-product-flow in Studio 6]
 
 .Configuration XML for delete-product-flow in Studio 6.
 [source,xml,linenums]
@@ -1129,6 +1170,9 @@ To return a specific HTTP Status code, instead of setting a `http.status` proper
   </ee:transform>
 </flow>
 ----
+
+.delete-product-flow in Studio 7
+image::m4-apikit-based-example-delete-product-flow.png[delete-product-flow in Studio 7]
 
 == Migrating Backend Flows
 
