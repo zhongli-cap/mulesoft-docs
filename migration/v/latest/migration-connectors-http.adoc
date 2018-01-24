@@ -1,38 +1,316 @@
-// sme: ana f, author: sduke?
+// sme: afelisatti, author: afelisatti
 = Migrating to the HTTP Connector
 
-////
-Anna Slacked over examples showing how to generate and access an attachment through DW. She says HTTP does not require any specific data on multipart except that now attachments need to be generated through DW.
-She also sent this: https://docs.google.com/document/d/1g1wELEySw-f0AzLnmbpaM5cPGDSllPZhPul0W07ewFQ Email and wsc are @juan.desimoni’s babies.
-////
+For the most part, the HTTP connector has just been adapted to the Mule 4 model:
 
-// Explain generally how and why things changed between Mule 3 and Mule 4.
-Intro here.
+* Configuration properties have been moved to a connection component when applicable.
+* Message processors have been refactored into proper operations.
+* Outbound properties such as `http.statusCode` have been removed in favor of explicit properties.
+* Inbound properties such as `http.queryParams` have been removed in favor of HTTP specific message attributes.
+* Threading configuration has been removed since it's now all handled at the Mule Runtime level.
+* Special handling for `application/x-www-form-urlencoded` and `multipart/*` media types has been removed in favor of DataWeave.
 
-What's covered in this section:
+Changes's covered in this section:
 
 * <<topic_1>>
 * <<topic_2>>
+* <<topic_3>>
+* <<topic_4>>
+* <<topic_5>>
 
 [[topic_1]]
-== topic_1
+== HTTP Listener
 
-Describe what changed from 3.x to 4.x.
+The HTTP Listener has only seen major changes in the configuration of it's response
+builders, as well as the encapsulation of it's config properties into a specific
+connection component.
+
+=== Configuration
+
+The following properties and components must now be defined within an inner `http:listener-connection`
+component:
+
+* `host`
+* `port`
+* `protocol`
+* TLS Context
 
 .Mule 3 example
 ----
-Mule 3 example goes here.
+<http:listener-config name="listenerConfig" host="localhost" port="8081" basePath="api/v2" protocol="HTTPS">
+  <tls:context>
+    <tls:trust-store path="tls/ssltest-cacerts.jks" password="changeit"/>
+    <tls:key-store path="tls/ssltest-keystore.jks" keyPassword="changeit" password="changeit"/>
+  </tls:context>
+</http:listener-config>
 ----
 
 .Mule 4 example
 ----
-Mule 4 example goes here.
+<http:listener-config name="listenerConfig" basePath="api/v2">
+  <http:listener-connection host="localhost" port="8081" protocol="HTTPS">
+    <tls:context>
+        <tls:trust-store path="cacerts.jks" password="changeit"/>
+        <tls:key-store path="keystore.jks" keyPassword="changeit" password="changeit"/>
+    </tls:context>
+  </http:listener-connection>
+</http:listener-config>
 ----
 
-[[topic_2]]
-== topic_2
+=== Listener
 
-Follows the same pattern.
+All HTTP Listener properties remain the same except for the `http:response-builder`
+and `http:error-response-builder`. These have been renamed to simply `http:response`
+and `http:error-response`, and now require the headers to be defined through a single
+expression while removing support for implicit outbound properties handling. Additionally,
+they support a new `http:body` component where an expression can be used to define the
+outgoing HTTP message body.
+
+.Mule 3 example
+In the following example, a number of `User-Agent` headers are sent in a response
+set up through an implicit outbound property (`Mule 3.6.0`), a single header reference
+(`Mule 3.7.0`) and an expression reference (`Mule 3.8.0` and `Mule 3.9.0`). An error
+response, on the other hand, will feature a `Date` header as well as the outbound
+property for `User-Agent`.
+----
+<flow name="listener">
+  <http:listener config-ref="listenerConfig" path="/">
+    <http:response-builder statusCode="201" reasonPhrase="everything works!">
+      <http:header headerName="User-Agent" value="Mule 3.7.0"/>
+      <http:headers expression="['User-Agent': ['Mule 3.8.0', 'Mule 3.9.0']]"/>
+    </http:response-builder>
+    <http:error-response-builder statusCode="500" reasonPhrase="something went wrong">
+      <http:header headerName="Date" value="#[server.dateTime]"/>
+    </http:error-response-builder>
+  </http:listener>
+  ...
+  <set-property propertyName="User-Agent" value="Mule 3.6.0"/>
+</flow>
+----
+
+.Mule 4 example
+Notice that while `statusCode` and `reasonPhrase` properties remain the same, all
+headers should now be explicitly added using a DataWeave expression.
+----
+<flow name="listener">
+  <http:listener config-ref="listenerConfig" path="/">
+    <http:response statusCode="201" reasonPhrase="everything works!">
+      <http:headers>
+        #[{
+          'User-Agent' : 'Mule 3.6.0',
+          'User-Agent' : 'Mule 3.7.0',
+          'User-Agent' : 'Mule 3.8.0',
+          'User-Agent' : 'Mule 3.9.0'
+          }]
+      </http:headers>
+    </http:response>
+    <http:error-response statusCode="500" reasonPhrase="something went wrong">
+      <http:headers>
+        #[{
+          'User-Agent': 'Mule 3.6.0',
+          'Date': now()
+        }]
+      </http:headers>
+    </http:error-response>
+  </http:listener>
+  ...
+</flow>
+----
+
+==== Attributes
+
+//Explain new expressions to access old properties
+
+[[topic_2]]
+== HTTP Request
+
+Like the HTTP listener, most changes in the HTTP request operation regard the configuration
+properties encapsulation within a connection component and the request building process.
+
+=== Configuration
+
+The following properties and components must now be defined within an inner `http:request-connection`
+component:
+
+* `host`
+* `port`
+* `protocol`
+* `usePersistentConnections`
+* `maxConnections`
+* `connectionIdleTimeout`
+* `streamResponse`
+* `responseBufferSize`
+* HTTP Authentication
+* HTTP Proxy
+* TLS Context
+* TCP Client Socket Properties
+
+.Mule 3 example
+----
+<http:request-config name="requestConfig" host="localhost" port="8081" protocol="HTTPS" enableCookies="false">
+  <tls:context>
+    <tls:trust-store path="trustStore" password="changeit"/>
+    <tls:key-store path="clientKeystore" keyPassword="changeit" password="changeit"/>
+  </tls:context>
+</http:request-config>
+----
+
+.Mule 4 example
+----
+<http:request-config name="requestConfig" enableCookies="false">
+  <http:request-connection host="localhost" port="8081" protocol="HTTPS">
+    <tls:context>
+      <tls:trust-store path="trustStore" password="changeit"/>
+      <tls:key-store path="clientKeystore" keyPassword="changeit" password="changeit"/>
+    </tls:context>
+  </http:request-connection>
+</http:request-config>
+----
+
+==== HTTP Authentication
+In addition to now belonging in the `http:request-connection` component, the HTTP
+authentication configuration must be placed within an `http:authentication` component.
+This applies to all authentication types supported: basic, digest, NTLM and OAuth2.
+
+.Mule 3 example
+----
+<http:request-config name="basicConfig" host="localhost" port="8081">
+  <http:basic-authentication username="#[flowVars.user]" password="#[flowVars.password]" preemptive="#[flowVars.preemptive]" />
+</http:request-config>
+----
+
+.Mule 4 example
+----
+<http:request-config name="basicConfig">
+  <http:request-connection host="localhost" port="8081">
+    <http:authentication>
+      <http:basic-authentication username="#[vars.user]" password="#[vars.password]" preemptive="#[vars.preemptive]" />
+    </http:authentication>
+  </http:request-connection>
+</http:request-config>
+----
+
+==== HTTP Proxy
+Just like the HTTP Authentication component, configuring an HTTP proxy now requires
+a wrapping `http:proxy-config` component, for all kind of proxies.
+
+.Mule 3 example
+----
+<http:request-config name="proxyConfig" host="localhost" port="8081" basePath="basePath">
+  <http:proxy host="localhost" port="8082" username="cniehaus" password="324B21" />
+</http:request-config>
+----
+
+.Mule 4 example
+----
+<http:request-config name="proxyConfig" basePath="basePath">
+  <http:request-connection host="localhost" port="8081">
+    <http:proxy-config>
+      <http:proxy host="localhost" port="8082" username="cniehaus" password="324B21" />
+    </http:proxy-config>
+  </http:request-connection>
+</http:request-config>
+----
+
+==== TCP Client Socket Properties
+In Mule 3, TCP client socket properties were defined based in the TCP transport
+which has been replaced in Mule 4 by the Sockets Connector, so now that is required
+to configure the properties. Additionally, the properties must be wrapped in an
+`http:client-socket-properties` component.
+
+.Mule 3 example
+----
+<http:request-config name="tcpConfig" host="localhost" port="8081" >
+    <tcp:client-socket-properties connectionTimeout="1000" keepAlive="true"
+                                  receiveBufferSize="1024" sendBufferSize="1024"
+                                  sendTcpNoDelay="true" timeout="1000" linger="1000" />
+</http:request-config>
+----
+
+.Mule 4 example
+----
+<http:request-config name="tcpConfig">
+  <http:request-connection host="localhost" port="8081">
+    <http:client-socket-properties>
+        <sockets:tcp-client-socket-properties connectionTimeout="1000" keepAlive="true"
+                                              receiveBufferSize="1024" sendBufferSize="1024"
+                                              sendTcpNoDelay="true" clientTimeout="1000" linger="1000" />
+    </http:client-socket-properties>
+  </http:request-connection>
+</http:request-config>
+----
+
+=== Request
+
+All HTTP request properties remain the same except for the `source` which has between
+replaced by an `http:body` component supporting expressions and transformations and
+the `http:request-builder` which has been removed. Headers, query and URI parameters
+should now be defined explicitly through DataWeave expressions.
+
+.Mule 3 example
+----
+<flow name="request">
+  ...
+  <set-property propertyName="Host" value="www.example.com"/>
+  <http:request config-ref="requestConfig" path="song/{id}" method="GET" source="#[flowVars.customSource]">
+    <http:request-builder>
+      <http:header headerName="Transfer-Encoding" value="chunked" />
+      <http:uri-param paramName="id" value="#[flowVars.songId]" />
+      <http:query-params expression="#[flowVars.params]" />
+    </http:request-builder>
+  </http:request>
+  ...
+</flow>
+----
+
+.Mule 4 example
+----
+<flow name="request">
+  ...
+  <http:request config-ref="requestConfig" path="song/{id}" method="GET">
+    <http:body>
+      #[vars.customSource]
+    </http:body>
+    <http:headers>
+      #[{
+        'Host': 'www.example.com'
+        'Transfer-Encoding' : 'chunked'
+        }]
+    </http:headers>
+    <http:uri-params>
+      #[{ 'id' : vars.songId }]
+    </http:uri-params>
+    <http:query-params>
+      #[vars.params]
+    </http:query-params>
+  </http:request>
+  ...
+</flow>
+----
+
+==== Attributes
+
+//Explain new expressions to access old properties
+
+[[topic_3]]
+== HTTP Static Resource Handler
+
+//Explain how it changed to load static resource
+
+[[topic_4]]
+== HTTP Basic Authentication Filter
+
+//Explain simple changes
+
+[[topic_5]]
+== HTTP Media Types
+
+In Mule 3, a `Map` payload was interpreted as an `application/x-www-form-urlencoded`
+output while a Mule message containing attachments was interpreted as a `multipart/form-data`
+output, with support for other subtypes as well. This was confusing since all other
+types of payloads required DataWeave to be used, like JSON and XML. In Mule 4, all
+payload types will be handled by DataWeave, which now supports both `multipart/*`
+and `application/x-www-form-urlencoded` media types.
 
 == See Also
 
