@@ -5,43 +5,32 @@ Little changed between Choice router for Mule 3 and Mule 4 except for the use of
 
 == Expression Language for the When Block
 
-=== Example (MEL to DataWeave)
+You need to upgrade your Choice component expressions to use DataWeave 2.
 
-TODO: PROVIDE INTRO
-
-.Input
-----
-<purchases>
-  <purchase>
-    <purchase_type>book</purchase_type>
-  </purchase>
-  <purchase>
-    <purchase_type>mp3</purchase_type>
-  </purchase>
-</purchases>
-----
-
-.Mule 3 Example
+.Mule 3 Example: MEL
 ----
 <choice>
   <when expression="#[payload.getPurchaseType() == 'book']">
-    <jms:outbound-endpoint queue="bookPurchases" />
+    <-- so something -->
   </when>
   <when expression="#[payload.getPurchaseType() == 'mp3']">
-    <jms:outbound-endpoint queue="songPurchases" />
+    <-- so something -->
   </when>
 </choice>
 ----
 
-.Mule 4 Example
+.Mule 3 Example: DataWeave 2
 ----
 <choice>
-  <when expression="#[payload.purchase_type == 'book']">
-    <jms:outbound-endpoint queue="bookPurchases" />
+  <when expression="#[payload.puchaseType == 'book']">
+    <-- do something -->
   </when>
-  <when expression="#[payload.getPurchaseType() == 'mp3']">
-    <jms:outbound-endpoint queue="songPurchases" />
+  <when expression="#[payload.puchaseType == 'mp3']">
+    <-- do something -->
   </when>
+  <otherwise>
+    <-- do something -->
+  </otherwise>
 </choice>
 ----
 
@@ -85,18 +74,29 @@ For the Mule 4 example, notice that the `when` expression uses the expression `#
 [[choice_exception_strategy]]
 == Choice Exception Strategy
 
-The Error Handler (`<error-handler>`) replaces the Choice Exception Strategy. Its child handlers are matched through the error type, rather than as a Java exception.
+In Mule 4, the Error Handler (`<error-handler>`) replaces the Choice Exception Strategy (`choice-exception-strategy`). Its child handlers are matched through the error type, rather than as a Java exception.
+
+.Mule 3 Example
+----
+<flow name="Sample_Flow">
+...
+  <choice-exception-strategy doc:name="Choice Exception Strategy">
+    <catch-exception-strategy doc:name="Catch Exception Strategy"  when="#[exception.causedBy(org.mule.api.routing.filter.FilterUnacceptedException)]">
+      <set-variable variableName="errorStatusCode" value="404" doc:name="Set status code"/>
+      <set-variable variableName="errorReasonPhrase" value="Not Found" doc:name="Set reason phrase"/>
+    </catch-exception-strategy>
+    <rollback-exception-strategy doc:name="Rollback Exception Strategy">
+      <logger level="INFO" doc:name="Logger" message="Unknown error"/>
+    </rollback-exception-strategy>
+  </choice-exception-strategy>
+</flow>
+----
+
+For a Mule 4 example, see link:migration-core-exception-strategies[Migrating Exception Strategies to Mule Error Handlers]
 
 == See Also
 
+link:migration-intro-error-handlers[Introduction to Mule 4: Error Handlers]
 link:migration-mel[Migrating from MEL to DataWeave]
 link:migration-dataweave[Migrating from DataWeave 1.0 to 2.x]
 link:migration-core-exception-strategies[Migrating Exception Strategies to Error Handlers]
-
-////
-link:migration-examples[Migration Examples]
-
-link:migration-patterns[Migration Patterns]
-
-link:migration-components[Migrating Components]
-////
