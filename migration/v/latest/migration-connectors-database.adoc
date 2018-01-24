@@ -2,92 +2,90 @@
 = Migrating the Database Connector
 
 // Explain generally how and why things changed between Mule 3 and Mule 4.
-The Mule 4 Database (DB) connector can connect to any relational Database engine. Unlike other connectors such as File or FTP, this connector's UX is similar to the one in Mule 3.x. Changes include:
+The Database connector for Mule 4 can connect to any relational Database engine. These are the main changes for Mule 4:
 
-* Operations: Operations are streamlined. Bulk functionality is extracted to its own set of operations so that you no longer have operations that change behaviors depending on the received payload.
+* Operations:
+ ** Bulk Insert, Update, and Delete are now separate operations, so the XML for the related elements and attributes has changed significantly since Mule 4.
+ ** Use of DataWeave: Insert and Update operations support DataWeave transformations. You can construct the data sets that insert or update the database without message side effects, and you no longer use message enrichers.
+ ** Bulk functionality is extracted to its own set of operations, so operations that no longer change their behavior depending on the received payload.
 
-* Dynamic queries simplified: Now there’s a single experience for executing static and dynamic queries.
+* You can perform dynamic and static queries in about the same way.
 
-* Embeddable transformations: you can now embed DataWeave transformations inside the Insert/Update operations so that you can construct the datasets you want to send to the DB without having a side effect on the message or using enrichers
+* You can now embed DataWeave transformations inside the Insert and Update operations so that you can construct the data sets you want to send to the database without having a side effect on the message or using enrichers.
 
-* Streaming: You no longer have to worry about configuring streaming on your operations. The connector will use Mule’s new streaming framework to handle that automatically. You can now even execute a select statement and process the results asynchronously without worrying about leaking connections!
+* The Mule streaming framework is automatically configured for your operations. You can execute a select statement and process the results asynchronously without worrying about leaking connections.
 
+|===
+| Operations in Mule 3 | Changes in Mule 4
+
+| Bulk Execute (`db:bulk-execute`) | Bulk Delete (`db:bulk-delete`), Bulk Insert (`db:bulk-insert`), Bulk Update (`db:bulk-update`)
+
+| DDL operations such as CREATE, ALTER, etc. | TODO?
+|===
 
 What's covered in this section:
 
-* <<db_operation_select>>
-* <<db_dynamic_queries>>
-* <<db_streaming>>
-* <<db_insert_update_delete>>
+* <<database_configuration>>
+* <<database_operation_select>>
+* <<database_dynamic_queries>>
+* <<database_streaming>>
+* <<database_insert_update_delete>>
+* <<database_operation_bulk>>
 
-[[db_configuration]]
+[[database_configuration]]
 == Database Configuration
+
+// TODO: EXPLAIN CONFIG CHANGES?
+The connector for Mule 4 still supports Derby, MySQL, Oracle, and a generic database configuration. However, the XML for configuring them has changed.
 
 .Mule 3 Example: Configurations
 ----
-<db:derby-config name="DerbyConfig"
- url="derbydb.com/MyDbTest"
+<database:derby-config name="DerbyConfig"
+ url="derbydatabase.com/MydatabaseTest"
  doc:name="Derby Configuration"/>
 ----
 
 .Mule 4 Example: Derby Configuration
 ----
-<db:config name="DerbyConfig" doc:name="Database Config">
-  <db:derby-connection database="derbydb.com/MyDbTest" />
-</db:config>
+<database:config name="DerbyConfig" doc:name="Database Config">
+  <database:derby-connection database="derbydatabase.com/MydatabaseTest" />
+</database:config>
 ----
 
-[[db_connection_pooling]]
-== Connection Pooling
-
-Pooling configuration for JDBC Data Sources is capable of pooling connections. Note that this profile is targeted at data sources and is not the standard pooling profile used by other connectors.
-
-.Mule 3 Example
-----
-TODO
-----
-
-.Mule 4 Example
-----
-TODO
-----
-
-
-== Connection Types
-
-* JDBC
-* MySQL
-* Oracle
-*
-
-[[db_operation_select]]
+[[database_operation_select]]
 == Select Operation
 
-The select operation is used to retrieve information from the RDBMS. The primary concept of this operation is that you will supply a SQL query and use DataWeave to supply the parameters:
+The Select operation retrieves information from the RDBMS. It takes an SQL query and uses DataWeave to supply the parameters.
 
 .Mule 3 Example: SELECT
 ----
-TODO: Mule 3 example goes here.
+<flow name="selectParameterizedQuery">
+    <db:select config-ref="Derby_Configuration" doc:name="Database" streaming="true">
+        <db:parameterized-query>
+          <!-- TODO: SHOW PARAMETERIZED INPUT-->
+        </db:parameterized-query>
+    </db:select>
+</flow>
 ----
 
 .Mule 4 Example: SELECT
 ----
 <flow name="selectParameterizedQuery">
-  <db:select config-ref="dbConfig">
-    <db:sql>select * from PLANET where name = :name</db:sql>
-    <db:input-parameters>
+  <database:select config-ref="databaseConfig">
+    <database:sql>select * from PLANET where name = :name</database:sql>
+    <database:input-parameters>
       #[{'name' : payload}]
-    </db:input-parameters>
-  </db:select>
+    </database:input-parameters>
+  </database:select>
 </flow>
 ----
 
-As you can see in the Mule 4 example, input parameters are supplied as key-value pairs, which we can now create by embedding a DataWeave script. Those keys are used in conjunction with the semicolon character (`:`) to reference to a parameter value by name. This is the recommended approach for using parameters in your query because:
+As you can see in the Mule 4 example, input parameters are supplied as key-value pairs, which you can create by embedding a DataWeave script. Those keys are used in conjunction with the semicolon character (`:`) to reference to a parameter value by name. This is the recommended approach for using parameters in your query:
 
 * The query becomes immune to SQL injection attacks.
 * The connector can perform optimizations that are not possible otherwise, which improves the application’s overall performance.
 
-[[db_dynamic_queries]]
+[[database_dynamic_queries]]
 == Dynamic Queries
 
 Sometimes you not only need to parameterize the WHERE clause but also to parameterize parts of the query itself. Use cases for this include queries that need to hit online/historic tables depending on a condition, or complex queries where the project columns need to vary.
@@ -96,24 +94,37 @@ In Mule 3, the concept of SELECT was split in parameterized and dynamic queries,
 
 .Mule 3 Example: SELECT with Parameterized Query
 ----
-TODO: show SELECT with separate parameterized query HERE
+<db:select config-ref="databaseConfig" doc:name="Database">
+    <db:parameterized-query/>
+</db:update>
 ----
 
 .Mule 3 Example: SELECT with Dynamic Query
 ----
-TODO: show SELECT with dynamic query HERE
+<db:select config-ref="databaseConfig" doc:name="Database" >
+    <db:dynamic-query/>
+</db:select>
 ----
 
 The Database Connector for Mule 4, can use both methods at the same time through expressions in the query. In the Mule 4 example, the expression produces the query by building a string in which the table depends on a variable. Notice that although the query text is dynamic, it still uses input parameters.
 
 .Mule 4 Example
 ----
+TODO: IS THIS OUT OF DATE? SEE BELOW?
 <set-variable variableName="table" value="PLANET"/>
-<db:select config-ref="dbConfig">
- <db:sql>#["SELECT * FROM $(vars.table) WHERE name = :name"]</db:sql>
- <db:input-parameters>
+<database:select config-ref="databaseConfig">
+ <database:sql>#["SELECT * FROM $(vars.table) WHERE name = :name"]</database:sql>
+ <database:input-parameters>
    #[{'name' : payload}]
- </db:input-parameters>
+ </database:input-parameters>
+</database:select>
+
+// TODO: LOOKS LIKE THE ABOVE IS OUT OF DATE. THIS COMES FROM STUDIO 7.1.
+// is it correct?:
+<set-variable value="PLANET" doc:name="Set Variable" doc:id="9712c6fb-b9c2-4663-b3c7-d756c81f5444" variableName="table"/>
+<db:select doc:name="Select" doc:id="9ea907ea-fd37-47b9-ad07-70c0521bac8d" config-ref="Database_Config">
+  <db:sql >SELECT * FROM $(vars.table) WHERE name = :name</db:sql>
+  <db:input-parameters ><![CDATA[{'name' : payload}]]></db:input-parameters>
 </db:select>
 ----
 
@@ -121,7 +132,7 @@ You might ask why you need dynamic queries for the example above. You might wond
 
 // TODO: SHOULD WE DISCUSS THE DW INTERPOLATION OPERATOR?
 
-<<db_streaming>>
+<<database_streaming>>
 == Streaming Large Results
 
 Database tables tend to be big. A single query might return tens of thousands of records, especially for integration use cases. Streaming is a great solution for this. What does streaming mean? Suppose you have a query which returns 10K rows. Attempting to fetch all those rows at once will result in the following:
@@ -146,55 +157,56 @@ TODO: show example of same process without setting for enabling streaming
 // NOTE: WHAT'S BELOW IS NEW AND DOES NOT HAVE A MIGRATION IMPACT, SO PROB NOT NEEDED
 Another improvement from Mule 3 is that you can now use the new repeatable streams mechanism from Mule 4. That means that streams are now repeatable, and you can make DataWeave and other components process the same stream many times, even in parallel.
 
-[[db_insert_update_delete]]
+[[database_insert_update_delete]]
 == Insert, Update, and Delete Operations
 
 The Insert, Update, and Delete operations also support the use of DataWeave parameters to get results from dynamic queries.
 
 .Mule 4 Example: Insert with
 ----
-<db:insert config-ref="dbConfig">
-  <db:sql>
+<database:insert config-ref="databaseConfig">
+  <database:sql>
     INSERT INTO PLANET(POSITION, NAME, DESCRIPTION) VALUES (777, 'Pluto', :description)
-  </db:sql>
-  <db:input-parameters>
+  </database:sql>
+  <database:input-parameters>
     #[
     {'description' : payload}
     ]
-  </db:input-parameters>
-</db:insert>
+  </database:input-parameters>
+</database:insert>
 ----
 
 .Mule 4 Example: Update
 ----
-<db:update config-ref="dbConfig">
-  <db:sql>
+<database:update config-ref="databaseConfig">
+  <database:sql>
     UPDATE PLANET SET DESCRIPTION = :description where POSITION = :position
-  </db:sql>
-  <db:input-parameters>
+  </database:sql>
+  <database:input-parameters>
   #[
     {'description' : payload,
     'position' : 7,
     }
   ]
-  </db:input-parameters>
-</db:update>
+  </database:input-parameters>
+</database:update>
 ----
 
 .Mule 4 Example
 ----
-<db:delete config-ref="dbConfig">
-  <db:sql>
+<database:delete config-ref="databaseConfig">
+  <database:sql>
     DELETE FROM PLANET where POSITION = :position
-  </db:sql>
-  <db:input-parameters>
+  </database:sql>
+  <database:input-parameters>
   #[
     {'position' : 7}
   ]
-  </db:input-parameters>
-</db:delete>
+  </database:input-parameters>
+</database:delete>
 ----
 
+[[database_operation_bulk]]
 == Bulk Operations
 
 The Insert, Update, and Delete operations above are fine for the cases in which each input parameter can take only one value.
@@ -206,19 +218,19 @@ For example, assume you have a payload that is a list of objects of the followin
 .Mule 4 Example: Executing Many Operations to Get Different Values
 ----
 <foreach>
-  <db:update config-ref="dbConfig">
-    <db:sql>
+  <database:update config-ref="databaseConfig">
+    <database:sql>
       UPDATE PRODUCTS set PRICE = PRICE * :discountRate where PRICE > :price
-    </db:sql>
-    <db:input-parameters>
+    </database:sql>
+    <database:input-parameters>
      #[
       {
         'discountRate' : payload.discountRate,
         'price' : payload.price,
       }
     ]
-    </db:input-parameters>
-  </db:update>
+    </database:input-parameters>
+  </database:update>
 </foreach>
 ----
 
@@ -226,17 +238,17 @@ Though the approach above works, it is inefficient because the query needs to be
 
 * Parse the query.
 * Resolve parameters.
-* Get a connection to the DB (either by getting one for the pool or establishing a new one).
+* Get a connection to the database (either by getting one for the pool or establishing a new one).
 * Pay all the network overhead.
 * The RBMS has to process the query and apply changes.
 * Release the connection.
 
 You can avoid that inefficiency with a Bulk operation. In the example above, the UPDATE statement is constant, not dynamic. The only thing that changes is that each iteration supplies a different set of parameters.
 
-Bulk operations allow you to run a single query using a set of parameters values. Make no mistake though, this is not just a shortcut for the same `<foreach>` above. This uses features on the JDBC API so that:
+Bulk operations allow you to run a single query using a set of parameters values. Make no mistake though, this is not just a shortcut for the same `<foreach>` above. This uses features on the JdatabaseC API so that:
 
 * The query is parsed only once.
-* Only one DB connection is required since a single statement is executed.
+* Only one database connection is required since a single statement is executed.
 * Network overhead is minimized.
 * RBDMS can execute the bulk operation atomically.
 
@@ -246,32 +258,50 @@ These are similar to their single counterparts, except that instead of receiving
 
 .Mule 4 Example: Using the Bulk Operation to Get Different Values
 ----
-<db:bulk-insert config-ref="dbConfig" >
-  <db:sql>
+<database:bulk-insert config-ref="databaseConfig" >
+  <database:sql>
     insert into customers (id, name, lastName) values (:id, :name, :lastName)
-  </db:sql>
-  <db:bulk-input-parameters>
+  </database:sql>
+  <database:bulk-input-parameters>
     #[[{'id': 2, 'name': 'George', 'lastName': 'Costanza'}, {'id': 3, 'name': 'Cosmo', 'lastName': 'Kramer'}]]
-  </db:bulk-input-parameters>
-</db:bulk-insert>
+  </database:bulk-input-parameters>
+</database:bulk-insert>
 ----
 
+////
 == TODO/NOTE: Other Topics Discussed in the Spec
 
 QUESTION: SHOULD WE cover any of these?
 
 spec here: https://docs.google.com/document/d/1zQLrSomGj8C5S7N5FDIVk1ThPiXTOWO9LVbxfSxjFAo/edit#heading=h.z8xftz3l7kjd
 
-* Pooling Profile
+* Pooling Profile?
 * Connections
-  - Generic JDBC connection
+  - Generic JdatabaseC connection
   - Global DataSource reference connection
-  - MySQL connection
-  - Derby connection
-  - Oracle connection
-  - Commom Connection Parameters
+  - Connection Types: MySQL, Derby, Oracle
+  - Common Connection Parameters?
 * Parameter Types
 * Stored Procedure
+////
+
+////
+
+[[database_connection_pooling]]
+== Connection Pooling
+
+Pooling configuration for JdatabaseC Data Sources is capable of pooling connections. Note that this profile is targeted at data sources and is not the standard pooling profile used by other connectors.
+
+.Mule 3 Example
+----
+TODO
+----
+
+.Mule 4 Example
+----
+TODO
+----
+////
 
 
 == See Also
