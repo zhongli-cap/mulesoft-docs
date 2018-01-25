@@ -103,6 +103,20 @@ This setting is unique to Data Source Reference:
 </db:config>
 ----
 
+These setting are unique to a Generic database:
+
+* `url="url_here"` for the JDBC URL to be used to connect to the database.
+* `driverClassName="driver_class_name_here"` for the fully-qualified name of the database driver class.
+
+These settings are available for Generic, Microsoft SQL Server, and Oracle connections:
+* Transactions (for Generic, ) for the transaction isolation level to set on the driver when connecting the database.
+ ** NOT_CONFIGURED (Default)
+ ** READ_COMMITTED (`transactionIsolation="READ_COMMITTED"`)
+ ** READ_UNCOMMITTED (`transactionIsolation="READ_UNCOMMITTED"`)
+ ** REPEATABLE_READ (`transactionIsolation="REPEATABLE_READ"`)
+ ** SERIALIZABLE (`transactionIsolation="SERIALIZABLE"`)
+ ** Use XA Transactions (`useXaTransactions="true|false"`)
+
 .Mule 4 Example: Microsoft SQL Server
 [source,xml]
 ----
@@ -115,6 +129,19 @@ This setting is unique to Data Source Reference:
     <db:pooling-profile />
   </db:mssql-connection>
 </db:config>
+----
+
+Microsoft SQL Server, MySql, Oracle configurations require a driver. T
+
+.Example: Maven dependency setting for a Microsoft SQL Server driver
+[source,xml]
+----
+<dependency>
+  <groupId>com.microsoft.sqlserver</groupId>
+  <artifactId>mssql-jdbc</artifactId>
+  <version>6.2.2.jre8</version>
+  <type>jar</type>
+</dependency>
 ----
 
 .Mule 4 Example: MySql
@@ -148,24 +175,6 @@ This setting is unique to Data Source Reference:
 
 Note that only some database connections provide these settings:
 
-* Transactions (for Generic, Microsoft SQL Server, Oracle only) for the transaction isolation level to set on the driver when connecting the database.
- ** NOT_CONFIGURED (Default)
- ** READ_COMMITTED (`transactionIsolation="READ_COMMITTED"`)
- ** READ_UNCOMMITTED (`transactionIsolation="READ_UNCOMMITTED"`)
- ** REPEATABLE_READ (`transactionIsolation="REPEATABLE_READ"`)
- ** SERIALIZABLE (`transactionIsolation="SERIALIZABLE"`)
- ** Use XA Transactions (`useXaTransactions="true|false"`)
-* Driver (Microsoft SQL Server, MySql, Oracle): Requires setting a Maven dependency for a database driver, for example:
-+
-----
-<dependency>
-  <groupId>com.microsoft.sqlserver</groupId>
-  <artifactId>mssql-jdbc</artifactId>
-  <version>6.2.2.jre8</version>
-  <type>jar</type>
-</dependency>
-----
-+
 * Connection properties (MySQL, Microsoft SQL Server only) for a list of custom key-value connection properties for the configuration.
  ** None (Default)
  ** Expression
@@ -192,20 +201,18 @@ In Mule 4, all database connector operations have a configurable display name, a
 [[database_operation_select]]
 === Select Operation
 
-The Select operation retrieves information from the RDBMS. It takes a SQL query and uses DataWeave to supply the parameters.
+The Select (`<db:select />`) operation retrieves information from the RDBMS. It takes a SQL query and uses DataWeave to supply the parameters.
 
 Notice that the Mule 3 example uses the parameterized SQL query within  `<db:parameterized-query />`.
 
 .Mule 3 Example: SELECT
 [source,xml]
 ----
-<flow name="selectParameterizedQuery">
-  <db:select config-ref="databaseConfig" doc:name="Database">
+<db:select config-ref="databaseConfig" doc:name="Database">
     <db:parameterized-query>
       <![CDATA[select first_name from employees where last_name = #[message.inboundProperties.'http.query.params'.lastname]]]>
     </db:parameterized-query>
-  </db:select>
-</flow>
+</db:select>
 ----
 
 Notice that the Mule 4 example uses `<database:input-parameters />` to set the value of the `last_name` input parameter that is used in the WHERE clause of the SQL query.
@@ -236,7 +243,7 @@ In Mule 3, the concept of SELECT was split into parameterized and dynamic querie
 [source,xml]
 ----
 <db:select config-ref="databaseConfig" doc:name="Database">
-    <db:parameterized-query/>
+  <db:parameterized-query/>
 </db:update>
 ----
 
@@ -244,7 +251,7 @@ In Mule 3, the concept of SELECT was split into parameterized and dynamic querie
 [source,xml]
 ----
 <db:select config-ref="databaseConfig" doc:name="Database" >
-    <db:dynamic-query/>
+  <db:dynamic-query/>
 </db:select>
 ----
 
