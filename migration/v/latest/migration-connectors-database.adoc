@@ -9,12 +9,13 @@ The Database connector for Mule 4 can connect to any relational Database engine.
  ** Use of DataWeave: Insert and Update operations support DataWeave transformations. You can construct the data sets that insert or update the database without message side effects, and you no longer use message enrichers.
  ** Bulk functionality is extracted to its own set of operations, so operations that no longer change their behavior depending on the received payload.
 
-* You can perform dynamic and static queries in about the same way.
+* You can perform dynamic and static queries in similar ways.
 
-* You can now embed DataWeave transformations inside the Insert and Update operations so that you can construct the data sets you want to send to the database without having a side effect on the message or using enrichers.
+* You can now embed DataWeave transformations inside the Insert and Update operations so that you can construct the data sets you want to send to the database without having a side effect on the message or needing to use enrichers.
 
 * The Mule streaming framework is automatically configured for your operations. You can execute a select statement and process the results asynchronously without worrying about leaking connections.
 
+////
 |===
 | Operations in Mule 3 | Changes in Mule 4
 
@@ -22,6 +23,7 @@ The Database connector for Mule 4 can connect to any relational Database engine.
 
 | DDL operations such as CREATE, ALTER, etc. | TODO?
 |===
+////
 
 What's covered in this section:
 
@@ -36,7 +38,9 @@ What's covered in this section:
 == Database Configuration
 
 // TODO: EXPLAIN CONFIG CHANGES?
-The connector for Mule 4 still supports Derby, MySQL, Oracle, and a generic database configuration. However, the XML for configuring them has changed.
+The connector for Mule 4 continues to support Derby, MySQL, Oracle, and a generic database configuration. However, the XML for configuring them has changed significantly.
+
+Notice that `database:derby-config` in Mule 3 changes to `database:config` in Mule 4, which includes a child element `database:derby-connection` for setting the URL (`database`).
 
 .Mule 3 Example: Configurations
 ----
@@ -80,17 +84,14 @@ The Select operation retrieves information from the RDBMS. It takes an SQL query
 </flow>
 ----
 
-As you can see in the Mule 4 example, input parameters are supplied as key-value pairs, which you can create by embedding a DataWeave script. Those keys are used in conjunction with the semicolon character (`:`) to reference to a parameter value by name. This is the recommended approach for using parameters in your query:
-
-* The query becomes immune to SQL injection attacks.
-* The connector can perform optimizations that are not possible otherwise, which improves the application’s overall performance.
+Note that input parameters are supplied as key-value pairs, which you can create by embedding a DataWeave script. Those keys are used with the semicolon character (`:`) to reference a parameter value by name. This approach is recommended to avoid SQL injection attacks, and it allows the connector to perform optimizations that improve the overall performance of the Mule app.
 
 [[database_dynamic_queries]]
 == Dynamic Queries
 
-Sometimes you not only need to parameterize the WHERE clause but also to parameterize parts of the query itself. Use cases for this include queries that need to hit online/historic tables depending on a condition, or complex queries where the project columns need to vary.
+Sometimes you not only need to parameterize the WHERE clause but also to parameterize parts of the query itself. Use cases for this include queries that need to hit online or historic tables depending on a condition, or complex queries where the project columns need to vary.
 
-In Mule 3, the concept of SELECT was split in parameterized and dynamic queries, and you couldn’t use both at the same time. You had to choose between having a dynamic query or having the advantages of using parameters (SQL Injection protection, PreparedStatement optimization, and so on). Furthermore, the syntax to do one or the other was different, so you had to learn two different ways of doing the same thing.
+In Mule 3, the concept of SELECT was split into parameterized and dynamic queries, and you could not use both at the same time. You had to choose between having a dynamic query or using parameters (for SQL Injection protection, PreparedStatement optimization, and so on). Furthermore, the syntax to do one or the other was different, so you had to learn two different ways of doing the same thing.
 
 .Mule 3 Example: SELECT with Parameterized Query
 ----
@@ -106,11 +107,28 @@ In Mule 3, the concept of SELECT was split in parameterized and dynamic queries,
 </db:select>
 ----
 
-The Database Connector for Mule 4, can use both methods at the same time through expressions in the query. In the Mule 4 example, the expression produces the query by building a string in which the table depends on a variable. Notice that although the query text is dynamic, it still uses input parameters.
+The Database Connector for Mule 4 can use both methods at the same time through expressions in the query. In the Mule 4 example, the expression produces the query by building a string in which the table depends on a variable. Notice that although the query text is dynamic, it still uses input parameters.
 
 .Mule 4 Example
 ----
-TODO: IS THIS OUT OF DATE? SEE BELOW?
+<set-variable value="PLANET" doc:name="Set Variable"
+ doc:id="9712c6fb-b9c2-4663-b3c7-d756c81f5444" variableName="table"/>
+<db:select doc:name="Select"
+ doc:id="9ea907ea-fd37-47b9-ad07-70c0521bac8d" config-ref="databaseConfig">
+  <db:sql >SELECT * FROM $(vars.table) WHERE name = :name</db:sql>
+  <db:input-parameters >
+   #[{'name' : payload}]
+  </db:input-parameters>
+</db:select>
+----
+
+It is important to note that Input Parameters can only be applied to parameters in a WHERE clause.
+
+////
+Got a CDATA in 7.1 actually. Not sure if that's correct:
+<![CDATA[{'name' : payload}]]>
+Mariano's example here seems a bit out of date:
+// TODO: IS THIS OUT OF DATE?
 <set-variable variableName="table" value="PLANET"/>
 <database:select config-ref="databaseConfig">
  <database:sql>#["SELECT * FROM $(vars.table) WHERE name = :name"]</database:sql>
@@ -118,17 +136,7 @@ TODO: IS THIS OUT OF DATE? SEE BELOW?
    #[{'name' : payload}]
  </database:input-parameters>
 </database:select>
-
-// TODO: LOOKS LIKE THE ABOVE IS OUT OF DATE. THIS COMES FROM STUDIO 7.1.
-// is it correct?:
-<set-variable value="PLANET" doc:name="Set Variable" doc:id="9712c6fb-b9c2-4663-b3c7-d756c81f5444" variableName="table"/>
-<db:select doc:name="Select" doc:id="9ea907ea-fd37-47b9-ad07-70c0521bac8d" config-ref="Database_Config">
-  <db:sql >SELECT * FROM $(vars.table) WHERE name = :name</db:sql>
-  <db:input-parameters ><![CDATA[{'name' : payload}]]></db:input-parameters>
-</db:select>
-----
-
-You might ask why you need dynamic queries for the example above. You might wonder if you can treat the table like another Input Parameter? The answer is no. Input Parameters can only be applied to parameters in a WHERE clause. To modify any other part of the query, you need to use the DataWeave interpolation operator.
+////
 
 // TODO: SHOULD WE DISCUSS THE DW INTERPOLATION OPERATOR?
 
@@ -290,7 +298,7 @@ spec here: https://docs.google.com/document/d/1zQLrSomGj8C5S7N5FDIVk1ThPiXTOWO9L
 [[database_connection_pooling]]
 == Connection Pooling
 
-Pooling configuration for JdatabaseC Data Sources is capable of pooling connections. Note that this profile is targeted at data sources and is not the standard pooling profile used by other connectors.
+Pooling configuration for JDBC Data Sources is capable of pooling connections. Note that this profile is targeted at data sources and is not the standard pooling profile used by other connectors.
 
 .Mule 3 Example
 ----
