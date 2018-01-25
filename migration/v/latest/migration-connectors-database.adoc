@@ -15,7 +15,6 @@ The Database connector for Mule 4 can connect to any relational database engine.
 * <<database_operation_select>>
 * <<database_dynamic_queries>>
 * <<database_streaming>>
-* <<database_insert_update_delete>>
 * <<database_operation_bulk>>
 
 [[database_configuration]]
@@ -270,12 +269,12 @@ In Mule 4, all database connector operations have a configurable display name, a
 * Error mapping for errors, including DB:BAD_SQL_SYNTAX, DB:QUERY_EXECUTION
 * Mule 4 input and output metadata for attributes, payload, and variables
 
-[[database_operation_select]]
+[[database_parameterized_queries]]
 === Migrating Parameterized Queries
 
 Operations like Select (`<db:select />`) retrieve information from the RDBMS.
 
-* In Mule 3, you pass a parameterized query in `<db:parameterized-query /`.
+* In Mule 3, you pass a parameterized query in `<db:parameterized-query />`.
 * In Mule 4, they take an SQL query in `<database:sql />` and use DataWeave to supply the parameters through a sibling element, `<database:input-parameters>`.
 
 Notice that this example uses the parameterized SQL query according to the Mule 3 model for accessing an inbound property.
@@ -292,7 +291,7 @@ Notice that this example uses the parameterized SQL query according to the Mule 
 
 Notice that the Mule 4 example uses `<database:input-parameters />` to specify the message attribute (`last_name`) used in the WHERE clause of the SQL query.
 
-.Mule 4 Example: SELECT
+.Mule 4 Example: Select with a Parameterized Query
 [source,xml, linenums]
 ----
 <database:select config-ref="databaseConfig">
@@ -310,9 +309,18 @@ In Mule 4, input parameters are supplied as key-value pairs, which you can creat
 [[database_dynamic_queries]]
 == Migrating Dynamic Queries
 
-Sometimes you not only need to parameterize the WHERE clause but also to parameterize parts of the query itself. Use cases for this include queries that need to hit online or historic tables depending on a condition, or complex queries where the project columns need to vary.
+In Mule 3, operations such as Select (`<db:select />`) are split into parameterized and dynamic queries, and you cannot use both at the same time. You must choose between using a dynamic query or using parameters, which can provide SQL Injection protection, PreparedStatement optimization, and so on.
 
-In Mule 3, the concept of SELECT was split into parameterized and dynamic queries, and you could not use both at the same time. You had to choose between having a dynamic query or using parameters (for SQL Injection protection, PreparedStatement optimization, and so on). Furthermore, the syntax to do one or the other was different, so you had to learn two different ways of doing the same thing.
+In Mule 4, the same set of operations, plus the Bulk operations () and Store Procedure, support DataWeave parameters to get results from dynamic queries:
+
+* Select (`<db:select />`)
+* Insert (`<db:insert />`)
+* Update (`<db:update />`)
+* Delete (`db:delete />`)
+* Bulk operations: Bulk Insert (`<db:bulk-insert>`), Bulk Update (`<db:bulk-update>`), and Bulk Delete (`<db:bulk-delete>`)
+* Stored Procedure (`<db:stored-prodedure />`): Mule 4 only
+
+Sometimes you not only need to parameterize the WHERE clause but also to parameterize parts of the query itself. Use cases for this include queries that need to hit online or historic tables depending on a condition, or complex queries where the project columns need to vary.
 
 .Mule 3 Example: SELECT with Parameterized Query
 [source,xml, linenums]
@@ -392,73 +400,12 @@ TODO: show example of same process without setting for enabling streaming
 // NOTE: WHAT'S BELOW IS NEW AND DOES NOT HAVE A MIGRATION IMPACT, SO PROB NOT NEEDED
 Another improvement from Mule 3 is that you can now use the new repeatable streams mechanism from Mule 4. That means that streams are now repeatable, and you can make DataWeave and other components process the same stream many times, even in parallel.
 
-////
-[[database_insert_update_delete]]
-== Migrating Insert, Update, and Delete Operations
-
-In Mule 3, the Insert (`<db:insert />`), Update (`<db:insert />`), and Delete (`db:delete />`) operations supports these features:
-
-* Bulk Mode (<<database_operation_bulk>>)
-* Parameterized, Dynamic, Templated (meaning parameterized or dynamic queries specified in a template) queries
-
-The Insert, Update, and Delete operations also support the use of DataWeave parameters to get results from dynamic queries.
-
-TODO: NEED MULE 3 COUNTERPARTS
-
-.Mule 4 Example: Insert with
-[source,xml, linenums]
-----
-<db:insert config-ref="databaseConfig">
-  <db:sql>
-    INSERT INTO PLANET(POSITION, NAME, DESCRIPTION) VALUES (777, 'Pluto', :description)
-  </db:sql>
-  <db:input-parameters>
-    #[
-    {'description' : payload}
-    ]
-  </db:input-parameters>
-</db:insert>
-----
-
-.Mule 4 Example: Update
-[source,xml, linenums]
-----
-<db:update config-ref="databaseConfig">
-  <db:sql>
-    UPDATE PLANET SET DESCRIPTION = :description where POSITION = :position
-  </db:sql>
-  <db:input-parameters>
-  #[
-    {'description' : payload,
-    'position' : 7,
-    }
-  ]
-  </db:input-parameters>
-</db:update>
-----
-
-.Mule 4 Example
-[source,xml, linenums]
-----
-<db:delete config-ref="databaseConfig">
-  <db:sql>
-    DELETE FROM PLANET where POSITION = :position
-  </db:sql>
-  <db:input-parameters>
-  #[
-    {'position' : 7}
-  ]
-  </db:input-parameters>
-</db:delete>
-----
-////
-
 [[database_operation_bulk]]
 === Migrating Bulk Operations
 
 In Mule 3, you set bulk functionality through a `bulkMode="true"` setting on Insert, Update, and Delete operations.
 
-In Mule 4, you use dedicated Bulk Insert (`<bulk-insert>`), Bulk Update (`<bulk-update>`), and Bulk Delete (`<bulk-delete>`) database, instead. This means that operations no longer change their behavior depending on the received payload.
+In Mule 4, you use dedicated Bulk Insert (`<db:bulk-insert>`), Bulk Update (`<db:bulk-update>`), and Bulk Delete (`<db:bulk-delete>`) database, instead. This means that operations no longer change their behavior depending on the received payload.
 
 In Mule 3, you write the operation something like this:
 [source,xml, linenums]
