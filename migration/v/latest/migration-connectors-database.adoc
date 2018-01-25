@@ -39,6 +39,7 @@ The connector for Mule 4 continues to support Derby, Microsoft SQL Server, MySQL
 Notice that `database:derby-config` in Mule 3 changes to `database:config` in Mule 4, which includes a child element `database:derby-connection` for setting the URL (`database`).
 
 .Mule 3 Example: Configurations
+[source,xml]
 ----
 <database:derby-config name="DerbyConfig"
  url="derbydatabase.com/MydatabaseTest"
@@ -46,6 +47,7 @@ Notice that `database:derby-config` in Mule 3 changes to `database:config` in Mu
 ----
 
 .Mule 4 Example: Derby Configuration
+[source,xml]
 ----
 <database:config name="DerbyConfig" doc:name="Database Config">
   <database:derby-connection database="derbydatabase.com/MydatabaseTest" />
@@ -67,6 +69,7 @@ These additional setting are available to all connections in Mule 4:
 * Expiration policy (`<expiration-policy/>`) for idle configuration instances.
 
 .Mule 4 Example: Data Source Reference
+[source,xml]
 ----
 <db:data-source-connection dataSourceRef="data_source_ref_here" >
   <reconnection failsDeployment="true">
@@ -88,6 +91,7 @@ This setting is unique to Data Source Reference:
 * `dataSourceRef="my_ref_here"`: Reference to a JDBC DataSource object. This object is typically created using Spring. When using XA transactions, an XADataSource object must be provided.
 
 .Mule 4 Example: Generic
+[source,xml]
 ----
 <db:config name="generic_connection" doc:name="Database Config"
  doc:id="a328feea-1b5e-4a14-b7dd-d457a76d56b5" >
@@ -100,6 +104,7 @@ This setting is unique to Data Source Reference:
 ----
 
 .Mule 4 Example: Microsoft SQL Server
+[source,xml]
 ----
 <db:config name="Microsoft_SQL_Server" doc:name="Database Config"
  doc:id="774cc10a-802c-43b1-aa90-7fca9a22fa83" >
@@ -113,6 +118,7 @@ This setting is unique to Data Source Reference:
 ----
 
 .Mule 4 Example: MySql
+[source,xml]
 ----
 <db:config name="MySQ" doc:name="Database Config"
  doc:id="27dba545-03f3-467a-8ccc-88dbbfca6b74" >
@@ -126,6 +132,7 @@ This setting is unique to Data Source Reference:
 ----
 
 .Mule 4 Example: Oracle JDBC Database
+[source,xml]
 ----
 <db:config name="Oracle_Connection" doc:name="Database Config"
  doc:id="c307c37f-b02f-4f10-b0dd-6f1ea42feab2" >
@@ -175,10 +182,7 @@ In Mule 4, all database connector operations have a configurable display name, a
  ** Non repeatable iterable ()
  ** Repeatable file store iterable (for  link://connectors/database-documentation#repeatable-file-store-iterable[maximum in-memory size and buffer unit settings])
  ** Repeatable in memory iterable (for link:/connectors/database-documentation#repeatable-in-memory-iterable[in-memory and buffer settings])
-* Transactional action (for the type of joining action that operations can take regarding transactions):
- ** ALWAYS_JOIN
- ** JOIN_IF_POSSIBLE (Default)
- ** NON_SUPPORTED
+* Transactional action for the type of joining action that operations can take regarding transactions: ALWAYS_JOIN, JOIN_IF_POSSIBLE (Default), NON_SUPPORTED
 * Query settings
 * Target variable output settings
 * Reconnection strategies
@@ -186,35 +190,40 @@ In Mule 4, all database connector operations have a configurable display name, a
 * Mule 4 input and output metadata for attributes, payload, and variables
 
 [[database_operation_select]]
-== Select Operation
+=== Select Operation
 
 The Select operation retrieves information from the RDBMS. It takes a SQL query and uses DataWeave to supply the parameters.
 
+Notice that the Mule 3 example uses the parameterized SQL query within  `<db:parameterized-query />`.
+
 .Mule 3 Example: SELECT
+[source,xml]
 ----
 <flow name="selectParameterizedQuery">
-  <db:select config-ref="Derby_Configuration" doc:name="Database"
-   streaming="true">
+  <db:select config-ref="databaseConfig" doc:name="Database">
     <db:parameterized-query>
-      <!-- Mule 3 parameterized query here -->
+      <![CDATA[select first_name from employees where last_name = #[message.inboundProperties.'http.query.params'.lastname]]]>
     </db:parameterized-query>
   </db:select>
 </flow>
 ----
 
+Notice that the Mule 4 example uses `<database:input-parameters />` to set the value of the `last_name` input parameter that is used in the WHERE clause of the SQL query.
+
 .Mule 4 Example: SELECT
+[source,xml]
 ----
-<flow name="selectParameterizedQuery">
-  <database:select config-ref="databaseConfig">
-    <database:sql>select * from PLANET where name = :name</database:sql>
-    <database:input-parameters>
-      #[{'name' : payload}]
-    </database:input-parameters>
-  </database:select>
-</flow>
+<database:select config-ref="databaseConfig">
+  <database:sql>
+    select * from employees where last_name = :last_name
+  </database:sql>
+  <database:input-parameters>
+    <![CDATA#[{'last_name' : payload}]]]>
+  </database:input-parameters>
+</database:select>
 ----
 
-Note that input parameters are supplied as key-value pairs, which you can create by embedding a DataWeave script. Those keys are used with the semicolon character (`:`) to reference a parameter value by name. This approach is recommended to avoid SQL injection attacks, and it allows the connector to perform optimizations that improve the overall performance of the Mule app.
+Input parameters are supplied as key-value pairs, which you can create by embedding a DataWeave script. Those keys are used with the semicolon character (`:`) to reference a parameter value by name. This approach is recommended to avoid SQL injection attacks, and it allows the connector to perform optimizations that improve the overall performance of the Mule app.
 
 [[database_dynamic_queries]]
 == Dynamic Queries
@@ -224,6 +233,7 @@ Sometimes you not only need to parameterize the WHERE clause but also to paramet
 In Mule 3, the concept of SELECT was split into parameterized and dynamic queries, and you could not use both at the same time. You had to choose between having a dynamic query or using parameters (for SQL Injection protection, PreparedStatement optimization, and so on). Furthermore, the syntax to do one or the other was different, so you had to learn two different ways of doing the same thing.
 
 .Mule 3 Example: SELECT with Parameterized Query
+[source,xml]
 ----
 <db:select config-ref="databaseConfig" doc:name="Database">
     <db:parameterized-query/>
@@ -231,6 +241,7 @@ In Mule 3, the concept of SELECT was split into parameterized and dynamic querie
 ----
 
 .Mule 3 Example: SELECT with Dynamic Query
+[source,xml]
 ----
 <db:select config-ref="databaseConfig" doc:name="Database" >
     <db:dynamic-query/>
@@ -240,6 +251,7 @@ In Mule 3, the concept of SELECT was split into parameterized and dynamic querie
 The Database Connector for Mule 4 can use both methods at the same time through expressions in the query. In the Mule 4 example, the expression produces the query by building a string in which the table depends on a variable. Notice that although the query text is dynamic, it still uses input parameters.
 
 .Mule 4 Example
+[source,xml]
 ----
 <set-variable value="PLANET" doc:name="Set Variable"
  doc:id="9712c6fb-b9c2-4663-b3c7-d756c81f5444" variableName="table"/>
@@ -282,11 +294,13 @@ Streaming means that the connector will not fetch the 10K rows at once. Instead,
 In Mule 3.x this was something you had to specifically enable because it was disabled by default. In Mule 4, this is transparent and always enabled, you don’t have to worry about it anymore. You can simply trust that the feature is there.
 
 .Mule 3 Example: Enabling Streaming
+[source,xml]
 ----
 TODO: show streaming enabled
 ----
 
 .Mule 4 Example: Streaming Automatically Enabled
+[source,xml]
 ----
 TODO: show example of same process without setting for enabling streaming
 ----
@@ -300,6 +314,7 @@ Another improvement from Mule 3 is that you can now use the new repeatable strea
 The Insert, Update, and Delete operations also support the use of DataWeave parameters to get results from dynamic queries.
 
 .Mule 4 Example: Insert with
+[source,xml]
 ----
 <database:insert config-ref="databaseConfig">
   <database:sql>
@@ -314,6 +329,7 @@ The Insert, Update, and Delete operations also support the use of DataWeave para
 ----
 
 .Mule 4 Example: Update
+[source,xml]
 ----
 <database:update config-ref="databaseConfig">
   <database:sql>
@@ -330,6 +346,7 @@ The Insert, Update, and Delete operations also support the use of DataWeave para
 ----
 
 .Mule 4 Example
+[source,xml]
 ----
 <database:delete config-ref="databaseConfig">
   <database:sql>
@@ -353,6 +370,7 @@ For example, when deleting, many rows might match the criteria and get deleted, 
 For example, assume you have a payload that is a list of objects of the following structure: `{ price : number, discountRate: number}`. You can execute many operations like this:
 
 .Mule 4 Example: Executing Many Operations to Get Different Values
+[source,xml]
 ----
 <foreach>
   <database:update config-ref="databaseConfig">
@@ -394,6 +412,7 @@ For these use cases, the connector offers three operations, `<bulk-insert>`, `<b
 These are similar to their single counterparts, except that instead of receiving input parameters as key-value pairs, they expect them as a list of key-value pairs.
 
 .Mule 4 Example: Using the Bulk Operation to Get Different Values
+[source,xml]
 ----
 <database:bulk-insert config-ref="databaseConfig" >
   <database:sql>
@@ -430,11 +449,13 @@ spec here: https://docs.google.com/document/d/1zQLrSomGj8C5S7N5FDIVk1ThPiXTOWO9L
 Pooling configuration for JDBC Data Sources is capable of pooling connections. Note that this profile is targeted at data sources and is not the standard pooling profile used by other connectors.
 
 .Mule 3 Example
+[source,xml]
 ----
 TODO
 ----
 
 .Mule 4 Example
+[source,xml]
 ----
 TODO
 ----
