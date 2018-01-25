@@ -2,13 +2,14 @@
 = Migrating the Database Connector
 
 // Explain generally how and why things changed between Mule 3 and Mule 4.
-Here are some of the main changes to the Database connector from Mule 3 to Mule 4:
+The main changes to the Database connector from Mule 3 to Mule 4 include these:
 
- ** All database processes (such as Select, Insert, Update, Delete, and others) have been refactored into separate operations. There are also new, dedicated bulk operations for Mule 4.
- ** Use of DataWeave: Database operations, such as Insert and Update, support DataWeave version 2 transformations. You can construct the data sets that insert or update the database without message side effects, and you no longer use message enrichers.
+* All database processes (such as Select, Insert, Update, Delete, and others) have been refactored into separate operations. There are also new, dedicated bulk operations for Mule 4.
+* Use of DataWeave: Database operations, such as Insert and Update, support DataWeave version 2 transformations. You can construct the data sets that insert or update the database without message side effects, and you no longer use message enrichers.
 * You can perform dynamic and static queries in similar ways.
 * The Mule streaming framework is automatically configured for your operations. You can execute a select statement and process the results asynchronously without worrying about leaking connections.
 
+[[whats_covered_here]]
 == What's Covered Here?
 
 * <<database_configuration>>
@@ -19,23 +20,23 @@ Here are some of the main changes to the Database connector from Mule 3 to Mule 
 * <<database_operation_bulk>>
 
 [[database_configuration]]
-== Database Configuration
+== Database Connection Configurations
 
 // TODO: EXPLAIN CONFIG CHANGES?
-The connectors for Mule 3 and Mule 4 supports Derby, MySQL, Oracle, and generic database configurations. For Mule 4, Microsoft SQL Server is also and Data Source Reference connections are also supported. The XML for these configurations has changed in Mule 4.
+The Database connectors for Mule 3 and Mule 4 support Derby, MySQL, Oracle, and generic database configurations. For Mule 4, Microsoft SQL Server and Data Source Reference connections are also supported.
 
-Most database connection configurations are set under the same top-level element in Mule 4. An exception is the Data Source Reference Connection.
+The XML for these connection configurations has changed in Mule 4:
 
-`<db:config />` is the top-level element for all database connection configurations in Mule 4, and specific database configurations are nested under separate `<db:config />` elements:
+* Mule 3: Database elements such `<db:derby-config />` are the top-level elements.
+* Mule 4: `<db:config />` is the top-level element for all database connection configurations in Mule 4, and specific database configurations are nested under separate `<db:config />` elements:
+** Derby: `<db:data-source-connection />`
+** Microsoft SQL Server: `<db:mssql-connection />`
+** MySql: `<db:my-sql-connection />`
+** Oracle: `<db:oracle-connection />`
+** Generic: `<db:generic-connection />`
+** Data Source Reference Connection: `<db:data-source-connection />`
 
-* Derby: `<db:data-source-connection />`
-* Microsoft SQL Server: `<db:mssql-connection />`
-* MySql: `<db:my-sql-connection />`
-* Oracle: `<db:oracle-connection />`
-* Generic: `<db:generic-connection />`
-* Data Source Reference Connection: `<db:data-source-connection />`
-
-.Mule 3 Example: Derby Configuration
+.Mule 3 Example: Derby Connection Configuration
 [source,xml, linenums]
 ----
 <db:derby-config name="DerbyConfig"
@@ -45,7 +46,7 @@ Most database connection configurations are set under the same top-level element
 
 Notice in that `<db:derby-config />` in Mule 3 example above changes to `<db:config />` in the Mule 4 example below, and the attribute for the URL to the database changes from  `url` to `database` in Mule 4. The `<db:derby-connection />` element is new in Mule 4.
 
-.Mule 4 Examples: Derby Configuration
+.Mule 4 Examples: Derby Connection Configurations
 [source,xml, linenums]
 ----
 <db:config name="DerbyConfig" doc:name="Database Config"
@@ -267,17 +268,14 @@ Only available in Mule 4:
 [[expiration_policies]]
 .Expiration Policies
 
-Expiration policy (`<expiration-policy/>`) for idle configuration instances. Note that this element is a sibling of the database-specific configuration (such as `<db:oracle-connection />`) and is not nested under it.
+In Mule 4, you can set up an expiration policy (`<expiration-policy/>`) for idle configuration instances. Note that this element is a sibling of the database-specific configuration (such as `<db:oracle-connection />`) and is not nested under it.
 
-.Mule 3 Example
+.Mule 4 Example:
 ----
-TODO
+<expiration-policy maxIdleTime="30" timeUnit="SECONDS"/>
 ----
 
-.Mule 4 Example
-----
-TODO
-----
+To see an example in context, see <<example_generic_db>>.
 
 [[database_operations_overview]]
 == Database Connector Operations
@@ -370,7 +368,8 @@ The Database Connector for Mule 4 can use both methods at the same time through 
 <set-variable value="PLANET" doc:name="Set Variable"
  doc:id="9712c6fb-b9c2-4663-b3c7-d756c81f5444" variableName="table"/>
 <db:select doc:name="Select"
- doc:id="9ea907ea-fd37-47b9-ad07-70c0521bac8d" config-ref="databaseConfig">
+ doc:id="9ea907ea-fd37-47b9-ad07-70c0521bac8d"
+ config-ref="db_config">
   <db:sql >SELECT * FROM $(vars.table) WHERE name = :name</db:sql>
   <db:input-parameters >
    #[{'name' : payload}]
@@ -391,13 +390,15 @@ In Mule 4, you can select a streaming strategy to make streams repeatable.
 
  ** None (Default)
  ** Non repeatable iterable
- ** Repeatable file store iterable (for  link://connectors/database-documentation#repeatable-file-store-iterable[maximum in-memory size and buffer unit settings])
- ** Repeatable in memory iterable (for link:/connectors/database-documentation#repeatable-in-memory-iterable[in-memory and buffer settings])
+ ** Repeatable file store iterable (for maximum in-memory size and buffer unit settings)
+ ** Repeatable in memory iterable (for in-memory and buffer settings)
 
 .Mule 3 Example: Enabling Streaming
 [source,xml, linenums]
 ----
-<db:select config-ref="derby_config" doc:name="db Derby" streaming="true">
+<db:select config-ref="db_config"
+   doc:name="mydb"
+   streaming="true">
     ...
 </db:select>
 ----
@@ -436,8 +437,8 @@ In Mule 4, you use dedicated Bulk Insert (`<db:bulk-insert>`), Bulk Update (`<db
 In Mule 3, you write the operation something like this:
 [source,xml, linenums]
 ----
-<db:insert config-ref="MySQL_Configuration"
- doc:name="db MySQL" bulkMode="true">
+<db:insert config-ref="db_config"
+ doc:name="my_db" bulkMode="true">
   <db:parameterized-query>
     <![CDATA[my_parameterized_query_here]]>
   </db:parameterized-query>
@@ -448,7 +449,7 @@ In Mule 4, you might execute a bulk operation like this one:
 .Mule 4 Example: Using the Bulk Operation to Get Different Values
 [source,xml, linenums]
 ----
-<db:bulk-insert config-ref="databaseConfig" >
+<db:bulk-insert config-ref="db_config" >
   <db:sql>
     insert into customers (id, name, lastName) values (:id, :name, :lastName)
   </db:sql>
@@ -460,10 +461,8 @@ In Mule 4, you might execute a bulk operation like this one:
 
 == See Also
 
-link:/connectors/database-documentation[Database Connector Documentation Reference]
+link:/connectors/database-documentation[Database Connector Reference]
 
-link:migration-examples[Migration Examples]
+link://connectors/database-documentation#repeatable-file-store-iterable[Repeatable File Store Iterable]
 
-link:migration-patterns[Migration Patterns]
-
-link:migration-components[Migrating Components]
+link:/connectors/database-documentation#repeatable-in-memory-iterable[Repeatable In-Memory Settings])
