@@ -2,17 +2,13 @@
 = Migrating the Database Connector
 
 // Explain generally how and why things changed between Mule 3 and Mule 4.
-The Database connector for Mule 4 can connect to any relational Database engine. These are the main changes for Mule 4:
+The Database connector for Mule 4 can connect to any relational database engine. Here are the main changes for Mule 4:
 
 * Operations:
- ** Bulk Insert, Update, and Delete are now separate operations, so the XML for the related elements and attributes has changed significantly since Mule 4.
+ ** All database processes (such as Select, Insert, Update, Delete, and others) have been refactored into separate operations. This change includes bulk functionality (through Bulk Insert, Bulk Update, and Bulk Delete operations) so that database operations no longer change their behavior depending on the received payload.
  ** Use of DataWeave: Insert and Update operations support DataWeave transformations. You can construct the data sets that insert or update the database without message side effects, and you no longer use message enrichers.
- ** Bulk functionality is extracted to its own set of operations, so operations that no longer change their behavior depending on the received payload.
-
 * You can perform dynamic and static queries in similar ways.
-
-* You can now embed DataWeave transformations inside the Insert and Update operations so that you can construct the data sets you want to send to the database without having a side effect on the message or needing to use enrichers.
-
+* You can embed DataWeave transformations inside the Insert and Update operations so that you can construct the data sets you want to send to the database without having a side effect on the message or needing to use enrichers.
 * The Mule streaming framework is automatically configured for your operations. You can execute a select statement and process the results asynchronously without worrying about leaking connections.
 
 ////
@@ -25,7 +21,7 @@ The Database connector for Mule 4 can connect to any relational Database engine.
 |===
 ////
 
-What's covered in this section:
+== What's Covered Here?
 
 * <<database_configuration>>
 * <<database_operation_select>>
@@ -38,7 +34,7 @@ What's covered in this section:
 == Database Configuration
 
 // TODO: EXPLAIN CONFIG CHANGES?
-The connector for Mule 4 continues to support Derby, MySQL, Oracle, and a generic database configuration. However, the XML for configuring them has changed significantly.
+The connector for Mule 4 continues to support Derby, Microsoft SQL Server, MySQL, Oracle, and generic database configurations. It also supports a Data Source Reference connection. However, the XML for configuring them has changed significantly.
 
 Notice that `database:derby-config` in Mule 3 changes to `database:config` in Mule 4, which includes a child element `database:derby-connection` for setting the URL (`database`).
 
@@ -55,20 +51,154 @@ Notice that `database:derby-config` in Mule 3 changes to `database:config` in Mu
   <database:derby-connection database="derbydatabase.com/MydatabaseTest" />
 </database:config>
 ----
+You can also configure connections to these databases:
+
+* Microsoft SQL Server (`<db:config />`)
+* MySql (`<db:config />`)
+* Oracle (`<db:config />`)
+* Generic (`<db:config />`)
+* Data Source Reference Connection (`db:data-source-connection`)
+
+These additional setting are available to all connections in Mule 4:
+* Column types (`<db:column-types/>`) for non-standard column types.
+* Pooling profile (`<db:pooling-profile/>`) for database connection pooling.
+* Reconnection strategies (`<reconnection/>`).
+ ** Fail deployment when test connection fails (`failsDeployment="true"`).
+* Expiration policy (`<expiration-policy/>`) for idle configuration instances.
+
+.Mule 4 Example: Data Source Reference
+----
+<db:data-source-connection dataSourceRef="data_source_ref_here" >
+  <reconnection failsDeployment="true">
+    <reconnect frequency="4000" count="4"/>
+  </reconnection>
+  <db:column-types >
+    <db:column-type id="124"
+     typeName="column_type"
+     className="class_name" />
+  </db:column-types>
+  <db:pooling-profile maxPoolSize="6" minPoolSize="1"
+   acquireIncrement="2" preparedStatementCacheSize="6"
+   maxWait="1" maxWaitUnit="MINUTES" />
+</db:data-source-connection>
+----
+
+This setting is unique to Data Source Reference:
+
+* `dataSourceRef="my_ref_here"`: Reference to a JDBC DataSource object. This object is typically created using Spring. When using XA transactions, an XADataSource object must be provided.
+
+.Mule 4 Example: Generic
+----
+<db:config name="generic_connection" doc:name="Database Config"
+ doc:id="a328feea-1b5e-4a14-b7dd-d457a76d56b5" >
+  <reconnection />
+  <db:column-types />
+  <db:pooling-profile />
+  <db:generic-connection url="url_here" driverClassName="driver_class_name_here" transactionIsolation="READ_COMMITTED" useXaTransactions="true"/>
+  <expiration-policy maxIdleTime="30" timeUnit="SECONDS"/>
+</db:config>
+----
+
+.Mule 4 Example: Microsoft SQL Server
+----
+<db:config name="Microsoft_SQL_Server" doc:name="Database Config"
+ doc:id="774cc10a-802c-43b1-aa90-7fca9a22fa83" >
+  <db:mssql-connection host="my_host" user="myuser"
+   password="mypassword" databaseName="mydatabase" >
+    <reconnection />
+    <db:column-types />
+    <db:pooling-profile />
+  </db:mssql-connection>
+</db:config>
+----
+
+.Mule 4 Example: MySql
+----
+<db:config name="MySQ" doc:name="Database Config"
+ doc:id="27dba545-03f3-467a-8ccc-88dbbfca6b74" >
+  <db:my-sql-connection host="myhost" user="myuser"
+   password="mypassword" database="mydatabase" >
+    <reconnection />
+    <db:column-types />
+    <db:pooling-profile />
+  </db:my-sql-connection>
+</db:config>
+----
+
+.Mule 4 Example: Oracle JDBC Database
+----
+<db:config name="Oracle_Connection" doc:name="Database Config"
+ doc:id="c307c37f-b02f-4f10-b0dd-6f1ea42feab2" >
+  <db:oracle-connection host="myhost" user="myuser"
+   password="mypassword" instance="myinstance" >
+    <reconnection />
+    <db:column-types />
+    <db:pooling-profile />
+  </db:oracle-connection>
+  <expiration-policy />
+</db:config>
+----
+
+Note that only some database connections provide these settings:
+
+* Transactions (for Generic, Microsoft SQL Server, Oracle only) for the transaction isolation level to set on the driver when connecting the database.
+ ** NOT_CONFIGURED (Default)
+ ** READ_COMMITTED (`transactionIsolation="READ_COMMITTED"`)
+ ** READ_UNCOMMITTED (`transactionIsolation="READ_UNCOMMITTED"`)
+ ** REPEATABLE_READ (`transactionIsolation="REPEATABLE_READ"`)
+ ** SERIALIZABLE (`transactionIsolation="SERIALIZABLE"`)
+ ** Use XA Transactions (`useXaTransactions="true|false"`)
+* Driver (Microsoft SQL Server, MySql, Oracle): Requires setting a Maven dependency for a database driver, for example:
++
+----
+<dependency>
+  <groupId>com.microsoft.sqlserver</groupId>
+  <artifactId>mssql-jdbc</artifactId>
+  <version>6.2.2.jre8</version>
+  <type>jar</type>
+</dependency>
+----
++
+* Connection properties (MySQL, Microsoft SQL Server only) for a list of custom key-value connection properties for the configuration.
+ ** None (Default)
+ ** Expression
+ ** Inline
+* Port (`port`) for non-standard ports. Otherwise, the connector uses the standard port by default.
+
+== Database Connector Operations
+
+In Mule 4, all database connector operations have a configurable display name, and all require reference to a connector configuration. They also provide a common set of settings:
+
+* Query for SQL query text and input parameters (as shown here in <<database_operation_select>>).
+* Streaming strategy settings (as shown here in <<database_streaming>>):
+ ** None (Default)
+ ** Non repeatable iterable ()
+ ** Repeatable file store iterable (for  link://connectors/database-documentation#repeatable-file-store-iterable[maximum in-memory size and buffer unit settings])
+ ** Repeatable in memory iterable (for link:/connectors/database-documentation#repeatable-in-memory-iterable[in-memory and buffer settings])
+* Transactional action (for the type of joining action that operations can take regarding transactions):
+ ** ALWAYS_JOIN
+ ** JOIN_IF_POSSIBLE (Default)
+ ** NON_SUPPORTED
+* Query settings
+* Target variable output settings
+* Reconnection strategies
+* Error mapping for errors, including DB:BAD_SQL_SYNTAX, DB:QUERY_EXECUTION
+* Mule 4 input and output metadata for attributes, payload, and variables
 
 [[database_operation_select]]
 == Select Operation
 
-The Select operation retrieves information from the RDBMS. It takes an SQL query and uses DataWeave to supply the parameters.
+The Select operation retrieves information from the RDBMS. It takes a SQL query and uses DataWeave to supply the parameters.
 
 .Mule 3 Example: SELECT
 ----
 <flow name="selectParameterizedQuery">
-    <db:select config-ref="Derby_Configuration" doc:name="Database" streaming="true">
-        <db:parameterized-query>
-          <!-- TODO: SHOW PARAMETERIZED INPUT-->
-        </db:parameterized-query>
-    </db:select>
+  <db:select config-ref="Derby_Configuration" doc:name="Database"
+   streaming="true">
+    <db:parameterized-query>
+      <!-- Mule 3 parameterized query here -->
+    </db:parameterized-query>
+  </db:select>
 </flow>
 ----
 
@@ -137,7 +267,6 @@ Mariano's example here seems a bit out of date:
  </database:input-parameters>
 </database:select>
 ////
-
 // TODO: SHOULD WE DISCUSS THE DW INTERPOLATION OPERATOR?
 
 <<database_streaming>>
@@ -313,6 +442,8 @@ TODO
 
 
 == See Also
+
+link:/connectors/database-documentation[Database Connector Documentation Reference]
 
 link:migration-examples[Migration Examples]
 
