@@ -36,7 +36,7 @@ The Database connector for Mule 4 can connect to any relational database engine.
 // TODO: EXPLAIN CONFIG CHANGES?
 The connector for Mule 4 continues to support Derby, Microsoft SQL Server, MySQL, Oracle, and generic database configurations. It also supports a Data Source Reference connection. However, the XML for configuring them has changed significantly.
 
-Notice that `database:derby-config` in Mule 3 changes to `database:config` in Mule 4, which includes a child element `database:derby-connection` for setting the URL (`database`).
+Notice that `<database:derby-config />` in Mule 3 changes to `<db:config />` in Mule 4. The attribute for setting the URL to the database changes from  `url` to `database` in Mule 4. The `<db:derby-connection />` element is new in Mule 4.
 
 .Mule 3 Example: Configurations
 [source,xml]
@@ -49,19 +49,32 @@ Notice that `database:derby-config` in Mule 3 changes to `database:config` in Mu
 .Mule 4 Example: Derby Configuration
 [source,xml]
 ----
-<database:config name="DerbyConfig" doc:name="Database Config">
-  <database:derby-connection database="derbydatabase.com/MydatabaseTest" />
-</database:config>
+<db:config name="DerbyConfig" doc:name="Database Config"
+ doc:id="280a5579-5490-4773-a36c-5e824def2370" >
+		<db:derby-connection database="derbydatabase.com/MydatabaseTest" />
+	</db:config>
 ----
-You can also configure connections to these databases:
 
-* Microsoft SQL Server (`<db:config />`)
-* MySql (`<db:config />`)
-* Oracle (`<db:config />`)
-* Generic (`<db:config />`)
-* Data Source Reference Connection (`db:data-source-connection`)
+Additional `<db:derby-connection />` settings (XML attributes) that are specific to Derby are available:
 
-These additional setting are available to all connections in Mule 4:
+* `create="true|false"`: Whether to create the database if it does not exist.
+* `subsubProtocol="classpath"`: Type of SubsubProtocol to be used by Derby. The available options are `directory`, `memory`, `classpath` and `jar`.
+
+=== Connector Configuration Details
+
+Most database connection configurations are set under the same element in Mule. An exception is the Data Source Reference Connection.
+
+* `<db:config />` is the top-level element for these configurations:
+ ** Derby ()
+ ** Microsoft SQL Server
+ ** MySql
+ ** Oracle
+ ** Generic (`<db:config />`)
+* `<db:data-source-connection />` is the top-level element for this configuration:
+ ** Data Source Reference Connection
+
+These additional setting can be nested under all database connection configurations in Mule 4:
+
 * Column types (`<db:column-types/>`) for non-standard column types.
 * Pooling profile (`<db:pooling-profile/>`) for database connection pooling.
 * Reconnection strategies (`<reconnection/>`).
@@ -323,48 +336,48 @@ The Insert, Update, and Delete operations also support the use of DataWeave para
 .Mule 4 Example: Insert with
 [source,xml]
 ----
-<database:insert config-ref="databaseConfig">
-  <database:sql>
+<db:insert config-ref="databaseConfig">
+  <db:sql>
     INSERT INTO PLANET(POSITION, NAME, DESCRIPTION) VALUES (777, 'Pluto', :description)
-  </database:sql>
-  <database:input-parameters>
+  </db:sql>
+  <db:input-parameters>
     #[
     {'description' : payload}
     ]
-  </database:input-parameters>
-</database:insert>
+  </db:input-parameters>
+</db:insert>
 ----
 
 .Mule 4 Example: Update
 [source,xml]
 ----
-<database:update config-ref="databaseConfig">
-  <database:sql>
+<db:update config-ref="databaseConfig">
+  <db:sql>
     UPDATE PLANET SET DESCRIPTION = :description where POSITION = :position
-  </database:sql>
-  <database:input-parameters>
+  </db:sql>
+  <db:input-parameters>
   #[
     {'description' : payload,
     'position' : 7,
     }
   ]
-  </database:input-parameters>
-</database:update>
+  </db:input-parameters>
+</db:update>
 ----
 
 .Mule 4 Example
 [source,xml]
 ----
-<database:delete config-ref="databaseConfig">
-  <database:sql>
+<db:delete config-ref="databaseConfig">
+  <db:sql>
     DELETE FROM PLANET where POSITION = :position
-  </database:sql>
-  <database:input-parameters>
+  </db:sql>
+  <db:input-parameters>
   #[
     {'position' : 7}
   ]
-  </database:input-parameters>
-</database:delete>
+  </db:input-parameters>
+</db:delete>
 ----
 
 [[database_operation_bulk]]
@@ -380,19 +393,19 @@ For example, assume you have a payload that is a list of objects of the followin
 [source,xml]
 ----
 <foreach>
-  <database:update config-ref="databaseConfig">
-    <database:sql>
+  <db:update config-ref="databaseConfig">
+    <db:sql>
       UPDATE PRODUCTS set PRICE = PRICE * :discountRate where PRICE > :price
-    </database:sql>
-    <database:input-parameters>
+    </db:sql>
+    <db:input-parameters>
      #[
       {
         'discountRate' : payload.discountRate,
         'price' : payload.price,
       }
     ]
-    </database:input-parameters>
-  </database:update>
+    </db:input-parameters>
+  </db:update>
 </foreach>
 ----
 
@@ -421,14 +434,14 @@ These are similar to their single counterparts, except that instead of receiving
 .Mule 4 Example: Using the Bulk Operation to Get Different Values
 [source,xml]
 ----
-<database:bulk-insert config-ref="databaseConfig" >
-  <database:sql>
+<db:bulk-insert config-ref="databaseConfig" >
+  <db:sql>
     insert into customers (id, name, lastName) values (:id, :name, :lastName)
-  </database:sql>
-  <database:bulk-input-parameters>
+  </db:sql>
+  <db:bulk-input-parameters>
     #[[{'id': 2, 'name': 'George', 'lastName': 'Costanza'}, {'id': 3, 'name': 'Cosmo', 'lastName': 'Kramer'}]]
-  </database:bulk-input-parameters>
-</database:bulk-insert>
+  </db:bulk-input-parameters>
+</db:bulk-insert>
 ----
 
 ////
