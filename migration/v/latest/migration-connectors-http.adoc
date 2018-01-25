@@ -5,7 +5,7 @@ For the most part, the HTTP connector has just been adapted to the Mule 4 model:
 
 * Configuration properties have been moved to a connection component when applicable.
 * Message processors have been refactored into proper operations.
-* Outbound properties such as `http.statusCode` have been removed in favor of explicit properties.
+* Outbound properties such as `http.status` have been removed in favor of explicit properties.
 * Inbound properties such as `http.queryParams` have been removed in favor of HTTP specific message attributes.
 * Threading configuration has been removed since it's now all handled at the Mule Runtime level.
 * Special handling for `application/x-www-form-urlencoded` and `multipart/*` media types has been removed in favor of DataWeave.
@@ -33,6 +33,8 @@ component:
 * `host`
 * `port`
 * `protocol`
+* `usePersistentConnections`
+* `connectionIdleTimeout`
 * TLS Context
 
 .Mule 3 example
@@ -90,7 +92,9 @@ property for `User-Agent`.
 
 .Mule 4 example
 Notice that while `statusCode` and `reasonPhrase` properties remain the same, all
-headers should now be explicitly added using a DataWeave expression.
+headers should now be explicitly added using a DataWeave expression. It's important
+to note that explicit `statusCode` and `reasonPhrase` must be provided as well to
+replace usages of outbound properties `http.status` and `http.reason`.
 ----
 <flow name="listener">
   <http:listener config-ref="listenerConfig" path="/">
@@ -118,8 +122,66 @@ headers should now be explicitly added using a DataWeave expression.
 ----
 
 ==== Attributes
+Following the new Mule Message structure, the HTTP listener now provides all request
+metadata through specific HTTP Request Attributes. Below you can find the new ways
+of accessing that metadata compared to Mule 3.
 
-//Explain new expressions to access old properties
+[%header,cols=“3,1”]
+|===
+|Metadata|Mule 3 | Mule 4
+
+|Method
+|#[inboundProperties.'http.method']
+|#[attributes.method]
+
+|Path
+|#[inboundProperties.'http.listener.path']
+|#[attributes.listenerPath]
+
+|Relative Path
+|#[inboundProperties.'http.relative.path']
+|#[attributes.relativePath]
+
+|Request URI
+|#[inboundProperties.'http.request.uri']
+|#[attributes.requestUri]
+
+|Query String
+|#[inboundProperties.'http.query.string']
+|#[attributes.queryString]
+
+|Query Parameters
+|#[inboundProperties.'http.query.params']
+|#[attributes.queryParams]
+
+|URI Parameters
+|#[inboundProperties.'http.uri.params']
+|#[attributes.uriParams]
+
+|Version
+|#[inboundProperties.'http.version']
+|#[attributes.version]
+
+|Scheme
+|#[inboundProperties.'http.scheme']
+|#[attributes.scheme]
+
+|Headers
+|#[inboundProperties]
+|#[attributes.headers]
+
+|Remote Address
+|#[inboundProperties.'http.remote.address']
+|#[attributes.remoteAddress]
+
+|Client Certificate
+|#[inboundProperties.'http.client.cert']
+|#[attributes.clientCertificate]
+|===
+
+Notice that while the HTTP headers where mapped directly into inbound properties,
+now they have an exclusive object. So obtaining a header in Mule 3 was `#[inboundProperties.'host']`
+while now it's `#[attributes.headers.'host']`.
 
 [[topic_2]]
 == HTTP Request
@@ -290,27 +352,95 @@ should now be defined explicitly through DataWeave expressions.
 
 ==== Attributes
 
-//Explain new expressions to access old properties
+Like the HTTP Listener , the HTTP request now provides all response metadata through
+specific HTTP Response Attributes. Below you can find the new ways of accessing that
+metadata compared to Mule 3.
+
+[%header,cols=“3,1”]
+|===
+|Metadata|Mule 3 | Mule 4
+
+|Status Code
+|#[inboundProperties.'http.status']
+|#[attributes.statusCode]
+
+|Reason Phrase
+|#[inboundProperties.'http.reason']
+|#[attributes.reasonPhrase]
+
+|Headers
+|#[inboundProperties]
+|#[attributes.headers]
+|===
+
+Notice that headers are treated just like in the HTTP Listener.
 
 [[topic_3]]
 == HTTP Static Resource Handler
 
-//Explain how it changed to load static resource
+The HTTP Static Resource Handler has been adapted to Mule 4's operation model and
+renamed to `http:load-static-resource`. The `resourceBase` property has also been
+renamed to `resourceBasePath`.
+
+.Mule 3 example
+----
+<flow name="main-http-root">
+    <http:listener config-ref="listenerConfig" path="*"/>
+    <http:static-resource-handler resourceBase="site" defaultFile="index.html"/>
+</flow>
+----
+
+.Mule 4 example
+----
+<flow name="main-http-root">
+    <http:listener config-ref="listenerConfig" path="*"/>
+    <http:load-static-resource resourceBasePath="site" defaultFile="index.html" />
+</flow>
+----
+
+Though this operation is only meant to be used with an HTTP Listener source, we've
+also introduced an `attributes` property where you can reference the HTTP request
+attributes of the listener and thus use the operation in any point of the flow.
 
 [[topic_4]]
-== HTTP Basic Authentication Filter
+== HTTP Basic Security Filter
 
-//Explain simple changes
+The HTTP Basic Security Filter has not been changed except to support DataWeave as
+a source for the `securityProviders` property and the introduction  an `attributes`
+property where you can reference the HTTP request attributes of the listener and
+thus use the operation in any point of the flow, just like the HTTP load static
+resource operation.
+
+.Mule 3 example
+----
+<flow name="listenerBasicAuth">
+    <http:listener config-ref="listenerConfigBasicAuth" path="/basic" />
+    <http:basic-security-filter realm="mule-realm" securityProviders="provider1,provider2"/>
+    <set-payload value="Ok"/>
+</flow>
+----
+
+.Mule 4 example
+----
+<flow name="listenerBasicAuth">
+    <http:listener config-ref="listenerConfigBasicAuth" path="/basic"/>
+    <http:basic-security-filter realm="mule-realm" securityProviders="#['provider1', 'provider2']"/>
+    <set-payload value="Ok"/>
+</flow>
+----
 
 [[topic_5]]
-== HTTP Media Types
+== HTTP Mime Types
 
+==== application/x-www-form-urlencoded
 In Mule 3, a `Map` payload was interpreted as an `application/x-www-form-urlencoded`
 output while a Mule message containing attachments was interpreted as a `multipart/form-data`
 output, with support for other subtypes as well. This was confusing since all other
 types of payloads required DataWeave to be used, like JSON and XML. In Mule 4, all
 payload types will be handled by DataWeave, which now supports both `multipart/*`
 and `application/x-www-form-urlencoded` media types.
+
+==== multipart/*
 
 == See Also
 
