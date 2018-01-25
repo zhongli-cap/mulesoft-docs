@@ -4,22 +4,10 @@
 // Explain generally how and why things changed between Mule 3 and Mule 4.
 The Database connector for Mule 4 can connect to any relational database engine. Here are the main changes for Mule 4:
 
-* Operations:
- ** All database processes (such as Select, Insert, Update, Delete, and others) have been refactored into separate operations. This change includes bulk functionality (through Bulk Insert, Bulk Update, and Bulk Delete operations) so that database operations no longer change their behavior depending on the received payload.
- ** Use of DataWeave: Insert and Update operations support DataWeave transformations. You can construct the data sets that insert or update the database without message side effects, and you no longer use message enrichers.
+ ** All database processes (such as Select, Insert, Update, Delete, and others) have been refactored into separate operations. There are also new, dedicated bulk operations for Mule 4.
+ ** Use of DataWeave: Database operations, such as Insert and Update, support DataWeave version 2 transformations. You can construct the data sets that insert or update the database without message side effects, and you no longer use message enrichers.
 * You can perform dynamic and static queries in similar ways.
-* You can embed DataWeave transformations inside the Insert and Update operations so that you can construct the data sets you want to send to the database without having a side effect on the message or needing to use enrichers.
 * The Mule streaming framework is automatically configured for your operations. You can execute a select statement and process the results asynchronously without worrying about leaking connections.
-
-////
-|===
-| Operations in Mule 3 | Changes in Mule 4
-
-| Bulk Execute (`db:bulk-execute`) | Bulk Delete (`db:bulk-delete`), Bulk Insert (`db:bulk-insert`), Bulk Update (`db:bulk-update`)
-
-| DDL operations such as CREATE, ALTER, etc. | TODO?
-|===
-////
 
 == What's Covered Here?
 
@@ -34,39 +22,11 @@ The Database connector for Mule 4 can connect to any relational database engine.
 == Database Configuration
 
 // TODO: EXPLAIN CONFIG CHANGES?
-The connector for Mule 4 continues to support Derby, Microsoft SQL Server, MySQL, Oracle, and generic database configurations. It also supports a Data Source Reference connection. However, the XML for configuring them has changed significantly.
-
-Notice that `<database:derby-config />` in Mule 3 changes to `<db:config />` in Mule 4. The attribute for setting the URL to the database changes from  `url` to `database` in Mule 4. The `<db:derby-connection />` element is new in Mule 4.
-
-.Mule 3 Example: Configurations
-[source,xml, linenums]
-----
-<database:derby-config name="DerbyConfig"
- url="derbydatabase.com/MydatabaseTest"
- doc:name="Derby Configuration"/>
-----
-
-.Mule 4 Example: Derby Configuration
-[source,xml, linenums]
-----
-<db:config name="DerbyConfig" doc:name="Database Config"
- doc:id="280a5579-5490-4773-a36c-5e824def2370" >
-  <db:derby-connection database="derbydatabase.com/MydatabaseTest" />
-</db:config>
-----
-
-Additional `<db:derby-connection />` settings (XML attributes) that are specific to Derby are available:
-
-* `create="true|false"`: Whether to create the database if it does not exist.
-* `subsubProtocol="classpath"`: Type of SubsubProtocol to be used by Derby. The available options are `directory`, `memory`, `classpath` and `jar`.
-
-=== Connector Configuration Settings
+The connectors for Mule 3 and Mule 4 supports Derby, MySQL, Oracle, and generic database configurations. For Mule 4, Microsoft SQL Server is also and Data Source Reference connections are also supported. The XML for these configurations has changed in Mule 4.
 
 Most database connection configurations are set under the same top-level element in Mule 4. An exception is the Data Source Reference Connection.
 
-`<db:config />` is the top-level element for all database connection configurations.
-
-Specific database configurations are nested under the top-level element:
+`<db:config />` is the top-level element for all database connection configurations in Mule 4, and specific database configurations are nested under separate `<db:config />` elements:
 
 * Derby: `<db:data-source-connection />`
 * Microsoft SQL Server: `<db:mssql-connection />`
@@ -75,15 +35,107 @@ Specific database configurations are nested under the top-level element:
 * Generic: `<db:generic-connection />`
 * Data Source Reference Connection: `<db:data-source-connection />`
 
-==== Examples: Detailed Database Configurations
+.Mule 3 Example: Derby Configuration
+[source,xml, linenums]
+----
+<db:derby-config name="DerbyConfig"
+ url="derbydatabase.com/MydatabaseTest"
+ doc:name="Derby Configuration"/>
+----
+
+Notice in that `<db:derby-config />` in Mule 3 example above changes to `<db:config />` in the Mule 4 example below, and the attribute for the URL to the database changes from  `url` to `database` in Mule 4. The `<db:derby-connection />` element is new in Mule 4.
+
+.Mule 4 Examples: Derby Configuration
+[source,xml, linenums]
+----
+<db:config name="DerbyConfig" doc:name="Database Config"
+ doc:id="280a5579-5490-4773-a36c-5e824def2370" >
+  <db:derby-connection database="derbydatabase.com/MydatabaseTest" />
+</db:config>
+
+<db:config name="DerbyConfig">
+   <db:derby-connection url="jdbc:derby:muleEmbeddedDB;create=true">
+       <db:custom-data-types>
+           <!-- Derby uses JAVA_OBJECT for UDT-->
+           <db:custom-data-type typeName="CONTACT_DETAILS" id="2000"/>
+       </db:custom-data-types>
+   </db:derby-connection>
+</db:config>
+----
+
+Note that additional `<db:derby-connection />` settings (XML attributes) specific to Derby are available in Mule 4:
+
+* `create="true|false"`: Whether to create the database if it does not exist.
+* `subsubProtocol="classpath"`: Type of SubsubProtocol to be used by Derby. The available options are `directory`, `memory`, `classpath` and `jar`.
+
+=== Examples: Detailed Connector Configurations
 
 These settings can be nested under all database connection configurations in Mule 4:
 
+.Column Types
 * Column types (`<db:column-types/>`) for non-standard column types.
-* Pooling profile (`<db:pooling-profile/>`) for database connection pooling.
-* Reconnection strategies (`<reconnection/>`).
- ** Fail deployment when test connection fails (`failsDeployment="true"`).
-* Expiration policy (`<expiration-policy/>`) for idle configuration instances. Note that this element is a sibling of the database-specific configuration (such as `<db:oracle-connection />`) and is not nested under it.
+
+.Pooling Profile
+* Pooling profile (`<db:pooling-profile/>`) for JDBC Data Sources capable of connection pooling connections. It is is almost identical to Connection Pooling in Mule 3. An exception is the ...
+// FROM SPEC: Pooling configuration for JDBC Data Sources capable of pooling connections. Notice that this is not Mule’s standard Pooling profile but a custom one targeted to data sources.
+
+.Reconnection Strategies
+
+Reconnection strategy (`<reconnection/>`) settings are similar in Mule 3 and Mule 4. However, custom reconnection strategies are not available in Mule 4.
+
+The examples below show changes to the XML for these settings:
+
+* None: Default. Same as Do Not Use A Reconnection Strategy in Mule 3.
+* Standard: Same as Standard Reconnection in Mule 3. Both have the same options: Frequency (ms), Reconnection Attempts
+* Forever: Same as Reconnect Forever in Mule 3.
++
+.Mule 3 Examples: Reconnection Settings
+[source,xml, linenums]
+----
+<db:mysql-config ...>
+  <reconnect frequency="4000" count="4"/>`
+</db:mysql-config>
+
+<db:mysql-config ...>
+  <reconnect-forever frequency="4000"/>`
+</db:mysql-config>
+----
++
+.Mule 4 Examples: Reconnection Settings
+[source,xml, linenums]
+----
+<db:mssql-connection ...>
+  <reconnection failsDeployment="true">
+    <reconnect frequency="4000" count="4"/>
+  </reconnection>
+</db:mssql-connection>
+
+<db:mssql-connection ...>
+  <reconnection >
+    <reconnect-forever frequency="4000" />
+  </reconnection>
+</db:mssql-connection>
+----
+
+Only available in Mule 4:
+
+* Fail Deployment When Test Connection Fails (`failsDeployment="true|false"`).
+
+.Expiration Policies
+
+Expiration policy (`<expiration-policy/>`) for idle configuration instances. Note that this element is a sibling of the database-specific configuration (such as `<db:oracle-connection />`) and is not nested under it.
+
+.Mule 3 Example
+----
+TODO
+----
+
+.Mule 4 Example
+----
+TODO
+----
+
+=== Data Source Reference
 
 .Mule 4 Example: Data Source Reference
 [source,xml, linenums]
@@ -126,6 +178,7 @@ These setting are unique to a Generic database:
 * `driverClassName="driver_class_name_here"` for the fully-qualified name of the database driver class.
 
 These settings are available for Generic, Microsoft SQL Server, and Oracle connections:
+
 * Transactions (for Generic, ) for the transaction isolation level to set on the driver when connecting the database.
  ** NOT_CONFIGURED (Default)
  ** READ_COMMITTED (`transactionIsolation="READ_COMMITTED"`)
@@ -199,6 +252,7 @@ Note that only some database connections provide these settings:
  ** Inline
 * Port (`port`) for non-standard ports. Otherwise, the connector uses the standard port by default.
 
+[[database_operations_overview]]
 == Database Connector Operations
 
 In Mule 4, all database connector operations have a configurable display name, and all require reference to a connector configuration. They also provide a common set of settings:
@@ -217,11 +271,14 @@ In Mule 4, all database connector operations have a configurable display name, a
 * Mule 4 input and output metadata for attributes, payload, and variables
 
 [[database_operation_select]]
-=== Select Operation
+=== Migrating Parameterized Queries
 
-The Select (`<db:select />`) operation retrieves information from the RDBMS. It takes a SQL query and uses DataWeave to supply the parameters.
+Operations like Select (`<db:select />`) retrieve information from the RDBMS.
 
-Notice that the Mule 3 example uses the parameterized SQL query within  `<db:parameterized-query />`.
+* In Mule 3, you pass a parameterized query in `<db:parameterized-query /`.
+* In Mule 4, they take an SQL query in `<database:sql />` and use DataWeave to supply the parameters through a sibling element, `<database:input-parameters>`.
+
+Notice that this example uses the parameterized SQL query according to the Mule 3 model for accessing an inbound property.
 
 .Mule 3 Example: SELECT
 [source,xml, linenums]
@@ -233,7 +290,7 @@ Notice that the Mule 3 example uses the parameterized SQL query within  `<db:par
 </db:select>
 ----
 
-Notice that the Mule 4 example uses `<database:input-parameters />` to set the value of the `last_name` input parameter that is used in the WHERE clause of the SQL query.
+Notice that the Mule 4 example uses `<database:input-parameters />` to specify the message attribute (`last_name`) used in the WHERE clause of the SQL query.
 
 .Mule 4 Example: SELECT
 [source,xml, linenums]
@@ -248,10 +305,10 @@ Notice that the Mule 4 example uses `<database:input-parameters />` to set the v
 </database:select>
 ----
 
-Input parameters are supplied as key-value pairs, which you can create by embedding a DataWeave script. Those keys are used with the semicolon character (`:`) to reference a parameter value by name. This approach is recommended to avoid SQL injection attacks, and it allows the connector to perform optimizations that improve the overall performance of the Mule app.
+In Mule 4, input parameters are supplied as key-value pairs, which you can create by embedding a DataWeave script. Those keys are used with the semicolon character (`:`) to reference a parameter value by name. This approach is recommended to avoid SQL injection attacks, and it allows the connector to perform optimizations that improve the overall performance of the Mule app.
 
 [[database_dynamic_queries]]
-== Dynamic Queries
+== Migrating Dynamic Queries
 
 Sometimes you not only need to parameterize the WHERE clause but also to parameterize parts of the query itself. Use cases for this include queries that need to hit online or historic tables depending on a condition, or complex queries where the project columns need to vary.
 
@@ -306,7 +363,7 @@ Mariano's example here seems a bit out of date:
 ////
 // TODO: SHOULD WE DISCUSS THE DW INTERPOLATION OPERATOR?
 
-<<database_streaming>>
+[[database_streaming]]
 == Streaming Large Results
 
 Database tables tend to be big. A single query might return tens of thousands of records, especially for integration use cases. Streaming is a great solution for this. What does streaming mean? Suppose you have a query which returns 10K rows. Attempting to fetch all those rows at once will result in the following:
@@ -321,7 +378,9 @@ In Mule 3.x this was something you had to specifically enable because it was dis
 .Mule 3 Example: Enabling Streaming
 [source,xml, linenums]
 ----
-TODO: show streaming enabled
+<db:select config-ref="derby_config" doc:name="db Derby" streaming="true">
+    <db:dynamic-query><![CDATA[my_dynamic_query_here]]></db:dynamic-query>
+</db:select>
 ----
 
 .Mule 4 Example: Streaming Automatically Enabled
@@ -333,10 +392,18 @@ TODO: show example of same process without setting for enabling streaming
 // NOTE: WHAT'S BELOW IS NEW AND DOES NOT HAVE A MIGRATION IMPACT, SO PROB NOT NEEDED
 Another improvement from Mule 3 is that you can now use the new repeatable streams mechanism from Mule 4. That means that streams are now repeatable, and you can make DataWeave and other components process the same stream many times, even in parallel.
 
+////
 [[database_insert_update_delete]]
-== Insert, Update, and Delete Operations
+== Migrating Insert, Update, and Delete Operations
+
+In Mule 3, the Insert (`<db:insert />`), Update (`<db:insert />`), and Delete (`db:delete />`) operations supports these features:
+
+* Bulk Mode (<<database_operation_bulk>>)
+* Parameterized, Dynamic, Templated (meaning parameterized or dynamic queries specified in a template) queries
 
 The Insert, Update, and Delete operations also support the use of DataWeave parameters to get results from dynamic queries.
+
+TODO: NEED MULE 3 COUNTERPARTS
 
 .Mule 4 Example: Insert with
 [source,xml, linenums]
@@ -384,58 +451,27 @@ The Insert, Update, and Delete operations also support the use of DataWeave para
   </db:input-parameters>
 </db:delete>
 ----
+////
 
 [[database_operation_bulk]]
-== Bulk Operations
+=== Migrating Bulk Operations
 
-The Insert, Update, and Delete operations above are fine for the cases in which each input parameter can take only one value.
+In Mule 3, you set bulk functionality through a `bulkMode="true"` setting on Insert, Update, and Delete operations.
 
-For example, when deleting, many rows might match the criteria and get deleted, but only one criterion (`POSITION = X`) is provided. The same concept applies for Update. That is, if you run `UPDATE PRODUCTS set PRICE = PRICE * 0.9 where PRICE > :price`, you might be applying a 10% discount on many products, but the `price` input parameter will only take one value. To apply _different_ discount rates on products that have different prices, you can either execute many operations, or can use the Bulk operation.
+In Mule 4, you use dedicated Bulk Insert (`<bulk-insert>`), Bulk Update (`<bulk-update>`), and Bulk Delete (`<bulk-delete>`) database, instead. This means that operations no longer change their behavior depending on the received payload.
 
-For example, assume you have a payload that is a list of objects of the following structure: `{ price : number, discountRate: number}`. You can execute many operations like this:
-
-.Mule 4 Example: Executing Many Operations to Get Different Values
+In Mule 3, you write the operation something like this:
 [source,xml, linenums]
 ----
-<foreach>
-  <db:update config-ref="databaseConfig">
-    <db:sql>
-      UPDATE PRODUCTS set PRICE = PRICE * :discountRate where PRICE > :price
-    </db:sql>
-    <db:input-parameters>
-     #[
-      {
-        'discountRate' : payload.discountRate,
-        'price' : payload.price,
-      }
-    ]
-    </db:input-parameters>
-  </db:update>
-</foreach>
+<db:insert config-ref="MySQL_Configuration"
+ doc:name="db MySQL" bulkMode="true">
+  <db:parameterized-query>
+    <![CDATA[my_parameterized_query_here]]>
+  </db:parameterized-query>
+</db:insert>
 ----
 
-Though the approach above works, it is inefficient because the query needs to be executed for each element in the list. For each element, you have to do this:
-
-* Parse the query.
-* Resolve parameters.
-* Get a connection to the database (either by getting one for the pool or establishing a new one).
-* Pay all the network overhead.
-* The RBMS has to process the query and apply changes.
-* Release the connection.
-
-You can avoid that inefficiency with a Bulk operation. In the example above, the UPDATE statement is constant, not dynamic. The only thing that changes is that each iteration supplies a different set of parameters.
-
-Bulk operations allow you to run a single query using a set of parameters values. Make no mistake though, this is not just a shortcut for the same `<foreach>` above. This uses features on the JdatabaseC API so that:
-
-* The query is parsed only once.
-* Only one database connection is required since a single statement is executed.
-* Network overhead is minimized.
-* RBDMS can execute the bulk operation atomically.
-
-For these use cases, the connector offers three operations, `<bulk-insert>`, `<bulk-update>`, and `<bulk-delete>`.
-
-These are similar to their single counterparts, except that instead of receiving input parameters as key-value pairs, they expect them as a list of key-value pairs.
-
+In Mule 4, you might execute a bulk operation like this one:
 .Mule 4 Example: Using the Bulk Operation to Get Different Values
 [source,xml, linenums]
 ----
@@ -448,44 +484,6 @@ These are similar to their single counterparts, except that instead of receiving
   </db:bulk-input-parameters>
 </db:bulk-insert>
 ----
-
-////
-== TODO/NOTE: Other Topics Discussed in the Spec
-
-QUESTION: SHOULD WE cover any of these?
-
-spec here: https://docs.google.com/document/d/1zQLrSomGj8C5S7N5FDIVk1ThPiXTOWO9LVbxfSxjFAo/edit#heading=h.z8xftz3l7kjd
-
-* Pooling Profile?
-* Connections
-  - Generic JdatabaseC connection
-  - Global DataSource reference connection
-  - Connection Types: MySQL, Derby, Oracle
-  - Common Connection Parameters?
-* Parameter Types
-* Stored Procedure
-////
-
-////
-
-[[database_connection_pooling]]
-== Connection Pooling
-
-Pooling configuration for JDBC Data Sources is capable of pooling connections. Note that this profile is targeted at data sources and is not the standard pooling profile used by other connectors.
-
-.Mule 3 Example
-[source,xml, linenums]
-----
-TODO
-----
-
-.Mule 4 Example
-[source,xml, linenums]
-----
-TODO
-----
-////
-
 
 == See Also
 
