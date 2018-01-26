@@ -10,14 +10,91 @@ In Mule 4, the connector can read, write, and perform many new file operations, 
 
 This section covers these migration topics:
 
+* <<file_configs>>
 * <<inbound_endpoint_migration>>
 * <<outbound_endpoints_migration>>
 * <<file_operations>>
 
-[[inbound_endpoints_migration]]
-=== Migrating Inbound Endpoints
+[[file_configs]]
+== Migrating File Configrations
 
-In Mule 3, you can place a File connector at the beginning of the flow to make it act as an inbound endpoint that triggers the flow when it receives an incoming file. As an inbound endpoint in Mule 3, the connector typically reads the file it received, then dispatches it to the next building block in the flow. It is also possible to move a copy of the file to a new directory on the file system.
+.Mule 3 Example: Default File Configuration
+[source,xml, linenums]
+----
+<file:connector name="file_config_default"
+ autoDelete="true"
+ streaming="true"
+ validateConnections="true"
+ doc:name="File"/>
+----
+
+.Mule 3 Example: File Configuration for Moving Files
+[source,xml, linenums]
+----
+<file:connector name="file_config_move_to"
+ autoDelete="true"
+ pollingFrequency="100"
+ moveToDirectory="/backup"
+ moveToPattern="#[message.inboundProperties['originalFilename']].backup" doc:name="File"/>
+----
+
+.Mule 3 Example: File Configuration for Moving Files
+[source,xml, linenums]
+----
+ <file:connector name="MyFileConfiguration" workDirectory="myDir"
+  autoDelete="false" streaming="false" validateConnections="false" doc:name="File" doc:description="My note here."/>
+----
+
+
+----
+ <file:connector name="MyFileConfiguration2" autoDelete="true"
+  streaming="true" validateConnections="true" doc:name="File">
+   <file:expression-filename-parser/>
+ </file:connector>
+
+ <file:connector name="myFileConfig" autoDelete="true" streaming="true"
+  validateConnections="true" doc:name="File" outputAppend="true" recursive="true"/>
+
+ <file:connector name="OutboundFileEnpoint" outputPattern="myfile.json"
+  writeToDirectory="/my/write/to/dir" readFromDirectory="/my/read/from/dir" workDirectory="/my/working/dir" autoDelete="true" outputAppend="true" streaming="true" recursive="true" validateConnections="true" doc:name="File"/>
+
+ <ftp:connector name="FTP" pollingFrequency="1000" streaming="true"
+  validateConnections="true" doc:name="FTP"/>
+
+ <ftp:connector name="FTP3" pollingFrequency="1000"
+  validateConnections="true" doc:name="FTP"/>
+
+<file:connector name="file_config_most_settings"
+ outputPattern="FileNamePattern"
+ writeToDirectory="WriteToDirectory"
+ readFromDirectory="ReadFromDirectory"
+ workDirectory="WorkDirectory"
+ workFileNamePattern="WorkFileNamePattern"
+ autoDelete="true"
+ outputAppend="true"
+ streaming="true"
+ recursive="true"
+ dynamicNotification="true"
+ validateConnections="true"
+ serialiseObjects="true"
+ moveToPattern="MoveToPattern"
+ moveToDirectory="MoveToDirectory"
+ doc:name="File" doc:description="Notes">
+  <file:custom-filename-parser/>
+  <spring:property name="Name" value="Value"/>
+</file:connector>
+
+
+----
+
+.Mule 4 XML Examples: File Configuration
+----
+----
+
+[[inbound_endpoints_migration]]
+== Migrating Inbound Endpoints
+
+In Mule 3, you can place a File connector at the beginning of the flow to make it act as an inbound endpoint that triggers the flow when it receives an incoming file. As an inbound endpoint, the connector typically reads a file or returns a list of files it receives, then dispatches the results to the next processor in the flow. It can also move a copy of the file to a new directory on the file system.
 
 In Mule 4, the File connector does serve as an inbound endpoint, and it no longer performs polling. The Mule 3 file transport is not available in Mule 4. In Mule 4, you use a triggering components, such as the Scheduler or HTTP Listener, to initiate the execution of a flow that contains a File connector operation.
 
@@ -33,6 +110,11 @@ Notice that this Mule 3 example uses the `pollingFrequency` attribute to trigger
  doc:name="File"
  fileAge="600"
  pollingFrequency="2000"/>
+
+ <file:connector name="file_config" outputPattern="file_name_pattern"
+  writeToDirectory="write_to_dir_here" readFromDirectory="read_from_dir_here" workDirectory="working_dir_here" workFileNamePattern="work_file_name_pattern_here" autoDelete="true" outputAppend="true" streaming="true" recursive="true" dynamicNotification="true" validateConnections="true" serialiseObjects="true" pollingFrequency="2000" fileAge="600" moveToPattern="move_to_pattern_here" moveToDirectory="move_to_dir_here" doc:name="File">
+    <spring:property name="spring_property_name_here" value="spring_property_value_here"/>
+</file:connector>
 ----
 
 In addition to polling, the connector for Mule 3 also supported:
@@ -105,6 +187,43 @@ In Mule 3, when you place File component in the middle or at the end of the flow
 TODO: OUTBOUND?
 ----
 
+=== Migrating Metadata
+
+TODO: THIS SHOULD BE COVERED AS A GENERAL TOPIC ELSEWHERE
+
+=== Migrating Reconnection Strategies
+
+TODO: SEE Database migration guide. Probably move that to its own topic.
+
+=== Migrating the Dispatched Pool Factory
+
+TODO? MIGRATE TO WHAT?
+
+=== Migrating Spring Properties
+
+// In Mule 3, FTP and SFTP connector configuration properties are the same as the File Connector.
+
+In Mule 3:
+
+* Name
+* Value
+* Reference
+
+* Subelements:
+ ** Add Array
+ ** Add Bean
+ ** Add List
+ ** Add Map
+ ** Add Null
+ ** Add Props
+ ** Add Reference
+ ** Add Set
+ ** Add Value
+ ** Add idef
+
+ Mule 4:
+
+ TODO: SEE IF POSSIBLE IN MULE. MIGRATE TO WHAT?
 
 [[file_operations]]
 == Operations
@@ -648,11 +767,11 @@ mule 3 examples
 ----
 
 * The inbound endpoint is by polling (Poll) only. To invoke the connector manually, you need to use the Requester module.
-////
 
 == See Also
 
-link:migration-examples[Migration Examples]
+
+link:/mule-user-guide/v/3.9/file-transport-reference[File Transport Reference]
 
 link:migration-patterns[Migration Patterns]
 
