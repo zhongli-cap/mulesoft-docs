@@ -2,20 +2,14 @@
 = Migrating the File Connector
 
 // Explain generally how and why things changed between Mule 3 and Mule 4.
-The File connector is completely new in Mule 4.
+The File connector is completely new in Mule 4. The main changes include:
 
-TODO: BRIEF OVERVIEW OF CHANGES
-
-In Mule 3:
-
-* The connector can serve as an inbound or outbound endpoint depending on where you place the connector in the flow. Many configuration options depend on the endpoint type.
-* etc. TODO
-
-In Mule 4:
-
-* Th connector can read, write, and perform many new file operations, but it never serves as an inbound endpoint that triggers the flow.
-
-
+* A far simpler connector configuration in Mule 4. For example, `writeToDirectory` and `moveToDirectory` are no longer part of the configuration.
+* The File connector no longer serves as a trigger (or message source) for inbound processes, nor does it contain a built-in poller. Instead, you use a separate component, such as a Scheduler or HTTP listener, to trigger any File connector processes in a flow.
+* All File connector processes (such as Read, Write, Move and so on) have been refactored into separate operations. These operations specify operation-specific settings, including the directory from which to read, write, and move files.
+* Use of DataWeave: File operations support DataWeave version 2 transformations and scripts.
+* Changes to the Mule event in Mule 4 affect accessors to the file attributes and properties.
+//* The Mule streaming framework is automatically configured for your operations. You can execute a select statement and process the results asynchronously without worrying about leaking connections.
 
 [[whats_covered_here]]
 == What's Covered Here?
@@ -42,9 +36,13 @@ In Mule 3, all connector configurations are set under a top-level element called
 
 The connector configuration also provides settings for reading, writing, and moving files, among many others. The next example shows most of the Mule 3 setting available to the File connector.
 
-.Mule 3 Example: Many Settings
+.Mule 3 Example: Available File Connection Settings
 [source,xml, linenums]
 ----
+<spring:beans>
+    <spring:bean id="MyBean" name="MyBean"/>
+</spring:beans>
+
 <file:connector name="file_config_most_settings"
  outputPattern="FileNamePattern"
  writeToDirectory="WriteToDirectory"
@@ -54,14 +52,16 @@ The connector configuration also provides settings for reading, writing, and mov
  autoDelete="true"
  outputAppend="true"
  streaming="true"
+ dispatcherPoolFactory-ref="MyBean"
  recursive="true"
  dynamicNotification="true"
  validateConnections="true"
  serialiseObjects="true"
+ pollingFrequency="4000" fileAge="800"
  moveToPattern="MoveToPattern"
  moveToDirectory="MoveToDirectory"
  doc:name="File" doc:description="Notes">
-  <file:custom-filename-parser/>
+  <file:expression-filename-parser/>
   <spring:property name="Name" value="Value"/>
 </file:connector>
 ----
@@ -73,19 +73,24 @@ In Mule 4, the top-level element for the file connection configuration is `<file
 ----
 <file:config name="file_config"
  doc:name="file_config"
- doc:id="5ff39ab7-0c61-474b-9814-290a69cbca52" >
-		<file:connection workingDir="my_dir/" />
+ doc:id="5ff39ab7-0c61-474b-9814-290a69cbca52"
+ defaultWriteEncoding="UTF-8">
+  <file:connection workingDir="/Users/me/path/to/files" >
+      <reconnection failsDeployment="true" >
+        <reconnect-forever />
+      </reconnection>
+  </file:connection>
+  <expiration-policy maxIdleTime="12" timeUnit="MILLISECONDS" />
 </file:config>
 ----
 
-The `workingDir` attribute ...
-
-However, the File connector configurations can also these properties:
- ** Working Directory where your files are located, which is required.
- ** Reconnection strategies for cases where the initial attempt to connect fails.
- ** A default write encoding for all files to which you write content. You can override this default encoding when specifying a particular File connector operation.
-
-Other con
+* `workingDir` identifies the location of your files. This attribute is required.
+* `defaultWriteEncoding` identifies the character encoding to use for writing. You can overwrite this global configuration with a File operation, such as Write.
++
+// TODO: NEED DESCRIPTION, I BELIEVE IT DEFAULTS TO THE MULE RUNTIME ENCODING.
++
+* `reconnection` is for reconnection strategies for cases where the initial attempt to connect fails (see link:migration-patterns-reconnection-strategies[Migrating Reconnection Strategies]).
+* `expiration-policy` is for idle configuration instances (see link:migration-patterns-expiration-policies[Expiration Policies]).
 
 == Migrating File Operations
 
