@@ -1,5 +1,5 @@
 // sme: afelisatti, author: afelisatti
-= Migrating to the HTTP Connector
+= Migrating HTTP Connector uses
 
 For the most part, the HTTP connector has just been adapted to the Mule 4 model:
 
@@ -12,13 +12,13 @@ For the most part, the HTTP connector has just been adapted to the Mule 4 model:
 
 Changes's covered in this section:
 
-* <<topic_1>>
-* <<topic_2>>
-* <<topic_3>>
-* <<topic_4>>
-* <<topic_5>>
+* <<http_listener>>
+* <<http-request>>
+* <<http-static-resource>>
+* <<http-basic-authentication>>
+* <<http-mime-types>>
 
-[[topic_1]]
+[[http_listener]]
 == HTTP Listener
 
 The HTTP Listener has only seen major changes in the configuration of its response
@@ -38,6 +38,7 @@ component:
 * TLS Context
 
 .Mule 3 example
+[source,xml,linenums]
 ----
 <http:listener-config name="listenerConfig" host="localhost" port="8081" basePath="api/v2" protocol="HTTPS">
   <tls:context>
@@ -48,6 +49,7 @@ component:
 ----
 
 .Mule 4 example
+[source,xml,linenums]
 ----
 <http:listener-config name="listenerConfig" basePath="api/v2">
   <http:listener-connection host="localhost" port="8081" protocol="HTTPS">
@@ -74,6 +76,7 @@ set up through an implicit outbound property (`Mule 3.6.0`), a single header ref
 (`Mule 3.7.0`) and an expression reference (`Mule 3.8.0` and `Mule 3.9.0`). An error
 response, on the other hand, will feature a `Date` header as well as the outbound
 property for `User-Agent`.
+[source,xml,linenums]
 ----
 <flow name="listener">
   <http:listener config-ref="listenerConfig" path="/">
@@ -95,6 +98,7 @@ Notice that while `statusCode` and `reasonPhrase` properties remain the same, al
 headers should now be explicitly added using a DataWeave expression. It's important
 to note that explicit `statusCode` and `reasonPhrase` must be provided as well to
 replace usages of outbound properties `http.status` and `http.reason`.
+[source,xml,linenums]
 ----
 <flow name="listener">
   <http:listener config-ref="listenerConfig" path="/">
@@ -179,11 +183,14 @@ of accessing that metadata compared to Mule 3.
 |#[attributes.clientCertificate]
 |===
 
-Notice that while the HTTP headers where mapped directly into inbound properties,
-now they have an exclusive object. So obtaining a header in Mule 3 was `#[inboundProperties.'host']`
-while now it's `#[attributes.headers.'host']`.
+Notice that while the HTTP headers were mapped directly into inbound properties,
+now they have an exclusive object. Below you can find an example of how to obtain
+a header: 
 
-[[topic_2]]
+* Mule 3: `#[inboundProperties.'host']`
+* Mule 4: `#[attributes.headers.'host']`
+
+[[http-request]]
 == HTTP Request
 
 Like the HTTP listener, most changes in the HTTP request operation regard the encapsulation of configuration
@@ -208,6 +215,7 @@ component:
 * TCP Client Socket Properties
 
 .Mule 3 example
+[source,xml,linenums]
 ----
 <http:request-config name="requestConfig" host="localhost" port="8081" protocol="HTTPS" enableCookies="false">
   <tls:context>
@@ -218,6 +226,7 @@ component:
 ----
 
 .Mule 4 example
+[source,xml,linenums]
 ----
 <http:request-config name="requestConfig" enableCookies="false">
   <http:request-connection host="localhost" port="8081" protocol="HTTPS">
@@ -235,6 +244,7 @@ authentication configuration must be placed within an `http:authentication` comp
 This applies to all authentication types supported: basic, digest, NTLM and OAuth2.
 
 .Mule 3 example
+[source,xml,linenums]
 ----
 <http:request-config name="basicConfig" host="localhost" port="8081">
   <http:basic-authentication username="#[flowVars.user]" password="#[flowVars.password]" preemptive="#[flowVars.preemptive]" />
@@ -242,6 +252,7 @@ This applies to all authentication types supported: basic, digest, NTLM and OAut
 ----
 
 .Mule 4 example
+[source,xml,linenums]
 ----
 <http:request-config name="basicConfig">
   <http:request-connection host="localhost" port="8081">
@@ -257,6 +268,7 @@ Just like the HTTP Authentication component, configuring an HTTP proxy now requi
 a wrapping `http:proxy-config` component, for all kinds of proxies.
 
 .Mule 3 example
+[source,xml,linenums]
 ----
 <http:request-config name="proxyConfig" host="localhost" port="8081" basePath="basePath">
   <http:proxy host="localhost" port="8082" username="cniehaus" password="324B21" />
@@ -264,6 +276,7 @@ a wrapping `http:proxy-config` component, for all kinds of proxies.
 ----
 
 .Mule 4 example
+[source,xml,linenums]
 ----
 <http:request-config name="proxyConfig" basePath="basePath">
   <http:request-connection host="localhost" port="8081">
@@ -281,6 +294,7 @@ to configure the properties. Additionally, the properties must be wrapped in an
 `http:client-socket-properties` component.
 
 .Mule 3 example
+[source,xml,linenums]
 ----
 <http:request-config name="tcpConfig" host="localhost" port="8081" >
     <tcp:client-socket-properties connectionTimeout="1000" keepAlive="true"
@@ -290,6 +304,7 @@ to configure the properties. Additionally, the properties must be wrapped in an
 ----
 
 .Mule 4 example
+[source,xml,linenums]
 ----
 <http:request-config name="tcpConfig">
   <http:request-connection host="localhost" port="8081">
@@ -310,6 +325,7 @@ the `http:request-builder` which has been removed. Headers, query and URI parame
 should now be defined explicitly through DataWeave expressions.
 
 .Mule 3 example
+[source,xml,linenums]
 ----
 <flow name="request">
   ...
@@ -326,6 +342,7 @@ should now be defined explicitly through DataWeave expressions.
 ----
 
 .Mule 4 example
+[source,xml,linenums]
 ----
 <flow name="request">
   ...
@@ -337,7 +354,7 @@ should now be defined explicitly through DataWeave expressions.
       #[{
         'Host': 'www.example.com'
         'Transfer-Encoding' : 'chunked'
-        }]
+      }]
     </http:headers>
     <http:uri-params>
       #[{ 'id' : vars.songId }]
@@ -375,7 +392,7 @@ metadata compared to Mule 3.
 
 Notice that headers are treated just like in the HTTP Listener.
 
-[[topic_3]]
+[[http-static-resource]]
 == HTTP Static Resource Handler
 
 The HTTP Static Resource Handler has been adapted to Mule 4's operation model and
@@ -383,18 +400,20 @@ renamed to `http:load-static-resource`. The `resourceBase` property has also bee
 renamed to `resourceBasePath`.
 
 .Mule 3 example
+[source,xml,linenums]
 ----
 <flow name="main-http-root">
-    <http:listener config-ref="listenerConfig" path="*"/>
-    <http:static-resource-handler resourceBase="site" defaultFile="index.html"/>
+  <http:listener config-ref="listenerConfig" path="*"/>
+  <http:static-resource-handler resourceBase="site" defaultFile="index.html"/>
 </flow>
 ----
 
 .Mule 4 example
+[source,xml,linenums]
 ----
 <flow name="main-http-root">
-    <http:listener config-ref="listenerConfig" path="*"/>
-    <http:load-static-resource resourceBasePath="site" defaultFile="index.html" />
+  <http:listener config-ref="listenerConfig" path="*"/>
+  <http:load-static-resource resourceBasePath="site" defaultFile="index.html" />
 </flow>
 ----
 
@@ -402,7 +421,7 @@ Though this operation is only meant to be used with an HTTP Listener source, we'
 also introduced an `attributes` property where you can reference the HTTP request
 attributes of the listener and thus use the operation in any point of the flow.
 
-[[topic_4]]
+[[http-basic-authentication]]
 == HTTP Basic Security Filter
 
 The HTTP Basic Security Filter has not been changed except to support DataWeave as
@@ -412,35 +431,173 @@ thus use the operation in any point of the flow, just like the HTTP load static
 resource operation.
 
 .Mule 3 example
+[source,xml,linenums]
 ----
 <flow name="listenerBasicAuth">
-    <http:listener config-ref="listenerConfigBasicAuth" path="/basic" />
-    <http:basic-security-filter realm="mule-realm" securityProviders="provider1,provider2"/>
-    <set-payload value="Ok"/>
+  <http:listener config-ref="listenerConfigBasicAuth" path="/basic" />
+  <http:basic-security-filter realm="mule-realm" securityProviders="provider1,provider2"/>
+  <set-payload value="Ok"/>
 </flow>
 ----
 
 .Mule 4 example
+[source,xml,linenums]
 ----
 <flow name="listenerBasicAuth">
-    <http:listener config-ref="listenerConfigBasicAuth" path="/basic"/>
-    <http:basic-security-filter realm="mule-realm" securityProviders="#['provider1', 'provider2']"/>
-    <set-payload value="Ok"/>
+  <http:listener config-ref="listenerConfigBasicAuth" path="/basic"/>
+  <http:basic-security-filter realm="mule-realm" securityProviders="#['provider1', 'provider2']"/>
+  <set-payload value="Ok"/>
 </flow>
 ----
 
-[[topic_5]]
-== HTTP Mime Types
+[[http-mime-types]]
+== HTTP MIME Type Parsing
+The HTTP connector in Mule 3 featured options to parse requests and responses when
+bodies of type `application/x-www-form-urlencoded` or `multipart/form-data` (and
+other subtypes) where received. When the parsed objects where encountered on outbound
+requests and responses, they were transformed back into those types of bodies for
+consistency.
+However, since DataWeave 2.0 now handles those MIME types, in Mule 4 HTTP parsing
+has been removed and HTTP components always provide and require binary data streams.
+Below you can find details on how to migrate uses of the formerly parsed types.
 
 ==== application/x-www-form-urlencoded
-In Mule 3, a `Map` payload was interpreted as an `application/x-www-form-urlencoded`
-output while a Mule message containing attachments was interpreted as a `multipart/form-data`
-output, with support for other subtypes as well. This was confusing since all other
-types of payloads required DataWeave to be used, like JSON and XML. In Mule 4, all
-payload types will be handled by DataWeave, which now supports both `multipart/*`
-and `application/x-www-form-urlencoded` media types.
+In Mule 3, a `Map` payload was used as a counterpart of `application/x-www-form-urlencoded`
+content. For outbound traffic that meant that if a `Map` payload was present then
+each key-value pair would be use to generate an `application/x-www-form-urlencoded`
+body. For inbound traffic it meant that each key-value pair of that body would be
+put in a `Map`.
+
+Now, DataWeave can read and write `application/x-www-form-urlencoded` content,
+making it easier and more consistent to work with different mime types in HTTP.
+
+.Mule 3 example
+In this example, a payload of `song=Snow+Poems&artist=TQP` is sent and returned
+featuring an ID with which it was saved: `song=Snow+Poems&artist=TQP&id=49`.
+[source,xml,linenums]
+----
+<flow name="urlForm">
+  <set-payload value="#[{'song': 'Snow Poems', 'artist' : 'TQP'}]"/>
+  <http:request config-ref="config" path="song" method="POST" />
+  <set-payload value="#[payload.id]"/>
+</flow>
+----
+
+.Mule 4 example
+Notice that the syntax for reading the content remains the same except that now
+we must indicate an output type since we are actually transforming data.
+[source,xml,linenums]
+----
+<flow name="urlForm">
+  ...
+  <http:request config-ref="config" path="song" method="POST">
+    <http:body>
+      #[
+      %dw 2.0
+      output application/x-www-form-urlencoded
+      ---
+      {
+        song: "Snow Poems",
+        artist: "TQP"
+      }]
+    </http:body>
+  </http:request>
+  <set-payload value="#[output text/plain --- payload.id]"/>
+  ...
+</flow>
+----
+
+Several values for a key can be added, just keep in mind accessing that data requires
+using the star selector to get the collection of all associated values: `#[payload.*artist]`
+would return a list with `David Bowie` and `Queen` for the song `Under Pressure`,
+for example.
 
 ==== multipart/*
+
+Mule Message attachments were used in Mule 3 as a counterpart of multipart content.
+For outbound traffic that meant that if attachments were present then those would
+be use as parts of a `multipart/form-data` body. For inbound traffic it meant that
+each part of that body would be mapped to a Mule Message attachment.
+
+In Mule 4, Mule Message attachments no longer exist. Instead, you can read and write
+multipart content through DataWeave as you would with JSON or XML content.
+
+.Mule 3 example
+In this example, a `multipart/form-data` body is received featuring 2 JSON parts,
+an order and a partner who has generated it. After logging the partner name, the order
+ID is saved to generate a `multipart/form-data` response featuring a simple message
+acknowledging the order and a PDF receipt generated for it.
+[source,xml,linenums]
+----
+<flow name="parts">
+  <http:listener config-ref="listenerConfig" path="orders"/>
+  <set-variable variableName="partner" value="#[message.inboundAttachments.partner.dataSource.inputStream]" mimeType="application/json"/>
+  <dw:transform-message>
+    <dw:set-variable variableName="partnerName"><![CDATA[
+      %dw 1.0
+      %output application/java
+      ---
+      flowVars.partner.name
+    ]]></dw:set-variable>
+  </dw:transform-message>
+  <logger message="Received order from #[flowVars.partnerName]." level="INFO"/>
+  <set-payload value="#[message.inboundAttachments.order.dataSource.inputStream]" mimeType="application/json"/>
+  <dw:transform-message>
+    <dw:set-variable variableName="orderId"><![CDATA[
+      %dw 1.0
+      %output application/java
+      ---
+      payload.id
+    ]]></dw:set-variable>
+  </dw:transform-message>
+  <!-- Generate PDF receipt -->
+  <set-attachment attachmentName="order" value="#['Order ' + flowVars.orderId +' received. Receipt available.']" contentType="text/plain"/>
+  <set-attachment attachmentName="receipt" value="#[payload]" contentType="application/pdf"/>
+</flow>
+----
+
+.Mule 4 example
+All the complexity of handling the attachments is now gone and we just access the
+parts by name using the `content` keyword. The multipart response is generated
+in the HTTP response body using DataWeave, where you can easily customize headers.
+[source,xml,linenums]
+----
+<flow name="parts">
+  <http:listener config-ref="listenerConfig" path="orders">
+    <http:response>
+      <http:body><![CDATA[
+      #[
+      %dw 2.0
+      output multipart/form-data
+      ---
+      {
+        parts : {
+          order : {
+            headers : {
+              "Content-Type": "text/plain"
+            },
+            content : "Order " ++ vars.orderId ++ " received. Receipt available."
+          },
+          receipt : {
+            headers : {
+              "Content-Disposition" : {
+                "name" : "receipt",
+                "filename": "receipt.pdf"
+              },
+              "Content-Type" : payload.^mimeType
+            },
+            content : payload
+          }
+        }
+      }]
+    ]]></http:body>
+    </http:response>
+  </http:listener>
+  <logger message="#[output text/plain --- 'Received order from ' ++ payload.parts.partner.content.name]"/>
+  <set-variable variableName="orderId" value="#[output text/plain --- payload.parts.order.content.id]"/>
+  <!-- Generate PDF receipt -->
+</flow>
+----
 
 == See Also
 
