@@ -8,7 +8,8 @@ In Mule 3, the connector can serve as an inbound or outbound endpoint depending 
 
 In Mule 4, the connector can read, write, and perform many new file operations, but it never serves as an inbound endpoint that triggers the flow.
 
-This section covers these migration topics:
+[[whats_covered_here]]
+== What's Covered Here?
 
 * <<file_configs>>
 * <<inbound_endpoint_migration>>
@@ -16,7 +17,9 @@ This section covers these migration topics:
 * <<file_operations>>
 
 [[file_configs]]
-== Migrating File Configrations
+== Migrating File Connector Configurations
+
+By default, the File connector sets values for these attributes. Notice that they are set under a top-level element called `<file:connector />`
 
 .Mule 3 Example: Default File Configuration
 [source,xml, linenums]
@@ -28,42 +31,11 @@ This section covers these migration topics:
  doc:name="File"/>
 ----
 
-.Mule 3 Example: File Configuration for Moving Files
+The next example shows most of the Mule 3 setting available to the File connector. As you can see, there are settings for reading, writing, and moving files. Many other settings are available.
+
+.Mule 3 Example: Many Settings
 [source,xml, linenums]
 ----
-<file:connector name="file_config_move_to"
- autoDelete="true"
- pollingFrequency="100"
- moveToDirectory="/backup"
- moveToPattern="#[message.inboundProperties['originalFilename']].backup" doc:name="File"/>
-----
-
-.Mule 3 Example: File Configuration for Moving Files
-[source,xml, linenums]
-----
- <file:connector name="MyFileConfiguration" workDirectory="myDir"
-  autoDelete="false" streaming="false" validateConnections="false" doc:name="File" doc:description="My note here."/>
-----
-
-
-----
- <file:connector name="MyFileConfiguration2" autoDelete="true"
-  streaming="true" validateConnections="true" doc:name="File">
-   <file:expression-filename-parser/>
- </file:connector>
-
- <file:connector name="myFileConfig" autoDelete="true" streaming="true"
-  validateConnections="true" doc:name="File" outputAppend="true" recursive="true"/>
-
- <file:connector name="OutboundFileEnpoint" outputPattern="myfile.json"
-  writeToDirectory="/my/write/to/dir" readFromDirectory="/my/read/from/dir" workDirectory="/my/working/dir" autoDelete="true" outputAppend="true" streaming="true" recursive="true" validateConnections="true" doc:name="File"/>
-
- <ftp:connector name="FTP" pollingFrequency="1000" streaming="true"
-  validateConnections="true" doc:name="FTP"/>
-
- <ftp:connector name="FTP3" pollingFrequency="1000"
-  validateConnections="true" doc:name="FTP"/>
-
 <file:connector name="file_config_most_settings"
  outputPattern="FileNamePattern"
  writeToDirectory="WriteToDirectory"
@@ -83,21 +55,63 @@ This section covers these migration topics:
   <file:custom-filename-parser/>
   <spring:property name="Name" value="Value"/>
 </file:connector>
-
-
 ----
 
-.Mule 4 XML Examples: File Configuration
+The Mule 4 configuration below shows the main configuration attribute for the File connector: `workingDir`. Notice that this attribute belongs to `<file:connection />`, which is a child of the top-level element `<file:config />`.
+
+.Mule 4 Examples
 [source,xml, linenums]
 ----
+<file:config name="file_config"
+ doc:name="file_config"
+ doc:id="5ff39ab7-0c61-474b-9814-290a69cbca52" >
+		<file:connection workingDir="my_dir/" />
+</file:config>
 ----
 
+The `workingDir` attribute ...
+
+Other con
 
 == Migrating File Operations
 
-In Mule 3, ... inbound, outbound...
+In Mule 3, all operations are set as inbound or outbound endpoints.
 
-In Mule 4, ... separate operations
+In Mule 4, all operations are specified within separate, top-level elements that reference a named File configuration.
+
+.Mule 4 Examples: Operations
+[source,xml, linenums]
+----
+<ftp:copy doc:name="Copy"
+ doc:id="0e10e616-1577-445b-b903-755366798e50"
+ config-ref="ftp_config"
+ ... />
+<ftp:create-directory doc:name="Create directory"
+ doc:id="3f93fb6d-af6b-430e-bf7c-5d8471cfc340"
+ config-ref="ftp_config"
+ ... />
+<ftp:delete doc:name="Delete"
+  doc:id="954301f2-393d-4d83-beed-fe5a87da9aca"
+  config-ref="ftp_config"
+  ... />
+<ftp:list doc:name="List"
+ doc:id="db1f62b9-b6fd-448b-836b-e0ae36f516b6"
+ ... />
+<ftp:move doc:name="Move"
+ doc:id="77382c43-de2d-44c5-b97c-cb8c4493bc1a"
+ ... />
+<ftp:read doc:name="Read"
+ doc:id="4a5e4652-7840-4e30-bbeb-b94430cc037e"
+ ... />
+<ftp:rename doc:name="Rename"
+ doc:id="f6436a0d-08b9-42ab-acea-8a5c3d8ba450"
+ ... />
+<ftp:write doc:name="Write"
+ doc:id="aeb168f2-d240-41a3-8f45-80cdbca9c1a1"
+ ... />
+----
+
+// TODO: On New File operation in 7.1 is not working on my instance.
 
 [[file_copy]]
 === Migrating a File Copy Operation
@@ -813,15 +827,7 @@ The configuration elements, attributes, and XML structure have changed substanti
 
 ----
 
-.Mule 4 Examples
-[source,xml, linenums]
-----
-<file:config name="MyFileConfiguration1"
- doc:name="File Config 1"
- doc:id="5ff39ab7-0c61-474b-9814-290a69cbca52" >
-		<file:connection workingDir="myDir" />
-</file:config>
-----
+
 
 == Migrating Filters to Watermarks
 
@@ -829,23 +835,15 @@ The inbound endpoint triggers one message per file, which made using the waterma
 
 You can now use watermarks instead of filters for this purpose. For example, you might use a watermark with the List operation in Mule 4.
 
-.Mule 3 Example
-[source,xml, linenums]
-----
-TODO USE FILTERS TO
-----
+For details:
 
-.Mule 4 Example
-[source,xml, linenums]
-----
-TODO: LIST USING WATERMARK?
-----
+* link:migration-patterns-watermark[Migrating Watermarks].
 
+For background information:
 
-////
-* link:/connectors/object-store-to-watermark[Example: To do Watermarks with ObjectStore]
-* link:migration-patterns-watermark[Migrating Watermarks]
-////
+* link:/connectors/object-store-to-watermark[Example: To do Watermarks with ObjectStore] (Mule 4 documentation)
+
+* https://docs.mulesoft.com/mule-user-guide/v/3.9/filters[Filters] (Mule 3.9 documentation)
 
 [[file_advanced]]
 == Advanced File Configurations
@@ -939,8 +937,6 @@ TODO
 
 == See Also
 
-link:/mule-user-guide/v/3.9/file-transport-reference[File Transport Reference]
+link:/mule-user-guide/v/3.9/file-transport-reference[File Transport Reference] (Mule 3.9)
 
-link:migration-patterns[Migration Patterns]
-
-link:migration-components[Migrating Components]
+link:/connectors/v/4.0/
