@@ -4,11 +4,12 @@
 // Explain generally how and why things changed between Mule 3 and Mule 4.
 The File connector is completely new in Mule 4. The main changes include:
 
-* A far simpler connector configuration in Mule 4. For example, `writeToDirectory` and `moveToDirectory` are no longer part of the configuration.
-* The File connector no longer serves as a trigger (or message source) for inbound processes, nor does it contain a built-in poller. Instead, you use a separate component, such as a Scheduler or HTTP listener, to trigger any File connector processes in a flow.
-* All File connector processes (such as Read, Write, Move and so on) have been refactored into separate operations. These operations specify operation-specific settings, including the directory from which to read, write, and move files.
-* Use of DataWeave: File operations support DataWeave version 2 transformations and scripts.
-* Changes to the Mule event in Mule 4 affect accessors to the file attributes and properties.
+* The File connector no longer serves as a trigger (message source) for inbound processes, nor does it contain a built-in poller. Instead, you need to use a separate component, such as a Scheduler or HTTP listener, to trigger any File connector processes in a flow.
+* The connector configuration is much simpler in Mule 4 than Mule 3. There are far fewer settings, and operation-related settings, such as `writeToDirectory` and `moveToDirectory`, are no longer part of the configuration.
+* All File connector processes (such as Read, Write, Move and so on) have been refactored into separate operations. Unlike in Mule 3, the Mule 4 operations provide settings operation-specific configurations, such as the directory from which to read, write, move, or copy files.
+* You use DataWeave version 2 expressions and scripts instead of the Mule Expression Language (MEL) or DataWeave version 1 within File connector and configuration fields.
+* Changes to the Mule message and event in Mule 4 affect accessors to use for file attributes and properties.
+* Provides mappings to error types that are specific to the File connector, such as FILE:CONNECTIVITY.
 //* The Mule streaming framework is automatically configured for your operations. You can execute a select statement and process the results asynchronously without worrying about leaking connections.
 
 [[whats_covered_here]]
@@ -66,7 +67,7 @@ The connector configuration also provides settings for reading, writing, and mov
 </file:connector>
 ----
 
-In Mule 4, the top-level element for the file connection configuration is `<file:config />`, and `<file:connection />` is a child element. The main configuration attribute for the File connector is `workingDir`.
+In Mule 4, `<file:config />` is the the top-level element for the file connection configuration, and `<file:connection />` is a child element for connection-related settings.
 
 .Mule 4 Examples
 [source,xml, linenums]
@@ -84,7 +85,7 @@ In Mule 4, the top-level element for the file connection configuration is `<file
 </file:config>
 ----
 
-* `workingDir` identifies the location of your files. This attribute is required.
+* `workingDir` identifies the location of your files. `workingDir` is the only required setting. (Note that in Mule 3, `workDirectory` is a similarly named attribute, but `workDirectory` is used when moving input files before processing them.)
 * `defaultWriteEncoding` identifies the character encoding to use for writing. You can overwrite this global configuration with a File operation, such as Write.
 +
 // TODO: NEED DESCRIPTION, I BELIEVE IT DEFAULTS TO THE MULE RUNTIME ENCODING.
@@ -92,40 +93,60 @@ In Mule 4, the top-level element for the file connection configuration is `<file
 * `reconnection` is for reconnection strategies for cases where the initial attempt to connect fails (see link:migration-patterns-reconnection-strategies[Migrating Reconnection Strategies]).
 * `expiration-policy` is for idle configuration instances (see link:migration-patterns-expiration-policies[Expiration Policies]).
 
-== Migrating File Operations
+== Referencing File Connection Configurations
 
-In Mule 3, all operations are set as inbound or outbound endpoints.
+In Mule 3, all operations are set as inbound or outbound endpoints that use `connector-ref` to point to a name File connector configuration.
 
-In Mule 4, all operations are specified within separate, top-level elements that reference a named File configuration.
+.Mule 3 Example: File Connection as Inbound Endpoint
+[source,xml, linenums]
+----
+<file:inbound-endpoint path="/tmp/input"
+  connector-ref="file_config"
+  responseTimeout="10000"
+  doc:name="File"
+  ... />
+----
+
+.Mule 3 Example: File Connection as Outbound Endpoint
+[source,xml, linenums]
+----
+<file:outbound-endpoint path="/tmp/output"
+ connector-ref="file_config"
+ responseTimeout="10000"
+ doc:name="File"
+ ... />
+----
+
+In Mule 4, all operations are specified within separate, top-level elements that use `config-ref` to point to a named File connector configuration.
 
 .Mule 4 Examples: Operations
 [source,xml, linenums]
 ----
-<ftp:copy doc:name="Copy"
+<file:copy doc:name="Copy"
  doc:id="0e10e616-1577-445b-b903-755366798e50"
- config-ref="ftp_config"
+ config-ref="file_config"
  ... />
-<ftp:create-directory doc:name="Create directory"
+<file:create-directory doc:name="Create directory"
  doc:id="3f93fb6d-af6b-430e-bf7c-5d8471cfc340"
- config-ref="ftp_config"
+ config-ref="file_config"
  ... />
-<ftp:delete doc:name="Delete"
+<file:delete doc:name="Delete"
   doc:id="954301f2-393d-4d83-beed-fe5a87da9aca"
-  config-ref="ftp_config"
+  config-ref="file_config"
   ... />
-<ftp:list doc:name="List"
+<file:list doc:name="List"
  doc:id="db1f62b9-b6fd-448b-836b-e0ae36f516b6"
  ... />
-<ftp:move doc:name="Move"
+<file:move doc:name="Move"
  doc:id="77382c43-de2d-44c5-b97c-cb8c4493bc1a"
  ... />
-<ftp:read doc:name="Read"
+<file:read doc:name="Read"
  doc:id="4a5e4652-7840-4e30-bbeb-b94430cc037e"
  ... />
-<ftp:rename doc:name="Rename"
+<file:rename doc:name="Rename"
  doc:id="f6436a0d-08b9-42ab-acea-8a5c3d8ba450"
  ... />
-<ftp:write doc:name="Write"
+<file:write doc:name="Write"
  doc:id="aeb168f2-d240-41a3-8f45-80cdbca9c1a1"
  ... />
 ----
@@ -134,6 +155,8 @@ In Mule 4, all operations are specified within separate, top-level elements that
 
 [[file_copy]]
 === Migrating a File Copy Operation
+
+This Mule 3 example uses two separate File connector components, the first to read a file through the `inbound-endpoint`, the second to write a copy of it to output directory using an `outbound-endpoint`.
 
 .Mule 3 Example: Copy File
 [source,xml, linenums]
@@ -153,14 +176,39 @@ In Mule 4, all operations are specified within separate, top-level elements that
 </flow>
 ----
 
+In Mule 4, you use a single Copy operation from the File connector to read and then write a copy to a new directory. You can also rename it.
+
 .Mule 4 Example: Copy File
 [source,xml, linenums]
 ----
-TODO
+<file:copy doc:name="Copy"
+ doc:id="86e645b4-1844-48d5-b64b-fc0f55ae23c2"
+ config-ref="File_Config"
+ sourcePath="/Users/me/source/myfile.json"
+ targetPath="/Users/me/output"
+ createParentDirectories="true|false"
+ overwrite="true|false"
+ renameTo="renamed.json">
+  <reconnect />
+  <error-mapping
+   sourceType="FILE:CONNECTIVITY"
+   targetType="APP:FILE:CONNECTIVITY" />
+</file:copy>
 ----
 
+//TODO: NEED EXAMPLE
+For `overwrite`, note that you can also provide a DataWeave expression instead of a Boolean.
+
+The connector also provides these error mapping source types:
+* FILE:ILLEGAL_PATH
+* FILE:FILE_ALREADY_EXISTS
+* FILE:CONNECTIVITY
+* FILE:RETRY_EXHAUSTED
+
 [[migrate_move]]
-=== Migrating a File Move Operation
+=== Migrating a File Move Process
+
+
 
 .Mule 3 Example: Move File
 [source,xml, linenums]
@@ -180,6 +228,7 @@ TODO
    path="/tmp/input"
    moveToDirectory="/tmp/backup"
    moveToPattern="#[message.inboundProperties['originalFilename']].backup"/>
+
   <file:outbound-endpoint
    connector-ref="output"
    path="/tmp/output"
@@ -190,7 +239,16 @@ TODO
 .Mule 4 Example: Move File
 [source,xml, linenums]
 ----
-TODO
+<file:copy doc:name="Copy"
+ doc:id="86e645b4-1844-48d5-b64b-fc0f55ae23c2"
+ config-ref="File_Config"
+ sourcePath="/Users/me/source"
+ targetPath="/Users/me/output"
+ createParentDirectories="false"
+ overwrite="true"
+ renameTo="#[now() ++ 'renamed.json']">
+    <reconnect-forever frequency="3000" />
+</file:copy>
 ----
 
 ////
@@ -254,10 +312,25 @@ In addition to polling, the connector for Mule 3 also supported:
 * `moveToPattern`: Pattern used by `moveToDirectory`.
 * `moveToDirectory`: Path on the Mule host machine where a copy of the file is to be saved.
 * `connector-ref`: Name of the connector configuration specified for this connector.
-* `responseTimeout`:
-* `doc:name`:
+* `responseTimeout`: Specifies how long (in ms) the endpoint waits for a response from the connected file system.
+* `doc:name`: Display name used in the Studio UI.
 * `fileAge`: Minimum period a file must wait before it is processed.
 * `pollingFrequency`: Specifies how often the endpoint should check for incoming messages. The default value is 1000 ms.
+
+////
+|===
+|Property |Description
+|*Address* |Enter the address for this endpoint, such as `http://localhost:8081/file`.
+|*Response Timeout* |Specify how long (in ms) the endpoint waits for a response from the connected file system.
+|*Encoding* |Choose from a drop-down list the character set used for message data. (such as UTF-8).
+|*Disable Transport Transformer* |Check this box if you do _not_ want to use the endpoint’s default response transport.
+|*MIME Type* |Select from the dropdown list one of the formats this endpoint supports.
+|*Connector Endpoint* |Use the dropdown list to select a previously configured global endpoint reference. If you have not created a global element for this type of endpoint, you can do so from this window by clicking *Add*. Click *Edit* to modify a previously created global element.
+|*Comparator* |_(Applies to inbound File endpoints only)_ . Specify the comparator used to sort incoming files, as in `org.mule.transport.file.comparator`. If you write your own comparator, it must implement the `java.util.Comparator` interface.
+|*Reverse Order* |_(Applies to inbound File endpoints only)_ . Check this box to reverse the normal comparator sort order.
+|*Enable default events tracking* |Enable default  link:/mule-user-guide/v/3.9/business-events[business event]  tracking for this endpoint.
+|===
+////
 
 Notice that this Mule 4 example uses a Scheduler component to trigger a simple Move operation for the connector on a regular basis (here, every 5 seconds):
 
