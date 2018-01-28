@@ -2,7 +2,7 @@
 = Migrating the File Connector
 
 // Explain generally how and why things changed between Mule 3 and Mule 4.
-In Mule 3, you can place a File connector at the beginning of the flow to make it act as an inbound endpoint that triggers the flow at a given polling interval. As an inbound endpoint, the connector reads the file, then dispatches the results to the next processor in the flow. It can also move a copy of the file to a new directory on the file system.
+In Mule 3, you can place a File connector at the beginning of the flow to make it act as an inbound endpoint that triggers the flow at a given polling interval. As an inbound endpoint, the connector reads the file, then dispatches the results to the next processor in the flow. If you put a File connector in any other place in the flow, it serves as an outbound endpoint and provides settings for handling outbound messages in the flow.
 
 Further, in Mule 3, `<file:inbound-endpoint />` is asynchronous by default and only operates synchronously when using the `synchronous` processing strategy. This can pose issues in cases where you need confirmation that the file could be written or when using it in batch.
 
@@ -11,10 +11,14 @@ In Mule 4, the File connector is completely new. Here are the main changes:
 * The File connector no longer serves as a trigger (message source) for inbound processes, nor does it contain a built-in poller. Instead, you use a separate component, such as a Scheduler or HTTP listener, to trigger any File connector processes in a flow. This separation means that you can copy, list, and move files at any point in the flow, rather than at a polling interval.
 * The connector configuration is much simpler in Mule 4 than Mule 3. There are far fewer settings, and operation-related settings, such as `writeToDirectory` and `moveToDirectory`, are no longer part of the configuration.
 * All File connector processes (such as Read, Write, Move and so on) have been refactored into separate operations. Unlike in Mule 3, the Mule 4 operations provide settings operation-specific configurations, such as the directory from which to read, write, move, or copy files.
-* You use DataWeave version 2 expressions and scripts instead of the Mule Expression Language (MEL) or DataWeave version 1 within File connector and configuration fields.
+* You use DataWeave version 2 expressions and scripts instead of the Mule Expression Language (MEL) or DataWeave version 1 within File connector and configuration fields that permit them.
 * Changes to the Mule message and event in Mule 4 affect accessors to use for file attributes and properties. In particular, file metadata is stored as attributes in the Mule message, and you access them, for example, with `#[attributes.lastModifiedTime]`.
-* Provides mappings to error types that are specific to the File connector, such as FILE:CONNECTIVITY.
-* Processes are synchronous in Mule 4 unless you put them in an Async scope.
+* Provides mappings to error types that are specific to the File connector, such as FILE:CONNECTIVITY. See link:/intro-error-handlers[Introduction to Mule 4: Error Handlers].
++
+// ERROR TYPES COULD PROB USE MORE INFO
++
+* Processes are synchronous in Mule 4 unless you put them in an Async scope. See link:/mule-user/guide/v/4.0/async-scope-reference[About the Async Scope].
+* Instead of using Mule 3 file transformers (such as File to String) within the File connector, you use the link:/anypoint-studio/v/7/transform-message-component-concept-studio[Mule 4 Transform component].
 //* The connector always returns an `InputStream`. List operation returns a `TreeNode`.
 
 //* The Mule streaming framework is automatically configured for your operations. You can execute a select statement and process the results asynchronously without worrying about leaking connections.
@@ -172,7 +176,7 @@ Note that the File connector has the same set of operations as the FTP and SFTP 
 
 In Mule 4, the File connector can use the Read operation (`<file:read />`) to read a file at any point in the flow, unlike the Mule 3 transport, which can only read files as a result of polling (for example, `pollingFrequency="1000"`) by the inbound endpoint (`<file:inbound-endpoint />`.
 
-Note that the inbound endpoint in Mule 3 triggers one message per file, which makes it difficult to use with the Batch module because you cannot have a job in which each file is a record. It also makes it difficult to perform watermarking, so some use file filters to produce the effect of Mule watermarking. In addition, use of use cases in which all obtained files need to be processed together required the use of an aggregator in Mule 3.
+Note that the inbound endpoint in Mule 3 triggers one message per file, which makes it difficult to use with the Batch module because you cannot have a job in which each file is a record. It also makes it difficult to perform watermarking, so some use file link:/mule-user-guide/v/3.9/filters[filters] (link:/mule-user-guide/v/3.9/file-transport-reference#filename-wildcard-filter[wildcard] and link:/mule-user-guide/v/3.9/file-transport-reference#filename-regex-filter[regex]) to produce the effect of Mule watermarking. In addition, use cases in which all obtained files need to be processed together required the use of an link:/mule-user-guide/v/3.9/routers#collection-aggregator[aggregator] in Mule 3.
 
 .Mule 3 Example: Reading a File
 [source,xml, linenums]
@@ -307,6 +311,8 @@ Notice that the Mule 3 example also uses an `outputPattern` in the outbound endp
 </flow>
 ----
 
+// TODO? `fileAge` is no longer needed?
+
 In Mule 4, the source and output paths for the file to move are set in a single Move operation. It uses `renameTo` to rename that file that it moves. You can also use create parent directories and reconnection strategies, as needed.
 
 .Mule 4 Example: Move File
@@ -343,6 +349,8 @@ link:/connectors/v/4.0/file-documentation[File Connector Documentation Reference
 
 ////
   TODO: NEED INFO ON HOW TO PICK UP A FILE BASED ON A FILE PATTERN WITH DW OR WHATEVER, INSTEAD OF A STATIC STRING.
+  TODO? FILENAME PARSER PATTERNS in moveTo, Connector template?
+  TODO?
 [[file_list]]
 === Listing a File
   TODO: MULE 3 COUNTERPART?
