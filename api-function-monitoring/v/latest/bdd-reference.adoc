@@ -1,0 +1,306 @@
+= BDD Test Writing Language Reference
+
+Behavior Driven Development (BDD) is the language for writing tests to execute for bat. BDD is an embedded domain specific language (EDSL) that resembles other testing frameworks, such as Mocha and Jasmine.
+
+== Usage
+
+The following statement is required:
+
+`import * from bat::BDD`
+
+[source,code,linenums]
+----
+import * from bat::BDD         // <-----
+import * from bat::Assertions
+import * from bat::Mutable
+
+
+var context = HashMap()
+---
+describe("the login flow") in [
+  it("tries a secured endpoint") in [
+    GET `http://127.0.0.1:4567/secured_by_token` with {
+
+    } assert [
+      $.response.status mustEqual 401,
+    ]
+  ],
+  it("gets the access token") in [
+    POST `http://127.0.0.1:4567/get_access_token` with {} assert [
+      $.response.body.new_token mustMatch /accessToken_\d+/,
+    ] execute [
+      context.set('token', $.response.body.new_token)
+    ] assert [
+      context.get('token') mustMatch /accessToken_\d+/,
+      context.get('token') mustEqual $.response.body.new_token,
+      $.response.status mustEqual 200,
+    ]
+  ],
+  it("tries to get a secured endpoint") in [
+    GET `http://127.0.0.1:4567/secured_by_token/header` with {
+      headers: {
+        Authorization: context.get('token')
+      }
+    } assert [
+      $.request.headers.Authorization mustEqual context.get('token'),
+      $.response.status mustEqual 200
+    ]
+  ]
+]
+----
+
+
+=== Test blocks
+
+Test blocks make the test more readable. You can writer every test block as function a call or custom interpolation. Use backticks (```).
+
+Test blocks also have a shorthand name to _skip the block_ described as `x<name>`. In the case of `describe` the skipped version is `xdescribe`.
+
+[source,code,linenums]
+----
+describe("A flow")  in [ ... ] // Describes a sequence of test blocks
+xdescribe("A flow") in [ ... ] // The same, but skipped.
+
+describe `A flow` in [ ... ]   // The same as describe, but with a custom interpolation
+xdescribe `A flow` in [ ... ]  // The same, but skipped.
+----
+
+The following functions follow Fowler's _GivenWhenThen_ structure:
+
+[%header,cols="3*a"]
+|===
+|Function Name|Description|Stops execution if it fails
+|`describe`   |is merely for grouping, which you can nest as deep, it adds contextual information for reports|No
+|`scenario`   |same as describe|No
+|`suite`      |same as describe|No
+|`given`      |test step, used for preparation|Yes
+|`when`       |test step, normally used to create side effects|Yes
+|`it`         |test step, validations|No
+|`should`     |test step|No
+|`must`       |test step|Yes
+|`it should "str"`|test step|No
+|`it must ""` |test step|Yes
+|===
+
+Every item in the following block can be used as custom interpolators and has the `x<name>` version.
+
+[source,code,linenums]
+----
+import * from bat::BDD         // <-----
+import * from bat::Assertions
+---
+describe `User trades stocks` in [
+  scenario `User requests a sell before close of trading` in [
+    given `I have 100 shares of MSFT stock` in [
+      POST `http://broker/create_stocks` with {
+        body: {
+          quantity: 100,
+          paper: 'MSFT'
+        }
+      } assert [
+        $.response.status == 201
+      ]
+    ],
+    given `I have 150 shares of APPL stock` in [
+      POST `http://broker/create_stocks` with {
+        body: {
+          quantity: 150,
+          paper: 'APPL'
+        }
+      } assert [
+        $.response.status == 201
+      ]
+    ],
+    when `I ask to sell 20 shares of MSFT stock` in [
+      POST `http://broker/sell_stocks` with {
+        body: {
+          quantity: 20,
+          paper: 'APPL'
+        }
+      } assert [
+        $.response.status == 201
+      ]
+    ],
+    it should "have 80 shares of MSFT stock" in [
+      GET `http://broker/get_stocks/MSFT` with {
+        headers: {}
+      } assert [
+        $.response.status == 200,
+        $.response.body.quantity == 80
+      ]
+    ],
+    it should "have 150 shares of APPL stock" in [
+      GET `http://broker/get_stocks/APPL` with {
+        headers: {}
+      } assert [
+        $.response.status == 200,
+        $.response.body.quantity == 150
+      ]
+    ]
+  ] 
+]
+----
+
+You can also write the block without custom interpolators to conform to your coding style guide. This doesn't affect behavior:
+
+[source,code,linenums]
+----
+import * from bat::BDD         // <-----
+import * from bat::Assertions
+---
+describe("User trades stocks") in [
+  scenario("User requests a sell before close of trading") in [
+    given("I have 100 shares of MSFT stock") in [
+      POST `http://broker/create_stocks` with {
+        body: {
+          quantity: 100,
+          paper: 'MSFT'
+        }
+      } assert [
+        $.response.status == 201
+      ]
+    ],
+    given("I have 150 shares of APPL stock") in [
+      POST `http://broker/create_stocks` with {
+        body: {
+          quantity: 150,
+          paper: 'APPL'
+        }
+      } assert [
+        $.response.status == 201
+      ]
+    ],
+    when("I ask to sell 20 shares of MSFT stock") in [
+      POST `http://broker/sell_stocks` with {
+        body: {
+          quantity: 20,
+          paper: 'APPL'
+        }
+      } assert [
+        $.response.status == 201
+      ]
+    ],
+    should("have 80 shares of MSFT stock") in [
+      GET `http://broker/get_stocks/MSFT` with {
+        headers: {}
+      } assert [
+        $.response.status == 200,
+        $.response.body.quantity == 80
+      ]
+    ],
+    should("have 150 shares of APPL stock") in [
+      GET `http://broker/get_stocks/APPL` with {
+        headers: {}
+      } assert [
+        $.response.status == 200,
+        $.response.body.quantity == 150
+      ]
+    ]
+  ] 
+]
+----
+
+== Execution Control and Deleting Assets
+
+If you get a failure in the middle of a test, you need to delete created assets as described here. For example, the user creates an asset, preforms a validation, and then deletes it.
+Typically, that validation fails, and since it breaks the test, the asset is not deleted and your database starts to accumulating test data. Use the BDD DSL and the "*Stops execution if it fails*" property of the test blocks to solve this problem.
+
+In the following example, if the middle step (change name) fails, the project is not deleted because the execution stops.
+
+[source,code,linenums]
+----
+describe `update project names` in [
+  it must 'create a project' in [
+    createProject()     // OK
+  ],
+  it must 'update the name' in [
+    updateProjectName() // FAILS
+  ], 
+  // Since the previous step was a `must` and it failed, the execution will stop here and the next steps will be not executed
+  it must 'clean up deleting the project' in [
+    deleteProject()     // CANCELED
+  ]
+]
+----
+
+To recommended solution to this problem is to use the right words to describe your test. For example:
+
+* `should` when something MAY fail, but is not mandatory for the test
+* `must` when something, such as project creation, needs to be executed to continue
+
+The fixed example might look like this:
+
+[source,code,linenums]
+----
+describe `update project names` in [
+  it must 'create a project' in [
+    /**
+     * Project creation is a MUST, because in this scenario
+     * we depend on the created project to continue
+     */
+    createProject()     // OK
+  ],
+  it should 'update the name' in [
+    /**
+     * Validations are `should` because the execution must continue
+     * if the validation fails.
+     */
+    updateProjectName() // FAILS
+  ], 
+  
+  // Since the previous step was a `should` and it failed, we can continue the execution
+  it must 'clean up deleting the project' in [
+    deleteProject()     // OK
+  ]
+]
+----
+
+== Executing Steps Selectively with `assuming`
+
+The `assuming` function, which skips the test if the result is false, has the following signature:
+
+
+`[TestBlockExpression] assuming [BooleanExpression] in ...`
+
+
+For example:
+
+[source,code,linenums]
+----
+describe `E2E Scenario` in [
+  it should 'always do something' in [ 
+    doSomething()
+  ],
+  it should 'do something else' in [
+    doSomethingElse()
+  ],
+  it should 'sometimes, do something else' assuming (random() > 0.5) in [
+    // This is executed randomly, based on          ^^^^^^^^^^^^^^^^ that condition
+    doSomethingElse()
+  ],
+  it should 'do something in dev environments' assuming (config.env == 'DEV') in [
+    // This is executed only when                       ^^^^^^^^^^^^^^^^^^^^^ that == true
+    doSomethingElse()
+  ]
+]
+----
+
+To make the code more readable and understandable, you can use two aliases for this function. `when` and `whenNot`. For example:
+
+[source,code,linenums]
+----
+describe `E2E Scenario` in [
+  it should 'always do something' in [ 
+    doSomething()
+  ],
+  it must 'do something else' when config.runSanity in [
+    doSomethingElse()
+  ],
+  it should 'do something else' when a == b in [
+    doSomethingElse()
+  ],
+  it should 'do something in dev environments' whenNot config.isSmokeTests in [
+    doSomethingElse()
+  ]
+]
+----
