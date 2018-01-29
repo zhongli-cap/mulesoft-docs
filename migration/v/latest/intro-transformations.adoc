@@ -7,10 +7,10 @@ a payload was larger than memory and how to convert data into Java objects so th
 For Mule 4, the following best practices are recommended:
 
 * Avoid unnecessary conversions to Java data types, and work with data directly
-* Let the runtime handle stream memory management for you
+* Let the runtime handle streaming for you
 * Not convert binary data types to String, byte[] or InputStream unless doing direct integration with custom Java code
 
-== Automatic Memory management
+== Transparent Streaming
 
 In the previous section, we saw how we can work with data directly with DataWeave, without having to first convert it to Java objects.
 The reason this works is because Mule now takes care of data streams for you automatically.
@@ -20,17 +20,7 @@ This greatly simplifies working with data in the runtime because:
 * Data can be sent to multiple places, without the user caching that data in memory first.
 * Users can transparently access larger than memory data.
 
-Streams can be controlled via streaming strategy configuration on the connector operations. You can configure it to be
-automatic, in memory only, or stored on disk only.
-[source,xml,linenums]
-----
-<file:read path="bigFile.json">
-  <repeatable-in-memory-stream initialBufferSize="512"
-                               bufferSizeIncrement="256"
-                               maxBufferSize="2048"
-                               bufferUnit="KB"/>
-</file:read>
-----
+For more information on how streaming works in Mule 4, please visit our link:/mule-user-guide/v/4.0/streaming-about[About Streaming in Mule 4.0] page
 
 == Data Types and Object to String/Byte/InputStream transformers
 
@@ -39,18 +29,18 @@ need to be concerned with what the underlying Java representation of that type i
 Whether it is a byte[], InputStream, String or other format.
 
 A common pattern that was observed in Mule 3 applications, is that users would convert things to strings to log them or
-send them via some transport.
+send them via some transport. This was necessary because streams cannot be consumed twice, so the Transformation was needed:
 
 [source,xml,linenums]
 ----
-<http:listener ... /> <!-- set the payload to an InputStream -->
-<object-to-string/> <!-- convert it to a String -->
+<http:listener ... /> <!-- Obtains an InputStream payload -->
+<object-to-string/> <!-- consume the stream and convert it to a String -->
 <logger message="#[payload]"/> <!-- log the String -->
-<jms:outbound-endoint .../> <!-- send the String -->
+<http:request .../> <!-- send the String somewhere else-->
 ----
 
 As a Mule 4 user, you should not have to worry about this anymore. As such, you can simply log or send the data,
-and not have to worry about the underlying type. Instead of thinking about InputStreams, you should just think
+and not have to worry about the underlying type or how many times the stream is consumed. Instead of thinking about InputStreams, you should just think
 about the payload as Binary data. Or, if the content type is known, you can think about it directly as JSON, XML,
 or whatever data type corresponds to the content type.
 
@@ -58,5 +48,9 @@ or whatever data type corresponds to the content type.
 ----
 <http:listener ... /> <!-- payload is JSON document -->
 <logger message="#[payload]"/> <!-- log the JSON document -->
-<jms:outbound-endoint .../> <!-- send the JSON document -->
+<http:request .../> <!-- send the JSON document somewhere else-->
 ----
+
+== See Also
+
+* link:/mule-user-guide/v/4.0/streaming-about[About Streaming in Mule 4.0]
