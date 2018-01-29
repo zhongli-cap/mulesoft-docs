@@ -1,38 +1,14 @@
-// sme: MG, author: sduke?
 = Migrating the File Connector
 
-// Explain generally how and why things changed between Mule 3 and Mule 4.
-In Mule 3, you can place a File connector at the beginning of the flow to make it act as an inbound endpoint that triggers the flow at a given polling interval. As an inbound endpoint, the connector reads the file, then dispatches the results to the next processor in the flow. If you put a File connector in any other place in the flow, it serves as an outbound endpoint and provides settings for handling outbound messages in the flow.
-
-Further, in Mule 3, `<file:inbound-endpoint />` is asynchronous by default and only operates synchronously when using the `synchronous` processing strategy. This can pose issues in cases where you need confirmation that the file could be written or when using it in batch.
-
-In Mule 4, the File connector is completely new. Here are the main changes:
-
-* The File connector no longer serves as a trigger (message source) for inbound processes, nor does it contain a built-in poller. Instead, you use a separate component, such as a Scheduler or HTTP listener, to trigger any File connector processes in a flow. This separation means that you can copy, list, and move files at any point in the flow, rather than at a polling interval.
-* The connector configuration is much simpler in Mule 4 than Mule 3. There are far fewer settings, and operation-related settings, such as `writeToDirectory` and `moveToDirectory`, are no longer part of the configuration.
-* All File connector processes (such as Read, Write, Move and so on) have been refactored into separate operations. Unlike in Mule 3, the Mule 4 operations provide operation-specific configurations, such as the directory from which to read, write, move, or copy files.
-* You use DataWeave version 2 expressions and scripts instead of the Mule Expression Language (MEL) or DataWeave version 1 within File connector configuration fields that permit them.
-* Changes to the Mule message and event in Mule 4 affect accessors to use for file attributes and properties. In particular, file metadata is stored as attributes in the Mule message, and you access them with the `attributes` keyword in a DataWeave selector (for example, with `#[attributes.lastModifiedTime]`).
-* It provides error types that are specific to the File connector, such as FILE:CONNECTIVITY. See link:/intro-error-handlers[Introduction to Mule 4: Error Handlers].
-+
-// ERROR TYPES COULD PROB USE MORE INFO
-+
-* Processes are synchronous in Mule 4 unless you put them in an Async scope. See link:/mule-user/guide/v/4.0/async-scope-reference[About the Async Scope].
-* Instead of using Mule 3 file transformers (such as File to String) within the File connector, you can use the separate Mule 4 link:/anypoint-studio/v/7/transform-message-component-concept-studio[Transform component] in your flow if you need to transform the message.
-//* The connector always returns an `InputStream`. List operation returns a `TreeNode`.
-
-//* The Mule streaming framework is automatically configured for your operations. You can execute a select statement and process the results asynchronously without worrying about leaking connections.
+The File connectors was completely rewritten. It evolved away from the Mule 3 transport model into an operation based connector. 
 
 [[whats_covered_here]]
 == What's Covered Here?
 
 * <<file_configs>>
 * <<file_config_refs>>
-* <<file_operations>>
- ** <<operation_read>>
- ** <<file_copy>>
- ** <<file_move_rename>>
-* <<migrate_reconnection>>
+* <<operation_read>>
+
 
 [[file_configs]]
 == Migrating File Connector Configurations
@@ -45,8 +21,7 @@ In Mule 3, all connector configurations are set under a top-level element called
 <file:connector name="file_config_default"
  autoDelete="true"
  streaming="true"
- validateConnections="true"
- doc:name="File"/>
+ validateConnections="true" />
 ----
 
 The connector configuration also provides settings for reading, writing, and moving files, among many others. The next example shows most of the Mule 3 setting available to the File connector.
@@ -86,26 +61,15 @@ In Mule 4, `<file:config />` is the the top-level element for the file connectio
 .Mule 4 Examples
 [source,xml, linenums]
 ----
-<file:config name="file_config"
- doc:name="file_config"
- doc:id="5ff39ab7-0c61-474b-9814-290a69cbca52"
- defaultWriteEncoding="UTF-8">
-  <file:connection workingDir="/Users/me/path/to/files" >
-      <reconnection failsDeployment="true" >
-        <reconnect-forever />
-      </reconnection>
-  </file:connection>
-  <expiration-policy maxIdleTime="12" timeUnit="MILLISECONDS" />
+<file:config name="file_config" defaultWriteEncoding="UTF-8">
+  <file:connection workingDir="/Users/me/path/to/files" />
 </file:config>
 ----
 
-* `workingDir` identifies the location of your files. `workingDir` is the only required setting. (Note that in Mule 3, `workDirectory` is a similarly named attribute, but `workDirectory` is used when moving input files before processing them.)
+* `workingDir` allows to specify a path to which all other paths are relative to. If not specified, the user's home directory will be used. Note that in Mule 3, `workDirectory` is a similarly named attribute, but `workDirectory` is used when moving input files before processing them.)
 * `defaultWriteEncoding` identifies the character encoding to use for writing. You can overwrite this global configuration with a File operation, such as Write.
-+
-// TODO: NEED DESCRIPTION, I BELIEVE IT DEFAULTS TO THE MULE RUNTIME ENCODING.
-+
-* `reconnection` is for reconnection strategies for cases where the initial attempt to connect fails (see link:migration-patterns-reconnection-strategies[Migrating Reconnection Strategies]).
-* `expiration-policy` is for idle configuration instances (see link:migration-patterns-expiration-policies[Expiration Policies]).
+
+All other Mule 3 config parameters are no longer needed since they were either replaced by parameters in the new connector's operations or they were render needless by the new connector model.
 
 [[file_config_refs]]
 == Referencing File Connection Configurations
@@ -117,58 +81,13 @@ In Mule 3, all operations are set as inbound or outbound endpoints that use `con
 ----
 <file:inbound-endpoint path="/tmp/input"
   connector-ref="file_config"
-  responseTimeout="10000"
-  doc:name="File"
-  ... />
+  responseTimeout="10000" ... />
 ----
 
 .Mule 3 Example: File Connection as Outbound Endpoint
 [source,xml, linenums]
 ----
-<file:outbound-endpoint path="/tmp/output"
- connector-ref="file_config"
- responseTimeout="10000"
- doc:name="File"
- ... />
-----
-
-[[file_operations]]
-== Migrating File Operations
-
-In Mule 4, all operations are specified within separate, top-level elements that use `config-ref` to point to a named File connector configuration.
-
-Note that the File connector has the same set of operations as the FTP and SFTP connectors. Each operation behaves almost identically for the connectors.
-
-.Mule 4 Examples: Operations
-[source,xml, linenums]
-----
-<file:copy doc:name="Copy"
- doc:id="0e10e616-1577-445b-b903-755366798e50"
- config-ref="file_config"
- ... />
-<file:create-directory doc:name="Create directory"
- doc:id="3f93fb6d-af6b-430e-bf7c-5d8471cfc340"
- config-ref="file_config"
- ... />
-<file:delete doc:name="Delete"
-  doc:id="954301f2-393d-4d83-beed-fe5a87da9aca"
-  config-ref="file_config"
-  ... />
-<file:list doc:name="List"
- doc:id="db1f62b9-b6fd-448b-836b-e0ae36f516b6"
- ... />
-<file:move doc:name="Move"
- doc:id="77382c43-de2d-44c5-b97c-cb8c4493bc1a"
- ... />
-<file:read doc:name="Read"
- doc:id="4a5e4652-7840-4e30-bbeb-b94430cc037e"
- ... />
-<file:rename doc:name="Rename"
- doc:id="f6436a0d-08b9-42ab-acea-8a5c3d8ba450"
- ... />
-<file:write doc:name="Write"
- doc:id="aeb168f2-d240-41a3-8f45-80cdbca9c1a1"
- ... />
+<file:outbound-endpoint path="/tmp/output" connector-ref="file_config" responseTimeout="10000" />
 ----
 
 [[operation_read]]

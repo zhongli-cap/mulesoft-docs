@@ -10,13 +10,18 @@ For Mule 4, these best practices are recommended:
 * Let the runtime handle stream memory management for you.
 * Do not convert binary data types to `String`, `byte[]`, or `InputStream` unless you are performing a direct integration with custom Java code.
 
-== Automatic Memory Management
+== Transparent Streaming
 
 link:intro-expressions[Introduction to Mule 4: DataWeave Expression Language] showed how to work with data directly using DataWeave. The reason you no longer have to convert your data to Java objects first is because Mule now takes care of data streams for you automatically. This change greatly simplifies working with data in the runtime because:
 
 * Data can be read multiple times or accessed randomly using the DataWeave expression language, without side effects.
 * Data can be sent to multiple places, without the need to cache that data in memory first.
 * You can transparently access larger-than-memory data.
+
+For more information on how streaming works in Mule 4, please visit our link:/mule-user-guide/v/4.0/streaming-about[About Streaming in Mule 4.0] page
+
+/////
+MARIANO: LEAVING IN BUT HIDDEN JUST IN CASE IT WAS SUPPOSED TO STAY
 
 [[streaming_strategy]]
 Streams can be controlled through a streaming strategy configuration on the connector operations. You can configure it to be
@@ -30,6 +35,7 @@ automatic, in-memory only, or stored on disk only.
                                bufferUnit="KB"/>
 </file:read>
 ----
+////
 
 == Data Types and Object to String/Byte/InputStream Transformers
 
@@ -38,23 +44,27 @@ need to be concerned with the underlying Java representation of that type.
 Whether it is a `byte[]`, `InputStream`, `String`, or some other format.
 
 A common pattern that was observed in Mule 3 applications, is that users would convert things to strings to log them or
-send them through some transport.
+send them via some transport. This was necessary because streams cannot be consumed twice, so the Transformation was needed:
 
 [source,xml,linenums]
 ----
-<http:listener ... /> <!-- set the payload to an InputStream -->
-<object-to-string/> <!-- convert it to a String -->
+<http:listener ... /> <!-- Obtains an InputStream payload -->
+<object-to-string/> <!-- consume the stream and convert it to a String -->
 <logger message="#[payload]"/> <!-- log the String -->
-<jms:outbound-endoint .../> <!-- send the String -->
+<http:request .../> <!-- send the String somewhere else-->
 ----
 
-In Mule 4, you can simply log or send the data without worrying about the underlying type. Instead of thinking about the `InputStream`, you can just think
-about the payload as binary data. Or, if the content type is known, you can think about it directly as JSON, XML,
+In Mule 4, you can simply log or send the data without worrying about the underlying type or how many times the stream is consumed. Instead of thinking about the `InputStream`, you should just think
+about the payload as binary data. Or, if you know the content type, you can think about it directly as JSON, XML,
 or whatever data type corresponds to the content type.
 
 [source,xml,linenums]
 ----
 <http:listener ... /> <!-- payload is JSON document -->
 <logger message="#[payload]"/> <!-- log the JSON document -->
-<jms:outbound-endoint .../> <!-- send the JSON document -->
+<http:request .../> <!-- send the JSON document somewhere else-->
 ----
+
+== See Also
+
+* link:/mule-user-guide/v/4.0/streaming-about[About Streaming in Mule 4.0]

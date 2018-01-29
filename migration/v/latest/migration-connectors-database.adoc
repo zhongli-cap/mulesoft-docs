@@ -1,10 +1,10 @@
-// sme: MG, author: sduke?
+
 = Migrating the Database Connector
 
 // Explain generally how and why things changed between Mule 3 and Mule 4.
-The main changes to the Database connector from Mule 3 to Mule 4 include these:
+The main changes to the Database connector from Mule 3 to Mule 4 include:
 
-* All database processes (such as Select, Insert, Update, Delete, and others) have been refactored into separate operations. There are also new, dedicated bulk operations for Mule 4.
+* All database operations (such as Select, Insert, Update, Delete, and others) have been refactored into separate operations. There are also new, dedicated bulk operations for Mule 4.
 * Use of DataWeave: Database operations, such as Insert and Update, support DataWeave version 2 transformations. You can construct the data sets that insert or update the database without message side effects, and you no longer use message enrichers.
 * You can perform dynamic and static queries in similar ways.
 * The Mule streaming framework is automatically configured for your operations. You can execute a select statement and process the results asynchronously without worrying about leaking connections.
@@ -145,12 +145,8 @@ This setting is unique to Data Source Reference:
 [source,xml, linenums]
 ----
 <db:config name="generic_connection">
-  <reconnection />
-  <db:column-types />
-  <db:pooling-profile />
   <db:generic-connection url="url_here" driverClassName="driver_class_name_here"
     transactionIsolation="READ_COMMITTED" useXaTransactions="true"/>
-  <expiration-policy maxIdleTime="30" timeUnit="SECONDS"/>
 </db:config>
 ----
 
@@ -173,11 +169,7 @@ See also, <<db_transactions>>.
 [source,xml, linenums]
 ----
 <db:config name="Microsoft_SQL_Server">
-  <db:mssql-connection host="my_host" user="myuser"
-    password="mypassword" databaseName="mydatabase" >
-    <reconnection />
-    <db:column-types />
-    <db:pooling-profile />
+  <db:mssql-connection host="my_host" user="myuser" password="mypassword" databaseName="mydatabase" >
   </db:mssql-connection>
 </db:config>
 ----
@@ -189,11 +181,7 @@ See also, <<db_transactions>>.
 [source,xml, linenums]
 ----
 <db:config name="MySQL">
-  <db:my-sql-connection host="myhost" user="myuser"
-    password="mypassword" database="mydatabase" >
-    <reconnection />
-    <db:column-types />
-    <db:pooling-profile />
+  <db:my-sql-connection host="myhost" user="myuser" password="mypassword" database="mydatabase" >
   </db:my-sql-connection>
 </db:config>
 ----
@@ -205,11 +193,7 @@ See also, <<db_transactions>>.
 [source,xml, linenums]
 ----
 <db:config name="Oracle_Connection">
-  <db:oracle-connection host="myhost" user="myuser"
-    password="mypassword" instance="myinstance" >
-    <reconnection />
-    <db:column-types />
-    <db:pooling-profile />
+  <db:oracle-connection host="myhost" user="myuser" password="mypassword" instance="myinstance" >
   </db:oracle-connection>
   <expiration-policy />
 </db:config>
@@ -379,24 +363,6 @@ The examples below show changes to the XML for these settings:
 </db:mssql-connection>
 ----
 
-*Only available in Mule 4:*
-
-* Fail Deployment When Test Connection Fails (`failsDeployment="true|false"`).
-
-//TODO: SHOULD JUST LINK TO pattern adoc on this topic instead
-[[expiration_policies]]
-==== Expiration Policies
-
-In Mule 4, you can set up an expiration policy (`<expiration-policy/>`) for idle configuration instances. Note that this element is a sibling of the database-specific configuration (such as `<db:oracle-connection />`) and is not nested under it.
-
-.Mule 4 Example
-[source,xml, linenums]
-----
-<expiration-policy maxIdleTime="30" timeUnit="SECONDS"/>
-----
-
-To see an example in context, see <<example_generic_db>>.
-
 [[database_operations_overview]]
 == Database Connector Operations
 
@@ -404,8 +370,6 @@ To see an example in context, see <<example_generic_db>>.
 * Streaming strategy settings (as shown here in <<database_streaming>>)
 * <<tx_actions>>
 * Query settings
-* Target variable output settings (<<output_target>>)
-* Reconnection strategies
 * Error mapping for errors, including DB:BAD_SQL_SYNTAX, DB:QUERY_EXECUTION
 * Mule 4 input and output metadata for attributes, payload, and variables
 
@@ -458,13 +422,11 @@ as the parameter value. This map can only be created using DataWeave.
 [[database_dynamic_queries]]
 === Migrating Dynamic Queries
 
-In Mule 4, in the same way as Mule 3, the DB Connector supports Dynamic Queries which means
-the usage of Expressions, *MEL* in Mule 3 and *DataWeave* in Mule 4, to generate parts
-of the query to execute.
+Sometimes, you not only need to parameterize the WHERE clause, but also parameterize parts of the query itself. Example use cases for this would be queries which need to hit online/historic tables depending on a condition, or complex queries where the project columns need to vary.
 
-The only difference between Mule 4 and Mule 3, is that doesn't exist anymore an exclusive
-element to execute dynamic queries `<db:dynamic-query>`, in *Mule 4* the plain `<db:sql>`
-supports to embed DataWeave expressions to dynamically create queries.
+In Mule 3, the concept of select was split in parameterized and dynamic queries, and you couldn’t use both at the same time. You had to choose between having a dynamic query or having the advantages of using parameters (SQL Injection protection, PreparedStatement optimization, etc.). Furthermore, the syntax to do one or the other was different, so you had to learn two different ways of doing the same thing.
+
+But with the new Database Connector in Mule 4, you can now use both methods at the same time by using expressions in the query:
 
 .Mule 3 Example: Dynamic SELECT Query
 [source,xml, linenums]
@@ -486,6 +448,8 @@ supports to embed DataWeave expressions to dynamically create queries.
 </db:select>
 ----
 
+GOTCHA: The Mule 3 example is less performant and vulnerable to SQL Injection attacks since the entire query is being treated as a string instead of using PreparedStatements
+
 [[database_streaming]]
 == Streaming Large Results
 
@@ -494,41 +458,9 @@ Streaming can handle results queries to big database tables, which might return 
 === Enabling Streaming
 In *Mule 3*, streaming is disabled by default, so you have to enable it to use it.
 
-In *Mule 4*, you can select a streaming strategy to make streams repeatable.
+In *Mule 4*, streaming is always on but you can configure the strategy through which the runtime will achieve repeatable streaming. For more information on this, please refer to the  link:/mule-user-guide/v/4.0/streaming-about[streaming documentation page].
 
- ** *None (Default)*
- ** *Non repeatable iterable*
- ** *Repeatable file store iterable* (for maximum in-memory size and buffer unit settings)
- ** *Repeatable in memory iterable* (for in-memory and buffer settings)
-
-.Mule 3 Example: Enabling Streaming
-[source,xml, linenums]
-----
-<db:select config-ref="db_config" streaming="true">
-    ...
-</db:select>
-----
-
-.Mule 4 Examples: Applying Streaming Strategies
-[source,xml, linenums]
-----
-<db:select config-ref="db_config">
-  <non-repeatable-iterable />
-  ...
-</db:select>
-
-<db:select config-ref="db_config">
-  <ee:repeatable-file-store-iterable />
-  ...
-</db:select>
-
-<db:select config-ref="db_config">
-  <repeatable-in-memory-iterable />
-  ...
-</db:select>
-----
-
-TIP: Note that making streams repeatable allow you to use DataWeave and other components to process the a stream many times, even in parallel.
+ TIP: Note that disabling repeatable streaming will prevent DataWeave and other components to process the a stream many times, even in parallel.
 
 [[database_operation_bulk]]
 === Migrating Bulk Operations
@@ -656,8 +588,5 @@ result. For example this can be: `\#[payload]`, to save the entire payload, or
 
 == See Also
 
-link:/connectors/database-documentation[Database Connector Reference]
-
-link://connectors/database-documentation#repeatable-file-store-iterable[Repeatable File Store Iterable]
-
-link:/connectors/database-documentation#repeatable-in-memory-iterable[Repeatable In-Memory Settings]
+* link:/connectors/database-documentation[Database Connector Reference]
+* link:/mule-user-guide/v/4.0/streaming-about[About Streaming in Mule 4.0].

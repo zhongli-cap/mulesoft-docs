@@ -1,36 +1,36 @@
-// sme: MG?, author: sduke?
 = Migrating the Enricher to a Target Variable
 
 // Explain generally how and why things changed between Mule 3 and Mule 4.
-The Message Enricher and its functionality in Mule 3 is replaced by the Target Variable in Mule 4. The Enricher provided a way to add information not provided by the source system. In Mule 4, several modules (including Flow Ref, Object Store, HTTP, FTP, SFTP, and Database) can store and output a Target Variable for such data in a variable (such as `myVar`). Other components in a Mule flow can then access that data from the Mule event through a DataWeave selector (for example, `vars.myVar`).
+The Message Enricher and its functionality in Mule 3 is replaced by the `target` parameter in Mule 4. The Enricher provided a way to executo a group of message processors and redirect their output to a variable without side effects to the current message. In Mule 4, all non-void operations (e.g: `<flow-ref>`, `<http:request>`, `<ftp:write>`, `<db:select>`, etc) include `target` and `targetValue` parameters which allow redirecting each operations output into a variable (such as `myVar`). Other components in a Mule flow can then access that datathrough a DataWeave selector (for example, `vars.myVar`).
 
-Consider a message from a source system that contains a zip code, but the target system needs the two letter state. In Mule 3, the Message Enricher might look up the state using the zip code from an enrichment resource. The Enricher calls out to the enrichment resource with the current message (containing the zip code), then enriches the current message with the result.
+Consider a message coming from an HTTP request, which we want to redirect to a third system, only that adding a `state` query param which is to be extracted using a secondary flow called `stateLookup`. Because you don't want to loose the original payload or headers, you need to extract this value without affecting the original message. The Enricher calls out to the enrichment resource with the current message (containing the zip code), then enriches the current message with the result.
 
 .Mule 3 example
 ----
 <flow name="orderProcessingFlow">
-   <inbound-endpoint ref="orderEndpoint"/>
+   <http:listener .../>
    <enricher target="#[variable:state]">
-       <outbound-endpoint ref="stateLookup"/>
+       <flow-ref name="stateLookup"/>
    </enricher>
-   <outbound-endpoint ref="orderStep2"/>
+  <http:request config-ref="config" path="state" method="POST">
+    <http:request-builder>
+        <http:query-param paramName="state" value="#[flowVars.state]" />
+    </http:request-builder>
+  </http:request>
 </flow>
 ----
 
-In Mule 4, you create a target variable through a component, such as Flow Ref. The target variable for Flow Ref will store the output of a flow. You can then use that output in a transformation to enrich your message.
-
-For example, similar to the Mule 3 example, the flow `stateLookup` below might look up a state code based on a zip code in a record retrieved through an operation, such as the Database Select operation (`db:select`). The next component in the flow (here, a FTP Write operation called `writeWithStateCode`) can then perform a transformation that uses output from the `stateLookup` process to enrich the record with state name. The transformation script can use  `#[vars.state]`, where `state` is the name of the target variable, to get the state code.
+In Mule 4, you can simply use the `target` parameter in the `<flow-ref>` operation:
 
 .Mule 4 example
 ----
 <flow name="orderProcessingFlow">
-  <http:listener/>
-  <db:select doc:name="Select record containing zip" .../>
-  <flow-ref doc:name="Get state code" name="stateLookup" target="state" targetValue="#[payload]"/>
-  <ftp:write doc:name="writeWithStateCode" config-ref="FTP_Config" path="/output"/>
-</flow>
-<flow name="stateLookup">
-  <!-- Your stateLookup processes here to retrieve the zip code -->
+  <http:listener .../>
+  <http:request config-ref="requestConfig" path="song" method="GET">
+    <http:query-params>
+      #[{'name' : 'Under Pressure', 'artist': 'David Bowie', 'artist': 'Queen'}]
+    </http:query-params>
+  </http:request>
 </flow>
 ----
 

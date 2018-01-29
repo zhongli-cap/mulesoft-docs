@@ -4,12 +4,10 @@ Mule 4 includes a simplified Mule message model in which each Mule event has a m
 
 == Inbound Properties Are Now Attributes
 
-In Mule 3, metadata from a connector was stored in inbound properties. Attributes are the successor to these. Advantages of this change include:
+In Mule 3, inbound properties were used to store additional information about a payload obtained through a Message Source, such as the query parameters coming through an HTTP listener. Attributes are the successor to these, and have these advantages: 
 
-* Attributes are strongly typed, so you can easily see what data is available.
-* Attributes can easily be stored in a variables for access throughout your flow.
-
-Here's an example of a typical Mule message in Mule 4, from an HTTP listener:
+* They are strongly typed, so you can easily see what data is available and 
+* They can easily be stored in a variables for access throughout your flow. Here's an example of a typical Mule Message in Mule 4, which is from an HTTP Listener:
 
 image:mule-message.png[Mule Message structure in Mule 4]
 
@@ -21,7 +19,20 @@ attributes.queryParams.searchCriteria
 ----
 
 == Outbound Properties
-To send data across protocol barriers like session properties did, you must explicitly specify what parameters you want to send. For example, with the HTTP listener, you might want to specify the outgoing status code response or headers. You can do this by mapping these to variables in your message:
+
+In Mule 3, connectors and transports which need to send additional data such as headers, need to explicitly specify Outbound properties. For example, with the HTTP listener, you may want to specify the outgoing status code response or headers. In Mule 4, you can set each of those concept separately using individual DataWeave expression for each one of them, without introducing any side effects in the main flow:
+
+[source,xml,linenums]
+----
+<http:request path="issues" config-ref="http" method="GET">
+    <http:headers>#[{'path':'input/issues-list.json'}]</http:headers>
+    <http:query-params>#[{'provider':'memory-provider'}]</http:query-params>
+</http:request>
+----
+
+In the example above, we see how to do an HTTP request in which we uso individual DataWeave scripts to generate headers and query parameters, without the need to set message properties nor generating any side effects on the message.
+
+The same concept can be applied for message sources which emits responses, such an HTTP listener:
 
 [source,xml,linenums]
 ----
@@ -36,6 +47,20 @@ To send data across protocol barriers like session properties did, you must expl
 </http:listener>
 ----
 
+== Session Properties
+Because transport barriers don't exist anymore, Session properties are no longer needed and have been removed in Mule 4. You should store data in variables
+
+== Message Collections
+One of the benefits of the new Mule Message structure is when dealing with collections. In Mule 3, components
+that returned multiple payloads, used a special structure called the `MuleMessageCollection`. In Mule 4, any component
+that needs to deal with multiple messages can simple set the payload of the message to a List of Mule Messages. You can
+then iterate over these messages using DataWeave, For Each, or other components.
+
+For example, when using the `<file:list>` operation, it retrieves a list of Messages. Each Message has Attributes for
+each file, making it easy to make decisions based on file size, whether it's a directory, etc.
+
+////
+TODO: COMMENTED OUT TO AVOID DELETING SOMETHING IMPT WHEN FIXING MERGE CONFLICTS
 This enables you to set those variables elsewhere in your flow, without having to worry about another connector overwriting them, as you did in Mule 3. For example:
 [source,xml,linenums]
 ----
@@ -72,6 +97,7 @@ then iterate over these messages using DataWeave, For Each, or other components.
 
 For example, the File List operation retrieves a list of Mule messages. Each message has attributes for
 each file, making it easy to make decisions based on file size, whether it's a directory, and so on.
+////
 
 == See Also
 
