@@ -1,0 +1,192 @@
+// sme: MG, author: ndinu
+= Migrating the Validation Module
+
+// Explain generally how and why things changed between Mule 3 and Mule 4.
+The Validation Module in Mule 4 is very similar to the one in Mule 3. The most
+impacted areas between these mayor versions were error handling and support in expressions.
+Error handling is different because Mule 4 Extensions have a different way to declare
+errors through error types. Regarding expressions, Mule 4 does not support MEL
+expressions anymore, all expressions must be DataWeave expressions.
+
+What's covered in this section:
+
+* <<errors>>
+* <<functions>>
+* <<all_scope>>
+* <<custom_validator>>
+
+[[errors]]
+=== Error Types
+In the Mule 3 Validation Module, any failure during a validation will throw the same exception or a
+ configured one and you are able to customize the message depending on the error. On the other
+ hand, in Mule 4, modules declare their own error types. In the case of this
+ module, validation operations have different error types which implies the type
+ of validation that have failed. In the case of the `all` scope, the type is
+ *VALIDATION:MULTIPLE* regardless of the validation or validations that failed inside
+ the `all` scope. You can still customize the error message or use a default one.
+
+The examples below show validators that will fail if the variable email is not
+ a possible valid email.
+
+.Mule 3 example
+[source,xml,linenums]
+----
+<validation:is-email  doc:name="Is email" email="#[flowVars.email]" message="The value is not a valid email"/>
+----
+
+If this validation fails, a *ValidationException* will be thrown.
+
+.Mule 4 example
+[source,xml,linenums]
+----
+<validation:is-email  doc:name="Is email" email="#[vars.email]" message="The value is not a valid email"/>
+----
+
+If this validation fails, the error will be of type *VALIDATION:INVALID_EMAIL*.
+
+[[functions]]
+=== From functions in MEL Expressions to functions in DataWeave
+
+In the same way that in Mule 3 you could execute validation in expressions, you can do that in Mule 4.
+The difference is that in Mule 4, these validations are called within DataWeave expressions instead of MEL expressions.
+This is the list of supported functions in Mule 4 : `isEmail`, `matchesRegex`, `isTime`, `isNumber`, `isIp` and `isUrl`
+
+In the examples below we can see how we set the value to a variable named `isEmail` depending if a variable named `email` is
+in fact a valid email.
+
+.Mule 3 example
+[source,xml,linenums]
+----
+<set-variable variableName="isEmail" value="#[validator.validateEmail(flowVars.email)]" doc:name="Set isEmail Variable"/>
+----
+
+Inside the MEL expression we used validator to access to the validation methods.
+
+.Mule 4 example
+[source,xml,linenums]
+----
+<set-variable variableName="isEmail" value="#[Validation::isEmail(vars.email)]" doc:name="Set isEmail Variable"/>
+----
+
+In the Validation module, there are functions declared to be called from within DataWeave expressions.
+Like any other function in Mule 4, they are invoked using ExtensionName::functionName , in this case `Validation::isEmail(vars.email)`.
+
+[[all_scope]]
+=== The use of the All scope
+
+In Mule 4 You can still group a set of validation the same way you did in Mule 3, only a minor part of the dsl has changed.
+
+.Mule 3 example
+[source,xml,linenums]
+----
+<validation:all doc:name="Especial Email Validation">
+  <validation:validations>
+      <validation:is-email email="#[flowVars.email]"/>
+      <validation:matches-regex value="#[flowVars.email]" regex="^.*\.com$"/>
+      <validation:validate-size value="#[flowVars.email]" min="5" max="20"/>
+  </validation:validations>
+</validation:all>
+----
+
+.Mule 4 example
+[source,xml,linenums]
+----
+<validation:all doc:name="Especial Email Validation">
+    <validation:is-email email="#[vars.email]"/>
+    <validation:matches-regex value="#[vars.email]" regex="^.*\.com$"/>
+    <validation:validate-size value="#[vars.email]" min="5" max="20"/>
+</validation:all>
+----
+
+[[custom_validator]]
+=== Build a custom Validator
+
+The way you make a Custom Validator has changed a bit. Because of the changes to
+error handling, the `ValidationResult` interface added a new method to be implemented which
+ must return the error type thrown in the case that the validation fails. Another aspect that changed
+ is that validate method of the `Validator` interface does not receive the event anymore.
+
+Let's see how to migrate a Mule 3 Custom Validator into Mule 4. In the examples below,
+we can see that we used to get the whole event, and from it we took the information that we needed for the
+validation.
+In the Mule 4 example, we instanciate a new Custom Validator only with the desired parameters through a DataWeave expression.
+
+.Mule 3 example
+[source,xml,linenums]
+----
+<validation:custom-validator class="BalanceValidator" doc:name="Enough Balance Validation"/>
+----
+
+[source,java,linenums]
+----
+public class BalanceValidator implements Validator {
+
+  @Override
+	public ValidationResult validate(MuleEvent event) {
+		Integer price = new Integer((String) event.getMessage().getInvocationProperty("price"));
+		Integer balance = new Integer((String) event.getMessage().getInvocationProperty("balance"));
+		return new ValidationResult() {
+
+			@Override
+			public boolean isError() {
+				return price > balance;
+			}
+
+			@Override
+			public String getMessage() {
+				return "There is not enough money to make the transaction";
+			}
+		};
+	}
+}
+----
+
+.Mule 4 example
+[source,xml,linenums]
+----
+<validation:custom-validator doc:name="Enough Balance Validation" ref="#[java!package::BalanceValidator::new(vars.balance, vars.price)]"/>
+----
+
+[source,java,linenums]
+----
+public class BalanceValidator implements Validator {
+
+	private Integer balance;
+	private Integer price;
+
+	public BalanceValidator(Integer balance, Integer price){
+		this.balance = new Integer(balance);
+		this.price = new Integer(price);
+	}
+
+	@Override
+	public ValidationResult validate() {
+		return new ValidationResult() {
+
+			@Override
+			public boolean isError() {
+				return price > balance;
+			}
+
+			@Override
+			public String getMessage() {
+				return "There is not enough money to make the transaction";
+			}
+
+			@Override
+			public ValidationErrorType getErrorType() {
+				return ValidationErrorType.VALIDATION;
+			}
+		};
+	}
+
+}
+----
+
+== See Also
+
+link:migration-examples[Migration Examples]
+
+link:migration-patterns[Migration Patterns]
+
+link:migration-components[Migrating Components]
