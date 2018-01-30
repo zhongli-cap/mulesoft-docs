@@ -1,100 +1,54 @@
 // sme: DF, author: sduke?
 = Migrating the Choice Router
 
-Little changed between Choice router for Mule 3 and Mule 4 except for the use of DataWeave 2 as the expression language for the `when` statements, rather than DataWeave 1 or the Mule Expression Language (MEL). In addition, the Choice Exception Strategy is now handled through Mule 4 error handlers.
+Little changed between Choice router for Mule 3 and Mule 4 except for:
+
+* DataWeave is now the expression language so the when statements are actually going to use it instead of MEL
+* The `<otherwise>` block is now optional
 
 == Expression Language for the When Block
 
-You need to upgrade your Choice component expressions to use DataWeave 2.
+The when expressions need to be changed from MEL to DataWeave. This also mean that you can leverage DataWeave's ability to interpret any format to avoid unnecesary convertions. For example, suppose a flow in which a JSON document representing a user is posted through HTTP and you want to check if the person is underage:
 
 .Mule 3 Example: MEL
+[source,xml, linenums]
 ----
-<choice>
-  <when expression="#[payload.getPurchaseType() == 'book']">
-    <-- so something -->
-  </when>
-  <when expression="#[payload.getPurchaseType() == 'mp3']">
-    <-- so something -->
-  </when>
-</choice>
-----
-
-//TODO: NEED TO VERIFY
-
-.Mule 3 Example: DataWeave 2
-----
-<choice>
-  <when expression="#[payload.puchaseType == 'book']">
-    <-- do something -->
-  </when>
-  <when expression="#[payload.puchaseType == 'mp3']">
-    <-- do something -->
-  </when>
-  <otherwise>
-    <-- do something -->
-  </otherwise>
-</choice>
-----
-
-=== Example (flowVars vs. vars)
-
-For the Mule 3 example, notice that the `when` expression uses the expression `#[flowVars.language == 'french']` to set a variable.
-
-.Mule 3 Example
-----
-<choice doc:name="Choice">
-  <when expression="#[flowVars.language == 'french']">
-    <set-payload value="Bonjour!" doc:name="Reply in French"/>
-  </when>
-  <when expression="#[flowVars.language == 'spanish']">
-    <set-payload value="Hola!" doc:name="Reply in Spanish"/>
-  </when>
-  <otherwise>
-    <set-variable variableName="language" value="English" doc:name="Set to English"/>
-    <set-payload value="Hello!" doc:name="Reply in English"/>
-  </otherwise>
-</choice>
-----
-
-For the Mule 4 example, notice that the `when` expression uses the expression `#[vars.language == 'french']` to set a variable.
-
-.Mule 4 example
-----
-<choice doc:name="Set Language" doc:id="f480b975-c0ba-4174-9415-67d83d8fd7f8" >
-  <when expression="#[vars.language == 'french']" >
-    <set-payload value='"Bonjour!"' doc:name="Reply in French" doc:id="f4600b8d-6dc7-48b7-9bac-247cf217380f" />
-  </when>
-  <when expression="#[vars.language == 'spanish']" >
-    <set-payload value="Hola!" doc:name="Reply in Spanish" doc:id="abcb0ec5-c01e-4854-9010-9cd042941c55" />
-  </when>
-  <otherwise >
-    <set-payload value="Hello!" doc:name="Reply in English" doc:id="d169c96a-41ec-4110-81e1-17230af3f862" />
-  </otherwise>
-</choice>
-----
-
-[[choice_exception_strategy]]
-== Choice Exception Strategy
-
-In Mule 4, the Error Handler (`<error-handler>`) replaces the Choice Exception Strategy (`choice-exception-strategy`). Its child handlers are matched through the error type, rather than as a Java exception.
-
-.Mule 3 Example
-----
-<flow name="Sample_Flow">
-...
-  <choice-exception-strategy doc:name="Choice Exception Strategy">
-    <catch-exception-strategy doc:name="Catch Exception Strategy"  when="#[exception.causedBy(org.mule.api.routing.filter.FilterUnacceptedException)]">
-      <set-variable variableName="errorStatusCode" value="404" doc:name="Set status code"/>
-      <set-variable variableName="errorReasonPhrase" value="Not Found" doc:name="Set reason phrase"/>
-    </catch-exception-strategy>
-    <rollback-exception-strategy doc:name="Rollback Exception Strategy">
-      <logger level="INFO" doc:name="Logger" message="Unknown error"/>
-    </rollback-exception-strategy>
-  </choice-exception-strategy>
+<flow name="checkAge">
+  <http:listener path="person" method="POST" config-ref="http" />
+  <json:json-to-object-transformer />
+  <choice>
+    <when expression="#[payload.age > 21]">
+      <logger message="adult" />
+    </when>
+    <otherwise>
+      <logger message="underage" />
+    </otherwise>
+  </choice>
 </flow>
 ----
 
-For a Mule 4 example, see link:migration-core-exception-strategies[Migrating Exception Strategies to Mule Error Handlers]
+With Mule 4, you don't need to worry about JSON or Java formats and just do:
+
+.Mule 4 Example: DataWeave 2
+[source,xml, linenums]
+----
+<flow name="checkAge">
+  <http:listener path="person" method="POST" config-ref="http" />
+  <choice>
+    <when expression="#[payload.age > 21]">
+      <logger message="adult" />
+    </when>
+    <otherwise>
+      <logger message="underage" />
+    </otherwise>
+  </choice>
+</flow>
+----
+
+== Optional Otherwise
+
+In Mule 3, the `<otherwise>` block was required. Many times in which fallback logic was not necessary, you ended up with an `<otherwise>` block which just had an unsignificant logger. In Mule 4, the `<otherwise>` block is optional and you don't need to specify it if not necessary.
+
 
 == See Also
 

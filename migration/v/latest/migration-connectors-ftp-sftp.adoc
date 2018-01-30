@@ -1,40 +1,34 @@
 // sme: MG, author: sduke?
 = Migrating to the FTP and SFTP Connectors
 
-// Explain generally how and why things changed between Mule 3 and Mule 4.
-The FTP and SFTP connectors for Mule 4 provide these features:
+The FTP and SFTP connectors were completely rewritten. They evolved away from the Mule 3 transport model into an operation based connector. This enables many new capabilities:
 
-* Dedicated operations: Read, Write, List, Create Directory, Copy, Move, Rename, Delete.
-* Input and output metadata types that are specific to the Mule 4 event (payload, attributes, variables).
-* File locks.
-* Output mime types (such as application/json, application/xml, and so on)
-* Mule 4 error mapping features that are specific to the connector.
-* File matching enhancements.
-* A new design that is consistent with the File connector for Mule 4.
+* The ability to read files or fully list directory contents on demand, unlike the old transport, which only provided a polling inbound endpoint.
+* Top-level support for common file system operations such as copying, moving, renaming, deleting, creating directories, and more.
+* Support for locking files at the file system level.
+* Advanced file matching functionality.
 
+Furthermore, they were designed to be completely symetrical. This means that, except for the connection configuration, they look and behave alike and have the exact same feature set. Furthermore, they also match the features and behavior of the File connector.
 
-Note that in Mule 4, the new connectors work much like the File connector, with the exception of their transport protocols (FTP and SFTP) and connections to external servers, as opposed to a local file system. Otherwise, they offer largely the same set of operations and features as the File connector.
 
 [[whats_covered_here]]
 == What's Covered Here?
-* <<config_ftp_sftp>>
-* <<XXXXXXX>>
+
+* <<ftp_configs>>
+* <<ftp_config_refs>>
+* <<ftp_listener>>
+* <<ftp_writer>>
+
 
 [[config_ftp_sftp]]
+
 == Connecting to an FTP or SFTP Server
-
-In Mule 3, the connectors can serve as inbound or outbound endpoints depending on where you place the connector in your flow.
-
-In Mule 4, the connectors can read and list files, but the operations do not serve as an inbound endpoint to trigger the flow.
-
-.No Polling in Mule 4
-It is important to note that in Mule 4 these connectors do not provide a poller (set in Mule 3 through the `pollingFrequency` attribute). Instead, you need to use a trigger, such as a Scheduler or HTTP Listener, to initiate a flow.
 
 === Migrating an FTP Connection
 
-Notice the `pollingFrequency` setting this Mule 3 example:
-
 .Mule 3 Example: FTP Inbound Connection with Polling
+
+[source,xml, linenums]
 ----
 <ftp:inbound-endpoint host="localhost"
  port="21" path="path/to/file"
@@ -48,6 +42,7 @@ Notice the `pollingFrequency` setting this Mule 3 example:
 This example shows a simple Mule 4 FTP configuration.
 
 .Mule 4 Example: FTP Connection
+[source,xml, linenums]
 ----
 <ftp:config name="ftp">
   <ftp:connection username="anonymous"
@@ -56,44 +51,10 @@ This example shows a simple Mule 4 FTP configuration.
 </ftp:config>
 ----
 
-Note that the FTP connector in Mule 4 provides a number of other optional settings.
-----
-<ftp:config name="FTP_Config" doc:name="FTP Config"
- doc:id="6de07ace-144b-46b9-9474-c786fd8bdb9a" defaultWriteEncoding="UTF-8">
-  <ftp:connection workingDir="my/working/dir" host="myhost" username="myusername" password="mypassword"
-  transferMode="ASCII" passive="false">
-    <reconnection failsDeployment="true" >
-      <reconnect frequency="4000" count="4" />
-    </reconnection>
-    <pooling-profile maxActive="6" />
-  </ftp:connection>
-  <expiration-policy maxIdleTime="30" timeUnit="SECONDS" />
-</ftp:config>
-----
-
-////
-FTP: OTHER AVAILABLE CONFIGS
-General:
-- working dir
-- transfer mode: binary and ascii
-- passive mode: true, false, or expression
-General Connection:
--host
--port
--username
--password
-General Advanced:
-- timeout config
-- reconnection strategy
-- pooling profile
-Advanced:
-- default write encoding
-- expiration policy
-////
-
 === Migrating and SFTP Connection
 
 .Mule 3 Example: SFTP Inbound Endpoint
+[source,xml, linenums]
 ----
 <sftp:inbound-endpoint host="localhost"
  port="22" path="path/to/file"
@@ -104,6 +65,7 @@ Advanced:
 ----
 
 .Mule 4 Example: SFTP Connection Configuration
+[source,xml, linenums]
 ----
 <sftp:config name="sftp">
   <sftp:connection username="myusername"
@@ -117,6 +79,7 @@ Advanced:
 The SFTP connection also supports a connection through a proxy.
 
 .Mule 4 Example: SFTP Connection through a Proxy
+[source,xml, linenums]
 ----
 <sftp:config name="sftp">
   <sftp:connection username="muletest1" password="muletest1"
@@ -126,182 +89,82 @@ The SFTP connection also supports a connection through a proxy.
 </sftp:config>
 ----
 
-Note that the SFTP connector in Mule 4 provides a number of other configuration options:
+[[ftp_listener]]
+== Migrating an inbound endpoint
 
-* Preferred authentication methods.
-* Specifying a known host file.
-* Authentication through an identity file.
-* Specification of a passphrase for encrypting the SFTP keys.
-* Selection of a pseudo-random number generator (PRNG) algorithm.
+In Mule 3 a `<ftp:inbound-endpoint>` and `<sftp:inbound-endpoint>` message sources were used to poll a directory for files. For each file found, a new message was triggered. The message would hold the file's content in the payload plus a number of file attriutes as system properties. To avoid picking the same files over and over, `autoDelete` and `moveTo` parameters were provided, so that the files would leave the polled directory after being picked.
 
-////
-SFTP: OTHER AVAILABLE CONFIGS
-General:
-- working dir
-- preferred auth method: none, expression, edit inline
-- known hosts file
-- SFTP proxy config: none, expression, edit inline
-Connection:
--host
--port
--username
--password
--identity file
--passphrase
--PRNG algorithm (AUTOSELECT (Default), NativePRNG, NativePRNGBlocking, NativePRNGNonBlocking, SHA1PRNG)
-transfer mode: binary and ascii
-passive mode: true, false, or expression
+Mule 4 offers an improved way of doing that. The `<ftp:listener>` and `<sftp:listener>` components (shown as `On New File` in the Studio palette) polls a directory and triggers a new message just like its predecesor did. However it has the following added capabilities:
 
-Advanced tab:
-- timeout config
-- reconnection strategy
-- pooling profile
-- default write encoding
-- expiration policy
-////
+* You can use a `<ftp:matcher>` and `<sftp:matcher>` to only accept files with match a certain criteria
+* You're no longer forced to either delete or move the file, although the option to do that is still available.
+* You can use any of the connector's operation to change processed files in such a way that they no longer meet the matching criteria.
+* Watermark is automatically supported, allowing you to optionally filter automatically based on the file's timestamp.
 
-== Migrating a Read Operation
-
-== Migrating a List Operation
-
-== Migrating a Write Operation
-
-== Migrating an Outbound SFTP Endpoint
-
-.Mule 3 Example: SFTP Outbound Endpoint
+.Mule 3 Example: Inbound endpoint
+[source,xml, linenums]
 ----
-<sftp:outbound-endpoint user="mule"
- password="test123" path="/tmp/sftp"
- host="myhost.com" name="outboundEndpoint2"
- keepFileOnError="false"/>
-----
-
-.Mule 4 Example: SFTP
-----
-
-----
-
-Many integrations require connecting to different servers depending on a certain condition. Examples of this include:
-
-* Connecting to different invoice storage servers depending on the branch that emitted the invoice
-* Connecting to different servers depending on a given integration subject, like in a multi-tenant use case
-
-TODO: WAS/HOW WAS THIS HANDLED IN MULE 3?
-.Mule 3 Example
-----
-TODO
-----
-
-To handle these use cases in Mule 4, the `ftp:config` and `sftp:config` elements support expressions that allow connection parameters to evaluate these conditions and connect to the correct server.
-
-Consider the following example application:
-
-.Mule 4 Example
-----
-<sftp:config name="sftp">
-  <sftp:connection host="#[payload.host]" username="#[payload.user]" password="#[payload.password]" />
-</sftp:config>
-
-<flow name="sftpMultitenant" >
-  <http:listener config-ref="HTTP_Listener_config" path="/multitenant"/>
-  <set-variable variableName="content" value="#[payload]" />
-  <file:read path="recipients.csv" outputMimeType="application/csv" />
-
-  <foreach>
-    <sftp:write path="demo.txt" config-ref="sftp">
-      <sftp:content >#[content]</sftp:content>
-    </sftp:write>
-  </foreach>
-
-  <set-payload value="Multicast OK"/>
-
+<flow name="listener">
+  <ftp:inbound-endpoint address="ftp://anonymous:password@localhost:${port1}"
+    pollingFrequency="1000"/>
+  
+  <flow-ref name="processFile" />
 </flow>
 ----
 
-This is a dynamic multicast application that follows this sequence:
+.Mule 4 Example: On New File
 
-. It defines an SFTP config in which the host, username, and password are expressions.
-. It contains a flow on which content is posted through HTTP.
-. It uses the File connector to load a recipient’s file, which is a CSV file containing a random set of SFTP destinations with columns such as host, user, and port.
-. It uses `<foreach>` to go over each of the lines in the CSV file.
-+
-On each `<foreach>` iteration, each expression in the SFTP config resolves to a different value, establishing different connections to each of the servers.
-+
-Notice that this example uses the File connector to read a file in the middle of the flow.
-
-The information posted through the `http:listener` component is written to each SFTP site multiple times. Because the component makes use of the repeatable streams feature, you do not have to worry about consuming the stream multiple times. You don’t even have to know streaming is taking place at all!
-
-Notice that `<foreach>` is automatically going through each line of the CSV file. In Mule 3, you would need to first transform the CSV file into a Java structure, but because Mule 4 is now Java agnostic, this works out-of-the-box!
-
-== Migrating Spring Properties
-
-In Mule 3, FTP and SFTP connector configuration properties are the same as the File Connector.
-
-== Re
-
-////
-
-TODO?
-* HOW GLOBAL TRANSFORMERS ARE HANDLED?
-* RECONNECTION STRATEGIES
-* OLD METADATA TO NEW?
-
-== Attributes (TODO?)
-
-The Attributes object set in the message by the read and list operations have a very small difference with regards to that of the File connector, mainly around timestamps. This is simply because FTP and SFTP handle those differently.
-
-TODO: THIS IS A COMPARISON TO THE FILE CONNECTOR. QUESTION IS IF AND HOW THE SAME THING WAS DONE IN MULE 3 VS HOW NOW. What's the migration impact? AND NEED EXAMPLES:
-
-.Mule 3 Example
+[source,xml, linenums]
 ----
-TODO?
+<ftp:config name="ftp">
+  <ftp:connection host="localhost" user="anonymous" password="password" workingDir="${workingDir}"/>
+</file:config>
+
+<flow name="listenWithScheduler" initialState="stopped">
+    <ftp:listener config-ref="ftp" directory=".">
+      <scheduling-strategy>
+        <fixed-frequency frequency="1000"/>
+      </scheduling-strategy>
+    </file:listener>
+    
+    <flow-ref name="processFile" />
+</flow>
 ----
 
-.Mule 4 Example
+[[ftp_write]]
+
+The Mule 3 transport uses the `<ftp:outbound-endpoint>` component to write the current payload to a file. The Mule 4 connector uses the `<ftp:write>` operation instead.
+The most important differences are:
+
+* The `<ftp:outbound-endpoint>` required the content to be written to be in the message payload at the moment of executing. The `<ftp:write>` operation allows embedding a DataWeave transformation which generates the content to be written.
+* The Mule 3 transport has the `outputAppend` parameter set at the config level, while the `<ftp:write>` operation has a mode parameter
+
+.Mule 3 Example: Outbound endpoint
+
+[source,xml, linenums]
 ----
-TODO?
+<ftp:connector name="file" outputAppend="true" />
+
+<flow name="greetings">
+  <http:listener path="greet" method="POST"/>
+  <set-payload value="Hello #[payload.name]" />
+  <ftp:outbound-endpoint path="greet.txt" connector-ref="file" />
+</flow>
 ----
 
-== Locking
+.Mule 4 Example: Write Operation
 
-The connectors allow you to optionally perform file locking at the operating system level, which means that the lock is not only good for your Mule application, but it also affects other processes. File-system-level locks are not possible in FTP, so the lock is a Mule lock. That means that the lock will only protect the file against other flows in the same Mule application, but it will not protect the file against external processes. Do keep in mind that if the Mule application is running on a cluster, the lock will be distributed.
-
-TODO: THIS IS A COMPARISON TO THE FILE CONNECTOR. QUESTION IS IF AND HOW THE SAME THING WAS DONE IN MULE 3 VS HOW NOW. What's the migration impact? AND NEED EXAMPLES:
-
-.Mule 3 Example
+[source,xml, linenums]
 ----
-TODO?
-----
-
-.Mule 4 Example
-----
-TODO?
+<flow name="greetings">
+  <http:listener path="greet" method="POST"/>
+  <ftp:write path="greet.txt" mode="APPEND">
+    <ftp:content>#['Hello $(payload.name)']</file:content>
+  </file:write>
+</flow>
 ----
 
-== TODO: ANY OF THESE?
+== See also
 
-TODO: HOW WERE THESE DONE FOR MULE 3 VS. HOW NOW?
-The connector can also handle the following:
-
-* File representation and attributes
-* MimeType metadata
-* Operations
-* Listing
-* Matching
-* Error handling
-* Polling
-
-Some of the above topics are discussed in the File Connector post. Please refer to the blog post for more information, as the functionalities of both connectors are similar. There are only two relevant differences:
-////
-
-== See Also
-
-link:/connectors/ftp-connector[FTP Connector]
-
-link:/connectors/sftp-connector[SFTP Connector]
-
-link:migration-examples[Migration Examples]
-
-link:migration-patterns[Migration Patterns]
-
-link:migration-components[Migrating Components]
+* link:/connectors/ftp-connector[FTP Connector]
+* link:/connectors/sftp-connector[SFTP Connector]

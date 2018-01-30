@@ -14,7 +14,7 @@ What's covered in this section:
 [[batch_scope]]
 == Migrating the Batch Element
 
-In Mule 3, Batch was a top-level element, at the same level as a flow. In Mule 3, the `<batch:job>` element is a scope that lives inside a flow so that it is easier to understand, invoke dynamically, and interact with other Mule components.
+In Mule 3, Batch was a top-level element, at the same level as a flow. In Mule 4, the `<batch:job>` element is a scope that lives inside a flow so that it is easier to understand, invoke dynamically, and interact with other Mule components.
 
 link::mule-4-batch-module[Mule 4 Batch Module]
 
@@ -22,30 +22,39 @@ This also means that there is no `<batch:input>` anymore. The role of the `<batc
 
 * `<batch:job>`: Even though Batch is a scope, it has a name. No Mule app can have two `<batch:job>` definitions with the same name. This allows better tracking and management when one single flow defines more than one job
 
-* `<batch:execute>`: This operation does not exist anymore.
+* `<batch:execute>`: This operation does not exist anymore. Instead, just invoke whatever flow contains the bach job.
 
 .Mule 3 example
+[source,xml, linenums]
 ----
-<batch:job name="Batch3">
+<batch:job name="batchJob">
     <<batch:input>>
-        <poll>
-            <sfdc:authorize/>
+        <poll frequency="10000">
+            <sfdc:query ..../>
         </poll>
-        <set-variable/>
     </<batch:input>>
     <batch:process-records>
-        <batch:step/>
+        <batch:step name="batchStep1">
+          <mp />
+          <mp />
+      </batch:step>
+      <batch:step name="batchStep1">
+        <event processor/>
+        <event processor/>
+      </batch:step>
     <batch:process-records>
 </batch:job>
-
-<flow name="flowOne">
-  ...
-</flow>
 ----
 
 .Mule 4 example
+[source,xml, linenums]
 ----
 <flow name="flowOne">
+  <scheduler>
+			<scheduling-strategy>
+				<fixed-frequency frequency="10000"/>
+			</scheduling-strategy>
+		</scheduler>
   <batch:job jobName="batchJob">
     <batch:process-records>
       <batch:step name="batchStep1">
@@ -53,8 +62,8 @@ This also means that there is no `<batch:input>` anymore. The role of the `<batc
         <event processor/>
       </batch:step>
       <batch:step name="batchStep1">
-        <event processor/>
-        <event processor/>
+        <mp />
+        <mp />
       </batch:step>
     </batch:process-records>
   </batch:job>
@@ -73,6 +82,7 @@ In Mule 4, variables (`vars`) replace `recordVars`. Variables are part of the Mu
 The Mule 3 example here uses `recordVars` within an expression in a For Each component:
 
 .Mule 3 Example
+[source,xml, linenums]
 ----
 <batch:step name="commitStep">
   <batch:commit size="10">
@@ -89,6 +99,7 @@ The Mule 3 example here uses `recordVars` within an expression in a For Each com
 The Mule 4 example here uses `vars` within an expression in a For Each component:
 
 .Mule 4 Example
+[source,xml, linenums]
 ----
 <batch:job jobName="batchJob">
   <batch:process-records>
@@ -110,8 +121,6 @@ The Mule 4 example here uses `vars` within an expression in a For Each component
 
 [[non_java_datasets]]
 == Support for Non-Java DataSets
-
-// TODO: DOESN'T SEEM TO BE REQUIRED FOR MIGRATION, MORE OF A NEW FEATURE.
 
 In Mule 3, the batch input phase required a Java structure. So, for input data in formats such as XML or JSON, you first needed to transform to Java, then make DataWeave use streaming in that transformation to avoid running out of memory for large datasets.
 
@@ -138,6 +147,7 @@ For example, suppose you have this source data pushed to your app through an HTT
 In Mule 3, you need to transform that JSON to Java before passing it over, something like this:
 
 .Mule 3 Example
+[source,xml, linenums]
 ----
 <batch:job name="forceJob">
    <<batch:input>>
@@ -159,6 +169,7 @@ In Mule 3, you need to transform that JSON to Java before passing it over, somet
 In Mule 4, Batch can automatically determine that the payload is a JSON array and perform the splitting on its own, for example:
 
 .Mule 4 Example
+[source,xml, linenums]
 ----
 <flow name="useTheForceBatch">
   <http:listener path="/forceWielders" config-ref="forceListener" />
@@ -182,8 +193,4 @@ You no longer have to set streaming in Mule 4 because of the automatic streaming
 
 == See Also
 
-link:migration-examples[Migration Examples]
-
-link:migration-patterns[Migration Patterns]
-
-link:migration-components[Migrating Components]
+* link:/mule-user-guide/v/4.0/batch-processing-concept[Batch Module documentation]
