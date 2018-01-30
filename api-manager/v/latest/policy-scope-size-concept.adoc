@@ -16,7 +16,7 @@ Defines policy dependencies. Packaging type needs to be `mule-policy`.
 +
 Optionally if the policy depends on other resources, such as a certificate, define resources as part of the policy. 
 +
-* The mule-artifact.json descriptor.
+* The mule-artifact.json descriptor
 +
 Specify the classifier as `mule-policy`.
 
@@ -26,11 +26,30 @@ For more information, see the header policy.
 
 Policies are isolated from the application and other policies, however there are ways to expose information from a policy. The authentication information about a policy can be propagated in the Security Context Principal object.
 
-Headers are not propagated by default. If a policy is expected to forward headers, the implementation needs to be explicit about it. Out of the box policies provide a configurable option to propagate headers.
+A policy can modify message content. In Mule 4.1.0 and later, if the message is modified before the `execute-next` in `source` policies
+or after it in `operation` policies, those modifications are not propagated by default. To enable propagation of those modifications
+you can enable the `propagateMessageTransformations` flag in each policy.
 
-A policy can modify message content. A policy can stop the execution flow.
+*Example*
 
-Variables set on a policy have only the scope of the policy.
+----
+<http-policy:proxy name="scope-payload">
+    <http-policy:source propagateMessageTransformations="true">
+
+        <http-policy:execute-next/>
+
+    </http-policy:source>
+    <http-policy:operation propagateMessageTransformations="true">
+
+        <http-policy:execute-next/>
+
+    </http-policy:operation>
+</http-policy:proxy>
+----
+
+A policy can avoid the execution of the flow by not defining the `execute-next` or making sure that it is not reached (placing it in a choice, for example).
+
+Variables set on a policy have only the scope of the policy. Also, variables defined in the flow, are not visible in policies.
 
 == Policy Size
 
