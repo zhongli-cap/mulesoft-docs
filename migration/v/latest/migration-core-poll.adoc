@@ -1,38 +1,51 @@
-// sme: DF, author: sduke?
 = Migrating the Poll Component
 
-// Explain generally how and why things changed between Mule 3 and Mule 4.
-Intro here.
+In Mule 3, the `<poll>` element was used to trigger a certain flow at a fixed frequency of time. This element was also a scope which required one (and only one) message processor to live inside of it. The output of that processor would be the message that the flow receives.
 
-What's covered in this section:
-
-* <<migrate_polling_info>>
-* <<migrate_watermark>>
-
-[[migrate_polling_info]]
-== Migrating to Polling Information to the Scheduler
-
-// TODO: Describe what changed from 3.x to 4.x.
-
-.Mule 3 Example: Polling Information
+.Mule 3 Example: Poll
+[source,xml, linenums]
 ----
-Mule 3 example goes here: Poll component example here.
+<flow name="poll>
+    <poll frequency="1000">
+        <db:select config-ref="MySQL_Configuration">
+            <db:parameterized-query>SELECT * FROM PERSON></db:parameterized-query>
+        <db:select>
+    </poll>
+
+    <flow-ref name="doProcess" />
+</flow>
 ----
+
+In Mule 4, the `<poll>` element was replaced with the `<scheduler>` element. Main differences are:
+
+* It just triggers the flow. It's no longer a scope
+* It supports both fixed frequency and cron expressions
 
 .Mule 4 Example: Scheduler
+[source,xml, linenums]
 ----
-Mule 4 example goes here: Scheduler component example here.
+<flow name="poll>
+    <scheduler>
+        <scheduling-strategy>
+            <fixed-frequency frequency="1000"/>
+        </scheduling-strategy>   
+    </scheduler>
+    
+    <db:select config-ref="MySQL_Configuration">
+        <db:sql>SELECT * FROM PERSON></db:sql>
+    <db:select>
+
+    <flow-ref name="doProcess" />
+</flow>
 ----
 
-[[migrate_watermark]]
+For more information on the `<scheduler>` element, please read the link:/mule-user-guide/v/4.0/scheduler-concept[Scheduler documentation].
+
 == Migrating a Watermark
 
-See link:migration-patterns-watermark[Migrating Watermarks].
-
-// Whatever other sections are required using the preceding section format.
+The `<poll>` element also supported a `<watermark>` element which was used to aid and scheduled synchronizations. That element doesn't exist anymore. Instead, please read
+the link:migration-patterns-watermark[Migrating Watermarks] page.
 
 == See Also
 
-link:/mule-user-guide/v/3.9/file-connector[File Connector] for 3.9
-
-link:/mule-user-guide/v/3.9/file-transport-reference[File Transport Reference] (Reference for 3.9)
+* link:/mule-user-guide/v/4.0/scheduler-concept[Scheduler documentation]
