@@ -1,81 +1,65 @@
-// sme: Ana, author: fer?
+// sme: afelisatti, author: fer?
 = Migrating Exception Strategies to Mule Error Handlers
 
-The following examples only refer to the exception strategy/error handler migration, inner components in the example flows have not been analyzed to provide equivalents and are only there to provide full examples.
+The following examples will guide you through the migration of the different exception
+strategies of Mule 3 considering the new error handling components in Mule 4.
 
 === Catch Exception Strategy
 
 //TODO: CLEAN UP, ELABORATE
 
-A Catch Exception Strategy would be equivalent to an error handler with a single on-error-continue component that accepts all errors.
-For example:
+A Catch Exception Strategy is equivalent to an Error Handler with a single `on-error-continue`
+component that accepts all errors, which is the default configuration:
 
 .Mule 3 Example
+[source,xml,linenums]
 ----
-<flow name="catchWithComponent">
-  <test:component throwException="true"/>
+<flow name="catch">
+  <!-- flow logic -->
   <catch-exception-strategy>
-    <script:component>
-      <script:script engine="groovy">
-        return "$payload Caught"
-      </script:script>
-    </script:component>
+    <!-- error handling logic -->
   </catch-exception-strategy>
 </flow>
 ----
 
 .Mule 4 Example
+[source,xml,linenums]
 ----
-<flow name="catchWithComponent">
-  <test:component throwException="true"/>
+<flow name="catch">
+  <!-- flow logic -->
   <error-handler>
-    <on-error-continue type="ALL">
-      <script:component>
-        <script:script engine="groovy">
-          return "$payload Caught"
-        </script:script>
-      </script:component>
+    <on-error-continue>
+      <!-- error handling logic -->
     </on-error-continue>
   </error-handler>
 </flow>
 ----
 
 === Rollback Exception Strategy
-A simple (no redelivery) rollback exception strategy would be equivalent to an error handler with a single on-error-propagate component that accepts all errors.
-
+A simple (no redelivery) rollback exception strategy is equivalent to an error
+handler with a single `on-error-propagate` component that accepts all errors,
+which is the default configuration:
 //TODO: CLEAN UP, ELABORATE
 
 .Mule 3 Example
+[source,xml,linenums]
 ----
-<flow name="rollbackWithComponent">
-  <vm:inbound-endpoint path="in5">
-    <vm:transaction action="ALWAYS_BEGIN"/>
-  </vm:inbound-endpoint>
-  <test:component throwException="true"/>
+<flow name="rollback">
+  <!-- flow logic -->
   <rollback-exception-strategy>
-    <script:component>
-      <script:script engine="groovy">
-        return "$payload Rolled Back"
-      </script:script>
-    </script:component>
+    <!-- error handling logic -->
   </rollback-exception-strategy>
 </flow>
 ----
 
 .Mule 4 Example
+[source,xml,linenums]
 ----
-<flow name="rollbackWithComponent">
-  <vm:inbound-endpoint path="in5">
-    <vm:transaction action="ALWAYS_BEGIN"/>
-  </vm:inbound-endpoint>
-  <test:component throwException="true"/>
+<flow name="rollback">
+  <!-- flow logic -->
   <error-handler>
-    <on-error-propagate type="ALL">
-      <script:component>
-        <script:script engine="groovy">
-          return "$payload Rolled Back"
-        </script:script>
-      </script:component>
+    <on-error-propagate>
+      <!-- error handling logic -->
     </on-error-propagate>
   </error-handler>
 </flow>
@@ -91,67 +75,62 @@ A simple (no redelivery) rollback exception strategy would be equivalent to an e
 
 == Choice Exception Strategy
 
-A Choice exception strategy with N inner catch/rollback exception strategies would be equivalent to an error handler with N on-error components handle/propagate according to the exception strategy kind.
+A Choice exception strategy with inner catch/rollback exception strategies is
+equivalent to an error handler with on-error components continue/propagate according
+to the exception strategy kind, as explained above:
 
 //TODO: CLEAN UP, ELABORATE
 
 .Mule 3 Example
+[source,xml,linenums]
 ----
-<flow name="VmJdbcRollback">
-  <vm:inbound-endpoint path="rollback" exchange-pattern="request-response">
-    <ee:multi-transaction action="ALWAYS_BEGIN"/>
-  </vm:inbound-endpoint>
-  <jdbc:outbound-endpoint address="jdbc://out" connector-ref="jdbcConnector">
-    <ee:multi-transaction action="ALWAYS_JOIN"/>
-  </jdbc:outbound-endpoint>
-  <test:component throwException="true" exceptionToThrow="java.lang.IllegalStateException"/>
-    <choice-exception-strategy>
-        <rollback-exception-strategy when="#[exception.causedBy(java.lang.IllegalStateException)]">
-            <set-payload value="ROLLBACK"/>
-        </rollback-exception-strategy>
-        <catch-exception-strategy/>
+<flow name="choice">
+  <!-- flow logic -->
+  <choice-exception-strategy>
+      <rollback-exception-strategy when="#[exception.causedBy(java.lang.IllegalStateException)]">
+          <!-- error handling logic -->
+      </rollback-exception-strategy>
+      <catch-exception-strategy/>
     </choice-exception-strategy>
 </flow>
 ----
 
 .Mule 4 Example
+[source,xml,linenums]
 ----
-<flow name="VmJdbcRollback">
-  <vm:inbound-endpoint path="rollback" exchange-pattern="request-response">
-    <ee:multi-transaction action="ALWAYS_BEGIN"/>
-  </vm:inbound-endpoint>
-  <jdbc:outbound-endpoint address="jdbc://out" connector-ref="jdbcConnector">
-    <ee:multi-transaction action="ALWAYS_JOIN"/>
-  </jdbc:outbound-endpoint>
-  <test:component throwException="true" exceptionToThrow="java.lang.IllegalStateException"/>
+<flow name="choice">
+  <!-- flow logic -->
   <error-handler>
     <on-error-propagate when="#[exception.causedBy(java.lang.IllegalStateException)]">
-      <set-payload value="ROLLBACK"/>
+      <!-- error handling logic -->
     </on-error-propagate>
-    <on-error-continue errorType="ALL"/>
+    <on-error-continue/>
   </error-handler>
 </flow>
 ----
 
 == Reference Exception Strategy
 
-Considering that the referenced exception strategy has already been migrated according the the above guidelines migrating the actual reference is just adding a reference error-handler.
+Considering that the referenced exception strategy has already been migrated according
+to the above guidelines, migrating the actual reference is just adding a reference `error-handler`.
 
 //TODO: CLEAN UP, ELABORATE
 
 .Mule 3 Example
+[source,xml,linenums]
 ----
-<flow name="otherFlowWithSameReferencedExceptionStrategy">
-  <logger/>
-  <exception-strategy ref="referencedEs"/>
+<flow name="reference">
+  <!-- flow logic -->
+  <exception-strategy ref="referencedHandler"/>
 </flow>
 ----
 
 .Mule 4 Example
+[source,xml,linenums]
 ----
-<flow name="otherFlowWithSameReferencedExceptionStrategy">
-  <logger/>
-  <error-handler ref="referencedEs"/>
+<flow name="reference">
+  <!-- flow logic -->
+  <error-handler ref="referencedHandler"/>
 </flow>
 ----
 
