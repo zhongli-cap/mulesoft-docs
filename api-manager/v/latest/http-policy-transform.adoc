@@ -1,44 +1,45 @@
-= HTTP Policy Transform Extension
+= HTTP Policy Transform Extension Reference (Nov 2017)
 
-The intention of this extension is to make easier the modification of HTTP Requests and Responses that go
+This extension simplifies the modification of HTTP requests and responses that go
  through the different policies.
 
 == Operations
 
-- <<Add Headers>>
+- Add Headers
 
-- <<Remove Headers>>
+- Remove Headers
 
-- <<Set Response>>
+- Set Response
 
-- <<Set Request>>
+- Set Request
 
 === Add Headers
 
-Allows to add headers in both requests and responses of the HTTP Listener and Requester In some cases, it will create a new request / response
-with the specified headers. This happens when the output type defined in the operation is not correlated with
-it is actually present in the Mule Message.
+The way this operation works depends on its correlation with the Mule message:
 
-For example, if the outputType specified is `response`, but when the operation
-is executed the Mule Message still contains the HTTP Request, then it will overwrite the whole value instead of just adding
-the headers to the request.
+* Correlated: adds headers in requests and responses of the HTTP Listener and Requester.
+* Not correlated:  Creates a new request / response with the specified headers. 
 
-====== Parameters
+For example, the operation and Mule message are not correlated if the specified outputType is `response`, but the Mule Message contains the HTTP Request. When the operation executes, it overwrites the entire value, creating a new response with the specified headers.  If the Mule Message contains a HTTP response, it just adds the headers to the request.
 
- - outputType: Valid values are `response`, `request`, `requester-request`. Defines the type of the attributes of
- operation's response. Its value depends on where is the operation being called from:
+==== Parameters
 
- .. From Source Policy, before the `execute-next` is invoked, then `request` should be the value
-
- .. From Source Policy, after the `execute-next` is invoked, then `response` should be the value
-
- .. From Operation Policy, before the `execute-next` is invoked, then `requester-request` should be the value
-
- .. From Operation Policy, after the `execute-next` is invoked, then `response` should be the value
-
- - headers: A Data-Weave expression that resolves to the Map of headers to be added to present message attributes
-
-.Example
+* `outputType`
++
+Valid values are `response`, `request`, `requester-request`. Defines the type of the attributes of
+ operation's response. Its value depends on where is the operation being called from as follows:
++
+** From Source Policy, before the `execute-next` is invoked, then `request` should be the value.
+** From Source Policy, after the `execute-next` is invoked, then `response` should be the value.
+** From Operation Policy, before the `execute-next` is invoked, then `requester-request` should be the value.
+** From Operation Policy, after the `execute-next` is invoked, then `response` should be the value.
++
+* `headers`
++
+A DataWeave expression that resolves to the Map of headers to be added to present message attributes
++
+*Example*
++
 ----
 <http-transform:add-headers outputType="response">
     <http-transform:headers>#[
@@ -53,14 +54,16 @@ the headers to the request.
 
 === Remove Headers
 
-Allows to remove headers from both requests and responses of the HTTP Listener and Requester.
-Returned attributes are always of the same type of the input attributes. Operation is case-insensitive
+This operation removes headers from both requests and responses of the HTTP Listener and Requester. Returned attributes are always of the same type as the input attributes. This operation is case-insensitive.
 
-====== Parameters
+==== Parameters
 
- - headers: A Data-Weave expression that resolves to an Array of header names to be removed.
-
-.Example
+* `headers`
++
+A Data-Weave expression that resolves to an Array of header names to be removed.
++
+*Example*
++
 ----
 <http-transform:remove-headers>
     <http-transform:headers>#[['FirstHeader', 'SecondHeader']]</http-transform:headers>
@@ -69,20 +72,21 @@ Returned attributes are always of the same type of the input attributes. Operati
 
 === Set Response
 
-Allows to set a complete HTTP Response. This is useful for scenarios, where the
-policy prevented the flow from being executed, thus there is not a HTTP Response in place.
+This operation sets a complete HTTP response. You use this operation when the
+policy prevents the flow from being executed; thus, there is no HTTP response in place.
 
-====== Parameters
+==== Parameters
 
- - statusCode: An integer representing the HTTP Status Code of the response.
+* `statusCode`: An integer representing the HTTP status code of the response.
 
- - reasonPhrase: A String representing the HTTP Reason Phrase of the response.
+* `reasonPhrase`: A string representing the HTTP reason phrase of the response.
 
- - body: The content of the HTTP Response.
+* `body`: The content of the HTTP response.
 
- - headers: A Data-Weave expression that resolves to the Map of headers of the HTTP response
-
-.Example
+* headers: A DataWeave expression that resolves to the map of headers of the HTTP response
++
+*Example*
++
 ----
 <http-transform:set-response statusCode="203" reasonPhrase="policyReasonPhrase">
     <http-transform:body>#['policyPayload']</http-transform:body>
@@ -98,21 +102,22 @@ policy prevented the flow from being executed, thus there is not a HTTP Response
 
 === Set Request
 
-Allows to set a complete HTTP Request that the HTTP Requester is going to execute.
+This operation sets a complete HTTP request that the HTTP Requester executes.
 
-====== Parameters
+==== Parameters
 
- - requestPath: The path where the HTTP Request is being sent.
+* `requestPath`: The path where the HTTP Request is being sent.
 
- - body: The content of the HTTP Request.
+* `body`: The content of the HTTP Request.
 
- - headers: A Data-Weave expression that resolves to the Map of headers of the HTTP request
+* `headers`: A DataWeave expression that resolves to the map of headers of the HTTP request.
 
- - uriParams: A Data-Weave expression that resolves to the Map of Uri Params of the HTTP request
+* `uriParams`: A DataWeave expression that resolves to the map of URI params of the HTTP request.
 
- - queryParams: A Data-Weave expression that resolves to the Map of Query Params of the HTTP request
-
-.Example
+* `queryParams`: A DataWeave expression that resolves to the map of query params of the HTTP request.
++
+*Example*
++
 ----
 <http-transform:set-requester-request requestPath="/backend/policy/{policyUriParam}">
     <http-transform:body>#['policyPayload']</http-transform:body>
