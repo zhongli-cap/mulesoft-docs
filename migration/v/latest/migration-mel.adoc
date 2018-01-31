@@ -5,84 +5,149 @@ In Mule 4, the DataWeave expression language replaces Mule Expression Language (
 This section provides guidance on migrating MEL expressions in your Mule apps to
 DataWeave (2.0 and later).
 
-////
 == DataWeave at a Glance
 
-For those who have not used DW, guide them through (or point them to info on) DW basics:
+DataWeave is a Mule-specific language that can be used lightly as an
+expression language to simply reference values and evaluate conditions, or as a
+scripting language to construct complex data transformations that include functions
+and recursion.
 
-// TODO, SEE THESE TO MAKE SURE EXAMPLES COVERED:
-// https://blogs.mulesoft.com/dev/mule-dev/why-dataweave-main-expression-language-mule-4/
-=======
-  *** Selectors.
-  *** Basic operators
-  *** Control flow
-  *** Map, filter functions (advanced feature but helps give an idea of what you can do with DW)
-  *** Instead of accessing data with Java methods, access with DW selectors.
-  *** Can call static Java functions directly from DW (e.g., to get the object’s properties), but can’t call Java methods in the object or alter state of the object.
-  *** Instead of inboundProperties (e.g., #[message.inboundProperties.'propertyName']) use attributes (e.g., attributes.header.propertyName)
-  *** MEL flowVars.myVar is DW vars.myVar
-  *** MEL XPath, regex, and wildcards can be matched to DW features, e.g.:
-  **** MEL regex function vs. DW matches and match functions
-//  **** MEL XPATH to DW _TODO_ (ask Mariano D'Achaval, Shoki, or Esteban W.)
-//  **** Wildcards to DW _TODO_ (ask Mariano D'Achaval, Shoki, or Esteban W.)
-  **** Update Choice example (from docs.mulesoft.com) to manipulate the flow:
+Unlike MEL, it supports different data types out of the box, like JSON, XML, or CSV,
+which means data no longer needs to be transformed before expressions can be evaluated.
+It also supports advanced use cases like mapping functions or filtering data.
+
+It's important to notice that the main data selector in DataWeave is the `.` operator,
+and since it shares most keywords with MEL, the syntax for most scenarios is
+identical. For example, `#[message.payload.name]` is the same on both languages.
+
+The main difference between MEL and DataWeave is that DataWeave expressions have
+no side effects. You can use DataWeave to extract or generate data but not to modify it.
+See the link:intro-java-integration[Java Integration] examples to deal with
+those use cases.
+
+////
+//This section will only make sense once the compatibility plugin is out
+== Compatibility Mode
+
+MEL is still supported in compatibility mode when expressions feature a `mel:` prefix.
+In fact, for compatibility use cases such as accessing inbound and outbound properties,
+attachments or exception payloads MEL is recommended.
+
 ////
 
-Note that MEL is still supported in compatibility mode when expressions feature a `mel:` prefix.
+== MEL usages
+
+
 
 // _TODO: THIS LINK WILL CHANGE_
 // Explain generally how and why things changed between Mule 3 and Mule 4.
 //Intro here.
 
-The main difference between MEL and DataWeave is that DataWeave expressions have
-no side effects. You can use DataWeave to extract or generate data but not to modify it.
+
 
 Below you can find some of MEL uses and how to adapt them to Mule 4.
 
+=== Accessing context variables
+All link:mule-user-guide/v/3.9/mel-cheat-sheet#server-mule-application-and-message-variables[context variables]
+remain the same in DataWeave except for the new `attributes` variables and the following changes:
+
 [%header,cols="2,3a"]
 |===
-| MEL | Alternative Procedure
+| MEL | DataWeave
 
-| Extracting data, for example: `#[payload.date]`
-| Use link:/mule-user-guide/v/4.0/dataweave-selectors[DataWeave Selectors].
+|`flowVars`
+|Renamed to `vars`
 
-| Assigning values, for example: `#[payload = 'Hello']`
-| Use the Scripting component instead.
-//See _TODO: PROVIDE LINK_
+|`sessionVars`
+|Removed: see link:intro-mule-message#session-properties[Session Properties].
 
-| Using Java methods, for example: `#[payload.substring(20)]`
-| Use DataWeave to invoke static methods, otherwise, use the Java module.
+|`exception`
+|Replaced: exceptions within a flow are now represented by a link:/mule-user-guide/v/4.0/about-mule-errors[Mule Error] you can access with the `error` variable.
 
-| Target definitions such as `#[flowVars.output]` in enrichers.
-| Use a Target Variable from a Mule component or connector and DataWeave. See link:/mule-user-guide/v/4.0/target-variables[About Target Variables].
+|`message.inboundProperties`
+|Removed: see link:intro-mule-message#inbound-properties-are-now-attributes[Inbound Properties Are Now Attributes].
 
-| XPath such as `#[xpath3('//root/element1')]`
-| Use the XML module `xpath-extract` operation or use DataWeave selectors (note that navigation to ancestor nodes is not supported).
-//See __TODO: LINK__
+|`message.outboundProperties`
+|Removed: see link:intro-mule-message#outbound-properties[Outbound Properties].
 
-| Wildcard and Regex functions
-| Use DataWeave matching operators, `match` and `matches` (see link:/mule-user-guide/v/4.0/dw-functions-core[Core DataWeave Functions]).
+|`message.inboundAttachments` and `message.outboundAttachments`
+|Removed: DataWeave now handles `multipart/*` data out of the box.
 
-| link:https://docs.mulesoft.com/mule-user-guide/v/3.9/mel-cheat-sheet#server-mule-application-and-message-variables[Mule context variables] are largely the same.
-|
-[%hardbreaks]
-However, the following MEL variables are unavailable in DataWeave:
+//This section will only make sense once the aggregators module is out
+//|`message.correlationId`
+//|Renamed: `correlationId`
 
-* `apps.registry`
-//replaced by _TODO_
-* `message.flowVars` replaced by `vars`, for example, `#[vars.myVar]` where `myVar` is the name of the variable (see link:migration-core-enricher[Migrating the Enricher to a Target Variable])
-* `message.inboundProperties` replaced by attributes (see link:intro-mule-message#inbound-properties-are-now-attributes[Inbound Properties Are Now Attributes])
-* `message.inboundAttachments` (see the HTTP connector documentation on attachments in link:migration-connectors-http#http_multipart[multipart/*])
-//replaced by _TODO_
-* `message.outboundProperties` (see link:intro-mule-message#outbound-properties[Outbound Properties])
-//replaced by _TODO_
-* `message.outboundAttachments` (see the HTTP connector documentation on attachments in link:migration-connectors-http#http_multipart[multipart/*])
-//replaced by _TODO_
-* `message.sessionVars` (see link:intro-mule-message#session-properties[Session Properties])
-//replaced by _TODO_
-* `server.dateTime` replaced by DataWeave's `now` function (see link:/mule-user-guide/v/4.0/dw-functions-core#code-now-code[Core DataWeave Functions]).
+//|`message.correlationSequence`
+//|Renamed: `itemSequenceInfo.position`
+
+//|`message.correlationGroupSize`
+//|Renamed: `itemSequenceInfo.sequenceSize`
+
+|`message.id`, `message.rootId` and `message.replyTo`
+|Removed.
+
+|`message.dataType`
+|Renamed to `dataType`.
+
+|`server.dateTime`
+|Removed: use DataWeave's link:mule-user-guide/v/4.0/dw-functions-core#code-now-code[`now`] function
+
 |===
+=== Extracting data
 
+You can use link:/mule-user-guide/v/4.0/dataweave-selectors[DataWeave Selectors]
+to query data as you did with MEL. Only now, you won't need extra transformations
+when dealing with types like JSON.
+////
+Take the following JSON payload with the intent of logging the received ID:
+[source,json,linenums]
+----
+{
+  "name" : "Rachel Duncan",
+  "id": "779H41"
+}
+----
+
+.Mule 3 example
+[source,xml,linenums]
+----
+<object-to-json/>
+<logger message="Updating health check record for subject '#[payload.id]'" />
+----
+
+.Mule 4 example
+[source,xml,linenums]
+----
+<logger message="Updating health check record for subject '#[payload.id]'" />
+----
+////
+=== Assigning values
+
+As mentioned earlier, DataWeave does not support modifying data as the `expression-component`
+allowed with MEL. To achieve those use cases you must use the Scripting module.
+
+=== Invoking Java methods
+
+DataWeave can be used to invoke static methods. For regular methods, you can use
+the Java module, which exposes both an operation and a function to invoke Java
+methods.
+
+=== Target definitions
+
+The `enricher` has been removed in favor of target variables which are now supported
+by every operation. See link:/mule-user-guide/v/4.0/target-variables[About Target Variables]
+for details.
+
+=== XPath function
+
+DataWeave can be used to query XML content using its link:/mule-user-guide/v/4.0/dataweave-selectors[selectors]
+but you can also use the XML module, which exposes both an operation and a function
+to execute XPath queries.
+
+=== Wildcard and Regex functions
+
+DataWeave matching functions: `match` and `matches` (see link:/mule-user-guide/v/4.0/dw-functions-core[Core DataWeave Functions])
+can be used instead.
 
 ////
 Topics to cover:
