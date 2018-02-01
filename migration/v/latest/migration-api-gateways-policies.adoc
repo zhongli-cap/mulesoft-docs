@@ -4,9 +4,14 @@
 // Explain generally how and why things changed between Mule 3 and Mule 4.
 In Mule 4, policies underwent major changes. A full explanation of them is available in link:https://docs.mulesoft.com/api-manager/custom-policy-4-reference[Custom Policy General Reference (Nov 2017)]
 
-=== Defining Policy Behavior
+== Defining Policy Behavior
 
 In 3.x, the logic inside a particular policy is split in two blocks, one that is executed before the next policy or flow, the other executed after it.
+
+This can be viewed in the following example:
+
+
+==== Basic example
 
 .Mule 3 Example
 [source,xml,linenums]
@@ -80,7 +85,92 @@ when policies are fetched from API Manager.
 Endpoint and App `pointcut` elements are no longer available, and there is no replacement to them.
 
 
-=== Uploading Policy Template to Exchange
+==== With Error Response example
+
+Another example is presented, where the policy does a client ID validation and if it fails, an error HTTP response
+is returned.
+
+.Mule 3 Example
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<policy online="false"
+        xmlns="http://www.mulesoft.org/schema/mule/policy"
+        xmlns:mule="http://www.mulesoft.org/schema/mule/core"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
+        xsi:schemaLocation="http://www.mulesoft.org/schema/mule/policy http://www.mulesoft.org/schema/mule/policy/current/mule-policy.xsd
+              http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+              http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd">
+
+    <mule:processor-chain name="policy-build-response">
+        <mule:set-property propertyName="http.status" value="403"/>
+        <mule:set-property propertyName="Content-Type" value="application/json"/>
+        <mule:set-payload value="#[flowVars._invalidClientMessage]"/>
+    </mule:processor-chain>
+
+    <before>
+        <api-platform-gw:validate-client clientId="clientId"
+                                         clientSecret="clientSecret"
+                                         onUnaccepted="policy-build-response"/>
+    </before>
+
+    <pointcut>
+        <api-platform-gw:api-pointcut apiName="sampleApi" apiVersion="1.0.0"/>
+    </pointcut>
+
+</policy>
+----
+
+.Mule 4 Example
+[source,xml,linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:http-policy="http://www.mulesoft.org/schema/mule/http-policy"
+      xmlns:http-transform="http://www.mulesoft.org/schema/mule/http-policy-transform"
+      xmlns:client-id-enforcement="http://www.mulesoft.org/schema/mule/client-id-enforcement"
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+               http://www.mulesoft.org/schema/mule/http-policy http://www.mulesoft.org/schema/mule/http-policy/current/mule-http-policy.xsd
+               http://www.mulesoft.org/schema/mule/http-policy-transform http://www.mulesoft.org/schema/mule/http-policy-transform/current/mule-http-policy-transform.xsd
+               http://www.mulesoft.org/schema/mule/client-id-enforcement http://www.mulesoft.org/schema/mule/client-id-enforcement/current/mule-client-id-enforcement.xsd">
+
+    <client-id-enforcement:config name="clientEnforcementConfig"/>
+
+    <http-policy:proxy name="client-id-enforcement">
+        <http-policy:source>
+            <try>
+                <client-id-enforcement:validate-client config-ref="clientEnforcementConfig"
+                                                       clientId="clientId"
+                                                       clientSecret="clientSecret"/>
+
+                <http-policy:execute-next/>
+
+                <error-handler>
+                    <on-error-continue
+                            type="CLIENT-ID-ENFORCEMENT:INVALID_API, CLIENT-ID-ENFORCEMENT:INVALID_CLIENT, CLIENT-ID-ENFORCEMENT:INVALID_CREDENTIALS"
+                            logException="false">
+                        <http-transform:set-response statusCode="401">
+                            <http-transform:body>#[
+                                output application/json --- {"error": "$(error.description)"}
+                            ]</http-transform:body>
+                        </http-transform:set-response>
+                    </on-error-continue>
+                </error-handler>
+            </try>
+        </http-policy:source>
+    </http-policy:proxy>
+
+</mule>
+
+
+----
+
+In the Mule 4 example, it is shown how the policy can make use of its own Error Handler, something that in Mule 3 was not possible
+
+
+== Uploading Policy Template to Exchange
 
 In 3.x, once the policy is defined, the result is an XML file that has to be uploaded to API Manager.
 
