@@ -1,0 +1,90 @@
+= To list Files in a directory using the File connector
+:keywords: file, connector, list, directory
+:toc:
+:toc-title:
+
+By default, this operation will only list the contents of the given directory, without going into any sub-folders at the root level of the Directory Path and without reading any file that is inside a subdirectory. To enable recursive listing, the `recursive` parameter should be set to true. If a sub-directory is found and recursive was set to true, then the files contained in that subdirectory will be listed immediately after the subdirectory.
+
+In this example, we will list the contents of a folder and handle regular files and subdirectories differently. We do so by using the list operation, which lists all the files and folders in a given Directory Path. This path could be absolute or relative. If the path is relative, then it will be relative from the Config’s Working Directory. The list operation returns a List of messages, where each message represents an item in the directory.
+
+[source, xml, linenums]
+----
+<flow name="list">
+  <file:list directoryPath="~/dropFolder" />
+  <foreach>
+    <choice>
+      <when expression="#[attributes.directory]">
+        <flow-ref name="processDirectory" />
+      </when>
+      <otherwise>
+        <logger message="Found file #[attributes.path] which content is #[payload]" />
+      </otherwise>
+    </choice>
+  </foreach>
+</flow>
+----
+
+== Matching
+Another common scenario, when listing files, is the need to filter files that match certain criteria.
+
+For that, a `<file:matcher>` element exists. This element defines the possible criteria that can be used to either accept or reject a file. This is how you can define the matcher:
+
+[source, xml, linenums]
+----
+<file:matcher
+  filename-pattern="a?*.{htm,html,pdf}"
+  path-pattern="a?*.{htm,html,pdf}"
+  createdSince="2015-06-03T13:21:58+00:00"
+  createdUntil="2015-07-03T13:21:58+00:00"
+  updatedSince="2015-05-03T13:21:58+00:00"
+  updatedUntil="2015-06-03T13:21:58+00:00"
+  accessedSince="2015-06-03T13:21:58+00:00"
+  accessedUntil="2015-06-03T13:21:58+00:00"
+  directory="true|false"
+  regularFile="true|false"
+  symbolicLink="true|false"
+  minSize="0"
+  maxSize="1024" />
+----
+
+All of the attributes above are optional and are ignored if not provided. They are all related to each other under an `AND` operator.
+
+A good thing about the file matcher is that it can either be a reusable element as a named top-level element or it can also be used as an inner element proprietary to a particular component.
+
+Here are the two ways of using it:
+
+=== Example of top level, reusable matcher
+
+[source, xml, linenums]
+----
+<file:matcher name="smallFileMatcher" maxSize="100" />
+
+<flow name="smallFiles">
+  <file:list path="~/smallfiles" matcher="smallFileMatcher" />
+  ...
+</flow>
+----
+
+=== Example of inner, not reusable, matcher
+
+[source, xml, linenums]
+----
+<flow name="smallFiles">
+	<file:list path="~/smallfiles">
+        <file:matcher maxSize="100" />
+	</file:list>
+	...
+</flow>
+----
+
+For more details on the capabilities of the matcher, please read the link:file-documentation[techincal reference].
+
+== Streaming
+
+This operation leverages the new repeatable streams functionality introduced in Mule 4. It returns a list of messages, each one representing one of the found files. Each of those messages holds a stream to the found file, and that stream is repeatable by default.
+
+For more information, read about link:/mule-user-guide/v/4.0/streaming-about[how automatic streaming works in Mule 4].
+
+== See also
+
+link:/mule-user-guide/v/4.0/streaming-about[Streaming in Mule 4.0]

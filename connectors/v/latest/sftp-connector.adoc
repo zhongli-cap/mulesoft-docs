@@ -1,31 +1,86 @@
-= SFTP Connector
+= About the SFTP Connector
+:keywords: SFTP, connector, matcher, directory, listener
+:toc:
+:toc-title:
 
-link:/connectors/sftp-about-the-sftp-connector[About the SFTP Connector]
+The SFTP connector allows accessing files and folders on a SFTP server. Its main features include:
 
-link:/connectors/sftp-documentation[SFTP Connector Technical Reference]
+* The ability to read files or fully list directory contents on demand.
+* Support for common SFTP operations such as copying, moving, renaming, deleting, and creating directories.
+* Support for locking files
+* File matching functionality.
+* A design that is fully consistent with the File, FTP and FTPS connectors. The same set of operations are available on all four connectors and they behave _almost_ the same
 
-Connection Setup:
+[[connection_settings]]
+== Connecting to an SFTP server
 
-* link:/connectors/sftp-to-set-up-sftp[To Set Up an SFTP Configuration]
+As usual with Mule, connections are established through config elements:
 
-Operations:
+[source, xml, linenums]
+----
+<sftp:config name="ftp">
+  <sftp:connection username="anonymous" password="password" host="localhost" port="${ftpPort}" workingDir="${workingDir}"/>
+</sftp:config>
+----
+Othen than the host, port and credential parameters, the `workingDir` is probably the most important connection parameters. The `workingDir` is the path to a directory that is considered as the root of every relative path used with this connector. If the directory is not provided, it will default to the remote server’s default. Notice that this is exactly the same functionality as the new File Connector, except, of course, that the default value is different.
 
-* link:/connectors/ftp-to-list[Example: To List Files]
+== Dynamic connections
 
-* link:/connectors/ftp-to-write-a-file[Example: To Write and Read a File]
+Many integrations require connecting to different servers depending on a certain condition. Examples of this include:
 
-* link:/connectors/ftp-to-read-write-mapped-content[Example: To Write Mapped Content to a File]
+* Connecting to different invoice storage servers depending on the branch that emitted the invoice
+* Connecting to different servers depending on a given integration subject, like in a multi-tenant use case
 
-Concepts and Reference:
+To accommodate for these use cases, the config element support expressions, so that the connection parameters can evaluate these conditions and connect to the correct server.
 
-* link:/connectors/ftp-about-matchers[About Matchers]
+For example, consider the following example application:
 
-* link:/connectors/common-about-file-attributes[About File Attributes]
+[source, xml, linenums]
+----
+<sftp:config name="ftp"> // <1>
+  <sftp:connection host="#[payload.host]" username="#[payload.user]" password="#[payload.password]" />
+</sftp:config>
 
-* link:/connectors/common-connection-pooling[Connection Pooling Reference]
+<flow name="ftpMultitenant" >
+  <http:listener config-ref="HTTP_Listener_config" path="/multitenant"/> // <2>
+  <set-variable variableName="content" value="#[payload]" />
+  <file:read path="recipients.csv" outputMimeType="application/csv" /> // <3>
 
-* link:/connectors/ftp-xml-ref[XML Reference for the FTP and SFTP Connectors (Studio)]
+  <foreach> // <4>
+    <sftp:write path="demo.txt" config-ref="ftp"> // <5>
+      <sftp:content >#[content]</sftp:content>
+    </sftp:write>
+  </foreach>
 
-////
-* link:/connectors/common-to-perform-basic-file-operations[To Perform Basic File Operations]
-////
+  <set-payload value="Multicast OK"/>
+</flow>
+----
+
+
+This sample is a dynamic multicast application:
+
+<1> It starts by defining a SFTP config in which the host, username, and password are expressions.
+<2> Then it has a flow on which content is posted through HTTP
+<3> Then it uses the File connector to load a recipient’s file, which is a CSV file containing a random set of SFTP destinations with columns such as host, user, and port
+<4> Then we use a <foreach> to go over each of the lines in the CSV file
+<5> On each <foreach> iteration, each expression in the SFTP config will resolve to a different value, establishing different connections to each of the servers
+
+Notice that:
+
+* This example uses the new File connector to read a file in the middle of the flow
+The information posted through the `<http:listener>` component is written to each SFTP site multiple times. Because the component makes use of the link:/mule-user-guide/v/4.0/streaming-about[repeatable streams feature], you don’t have to worry about consuming the stream multiple times. You don’t even have to know streaming is taking place at all!
+
+[TIP]
+ Notice that `<foreach>` is automatically going through each line of the CSV file. In Mule 3, you would need to first transform the CSV file into a Java structure, but because Mule 4 is now Java agnostic, this works out-of-the-box!
+
+== Attributes
+
+When reading or listing files, users are often not only interested in the file's content, but in its metadata as well (e.g: File name, full path, size, timestamp, etc). The connector will use the Mule Message Attributes to access this information, while the Message Payload will always contain the file's content. For details on the Attributes structure, please read the link:sftp-documentation[techincal reference].
+
+== See Also
+* link:sftp-read[To read files]
+* link:sftp-write[To write files]
+* link:sftp-list[To list files]
+* link:sftp-on-new-file[To listen for new or modified files]
+* link:sftp-copy-move[To copy or move files]
+* link:sftp-documentation[File Connector Technical Reference]

@@ -60,6 +60,8 @@ A ConnectionProvider which provides instances of FileSystem from instances of Fi
 * <<rename>> {nbsp}
 * <<write>> {nbsp}
 
+==== Associated Sources
+* <<listener>> {nbsp}
 
 
 == Operations
@@ -91,9 +93,9 @@ Copies the file at the sourcePath into the targetPath. <p> If targetPath doesn't
 * <<config>> {nbsp}
 
 ==== Throws
+* FILE:CONNECTIVITY {nbsp}
 * FILE:ILLEGAL_PATH {nbsp}
 * FILE:FILE_ALREADY_EXISTS {nbsp}
-* FILE:CONNECTIVITY {nbsp}
 * FILE:RETRY_EXHAUSTED {nbsp}
 
 
@@ -120,11 +122,11 @@ Creates a new directory on directoryPath
 * <<config>> {nbsp}
 
 ==== Throws
+* FILE:CONNECTIVITY {nbsp}
 * FILE:ILLEGAL_PATH {nbsp}
 * FILE:FILE_ALREADY_EXISTS {nbsp}
-* FILE:CONNECTIVITY {nbsp}
-* FILE:ACCESS_DENIED {nbsp}
 * FILE:RETRY_EXHAUSTED {nbsp}
+* FILE:ACCESS_DENIED {nbsp}
 
 
 [[delete]]
@@ -150,10 +152,10 @@ Deletes the file pointed by path, provided that it's not locked
 * <<config>> {nbsp}
 
 ==== Throws
-* FILE:ILLEGAL_PATH {nbsp}
 * FILE:CONNECTIVITY {nbsp}
-* FILE:ACCESS_DENIED {nbsp}
+* FILE:ILLEGAL_PATH {nbsp}
 * FILE:RETRY_EXHAUSTED {nbsp}
+* FILE:ACCESS_DENIED {nbsp}
 
 
 [[list]]
@@ -188,10 +190,10 @@ Lists all the files in the directoryPath which match the given matcher. <p> If t
 * <<config>> {nbsp}
 
 ==== Throws
-* FILE:ILLEGAL_PATH {nbsp}
 * FILE:CONNECTIVITY {nbsp}
-* FILE:ACCESS_DENIED {nbsp}
+* FILE:ILLEGAL_PATH {nbsp}
 * FILE:RETRY_EXHAUSTED {nbsp}
+* FILE:ACCESS_DENIED {nbsp}
 
 
 [[move]]
@@ -221,9 +223,9 @@ Moves the file at the sourcePath into the targetPath. <p> If targetPath doesn't 
 * <<config>> {nbsp}
 
 ==== Throws
+* FILE:CONNECTIVITY {nbsp}
 * FILE:ILLEGAL_PATH {nbsp}
 * FILE:FILE_ALREADY_EXISTS {nbsp}
-* FILE:CONNECTIVITY {nbsp}
 * FILE:RETRY_EXHAUSTED {nbsp}
 
 
@@ -264,11 +266,11 @@ Obtains the content and metadata of a file at a given path. The operation itself
 * <<config>> {nbsp}
 
 ==== Throws
-* FILE:ILLEGAL_PATH {nbsp}
 * FILE:CONNECTIVITY {nbsp}
-* FILE:ACCESS_DENIED {nbsp}
-* FILE:RETRY_EXHAUSTED {nbsp}
 * FILE:FILE_LOCK {nbsp}
+* FILE:ILLEGAL_PATH {nbsp}
+* FILE:RETRY_EXHAUSTED {nbsp}
+* FILE:ACCESS_DENIED {nbsp}
 
 
 [[rename]]
@@ -296,11 +298,11 @@ Renames the file pointed by path to the name provided on the to parameter <p> to
 * <<config>> {nbsp}
 
 ==== Throws
+* FILE:CONNECTIVITY {nbsp}
 * FILE:ILLEGAL_PATH {nbsp}
 * FILE:FILE_ALREADY_EXISTS {nbsp}
-* FILE:CONNECTIVITY {nbsp}
-* FILE:ACCESS_DENIED {nbsp}
 * FILE:RETRY_EXHAUSTED {nbsp}
+* FILE:ACCESS_DENIED {nbsp}
 
 
 [[write]]
@@ -335,12 +337,62 @@ Writes the content into the file pointed by path. <p> If the directory on which 
 * <<config>> {nbsp}
 
 ==== Throws
-* FILE:ILLEGAL_PATH {nbsp}
 * FILE:ILLEGAL_CONTENT {nbsp}
-* FILE:FILE_ALREADY_EXISTS {nbsp}
 * FILE:CONNECTIVITY {nbsp}
-* FILE:ACCESS_DENIED {nbsp}
+* FILE:ILLEGAL_PATH {nbsp}
+* FILE:FILE_ALREADY_EXISTS {nbsp}
 * FILE:RETRY_EXHAUSTED {nbsp}
+* FILE:ACCESS_DENIED {nbsp}
+
+
+== Sources
+
+[[listener]]
+=== On New or Updated File
+`<file:listener>`
+
++++
+Polls a directory looking for files that have been created or updated. One message will be generated for each file that is found. <p> The key part of this functionality is how to determine that a file is actually new. There're three strategies for that: <ul> <li>Set the <i>autoDelete</i> parameter to <i>true</i>: This will delete each processed file after it has been processed, causing all files obtained in the next poll to be necessarily new</li> <li>Set <i>moveToDirectory</i> parameter: This will move each processed file to a different directory after it has been processed, achieving the same effect as <i>autoDelete</i> but without loosing the file</li> <li></li> <li>Use the <i>watermarkMode</i> parameter to only pick files that have been created/updated after the last poll was executed.</li> </ul> <p> A matcher can also be used for additional filtering of files.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Configuration | String | The name of the configuration to use. | | *x*{nbsp}
+| Directory a| String |  +++The directory on which polled files are contained+++ |  | {nbsp}
+| Recursive a| Boolean |  +++Whether or not to also files contained in sub directories.+++ |  +++true+++ | {nbsp}
+| Matcher a| <<matcher>> |  +++A matcher used to filter events on files which do not meet the matcher's criteria+++ |  | {nbsp}
+| Watermark Mode a| Enumeration, one of:
+
+** DISABLED
+** MODIFIED_TIMESTAMP
+** CREATED_TIMESTAMP |  +++Controls whether or not to do watermarking, and if so, if the watermark should consider the file's modification or creation timestamps+++ |  +++DISABLED+++ | {nbsp}
+| Output Mime Type a| String |  +++The mime type of the payload that this operation outputs.+++ |  | {nbsp}
+| Output Encoding a| String |  +++The encoding of the payload that this operation outputs.+++ |  | {nbsp}
+| Primary Node Only a| Boolean |  +++Whether this source should only be executed on the primary node when runnning in Cluster+++ |  | {nbsp}
+| Scheduling Strategy a| <<scheduling-strategy>> |  +++Configures the scheduler that triggers the polling+++ |  | *x*{nbsp}
+| Streaming Strategy a| * <<repeatable-in-memory-stream>>
+* <<repeatable-file-store-stream>>
+* <<non-repeatable-stream>> |  +++Configure if repeatable streams should be used and their behaviour+++ |  | {nbsp}
+| Redelivery Policy a| <<RedeliveryPolicy>> |  +++Defines a policy for processing the redelivery of the same message+++ |  | {nbsp}
+| Reconnection Strategy a| * <<reconnect>>
+* <<reconnect-forever>> |  +++A retry strategy in case of connectivity errors+++ |  | {nbsp}
+| Auto Delete a| Boolean |  +++Whether each file should be deleted after processing or not+++ |  +++false+++ | {nbsp}
+| Move To Directory a| String |  +++If provided, each processed file will be moved to a directory pointed by this path.+++ |  | {nbsp}
+| Rename To a| String |  +++This parameter works in tandem with moveToDirectory. Use this parameter to enter the name under which the file should be moved. Do not set this parameter if moveToDirectory hasn't been set as well.+++ |  | {nbsp}
+| Apply Post Action When Failed a| Boolean |  +++Whether any of the post actions (autoDelete and moveToDirectory) should also be applied in case the file failed to be processed. If set to false, no failed files will be moved nor deleted.+++ |  +++true+++ | {nbsp}
+|======================
+
+==== Output
+[cols=".^50%,.^50%"]
+|======================
+| *Type* a| Binary
+| *Attributes Type* a| <<FileAttributes>>
+|======================
+
+==== For Configurations.
+* <<config>> {nbsp}
 
 
 
@@ -393,35 +445,18 @@ Writes the content into the file pointed by path. <p> If the directory on which 
 ** DAYS | A time unit that qualifies the maxIdleTime attribute |  | 
 |======================
 
-[[LocalFileAttributes]]
-=== Local File Attributes
-
-[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
-|======================
-| Field | Type | Description | Default Value | Required
-| Creation Time a| DateTime |  |  | 
-| Directory a| Boolean |  |  | 
-| Last Access Time a| DateTime |  |  | 
-| Last Modified Time a| DateTime |  |  | 
-| Name a| String |  |  | 
-| Path a| String |  |  | 
-| Regular File a| Boolean |  |  | 
-| Size a| Number |  |  | 
-| Symbolic Link a| Boolean |  |  | 
-|======================
-
 [[matcher]]
 === Matcher
 
 [cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
 |======================
 | Field | Type | Description | Default Value | Required
-| Created Since a| DateTime |  |  | 
-| Created Until a| DateTime |  |  | 
-| Updated Since a| DateTime |  |  | 
-| Updated Until a| DateTime |  |  | 
-| Accessed Since a| DateTime |  |  | 
-| Accessed Until a| DateTime |  |  | 
+| Created Since a| DateTime | Files created before this date are rejected. |  | 
+| Created Until a| DateTime | Files created after this date are rejected |  | 
+| Updated Since a| DateTime | Files modified before this date are rejected |  | 
+| Updated Until a| DateTime | Files modified after this date are rejected |  | 
+| Accessed Since a| DateTime | Files which were last accessed before this date are rejected |  | 
+| Accessed Until a| DateTime | Files which were last accessed after this date are rejected |  | 
 | Filename Pattern a| String |  |  | 
 | Path Pattern a| String |  |  | 
 | Directories a| Enumeration, one of:
@@ -473,5 +508,35 @@ Writes the content into the file pointed by path. <p> If the directory on which 
 ** KB
 ** MB
 ** GB | The unit in which maxInMemorySize is expressed |  | 
+|======================
+
+[[RedeliveryPolicy]]
+=== Redelivery Policy
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|======================
+| Field | Type | Description | Default Value | Required
+| Max Redelivery Count a| Number | The maximum number of times a message can be redelivered and processed unsuccessfully before triggering process-failed-message |  | 
+| Use Secure Hash a| Boolean | Whether to use a secure hash algorithm to identify a redelivered message |  | 
+| Message Digest Algorithm a| String | The secure hashing algorithm to use. If not set, the default is SHA-256. |  | 
+| Id Expression a| String | Defines one or more expressions to use to determine when a message has been redelivered. This property may only be set if useSecureHash is false. |  | 
+| Object Store a| <<ObjectStore>> | The object store where the redelivery counter for each message is going to be stored. |  | 
+|======================
+
+[[LocalFileAttributes]]
+=== Local File Attributes
+
+[cols=".^20%,.^25%,.^30%,.^15%,.^10%", options="header"]
+|======================
+| Field | Type | Description | Default Value | Required
+| Creation Time a| DateTime |  |  | 
+| Directory a| Boolean |  |  | 
+| Last Access Time a| DateTime |  |  | 
+| Last Modified Time a| DateTime |  |  | 
+| Name a| String |  |  | 
+| Path a| String |  |  | 
+| Regular File a| Boolean |  |  | 
+| Size a| Number |  |  | 
+| Symbolic Link a| Boolean |  |  | 
 |======================
 
