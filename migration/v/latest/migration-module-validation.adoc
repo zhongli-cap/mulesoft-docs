@@ -51,13 +51,23 @@ In the same way that in Mule 3 you could execute validation in expressions, you 
 The difference is that in Mule 4, these validations are called within DataWeave expressions instead of MEL expressions.
 This is the list of supported functions in Mule 4 : `isEmail`, `matchesRegex`, `isTime`, `isNumber`, `isIp` and `isUrl`
 
-In the examples below we can see how we set the value to a variable named `isEmail` depending if a variable named `email` is
-in fact a valid email.
+In the examples below we can see how to execute different operations depending if the
+content on a variable named unknownVariable is: a valid email, a valid Url or neither of those.
 
 .Mule 3 example
 [source,xml,linenums]
 ----
-<set-variable variableName="isEmail" value="#[validator.validateEmail(flowVars.email)]" doc:name="Set isEmail Variable"/>
+<choice doc:name="Choice">
+  <when expression="#[validator.validateEmail(flowVars.unknownVariable)]">
+    <set-payload value="#[flowVars.unknownVariable + &quot; is a valid email.&quot;]" doc:name="Set Payload: Is a valid email"/>
+  </when>
+  <when expression="#[validator.validateUrl(flowVars.unknownVariable)]">
+    <set-payload value="#[flowVars.unknownVariable+ &quot; is a valid URL.&quot;]" doc:name="Set Payload: Is a valid URL"/>
+  </when>
+  <otherwise>
+    <set-payload value="#[flowVars.unknownVariable + &quot; is a not a valid email or a valid url.&quot;]" doc:name="Set Payload: Is not a valid email or valid URL"/>
+  </otherwise>
+</choice>
 ----
 
 Inside the MEL expression we used validator to access to the validation methods.
@@ -65,7 +75,17 @@ Inside the MEL expression we used validator to access to the validation methods.
 .Mule 4 example
 [source,xml,linenums]
 ----
-<set-variable variableName="isEmail" value="#[Validation::isEmail(vars.email)]" doc:name="Set isEmail Variable"/>
+<choice doc:name="Choice">
+  <when expression="#[Validation::isEmail(vars.unknownVariable)]" >
+    <set-payload value='#[vars.unknownVariable ++ " is a valid email."]' doc:name="Set Payload: Is a valid email" />
+  </when>
+  <when expression="#[Validation::isUrl(vars.unknownVariable)]" >
+    <set-payload value='#[vars.unknownVariable ++ " is a valid URL."]' doc:name="Set Payload: Is a valid URL" />
+  </when>
+  <otherwise >
+    <set-payload value='#[vars.unknownVariable ++ " is a not a valid email or a valid url."]' doc:name="Set Payload: Is not a valid email or valid URL" />
+  </otherwise>
+</choice>
 ----
 
 In the Validation module, there are functions declared to be called from within DataWeave expressions.
