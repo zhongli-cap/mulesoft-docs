@@ -685,6 +685,166 @@ Uri
 *  link:https://www.mulesoft.com/exchange#!/?filters=DataWeave&sortBy=rank[Anypoint Exchange (List of Projects that use DataWeave)]
 
 ////
+==
+Expressions can also be complex, meaning that they can be composed of other expressions. This can be achieved by either nesting expressions inside Arrays or Objects, or through the use of operators.
+In complex expressions, the result of one expression sets the context for the subsequent execution of other expressions. You just need to remember that each expression produces an Object, an Array, or a Variable. When you understand the structure of these data types are constructed from DataWeave expressions, you effectively understand how to use DataWeave.
+
+
+
+
+
+=== Simple Values
+
+Simple values can be of the following types:
+
+* link:/mule-user-guide/v/4.0/dataweave-types#string[*String*] : Double quoted ("Hello") or Single quoted ('Hello')
+* link:/mule-user-guide/v/4.0/dataweave-types#boolean[*Boolean*] : Literals true or false
+* link:/mule-user-guide/v/4.0/dataweave-types#number[*Number*] : Decimal and Integer values are supported (ex: 2.0)
+* link:/mule-user-guide/v/4.0/dataweave-types#dates[*Date*] : IS0-8601 enclosed by "|" (ex:|2003-10-01T23:57:59Z|)
+* link:/mule-user-guide/v/4.0/dataweave-types#regular-expressions[*Regex*] : Regex expression enclosed by "/" (ex:/(\d+)-(\d+)/)
+
+=== Arrays
+
+Arrays are represented as a sequence of value expressions.
+
+.Input
+[source, dataweave]
+--------------------------------------------------------------------
+[ 1, 2 + 2, 3 * 3, $x ]
+--------------------------------------------------------------------
+
+.Transform
+[source, dataweave, linenums]
+----
+%dw 2.0
+output application/json
+---
+[ "My", "three", "words" ]
+----
+
+See link:/mule-user-guide/v/4.0/dataweave-types#array[DataWeave types] for more details on arrays.
+
+=== Objects
+
+These are represented as a comma separated sequence of key: value pairs surrounded by curly brackets { }.
+
+.Transform
+[source, dataweave, linenums]
+---------------------------------------------------------------------
+%dw 2.0
+output application/xml
+---
+myoutput:{
+  name : "Jill",
+  payload : payload.id + 3
+  }
+---------------------------------------------------------------------
+
+.Output
+[source,xml,linenums]
+---------------------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<myoutput>
+  <name>Jill</name>
+  <payload>5</payload>
+</myoutput>
+---------------------------------------------------------------------
+
+Note that both the keys and the values may be *expressions*.
+
+See link:/mule-user-guide/v/4.0/dataweave-types#object[DataWeave types] for more details on objects.
+
+
+== Variables
+
+=== Constants
+
+In the DataWeave header, you define constants as directives, these can then be referenced as variables in any part of your transform body, just as you do with input variables.
+The following creates an XML document and inserts the constant value for Language "Español" in the output language element.
+
+
+
+=== Scoped Variables
+
+Variables declared in the Transform's header always have a global scope, to declare and initialize a variable with a limited scope, you can do so in any part of the transform's body.
+
+You can initialize these variables using literal expressions, variable reference expressions, or functional expressions. They may reference any other scoped variables or any of the input variables or constants in their initialization. The declaration and initialization can be prepended to any literal expression, but you must be aware that the literal they are prepended to delimits their scope. You cannot reference a variable outside its scope.
+
+To declare a variable in the DataWeave body, the following syntax is supported: *using (<variable-name> = <expression>)* and it must be written before defining the contents of the literal that it exists in.
+To reference an already initialized variable, you can just call it by the name you defined for it as with any other variable, or you can also write it in the form *$<variable-name>*.
+
+Consider the following examples:
+
+*Scoped to Simple Value*
+
+[source, dataweave, linenums]
+----
+%dw 2.0
+output application/json
+---
+using (x = 2) 3 + x # <1>
+----
+<1> Result is simply 5
+
+*Scoped to Array literal*
+
+[source, dataweave, linenums]
+----
+%dw 2.0
+output application/json
+---
+using (x = 2) [1, x, 3]
+----
+
+*Scoped to Object literal*
+
+[source, dataweave, linenums]
+----
+%dw 2.0
+output application/xml
+---
+{
+  person: using (user = "Greg", gender = "male") { # <1>
+    name: user, # <2>
+    gender: gender
+  }
+}
+----
+
+<1> Declaration and initialization.
+<2> *user* is a valid reference because it is within the object *person* for which it was declared.
+
+*Invalid Reference outside of Scope*
+
+[source, dataweave, linenums]
+----
+%dw 2.0
+output application/xml
+---
+entry: using (firstName = "Annie", lastName = "Point") {
+  person: using (user = firstName, gender = "male") {
+    name: user,
+    gender: gender
+  },
+  sn: lastName, # <1>
+  gen: gender # <2>
+}
+----
+
+<1> The reference *lastName* is valid because it is within scope.
+<2> The reference *gender* is invalid because gender was declared in the *person* object, and this reference exists outside the scope of that object.
+
+== Expressions
+
+DataWeave allows you to put logic in your script using expression values.
+All expressions in DataWeave return a value, these can be categorized into:
+
+* <<Operators>>
+* <<Selectors>>
+* <<Flow Control Expressions>>
+////
+
+////
 = DataWeave Types:
 == String
 == Boolean
@@ -709,3 +869,4 @@ Uri
 == Type
 
 ==TryResult
+////

@@ -1,25 +1,23 @@
 = Migrating the VM Transport
 
-The VM transport was completely rewritten. It evolved away from the Mule 3 transport model into an operation based connector. This enables many new capabilities:
+The VM transport was completely rewritten. It evolved away from the Mule 3 transport model into an operation-based connector. This enables many new capabilities:
 
-* The ability to consume messages from a queueon demand, unlike the old transport, which only provided a polling inbound endpoint.
-* Enhanced DataSense
+* The ability to consume messages from a queue on demand, unlike the old transport, which only provided a polling inbound endpoint.
+* Enhanced DataSense.
 
 [[whats_covered_here]]
 == What's Covered Here?
 
 * <<file_configs>>
-* <<file_config_refs>>
-* <<file_listener>>
-* <<file_writer>>
-
+* <<vm_listener>>
+* <<vm_outbound>>
 
 [[file_configs]]
 == Migrating VM Transport Configurations
 
-In Mule 3, all transport configurations are set under a top-level element called `<vm:connector />`. Each configuration could handle multiple queues, but with the limitation that all of them had to be either transient or persistent. Two separate transport configs were needed in order to combine transient and persistent
+In Mule 3, all transport configurations are set under a top-level element called `<vm:connector />`. Each configuration could handle multiple queues, but with the limitation that all of them had to be either transient or persistent. Two separate transport configs were needed in order to combine transient and persistent.
 
-.Mule 3 Example: Defining a persisent VM transport
+.Mule 3 Example: Defining a Persistent VM Transport
 [source,xml, linenums]
 ----
 <vm:connector name="persistentVmConnector" queueTimeout="1000">
@@ -29,7 +27,7 @@ In Mule 3, all transport configurations are set under a top-level element called
 </vm:connector>
 ----
 
-In Mule 4, each connector configuration defines the queues that is going to handle in advanced. Each of these queues can have their own settings allowing for clarity and flexibility. However, each config can ONLY access the queues it has defined. This is a restriction put in place to avoid publishing to a queue in which nobody is listening, which is a common mistake.
+In Mule 4, each connector configuration defines the queues that it is going to handle in advance. Each of these queues can have their own settings, allowing for clarity and flexibility. However, each config can ONLY access the queues it has defined. This is a restriction put in place to avoid publishing to a queue in which nobody is listening, which is a common mistake.
 
 .Mule 4 Example: Defining a VM connector config
 [source,xml, linenums]
@@ -43,11 +41,11 @@ In Mule 4, each connector configuration defines the queues that is going to hand
 ----
 
 [[vm_listener]]
-== Migrating an inbound endpoint
+== Migrating an Inbound Endpoint
 
-In Mule 3 a `<vm:inbound-endpoint>` message source was used to listen on a specific queue for messages. For each element in the queue, a new message was triggered.
+In Mule 3, a `<vm:inbound-endpoint>` message source was used to listen on a specific queue for messages. For each element in the queue, a new message was triggered.
 
-.Mule 3 Example: VM Inbound endpoint
+.Mule 3 Example: VM Inbound Endpoint
 [source,xml, linenums]
 ----
 <flow name="persistentVM">
@@ -59,7 +57,7 @@ In Mule 3 a `<vm:inbound-endpoint>` message source was used to listen on a speci
 </flow>
 ----
 
-This configuration defines a transactional inbound endpoint which listenes to a queue called `persistentQueue`. Also, the `exchange-pattern` parameter was used to determine if the flow was to send a response or not. If configured to `request-response`, the endpoint would response with whatever message was obtained at the end of the flow (more on this on the link:[vm_outbound] section.
+This configuration defines a transactional inbound endpoint which listens to a queue called `persistentQueue`. Also, the `exchange-pattern` parameter was used to determine if the flow was to send a response or not. If configured to `request-response`, the endpoint would response with whatever message was obtained at the end of the flow (more on this on the <<vm_outbound>> section).
 
 In Mule 4, the `<vm:listener>` message source is used instead:
 
@@ -74,22 +72,22 @@ In Mule 4, the `<vm:listener>` message source is used instead:
             </vm:content>
         </vm:response>
     </vm:listener>
-    
+
     ...
 </flow>
 ----
 
 Main differences are:
 
-* The listener points to a config and can only listen to a queue defined in that config
-* Now you can use the `<vm:response>` element to control the response. If not provided, the message payload that results at the end of the flow will be settings
+* The listener points to a config and can only listen to a queue defined in that config.
+* Now, you can use the `<vm:response>` element to control the response. If not provided, the message payload that results at the end of the flow will be settings.
 * You no longer need to use an `exchange-pattern` to control whether or not a response is sent. The connector automatically knows when to send it depending on the message being generated through the `<vm:publish>` or `<vm:publish-response>` operations.
 
-=== Listening for messages in order
+=== Listening for Messages In Order
 
-Another inbound endpoint use case was listening for messages in order. In Mule 3, this had to be configured at the connector level using the `numberOfConcurrentTransactedReceivers` parameters
+Another inbound endpoint use case was listening for messages in order. In Mule 3, this had to be configured at the connector level using the `numberOfConcurrentTransactedReceivers` parameters.
 
-.Mule 3 Example: Listening for messages in order
+.Mule 3 Example: Listening for Messages In Order
 [source,xml, linenums]
 ----
     <vm:connector name="vmConnector" numberOfConcurrentTransactedReceivers="1"/>
@@ -97,7 +95,7 @@ Another inbound endpoint use case was listening for messages in order. In Mule 3
 
 In Mule 4, you can now do it at the listener level:
 
-.Mule 4 Example: Listening for messages in order
+.Mule 4 Example: Listening for Messages In Order
 [source,xml, linenums]
 ----
 <flow name="synchronousQueue" maxConcurrency="1">
@@ -109,22 +107,22 @@ In Mule 4, you can now do it at the listener level:
 By setting both, the flow's `maxConcurrency` and the listener's `numberOfConsumers` to 1, you can process the messages in order.
 
 [[vm_outbound]]
-== Migrating an outbound endpoint
+== Migrating an Outbound Endpoint
 
-The Mule 3 transport uses the `<vm:outbound-endpoint>` component to publish a message into a queue: 
+The Mule 3 transport uses the `<vm:outbound-endpoint>` component to publish a message into a queue:
 
-.Mule 3 Example: Posting a message to a queue
+.Mule 3 Example: Posting a Message to a Queue
 [source,xml, linenums]
 ----
 <vm:outbound-endpoint path="sendAsync" exchange-pattern="one-way"/>
 <vm:outbound-endpoint path="sendAndWait" exchange-pattern="request-response"/>
 ----
 
-The `exchange-pattern` parameters plays a key role in the behaviour of the example above. If the pattern is `one-way`, then the message will be sent and the execution continues with the same message payload. If `request-response` is used, then the execution waits for a response coming from a flow with a `<vm:inbound-endpoint>` listening on the same queue, and the obtained response is then propagated to the next message processor.
+The `exchange-pattern` parameters play a key role in the behavior of the example above. If the pattern is `one-way`, then the message will be sent and the execution continues with the same message payload. If `request-response` is used, then the execution waits for a response coming from a flow with a `<vm:inbound-endpoint>` listening on the same queue, and the obtained response is then propagated to the next message processor.
 
 Mule 4 achieves this through two different operations:
 
-.Mule 4 Example: Posting a message to a queue
+.Mule 4 Example: Posting a Message to a Queue
 
 [source,xml, linenums]
 ----
@@ -137,9 +135,9 @@ Mule 4 achieves this through two different operations:
 </vm:publish-consume>
 ----
 
-Both operation are configured similarly and allow using DataWeave to build the content of the message being sent. However, while the `<vm:publish>` operation publishes the content and continues with the same message, the `<vm:publish-consume>` operation will wait for the response emited by the `<vm:listener>` of the referenced queue.
+Both operation are configured similarly and allow you to use DataWeave to build the content of the message being sent. However, while the `<vm:publish>` operation publishes the content and continues with the same message, the `<vm:publish-consume>` operation will wait for the response emitted by the `<vm:listener>` of the referenced queue.
 
-To use the VM connector, simply add it to your application using the Studio palette or add the following dependency in your `pom.xml` file:
+To use the VM connector, simply add it to your application using the Studio palette, or add the following dependency in your `pom.xml` file:
 
 [source,XML,linenums]
 ----
@@ -153,4 +151,4 @@ To use the VM connector, simply add it to your application using the Studio pale
 
 == See also
 
-* link:/connectors/file-about-the-file-connector[Mule 4 File Connector documentation]
+* link:/connectors/v/latest/file-about-the-file-connector[Mule 4 File Connector Documentation]
