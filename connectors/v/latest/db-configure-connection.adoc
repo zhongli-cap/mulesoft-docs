@@ -1,0 +1,140 @@
+= Configuring a Database connection
+:keywords: db, connector, Database, connection
+:toc:
+:toc-title:
+
+The database connector is capable of connecting to any database for which a JDBC driver is available. For simplicity, it includes a series of different connection types, aimed to make it easier to connect to the most popular Database vendors. 
++
+Let's see examples of how to connect to each one.
+
+== Connecting to MySQL
+
+[source,xml,linenums]
+----
+<db:config name= "dbConfig">
+  <db:mysql-connection host="0.0.0.0" port="3306" user="Max" password="POWERS" database="someSchema"/>
+</db:config>
+----
+
+== Connecting to Oracle
+
+[source,xml,linenums]
+----
+<db:config name="dbConfig">
+  <db:oracle-connection host="192.168.99.100" port="1521" instance="xe" user="system" password="oracle" />
+</db :config >
+----
+
+== Connecting to Derby
+
+[source,xml,linenums]
+----
+<db:config name= "dbConfig" >
+  <db:derby-connection url=" jdbc:derby:muleEmbeddedDB;create=true" />
+</db:config >
+----
+
+== Connecting to a generic Database
+
+The generic connection type is useful when:
+
+* Trying to connect to a Database for which we don't have a specific connection type
+* You want to connect to one of the supported Database vendors but using some custom options not included in the connection types
+
+All you have to do is supply the driver class name and the connection URL. The following example shows how to connect to an H2 Database:
+
+[source,xml,linenums]
+----
+<db:config name="dbConfig">
+    <db:generic-connection driverClassName="org.h2.Driver" url="jdbc:h2:file:/tmp/datasenseDB"/>
+</db:config>
+----
+
+== Connecting to a global DataSource
+
+When using the generic connection described above, the connector will use the provided information to generate a JDBC DataSource. There are use cases in which the user might want to create his own DataSource. To do this, theres a `data-source-connection` element which allows referencing a DataSource previously defined through the Spring module.
+
+First, create a Spring configuration file containing a bean such as this:
+
+[source,xml,linenums]
+----
+<bean id="jdbcDataSource" class="org.enhydra.jdbc.standard.StandardDataSource" destroy-method="shutdown">
+   <property name="driverName" value="org.apache.derby.jdbc.EmbeddedDriver"/>
+   <property name="url" value="jdbc:derby:muleEmbeddedDB;create=true"/>
+</bean>
+----
+
+The example above creates a custom enhydra DataSource connecting to a Derby database. Now, we can reference that Spring config file using the Spring module and use the DataSource in a connection:
+
+[source,xml,linenums]
+----
+<spring:config name="datasource" files="datasource-config.xml" />
+
+<db:config name="dbConfig">
+   <db:data-source-connection dataSourceRef="jdbcDataSource" />
+</db:config>
+----
+
+== Setting the JDBC Driver
+
+Now that we know how to configure the connections, it's time to supply the JDBC driver. Let's see how to do that for the case of the MySQL database. 
+
+[TIP]
+The steps are the same for any Database vendor, the only difference will using the proper Driver dependency instead of the one shown here.
+
+First, add the driver as a dependency in your project's `pom.xml` file:
+
+[source,xml,linenums]
+----
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <version>5.1.6</version>
+</dependency>
+----
+
+Because the driver is a dependency of your application, next step is to tell the Mule Runtime that this particular dependency should be exposed to the Database connector. This too is done through the `pom.xml`:
+
+[source,xml,linenums]
+----
+<build>
+    <plugins>
+        <!-- Only used to declare the shared libraries-->
+        <plugin>
+            <groupId>org.mule.tools.maven</groupId>
+            <artifactId>mule-maven-plugin</artifactId>
+            <version>1.0.0</version>
+            <configuration>
+                <sharedLibraries>
+                    <sharedLibrary>
+                        <groupId>mysql</groupId>
+                        <artifactId>mysql-connector-java</artifactId>
+                    </sharedLibrary>
+                </sharedLibraries>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
+----
+
+== Configuration Connection pools
+
+Establishing connections is costly in terms of connector and RDBMS network and processing overhead. The solution is to build a connection pool that provides a number of available connections. Pooling of database connections have special requirements. You use the database connector `<db:pooling-profile>` element instead of the standard Mule <pooling-profile> element.
+
+Here’s an example of how to use the `db:pooling-profile` element:
+
+[source,xml,linenums]
+----
+<db:config name="dbConfig">
+    <db:my-sql-connection database="mozart_test" host="${host}" password="${password}" port="${port}" user="${user}">
+        <db:pooling-profile acquireIncrement="1" maxPoolSize="5" maxWait="0" maxWaitUnit="SECONDS" minPoolSize="0" preparedStatementCacheSize="5"/>
+    </db:my-sql-connection>
+</db:config>
+----
+
+All connection configuration elements, except the global data source reference, accept the pooling profile. In JDBC, the pooling happens at the data source level itself. To do pooling, you have to configure the global data source. The software cannot add it on the fly. 
+
+[TIP]
+Notice that unlike other connectors such as FTP or SFTP, the `<db:pooling-profile>` element is used instead of the standard `<pooling-profile>`. This is because databases have special pooling attributes such as `preparedStatementCacheSize` which don't make sense on the generic element.
+
+For more details on parameters and capabilities of the connection types, please read link:database-documentation[the Database Connector Technical Reference]
