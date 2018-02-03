@@ -87,10 +87,6 @@ field lengths, and repetition counts as listed for each HL7 version.
 low-level data types are treated as simple strings, and 
 field lengths and repetition counts are not enforced.
 
-See the HL7 Schema List for details of the message structures
-schema definitions supplied with the connector. (Listed in
-the See Also section of this document.)
-
 You can customize the HL7 schema definitions to suit your data by 
 copying and editing the schema definitions directly or by using a 
 console tool to generate a simplified schema based on one or more 
@@ -116,13 +112,13 @@ pairs before any lists that are part of the same definition.
 
 === To Copy and Edit Schema Definitions
 
-HL7 schema definitions are distributed inside the hl7-schemas-hl7-4.0.0.jar, 
+HL7 schema definitions are distributed inside the edi-schemas-hl7-1.3.0.jar, 
 which is embedded inside the HL7 EDI Connector update site and can also 
 be found in the standard MuleSoft enterprise Maven repositories 
-(under group id com.mulesoft.connectors). You can copy a message structure schema 
+(under group id org.mule.edi). You can copy a message structure schema 
 from this JAR and edit it to match your specific needs. If you only need 
 to make changes at the segment level you can just copy the message structure 
-schema by itself; if you need to change segment definitions, you must also copy 
+schema; if you need to change segment definitions, you must also copy 
 the basedefs.esl schema of the same version, since that file contains 
 the segment, composite, and element definitions.
 
@@ -262,8 +258,8 @@ simplify your schema definitions by eliminating components which
 are not normally used in your messages.
 
 The schema simplification tool is distributed as the 
-hl7-simplify-4.0.0.jar, which is found in the standard 
-MuleSoft Enterprise Maven repositories (under group id com.mulesoft.connectors).
+edi-schemas-hl7-1.3.0-simplify.jar, which is found in the standard 
+MuleSoft enterprise Maven repositories (under group id org.mule.edi). 
 It takes a message structure schema and one or more example messages 
 (as separate files) as input, and generates an output schema reduced 
 down to only those segments and components present in one or more of 
@@ -273,7 +269,7 @@ To use this tool, download the JAR and open a command line console, then type:
 
 [source,bash]
 ----
-java -jar hl7-simplify-4.0.0.jar {input-schema} {output-schema} {sample1} {sample2} ...
+java -jar edi-schemas-hl7-1.3.0-simplify.jar {input-schema} {output-schema} {sample1} {sample2} ...
 ----
 
 Where:
@@ -392,8 +388,8 @@ same as for the original component in this case, but it does not display
 in the DataSense view of the data you see in DataWeave.
 
 When the schema simplification tool checks which data is present in the 
-messages, it handles each occurrence of a composite in context. Different  
-usages of the same composite may have different values present in your samples. When this 
+messages, it handles each occurrence of a composite in context, so different 
+usages of the same composite may have different values present. When this 
 happens the composite is defined more than once, with different identifiers. 
 The CE composite in the above example shows this.
 
@@ -430,20 +426,19 @@ If you configure the connector with multiple message structure schemas
 or in a single file) you may need to define a mapping from the HL7 event 
 and message types to message structures.
 
-HL7 defines the Message Type in the component values of MSH-09a composite 
-structure of type `MSG`. The HL7 EDI Connector uses these component values 
-to find the structure schema to be used for processing a receive message, 
-according to the following rules:
+HL7 defines the Message Type in the component values of MSH-09. The HL7 
+EDI Connector uses these component values to find the structure schema 
+to be used for processing a receive message, according to the following rules:
 
-* If the MSG-01 Message Code value is ACK, always use the predefined ACK schema.
-* Otherwise, if the MSG-03 Message Structure value is present (a value such 
+* If the MSH-09-01 Message Type value is ACK, always use the predefined ACK schema.
+* Otherwise, if the MSH-09-03 Message Structure value is present (a value such 
 as XYZ_A01), use the schema structure with that ID.
 * Otherwise, use a configured Event and Message to Message Structure Map to determine 
-the message structure from the specified Trigger Event (MSG-02) and Message Code (MSG-01) values.
+the message structure from the specified Event Type (MSH-09-02) and Message Type (MSH-09-01) values.
 
 The Event and Message to Message Structure Map is an optional configuration parameter. 
 It must be a YAML file consisting of a map from each Event Type to a map for each 
-supported Message Code to the actual Message Structure. Here's a sample of what this looks like:
+supported Message Type to the actual Message Structure. Here's a sample of what this looks like:
 
 [source,yaml, linenums]
 ----
@@ -458,7 +453,7 @@ A08: { XYZ: XYZ_A01, ACK: ACK }
 ----
 
 Each version of HL7 defines a different set of mappings from the event type and 
-message code to the message structure. The default mappings are provided in the 
+message type to the message structure. The default mappings are provided in the 
 same JAR as the standard HL7 schema definitions, in files named event-message.yaml. 
 You use the same type of paths for these mapping definitions as for the actual message structure schemas.
 
@@ -505,9 +500,9 @@ Self identification settings:
 +
 [source,code,linenums]
 ----
-Mule Application Namespace ID (MSH-03/HD-01 when sending, MSH-05/HD-01 when receiving)
-Mule Application Universal ID (MSH-03/HD-02 when sending, MSH-05/HD-02 when receiving)
-Mule Application Universal ID Type (MSH-03/HD-03 when sending, MSH-05/HD-03 when receiving)
+Mule Application Namespace ID (MSH-3-1/MSH-5-1)
+Mule Application Universal ID (MSH-3-2/MSH-5-2)
+Mule Application Universal ID Type (MSH-3-3/MSH-5-3)
 ----
 +
 * Partner identification parameters identify your trading partner. 
@@ -516,9 +511,9 @@ Partner identification settings:
 +
 [source,code,linenums]
 ----
-Partner Application Namespace ID (MSH-03/HD-01 when receiving, MSH-05/HD-01 when sending)
-Partner Application Universal ID (MSH-03/HD-02 when receiving, MSH-05/HD-02 when sending)
-Partner Application Universal ID Type (MSH-03/HD-03 when receiving, MSH-05/HD-03 when sending)
+Partner Application Namespace ID (MSH-3-1/MSH-5-1}
+Partner Application Universal ID (MSH-3-2/MSH-5-2}
+Partner Application Universal ID Type (MSH-3-3/MSH-5-3)
 ----
 
 === To Set Parser Options
@@ -542,7 +537,7 @@ You can set the following options if needed:
 
 The following flow can be loaded from the XML that follows.
 
-image:hl7-connector-flow-in-studio.png[Example flow in Studio]
+image:hl7-connector-flow-in-studio[Example flow in Studio]
 
 [source,xml,linenums]
 ----
@@ -641,7 +636,7 @@ You can set the following options if needed:
 
 === To Set Your Schema Locations
 
-You can configure schema locations in the Anypoint Studio XML view.
+You can only configure schema locations in the Anypoint Studio XML view.
 
 In Anypoint Studio, switch to the XML view by clicking Configuration XML and modify your HL7 EDI configuration to include a list of all the schemas you wish to include by adding an `+<http://edischema[edi:schema]>+` element for each document type:
 
@@ -665,9 +660,9 @@ The HL7 message contains the following keys:
 [%header,cols="30a,70a"]
 |===
 |Key name |Description
-|ACK (read only) |ACK message generated in response to the input data. The MSA-01 acknowledgment code value is based on the parser configuration settings. To send an acknowledgment, see the Sending Acknowledgments section below.
+|ACK (read only) |ACK message generated in response to the input data. The MSA-1 acknowledgment code value is based on the parser configuration settings. To send an acknowledgment, see the Sending Acknowledgments section below.
 |Data (read or write) |Wrapper for message data, with a key matching the message structure ID value linking to the actual data. This allows different messages to be included in the metadata and handled in DataWeave mappings.
-|Delimiters (read or write) |The delimiters used for the message. The characters in the string are interpreted based on position, in the following order: (component separator), (repetition separator), (escape character), (subcomponent separator).
+|Delimiters (read only) |The delimiters used for the message. The characters in the string are interpreted based on position, in the following order: (component separator), (repetition separator), (escape character), (subcomponent separator).
 |Errors (read only) |A list of errors which are associated with the input message. See the HL7Error structure description in the Reading and Validating HL7 Messages section below.
 |Id |Message structure ID.
 |MSH (read only) |Link to received MSH segment data.
@@ -683,7 +678,7 @@ Extension segments with tags matching a pattern configured under parser options 
 
 The maps containing extension segment data are added to the basic message map in lists with the key `ExtensionSegs`. In addition to the actual extension segment data, the map for the extension segment contains two other keys:
 
-[cols="30a,70a"]
+[%header,cols="30a,70a"]
 |===
 |Ident |The extension segment identifier (tag).
 |Position |The position of the segment within the message structure, as a two digit string. This is the same as the position of the immediately preceding defined segment, as defined in the schema. If a ZVN extension segment is used following the EVN segment in an XYZ_A01 message structure, the ZVN is at position 03).
@@ -693,6 +688,7 @@ If extension segments are used in nested groups, the list containing those segme
 
 == See Also
 
+* link:/connectors/hl7-schemas[HL7 Supplied Schemas]
 * link:/release-notes/hl7-connector-release-notes[HL7 EDI Connector Release Notes]
 * link:/anypoint-b2b/edi-schema-language-reference[EDI Schema Language Reference].
 * https://forums.mulesoft.com[MuleSoft Forum].
