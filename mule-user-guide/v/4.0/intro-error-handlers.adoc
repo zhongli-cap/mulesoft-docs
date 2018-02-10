@@ -1,10 +1,15 @@
 // sme: Ana, author: sduke?
 = Introduction to Mule 4: Error Handlers
 
-In Mule 4, error handling is no longer limited to a Java exception handling process that requires you to check the source code or force the error to understand what happened. Though Java `Throwable` errors and exceptions are still available, Mule 4 introduces a formal Error concept that's easier to use. Now, each component declares the type of errors it can throw, so you can identify potential errors at design time.
+In Mule 4, error handling in handled by Mule error types. Though all the Java `Throwable` errors and exceptions are available, Mule 4 introduces a formal Error concept that's easier to use. Now, each component declares the type of errors it can throw, so you can easily identify the most common potential errors at design time.
+
+[NOTE]
+Compared to Mule 3 which had Excpetion handlers, in Mule 4 exception handling is no longer limited to a Java exception handling process that requires you to check the source code or force the error to understand what happened. 
+
+
 
 == Mule Errors
-Execution failures are represented with Mule errors that have the following components:
+Execution failures are represented by Mule errors with the following components:
 
 * A description of the problem
 * A type, used to characterize the problem
@@ -21,11 +26,13 @@ Error Message:  { "message" : "Could not authorize the user." }
 -----
 
 == Error Types
-In the example above, the error type is HTTP:UNAUTHORIZED, not simply UNAUTHORIZED. Error types consist of both a namespace and an identifier, allowing you to distinguish the types according to their domain (for example, HTTP:NOT_FOUND and FILE:NOT_FOUND). While connectors define their own namespace, core runtime errors have an implicit one: MULE:EXPRESSION and EXPRESSION are interpreted as one.
+In the example above, the error type is HTTP:UNAUTHORIZED, not simply UNAUTHORIZED. Error types consist of both a namespace and an identifier, allowing you to differentiate categories of error types according to different conceptual domains (for example, HTTP:NOT_FOUND and FILE:NOT_FOUND). While connectors define their own namespace, core runtime errors have an implicit one, so  MULE:EXPRESSION and EXPRESSION are interpreted as the same error type.
 
-Another important characteristic of error types is that they might have a parent type. For example, HTTP:UNAUTHORIZED has MULE:CLIENT_SECURITY as the parent, which, in turn, has MULE:SECURITY as the parent. This establishes error types as specifications of more global ones: an HTTP unauthorized error is a kind of client security error, which is a type of a more broad security issue.
+Another important characteristic of error types is that they are hierarchical. So a particular error type might have a parent, or might be extended to a more specific child error type. For example, HTTP:UNAUTHORIZED extends the parent MULE:CLIENT_SECURITY error type, which, in turn, extends the MULE:SECURITY error type. This establishes error types as specifications of more global ones. For example an HTTP unauthorized error is a type of client security error, where the client security error represents a more broad grouping of security issues.
 
-These hierarchies mean routing can be more general, since, for example, a handler for MULE:SECURITY will catch HTTP unauthorized errors as well as OAuth errors. Below you can see what the core runtime hierarchy looks like:
+These hierarchies allow routing to be more general, since, for example, a handler for MULE:SECURITY will catch HTTP unauthorized errors as well as OAuth errors. Like Java excpetion handling hierarchies, this gives developers the flexibility to decide at what granularity they want to handle errors. 
+
+Below you can see what the core runtime hierarchy looks like:
 
 image::error-hierarchy.png[Error Hierarchy]
 
@@ -76,8 +83,21 @@ image::error-handling-try.png[Try Scope]
 The error handler behaves as we have explained earlier. In the example above, any database connection errors are propagated, causing the `try` to fail and the flow’s error handler to execute. In this case, any other errors will be handled, and the Try scope will be considered successful which, in turn, means that the next processor in the flow, an HTTP request, will continue executing.
 
 == Error Mapping
-Mule 4 now also allows for mapping default errors to custom ones. The Try scope is useful, but if you have several equal components and want to distinguish the errors of each one, using a Try on them can clutter your app. Instead, you can add error mappings to each component, meaning that all or certain kind of errors streaming from the component will be mapped to another error of your choosing. If, for example, you are aggregating results from 2 APIs using an HTTP request component for each, you might want to distinguish between the errors of API 1 and API 2, since by default, their errors will be the same.
+Components that can throw various error types. Sometimes you might want to rename the standard error types to a type that is more specific to the context of your flows and applications. In this case you can map various error types to a new custom error type. 
 
-By mapping errors from the first request to a custom API_1 error and errors in the second request to API_2, you can route those errors to different handlers. The next example maps HTTP:INTERNAL_SERVER_ERROR  so that different handling policies can be applied if the APIs go down (propagating the error in the first API and handling it in the second API).
+Surrounding a particular component in Try scope is useful and lets you isolate the error handling logic, but if you have several equal components and want to distinguish the errors of each one, using a Try scope around each component can clutter your app. Instead, you can add custom error mappings to each component, meaning that all or certain kind of errors streaming from the component will be mapped to another error of your choosing. Then you can bundle these components together into a common Try scope, or you can let the flow's error handler process all possible errors in the flow. 
+
+For example, if you are aggregating results from 2 APIs using an HTTP request component for each, you might want to distinguish between the errors of API 1 and API 2, since by default, their errors will be the same, but handle all these errors in a common Try scope, or even in a global error handler. 
+
+By mapping errors from the first request to a custom API_1 error and errors in the second request to API_2, you can route those errors to different handlers, or filter the error types inside a common error handler. The next example maps HTTP:INTERNAL_SERVER_ERROR  so that different handling policies can be applied if the APIs go down (propagating the error in the first API and handling it in the second API).
 
 image::error-handling-mappings.png[Error Handling Mappings]
+
+Error mappings are available in the Error Mappings tab of a component. You can map one or more *source* error types (error types defined by  MuleSoft) to a new *target* error type. The target error type has a custom namespace and type. You can map several error types to the same custom error type, to combine error message types together. Here is an example of mapping two different HTTP Requestor error types to a custom error type named `APP:CUSTOM_ERROR`
+
+-----
+			<http:request method="GET" doc:name="Request" doc:id="93dd48fb-143f-4aa0-8b12-1aaeb7ddaaca" config-ref="HTTP_Request_configuration" path="/delta?wsdl">
+				<error-mapping sourceType="HTTP:CONNECTIVITY" targetType="APP:CUSTOM_ERROR" />
+				<error-mapping sourceType="HTTP:TOO_MANY_REQUESTS" targetType="APP:CUSTOM_ERROR" />
+			</http:request>
+ -----
