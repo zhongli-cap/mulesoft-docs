@@ -33,6 +33,306 @@ The selected Module is now part of your Mule Domain and it will show up in the M
 Modules inherited by a Mule domain show as such in the Mule Palette View. +
 You can't edit or delete Domain Modules from your Mule Application's palette .
 
+
+=To Add Custom Modules to Studio
+You can also code custom Mule modules, then add them to Studio and Mule projects. Mule modules are developed as Maven projects. 
+
+Here is an example pom.xml file for a custom Mule module project. 
+
+[source, xml, linenums]
+----
+<?org.mule.security.encryption.xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.mule.extensions</groupId>
+        <artifactId>mule-ee-core-modules-parent</artifactId>
+        <version>1.1.0-SNAPSHOT</version>
+    </parent>
+
+    <groupId>com.mulesoft.mule.modules</groupId>
+    <artifactId>mule-secure-configuration-property-module</artifactId>
+    <packaging>mule-extension</packaging>
+    <version>1.0.0-SNAPSHOT</version>
+
+    <name>Mule Secure Configuration Property Extension</name>
+    <description>Mule extension for loading encrypted properties</description>
+
+    <properties>
+        <formatterConfigPath>formatter.xml</formatterConfigPath>
+        <muleTestsComponentPlugin>4.1.0-SNAPSHOT</muleTestsComponentPlugin>
+    </properties>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>org.mule.runtime</groupId>
+            <artifactId>mule-core</artifactId>
+            <version>${mule.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-ext-jdk15on</artifactId>
+            <version>1.56</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mule.tests.plugin</groupId>
+            <artifactId>mule-tests-component-plugin</artifactId>
+            <version>${muleTestsComponentPlugin}</version>
+            <classifier>mule-plugin</classifier>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.gmaven</groupId>
+                <artifactId>groovy-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+        <repository>
+            <id>mule</id>
+            <name>Mule Repository</name>
+            <url>https://repository.mulesoft.org/nexus/content/repositories/public/</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>mulesoft-private</id>
+            <name>Mulesoft internal repository</name>
+            <url>https://repository.mulesoft.org/nexus/content/repositories/private/</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+</project>
+----
+
+The steps to install and use a custom Mule module are:
+
+. Install the Mule module into a Maven repository (local or online).
+. Identify maven information to use in Studio projects.
+. Add a dependency to the module in your Studio project.
+. Use the Mule module in Studio projects. 
+
+==Install the Mule module into a Maven repository (local or online)
+
+The steps to install a Mule module are:
+. Install Maven on your computer.
+. Configure the correct Maven settings.
+. Add Maven repositories to your Maven settings.
+. Install Mule modules into your local Maven repository.
+
+===Configure the Correct Maven Settings 
+
+First, verify you have permission to view the various online repositories that contain the dependencies for the Mule module project. 
+
+In a web browser, navigate to each repository URL listed in the `pom.xml` file. 
+
+For example, the `pom.xml` file above lists
+
+[source, xml, linenums]
+----
+        <repository>
+            <id>mule</id>
+            <name>Mule Repository</name>
+            <url>https://repository.mulesoft.org/nexus/content/repositories/public/</url>
+        </repository>
+----
+
+====Verify Maven Repository Authentication and Authorization
+Open a web browser and navigate to `https://repository.mulesoft.org/nexus/content/repositories/public`. Type in your username and password and verify you see a listing of folders. 
+
+====Add Maven Repositories to your Maven Settings
+
+After you verify your credentials for each online maven repository, navigate to your local MAVEN_HOME location (it's usually $HOME/.m2), and edit the `settings.xml` file. 
+
+Here is a sample settings.xml file (replace yourusername and yourpassword with the correct values for each repository you just tested): 
+
+[source, xml, linenums]
+----
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+        <usePluginRegistry />
+        <pluginGroups />
+        <servers>
+                <server>
+                        <id>MuleRepository</id>
+                        <username>yourusername</username>
+                        <password>yourpassword</password>
+                </server>
+                <server>
+                        <id>mulesoft-public</id>
+                        <username>yourusername</username>
+                        <password>yourpassword</password>
+                </server>
+
+        </servers>
+        <mirrors />
+        <proxies />
+        <profiles>
+                <profile>
+                        <id>Mule</id>
+                        <activation>
+                                <activeByDefault>true</activeByDefault>
+                        </activation>
+                        <repositories>
+                                <repository>
+                                        <id>MuleRepository</id>
+                                        <name>MuleRepository</name>
+                                        <url>https://repository.mulesoft.org/nexus-ee/content/repositories/releases-ee/</url>
+                                        <layout>default</layout>
+                                        <releases>
+                                                <enabled>true</enabled>
+                                        </releases>
+                                        <snapshots>
+                                                <enabled>true</enabled>
+                                        </snapshots>
+                                </repository>
+                                <repository>
+                                        <id>mulesoft-public</id>
+                                        <name>MuleSoft Public Repository</name>
+                                        <url>https://repository.mulesoft.org/nexus/content/repositories/public/</url>
+                                        <layout>default</layout>
+                                        <releases>
+                                                <enabled>true</enabled>
+                                        </releases>
+                                        <snapshots>
+                                                <enabled>true</enabled>
+                                        </snapshots>
+                                </repository>
+
+                        </repositories>
+                </profile>
+        </profiles>
+        <activeProfiles />
+</settings>
+----
+
+===Install Mule Modules to a Local Maven Repository
+To install the module into a local repository, navigate to the module project's home folder (the folder with the `pom.xml` file), then execute the commmand
+
+[source, shell, linenums]
+----
+mvn clean install
+----
+
+Maven will use the values in the `pom.xml` file to build the module into a JAR file, then install the module into your local Maven repository. 
+
+
+In the previous example, the key information you need to use this module is:
+
+[source, xml, linenums]
+----
+    <groupId>com.mulesoft.mule.modules</groupId>
+    <artifactId>mule-secure-configuration-property-module</artifactId>
+    <packaging>mule-extension</packaging>
+    <version>1.0.0-SNAPSHOT</version>
+----
+
+If everything goes fine, the result shoud be that the Mule module is installed into your local Maven repository with a folder structure corresponding to the groupId, artifactId, and version. 
+
+For example, using the previous example `pom.xml` file, the Mule module is installed in `$HOME/.m2/repository/com/mulesoft/mule/modules/mule-secure-configuration-property-module/`
+
+This folder has two folders:
+
+[source, shell, linenums]
+----
+1.0.0-SNAPSHOT
+1.0.0-SNAPSHOT-mule-plugin
+----
+
+Here is the contents of the folders:
+
+[source, shell, linenums]
+----
+~/github/mule-secure-configuration-property$ ls ~/.m2/repository/com/mulesoft/mule/modules/mule-secure-configuration-property-module/1.0.0-SNAPSHOT
+_remote.repositories
+maven-metadata-anypoint-exchange.xml
+maven-metadata-local.xml
+maven-metadata-mulesoft-private.xml
+mule-secure-configuration-property-module-1.0.0-20180214.190255-11-mule-plugin.jar
+mule-secure-configuration-property-module-1.0.0-20180214.190255-11.pom
+mule-secure-configuration-property-module-1.0.0-20180214.190255-11.pom.lastUpdated
+mule-secure-configuration-property-module-1.0.0-SNAPSHOT-extension-model-4.1.0.json
+mule-secure-configuration-property-module-1.0.0-SNAPSHOT-mule-plugin.jar
+mule-secure-configuration-property-module-1.0.0-SNAPSHOT.jar.lastUpdated
+mule-secure-configuration-property-module-1.0.0-SNAPSHOT.mule-extension
+mule-secure-configuration-property-module-1.0.0-SNAPSHOT.pom
+resolver-status.properties
+~/github/mule-secure-configuration-property$ ls ~/.m2/repository/com/mulesoft/mule/modules/mule-secure-configuration-property-module/1.0.0-SNAPSHOT-mule-plugin/
+_remote.repositories
+maven-metadata-local.xml
+mule-secure-configuration-property-module-1.0.0-SNAPSHOT-extension-model-4.1.0.json
+mule-secure-configuration-property-module-1.0.0-SNAPSHOT-mule-plugin.jar
+mule-secure-configuration-property-module-1.0.0-SNAPSHOT-mule-plugin.jar.lastUpdated
+mule-secure-configuration-property-module-1.0.0-SNAPSHOT-mule-plugin.pom.lastUpdated
+mule-secure-configuration-property-module-1.0.0-SNAPSHOT.jar.lastUpdated
+mule-secure-configuration-property-module-1.0.0-SNAPSHOT.mule-extension
+mule-secure-configuration-property-module-1.0.0-SNAPSHOT.pom
+~/github/mule-secure-configuration-property$ 
+
+----
+
+===Identify maven information to use in Studio projects
+
+In the previous example, the key information you need to use this module is located in the Mule module's `pom.xml` file:
+
+[source, xml, linenums]
+----
+    <groupId>com.mulesoft.mule.modules</groupId>
+    <artifactId>mule-secure-configuration-property-module</artifactId>
+    <packaging>mule-extension</packaging>
+    <version>1.0.0-SNAPSHOT</version>
+----
+
+Notice how this information was used to create the folder structure in the local Maven repository:
+``` ~/.m2/repository/com/mulesoft/mule/modules/mule-secure-configuration-property-module/1.0.0-SNAPSHOT```
+corresonds to
+```$MAVEN_REPOS_HOME/groupID_path/artifactId/version```
+so you may be able to infer the groupId, artifactId, and version by just looking at the folder path in local the Maven repository. 
+
+===Add Dependencies to Studio Projects which Use the Module
+The next step is to access the newly installed Mule modules in Studio projects. 
+
+In a studio project, edit the `pom.xml` file with the correct groupId, artifactId, and version. This information is in the Mule module's `pom.xml` file, but is also reflected in the folder structure in which the Mule module was installed. 
+
+In the previous example, you need to add this dependency to your Studio project's `pom.xml` file: 
+
+
+[source, xml, linenums]
+----
+		<dependency>
+			<groupId>com.mulesoft.mule.modules</groupId>
+			<artifactId>mule-secure-configuration-property-module</artifactId>
+			<version>1.0.0-SNAPSHOT</version>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+
+----
+Notice that the `<classifier>` element is set to mule-plugin. This will automatically install the mule-plugin into your Studio project's palette. 
+
+===Use the Mule Module in Studio Project
+
+After saving your changes to your Studio project's `pom.xml` file, you should see new components in the Studio palette. For example, in this module, there should be a Secure Properties module listed in the Mule Palette view. 
+
+In this example, a new Secure Properties Config element is available in the Global Elements editor, and the new xml namespace and xml tags are available in the XML configuration file editor. So in this example, the type-ahead feature in the XML editor assists you to define new elements such as:
+
+[source, xml, linenums]
+----
+	<secure-properties:config name="Secure_Properties_Config1" doc:name="Secure Properties Config" doc:id="79f91287-c9ab-4719-afc1-38779355b5c9" file="mysecure.properties" key="abcd1234abcd1234" >
+		<secure-properties:encrypt algorithm="Blowfish" mode="ECB" />
+	</secure-properties:config>
+----
+
+
+
+
+
 == See Also
 
 * link:/anypoint-studio/v/7.1/set-credentials-in-studio-to[To Set Credentials in Studio]
