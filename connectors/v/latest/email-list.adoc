@@ -1,0 +1,117 @@
+= To List Emails with the Email Connector
+
+The Mule 4 connector provides capability to list emails in any part of
+the flow, unlike the old Mule 3 transport which can only retrieve emails as a result
+of inbound endpoint polling.
+
+NOTE: Both POP3 and IMAP configurations contains a `list` operation, we will cover both
+together and explain the differences at the end. In the examples we will use *list-pop3*
+or *list-imap*, but all the described sections will apply for both configurations unless it
+explicitly says the opposite
+
+The basic syntax to list the emails in a mailbox is:
+
+[source, xml, linenums]
+----
+<email:list-pop3 config-ref="pop3-config" mailboxFolder="INBOX"/>
+----
+
+This simple example returns all the emails in the configured POP3 mailbox server that
+lives in the INBOX folder.
+
+=== Getting the email's data
+
+As explained before incoming emails carry metadata about them (subject, received date, etc) in
+the message attributes meanwhile the payload carries the email body content and Attachments
+which can be easily accessed. Let's see another quick example:
+
+[source, xml, linenums]
+----
+<flow name="retrieveWithAttachments">
+    <email:list-imap config-ref="imap-config"/>
+    // foreach to work with single emails in the payload
+    <foreach>
+        <set-variable variableName="email-content" value="payload.body" />
+        <set-variable variableName="json-attachment" value="payload.attachments.json" />
+    </foreach>
+</flow>
+----
+
+When working with a single email in the payload we can just do `payload.body` to access the
+email content, in the example we set this to a variable called `email-content`. For accessing
+to the attachments we can do `payload.attachments.{nameOfTheAttachment}`, in the example we get
+an attachment called `json` and set it to a new variable called `json-attachment`.
+
+== Matching
+
+When listing emails it exist the need to filter those that match certain criteria.
+
+For that, the `<email:pop3-matcher>` and `<email:imap-matcher>` elements exists.
+This elements defines the possible criteria that can be used to either process an email or not.
+
+This is an example of an IMAP matcher that will reject emails with subjects that doesn't match
+the `[0-9]` regex and hasn't been seen.
+
+[source, xml, linenums]
+----
+<email:list-imap config-ref="config">
+    <email:imap-matcher subjectRegex="[0-9]" seen="EXCLUDE"/>
+</email:list-imap>
+----
+
+All matcher attributes are optional and are ignored if not provided and they are
+all related to each other under an AND operator.
+
+In the above example we declared an inner, not reusable, matcher proprietary to a particular component,
+but matchers can be declared as a reusable element (as a named top-level element).
+For example this `pop3-matcher`:
+
+[source, xml, linenums]
+----
+<email:pop3-matcher name="pop3Matcher"
+                    subjectRegex="Email Subject"
+                    fromRegex="@mulesoft"/>
+
+<flow name="listEmails">
+  ...
+  <file:list pop3-matcher="pop3Matcher" />
+  ...
+</flow>
+----
+
+=== IMAP Matcher vs POP3 Matcher
+
+The IMAP protocol provides more metadata about the email that lets you
+perform more precise filters.
+
+while the POP3 matcher contains all this parameters:
+
+[source, xml, linenums]
+----
+<email:pop3-matcher
+  receivedSince="2015-06-03T13:21:58+00:00"
+  receivedUntil="2015-07-03T13:21:58+00:00"
+  sentSince="2015-05-03T13:21:58+00:00"
+  sentUntil="2015-06-03T13:21:58+00:00"
+  subjectRegex="BETA:"
+  fromRegex="@mulesoft"/>
+----
+
+the IMAP matcher looks like this:
+
+[source, xml, linenums]
+----
+<email:imap-matcher
+  receivedSince="2015-06-03T13:21:58+00:00"
+  receivedUntil="2015-07-03T13:21:58+00:00"
+  sentSince="2015-05-03T13:21:58+00:00"
+  sentUntil="2015-06-03T13:21:58+00:00"
+  subjectRegex="BETA:"
+  fromRegex="@mulesoft"
+  recent="EXCLUDE|INCLUDE|REQUIRE"
+  seen="EXCLUDE|INCLUDE|REQUIRE"
+  deleted="EXCLUDE|INCLUDE|REQUIRE"
+  answered="EXCLUDE|INCLUDE|REQUIRE"/>
+----
+
+Adding the recent, seen, deleted and answered flag parameters.
