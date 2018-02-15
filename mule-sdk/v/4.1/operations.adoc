@@ -1,0 +1,285 @@
+= Operations
+:keywords: mule, sdk, operation, processor, result, execution, void, payload,
+
+Operations are one of the most important concepts inside Mule's world.
+They represent the actions our module can perform inside a flow. We use them to process incoming messages by performing the bussiness logic implemented in the module.
+
+== Declaring operations for a Config
+
+Operations must be declared inside a separate class. Please head to the <<module-structure#, Structure>> documentation to learn how to correctly organize your module's code.
+
+TIP: A class is either a Config class or an Operations class, you cannot have both things mixed together in the same class!
+
+[source, java, linenums]
+----
+@Extension(name = "Foo")
+@Operations(FooOperations.class)
+public class FooModule {
+
+    @Parameter
+    private String fooModuleParameter;
+
+    public String getFooModuleParameter() {
+        return fooModuleParameter;
+    }
+}
+----
+
+All the public methods defined in `FooOperations` are going to be considered as our operations. Moreover, if you
+want to have a public method inside your operation class but you don't want it to be consider as an operation, you
+just need to annotate that method with `@Ignore`.
+
+Like this:
+
+[source, java, linenums]
+----
+public class FooOperations {
+
+    public String foo(@Config FooModule config) {
+        return config.getFooModuleParameter();
+    }
+
+    private String thisIsNotAnOperation() {
+        return "bar";
+    }
+
+    @Ignore
+    public String thisIsNotAnOperationEither() {
+        return "foobar";
+    }
+}
+----
+
+In the example above, we bound our operation class to the only config we have (which is the same as our extension class).
+That means that those operations (the ones defined in `FooOperations`) are only available to be used with a
+certain type of configuration (`FooModule` in this case).
+
+TIP: Remember that we can use our extension as a config if and only if is the only configuration we have.
+
+So, we defined an operation named `foo` and because *it belongs to the configuration* `FooModule`, thus it can
+receive the configuration class as an argument annotated with the annotation `@Config`.
+
+You cannot annotate the argument annotated as `@Config` with the annotations you use for any <<parameters#, Parameter>> because the config is not a parameter at all!
+
+== Global operations
+
+Besides adding operations that are exclusive to a particular config, we can also add operations at extension level,
+in other words, operations that are global to the module.
+
+Operations at extension level are config-less (except for the case in which your extension class is your only config),
+which means that they are not bound to a config at all. To define operations at extension level you just need to
+annotate the extension class with your `@Operations` while having configurations defined rather than using the
+extension class as your only config.
+
+Take into account that this only makes sense if you have more than just one config. That's because if we only have the extension class (our only config),
+then all the operations we define are bound to it.
+
+So, let's first add two different configs and define operations for each one of them, and then add some operations
+that are global to the module.
+
+[source, java, linenums]
+----
+@Extension(name = "Foo")
+@Operations(GlobalOperations.class)
+@Configurations({FooConfig.class, BarConfig.class})
+public class FooModule {
+}
+----
+
+[source, java, linenums]
+----
+public class GlobalOperations {
+    public String fooModuleOperation() {
+        return "this operation is global to the module!";
+    }
+}
+----
+
+So far, we defined a module with two configurations named `FooConfig` and `BarConfig`, and a set of
+operations defined in `GlobalOperations`.
+
+Let's take a look at the configs and their operations:
+
+[source, java, linenums]
+----
+@Operations({FooConfigOperations.class})
+public class FooConfig {
+
+    @Parameter
+    private String fooParameter;
+
+    public String getFooParameter() {
+        return fooParameter;
+    }
+}
+----
+
+[source, java, linenums]
+----
+public class FooConfigOperations {
+    public String fooConfigOperation(@Config FooConfig config) {
+        return "this operation receives the FooConfig which has a fooParameter with value: " + config.getFooParameter();
+    }
+}
+----
+
+We defined a new configuration named `FooConfig` with some exclusive operations defined in `FooConfigOperations`.
+Then, we defined an operation named `fooConfigOperation` and because it belongs to our configuration `FooConfig` can
+receive the configuration class as an argument annotated with the special annotation `@Config`.
+
+[source, java, linenums]
+----
+@Operations({BarConfigOperations.class})
+public class BarConfig {
+
+    @Parameter
+    private String barParameter;
+
+    public String getBarParameter() {
+        return barParameter;
+    }
+}
+----
+
+[source, java, linenums]
+----
+public class BarConfigOperations {
+    public String barConfigOperation(@Config BarConfig config){
+        return "this operation receives the BarConfig which has a barParameter with value: " + config.getBarParameter();
+    }
+}
+----
+
+Defining an operation at extension level (what we just did in with the `GlobalOperations` methods) represents that the operations
+there defined don't receive (and therefore don't need) any configuration to operate.
+
+For more information about configurations, please refer to the <<configs#, Configs>> section.
+
+[[_using_connections]]
+== Connected operations
+
+We saw how to receive a configuration as an argument but there is another _special_ argument we can receive which is the connection.
+In order to do that, we need to define a <<connections#, Connection Provider>> for the configuration to which this operation belongs.
+
+So, let's add a connection to our previous example.
+
+Suppose that we defined a `FooConnectionProvider` elsewhere which provides us connections of type `FooConnection`.
+To check how a Connection Provider should be defined please head to this section <<connections#, Connection Provider>>.
+
+[source, java, linenums]
+----
+@Operations({FooConfigOperations.class})
+@ConnectionProviders(FooConnectionProvider.class)
+public class FooConfig {
+
+    @Parameter
+    private String fooParameter;
+
+    public String getFooParameter() {
+        return fooParameter;
+    }
+}
+----
+
+[source, java, linenums]
+----
+public class FooConfigOperations {
+    public String fooConfigOperation(@Config FooConfig config){
+        return "this operation receives the FooConfig!";
+    }
+
+    public String fooConnectedOperation(@Connection FooConnection connection){
+        return "this operation receives FooConnection!";
+    }
+
+    public String fooConnectedOperation(@Config FooConfig config, @Connection FooConnection connection){
+        return "this operation receives both config and connection!";
+    }
+}
+----
+
+We have three different operations:
+
+* One that receives the config `FooConfig`
+* One that receives the connection `FooConnection`
+* And one that not only receives the config `FooConfig` but it also gets a connection of type `FooConnection`
+provided by the `FooConnectionProvider` provider class.
+
+== Operation structure
+
+An operation is defined from a Java method, which makes the mapping among the method's argument and the operation parameters quite straightforward.
+Following the same logic, the operation's output type is taken from the method's return type.
+
+=== Output
+
+Let's talk about what can be the output of an operation and how it affects what we happens in the flow when we invoke it.
+
+==== Payload
+
+The common behaviour is to define an operation which returns any type that will be set in the operation output message's payload.
+
+[source, java, linenums]
+----
+
+public String outputStringPayload(){
+    return "this string is going directly into the payload!";
+}
+----
+
+[TIP] If an operation specifies *only* a payload, then the message attributes will be set to `null`.
+
+==== Void
+
+As you can imagine, a void operation is just a an operation that was created from a method that returns `void`.
+This operation will not modify the message received and will pass that message to the next component present in the flow.
+
+This can be seen more clearly in a simple example:
+
+[source, xml, linenums]
+----
+<flow>
+    <set-payload value="Hello" />
+    <foo:output-string-payload/>
+    <foo:other-operation />
+</flow>
+----
+
+Here, the message received in `void-operation` is the same as the one received in `other-operation`.
+
+==== Result
+
+If you want to output something more than a simple payload, let's say you want to provide
+some information about the payload itself (or as we call them in the Mule's world *attributes*),
+then you need to use a `Result` as the your method's return type.
+
+Check <<result-object#, Result>> for more information.
+
+=== Special arguments
+
+So you can receive the a configuration and a connection in an operation. Are there other special arguments other tan regular parameters? Sure!
+
+Here is a short list about the special things you can receive as an argument in an operation
+and Mule will automatically inject the right value there for you:
+
+* AuthenticationHandler: An argument of type `AuthenticationHandler`  that allows you to configure the current context's authentication, used for encryption and inbound authentication.
+* StreamingHelper: An argument of type `StreamingHelper` with utilities for working with streams. See <<streaming#, Streaming>> for more information.
+* DefaultEncoding: An argument of type `String` annotated with `@DefaultEncoding` with information about the Runtime's default encoding.
+
+[source, java, linenums]
+----
+public String foo(@DefaultEncoding String encoding) {
+    return "Mule default encoding is " + encoding;
+}
+----
+
+== Aliasing an operation
+
+You can change the name of an operation without having to change the name of the method by using `@Alias`. And we can also alias the
+operation's parameters as it's explained in the <<parameters#, Parameters>> document reference.
+
+[source, java, linenums]
+----
+@Alias("fooOperation")
+public void thisWillNotBeTheOperationName(@Alias("fooParameter") String aliasedParameter) {
+}
+----
