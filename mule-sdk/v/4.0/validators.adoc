@@ -1,0 +1,138 @@
+= Validators with Mule SDK
+:keywords: validation, validators, mule, sdk
+
+==  What is a Validator?
+
+Validators are operations that are used to perform a validation to the Mule Message. These
+validators make no change to the Mule Message. There are two outcomes when placing a validator
+on a flow:
+
+  - If the condition the validator imposes is fulfilled, the flow continues and the Mule Message
+  remains unchanged.
+
+  - If the condition the validator imposes is not fulfilled, an error will be thrown.
+
+== What are the requirements for a validator?
+
+For an operation to be considered a Validator, it should comply with this requirements:
+
+  - It should be reached by the `@Validator` annotation. This can either be assigned at the
+  class level or at method level. By using the `@Validator` annotation at a class level,
+  all public methods will be marked as Validators.
+
+  - It should return void
+
+  - It should throw at least one error that is or extends from `MULE:VALIDATION`. Upon
+   validation failure, validators must throw a Mule validation error or a child of one.
+
+The `@Validator` annotation makes the methods be of the Stereotype `ValidatorStereotype`, since
+components cannot have two stereotypes, you cannot assign another stereotype to them.
+
+These Validators share the same UX as Operations, once your module is added for usage in Studio, the
+validators will appear on the palette. When adding a validator to a flow, it's parameters will be assigned
+just like if it was an operation.
+
+== How to make a Validator
+
+Now, let's see a brief example of how to make a simple validator. To show this we will create a
+simple extension named `balance`:
+
+[source,java,linenums]
+----
+@Operations({BalanceOperations.class})
+@Extension(name = "balance")
+@ErrorTypes(BalanceError.class)
+public class BalanceExtension {
+
+}
+----
+
+In the `BalanceOperations` class we add our validation method and we annotate it with `@Validator`. The
+method needs to throw an error type which comes from the generic validation error type. Notice that we
+could also annotate  the class `BalanceOperations` with `@Validator` but if there were any other operations
+on it, those would also be flagged as Validators.
+
+[source,java,linenums]
+----
+public class BalanceOperations {
+  @Validator
+  @Throws(BalanceErrorsProvider.class)
+  public void hasSufficientFunds(Integer balance, Integer price) throws Exception {
+    if (price > balance){
+      throw new ModuleException(BalanceError.INSUFFICIENT_FUNDS, new IllegalArgumentException("There is not enough money to make the transaction"));
+    }
+  }
+}
+----
+
+Here we create the error that will be thrown if the validation fails. See that it has a
+name according to the validations failure.
+
+[source,java,linenums]
+----
+public enum BalanceError implements ErrorTypeDefinition<BalanceError> {
+  INSUFFICIENT_FUNDS(MuleErrors.VALIDATION);
+
+  private ErrorTypeDefinition<? extends Enum<?>> parent;
+
+  BalanceError(ErrorTypeDefinition<? extends Enum<?>> parent) {
+    this.parent = parent;
+  }
+
+  @Override
+  public Optional<ErrorTypeDefinition<? extends Enum<?>>> getParent() {
+    return Optional.ofNullable(parent);
+  }
+}
+----
+
+The Validator method needs an `ErrorTypeProvider` that knows all the error types
+the validation can throw, in this case we create an `ErrorTypeProvider` that says that the
+only error the method can throw is of type *BALANCE:INSUFFICIENT_FUNDS*
+
+[source,java,linenums]
+----
+public class BalanceErrorsProvider implements ErrorTypeProvider {
+  @Override
+  public Set<ErrorTypeDefinition> getErrorTypes() {
+    HashSet<ErrorTypeDefinition> errors = new HashSet<>();
+    errors.add(BalanceError.INSUFFICIENT_FUNDS);
+    return errors;
+  }
+}
+----
+
+== How to use Validators
+
+Let's say that we want to use the validator that we created before on a flow. The sintax
+will be the same as if it was an operation. As `balance` and `price` are required parameters
+we must assign those. In this case the validation is made with the values in the variables
+`price` and `balance` but we could have used any expression there:
+
+[source,xml,linenums]
+----
+<balance:has-sufficient-funds balance="#[vars.balance]" price="#[vars.price]"/>
+----
+
+== Validators and the "all" scope
+
+As Validators are of the Stereotype `ValidatorStereotype`, they can be used in the `all` scope from the
+Validation Module. Let's see an example of how to do this:
+
+For this example we will use a Validatior from the Validation module and also suppose that there is
+ a number extension which has a Validator named isPositive that validates whether a
+value is in fact positive.
+
+[source,xml,linenums]
+----
+<validation:all>
+  <validation:is-not-blank-string value="#[vars.buyerName]"/>
+  <number:is-positive value="#[vars.price]"/>
+  <number:is-positive value="#[vars.balance]"/>
+  <balance:has-sufficient-funds balance="#[vars.balance]" price="#[vars.price]"/>
+</validation:all>
+----
+
+In this example we check that there is a variable `buyerName` that is not an empty string, after
+that we ensure that both variables, `price` and `balance`, have positive values. Finally we check whether
+there is enough balance on the account with the validator that we made.
