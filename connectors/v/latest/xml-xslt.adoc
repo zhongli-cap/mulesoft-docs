@@ -1,0 +1,165 @@
+= XSLT transformations with the XML Module
+:keywords: XML, xpath, xslt
+
+The `<xml-module:xslt-transform>` element allows to take an input XML document and transform it using and XSL sheet. 
+
+As an example, consider the following input document:
+
+[source, xml, linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<cities>
+    <city name="milan"  country="italy"   pop="5"/>
+    <city name="paris"  country="france"  pop="7"/>
+    <city name="munich" country="germany" pop="4"/>
+    <city name="lyon"   country="france"  pop="2"/>
+    <city name="venice" country="italy"   pop="1"/>
+</cities>
+----
+
+You can transform it like this:
+
+[source, xml, linenums]
+----
+<xml-module:xslt-transform>
+    <xml-module:xslt><![CDATA[
+    <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
+
+        <xsl:template match="/">
+            <table>
+            <tr>
+                <th>Country</th>
+                <th>City List</th>
+                <th>Population</th>
+            </tr>
+            <xsl:for-each-group select="cities/city" group-by="@country">
+                <tr>
+                    <td>
+                        <xsl:value-of select="@country"/>
+                    </td>
+                    <td>
+                        <xsl:value-of select="current-group()/@name" separator=", "/>
+                    </td>
+                    <td>
+                        <xsl:value-of select="sum(current-group()/@pop)"/>
+                    </td>
+                </tr>
+            </xsl:for-each-group>
+            </table>
+        </xsl:template>
+    </xsl:stylesheet>
+]]></xml-module:xslt>
+</xml-module:xslt-transform>
+----
+
+This will output the following document:
+
+[source, xml, linenums]
+----
+<table>
+    <tr>
+        <th>Country</th>
+        <th>City List</th>
+        <th>Population</th>
+    </tr>
+    <tr>
+        <td>italy</td>
+        <td>milan, venice</td>
+        <td>6</td>
+    </tr>
+    <tr>
+        <td>france</td>
+        <td>paris, lyon</td>
+        <td>9</td>
+    </tr>
+    <tr>
+        <td>germany</td>
+        <td>munich</td>
+        <td>4</td>
+    </tr>
+</table>
+----
+
+Although by default this operation will try look for the input document at the message payload, you can supply your own input. For example, imagine that the cities were
+actually a json array inside the payload. You could first transform it to XML before actually running the XSL transformation:
+
+[source, xml, linenums]
+----
+<xml-module:xslt-transform>
+    <xml-module:content><![CDATA[
+                %dw 2.0
+                input payload application/json encoding='UTF-8'
+                output application/xml encoding='UTF-8'
+                ---
+                payload.cities
+    ]]></xml-module:content>
+    <xml-module:xslt><![CDATA[
+        // THE XSLT
+    ]]></xml-module:xslt>
+</xml-module:xslt-transform>
+----
+
+== Externalizing the XSL sheet to a separate file
+
+In many cases it is a good practice not to have the XSLT transformation embedded in your application and instead ship it in a different file. That's also easy to do:
+
+[source, xml, linenums]
+----
+<xml-module:xslt-transform>
+    <xml-module:xslt>${file:xlst/cities.xslt}</xml-module:xslt>
+</xml-module:xslt-transform>
+----
+
+A more complex use case is one in which the actual script to use depends on some external condition. For example, imagine a multi-tenant integration in which the actual transformation to use depends on a user id:
+
+[source, xml, linenums]
+----
+<flow name="multitenantExample">
+    <http:listener path="transform" allowedMethods="POST" config-ref="httpListener" /> // <1>
+    <file:read path="#['xslt/$(attributes.queryParam.userId).xslt']" target="xslt" />
+    <xml-module:xslt-transform>
+        <xml-module:xslt>#[vars.xslt]</xml-module:xslt>
+    </xml-module:xslt-transform>
+</flow>
+----
+
+<1> This example flow is triggered through an HTTP request. 
+<2> Assuming that the user id will be provided as a query param, we use the file connector to go fetch the file holding the correct XSL and store it in a variable.
+<3> Finally, we execute a transformation using an expression to point to the XSL sheet we just obtained
+
+[TIP]
+The usage of the HTTP and File connectors are just for the purpose of the example. They are not required to achieve similar use cases.
+
+== Using Context Properties
+
+XSL has the concept of context properties, which is not anything else than the ability to pass parameters to the transformation. This feature is also available and you can use DataWeave to construct the arguments map:
+
+[source, xml, linenums]
+----
+<xml-module:xslt-transform>
+    <xml-module:xslt><![CDATA[
+    <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
+        <xsl:output method="xml"/>
+
+        <xsl:param name="vtn" /> // <1>
+        <xsl:template match="/parameter">
+            <param><xsl:value-of select="$vtn"/></param> // <2>
+        </xsl:template>
+    </xsl:stylesheet>
+]]></xml-module:xslt>
+    <xml-module:context-properties>#[{'vtn' : 'some value'}] // <3> </xml-module:context-properties>
+</xml-module:xslt-transform>
+----
+
+<1> The XSL sheet declares a parameter. In this case we called it `vtn`
+<2> The sheet references the assigned value of the parameter using the `$` prefix
+<3> We use the `context-properties` parameter to pass the values in.
+
+
+== Output MimeType
+
+The most common use case for XSLT is to output a new XML document. However, XSLT is capable of producing documents on other formats such as JSON, CSV, or simply a text or number value. Because of this, the produced value will not have any specific mimeType assigned. It is recommended that you specify one using the `outputMimeType` parameter.
+ 
+== See also
+
+* link:xml-module[XML Module documentation]
