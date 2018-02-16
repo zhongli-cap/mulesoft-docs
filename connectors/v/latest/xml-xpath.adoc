@@ -1,11 +1,14 @@
 = Using XPath with the XML Module
 :keywords: XML, xpath
 
-Evaluates an XPath expression the input content and returns the result.
+The `<xml-module:xpath-extract>` operation supports evaluation of XPath expressions.
 
 Because XPath expressions can match any number of individual elements, this operation returns a List of Strings. If no element matched the expression, an empty list will be returned.
 
 XPath expressions are also namespace aware, which is why this operation allows namespace mappings. These mappings will be merged with those optionally defined in the referenced namespace-directory, meaning that the evaluation will combine both sets of namespace mappings.
+
+[TIP]
+Although we support the XPath standard, remember that DataWeave is capable of achieving the same use cases and Mulesoft's recommended tool for extracting/transforming XML documents
 
 As an example, let's look at how to work with a sample XML which contains the script of the play Othello by William Shakespeare. The XML file looks roughly like this:
 
@@ -198,7 +201,43 @@ In any of the examples above, the prefixes used in the mappings and XPath expres
 
 == Using XPath as a function
 
+The XML module also contributes a DataWeave function for extracting values using XPath. This is useful in cases such as a `<choice>` or `<foreach>` routers.
 
+[TIP]
+You can use this function inside any DataWeave transformation
+
+=== Using XPath function with <foreach>
+
+Going back to the Othello lines example, imagine what what you really want is to iterate through all those lines and process them separatelly:
+
+[source, xml, linenums]
+----
+<foreach collection="#[XmlModule::xpath('//LINE', payload, {})]">
+    <flow-ref name="processLine" />
+</foreach>
+----
+
+1. The first argument is the XPath expression
+2. The second one is the input document, in this case, the message payload
+3. The third one is the context properties. Since in this case we don't need any, we just pass an empty object (`{}`)
+
+=== Using XPath function with <choice>
+
+Going back to the previous example, suppose you want to do something if the input document does not contain the word `handkerchief`
+
+[source, xml, linenums]
+----
+<choice>
+    <when expression="#[isEmpty(XmlModule::xpath('//LINE[contains(., \$word)]', vars.untrustedOthello, {'word': 'handkerchief'}))]">
+        <flow-ref name="alteredOthello" />
+    </when>
+</choice>
+----
+
+1. Since the `XmlModule::xpath` function returns a list, we use DataWeave's `isEmpty()` function to test if the output is empty or not
+2. The first argument of the XPath function is an expression, this time using the `$work` context property
+3. The second argument is the input document, this time sitting in a variable
+4. Lastly, we provide the context properties values
 
 == See also
 
