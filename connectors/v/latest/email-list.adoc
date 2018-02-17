@@ -1,0 +1,112 @@
+= To List Emails Using the Email Connector
+
+The Mule 4 connector provides the ability to list emails in any part of
+the flow, unlike the old Mule 3 transport which can only retrieve emails as a result
+of inbound endpoint polling.
+
+Note that both POP3 and IMAP configurations contains a `list` operation. This section covers both
+together and then explains the differences. Though the examples use `list-pop3`
+or `list-imap`, all the sections apply for both configurations unless stated otherwise.
+
+The basic syntax to list the emails in a mailbox is:
+
+[source, xml, linenums]
+----
+<email:list-pop3 config-ref="pop3-config" mailboxFolder="INBOX"/>
+----
+
+This simple example returns all the emails in the configured POP3 mailbox server that
+reside in the INBOX folder.
+
+=== Getting the Email's Data
+
+As explained before, incoming emails carry metadata (subject, received date, and so on) in
+the message attributes, while the payload carries the email body content and attachments
+that you can access. Here is an example:
+
+[source, xml, linenums]
+----
+<flow name="retrieveWithAttachments">
+    <email:list-imap config-ref="imap-config"/>
+    // foreach to work with single emails in the payload
+    <foreach>
+        <set-variable variableName="email-content" value="payload.body" />
+        <set-variable variableName="json-attachment" value="payload.attachments.json" />
+    </foreach>
+</flow>
+----
+
+When working with a single email in the payload, you can specify `payload.body` to access the
+email content. The example sets this to a variable called `email-content`. To access 
+attachments, you specify `payload.attachments.{nameOfTheAttachment}`. The example retrieves an attachment called `json` and sets it to a new variable called `json-attachment`.
+
+== Matching
+
+When listing emails, you can filter emails that match certain criteria using the `<email:pop3-matcher>` and `<email:imap-matcher>` elements. These elements define the criteria that can be used to process an email or not.
+
+This example of an IMAP matcher rejects emails with subjects that do not match
+the `[0-9]` regular expression and that have not been seen before.
+
+[source, xml, linenums]
+----
+<email:list-imap config-ref="config">
+    <email:imap-matcher subjectRegex="[0-9]" seen="EXCLUDE"/>
+</email:list-imap>
+----
+
+All matcher attributes are optional and are ignored if they are not provided, and they are
+all related to each other under an AND operator.
+
+The example above declares an inner, non-reusable, matcher that is proprietary to a particular component,
+but matchers can be declared as a reusable element (as a named top-level element).
+For example, this `pop3-matcher`:
+
+[source, xml, linenums]
+----
+<email:pop3-matcher name="pop3Matcher"
+                    subjectRegex="Email Subject"
+                    fromRegex="@mulesoft"/>
+
+<flow name="listEmails">
+  ...
+  <file:list pop3-matcher="pop3Matcher" />
+  ...
+</flow>
+----
+
+=== IMAP Matcher vs POP3 Matcher
+
+The IMAP protocol provides metadata about the email that allows for more
+precise filters than POP3.
+
+The POP3 matcher contains these parameters:
+
+[source, xml, linenums]
+----
+<email:pop3-matcher
+  receivedSince="2015-06-03T13:21:58+00:00"
+  receivedUntil="2015-07-03T13:21:58+00:00"
+  sentSince="2015-05-03T13:21:58+00:00"
+  sentUntil="2015-06-03T13:21:58+00:00"
+  subjectRegex="BETA:"
+  fromRegex="@mulesoft"/>
+----
+
+The IMAP matcher looks like this:
+
+[source, xml, linenums]
+----
+<email:imap-matcher
+  receivedSince="2015-06-03T13:21:58+00:00"
+  receivedUntil="2015-07-03T13:21:58+00:00"
+  sentSince="2015-05-03T13:21:58+00:00"
+  sentUntil="2015-06-03T13:21:58+00:00"
+  subjectRegex="BETA:"
+  fromRegex="@mulesoft"
+  recent="EXCLUDE|INCLUDE|REQUIRE"
+  seen="EXCLUDE|INCLUDE|REQUIRE"
+  deleted="EXCLUDE|INCLUDE|REQUIRE"
+  answered="EXCLUDE|INCLUDE|REQUIRE"/>
+----
+
+Notice that the IMP matcher includes the `recent`, `seen`, `deleted`, and `answered` parameters.

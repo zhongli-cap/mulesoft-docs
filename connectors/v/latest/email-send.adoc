@@ -1,0 +1,61 @@
+= To Send Emails Using the Email Connector
+:keywords: email, connector, configuration, smtp, send, smtps
+:toc:
+:toc-title:
+
+toc::[]
+
+The Email connector allows you to send messages through the SMTP (and SMTPS) protocol.
+Sending emails is straightforward, for example:
+
+[source, xml, linenums]
+----
+<email:send config-ref="smtp" subject="IMPORTANT!" fromAddress="musumeci@mulesoft.com">
+    <email:to-addresses>
+        <email:to-address value="ale.gamarra@mulesoft.com"/>
+        <email:to-address value="agustin.celentandios@mulesoft.com"/>
+    </email:to-addresses>
+    <email:body contentType="text/html">
+        <email:content>"<h1>Hello this is an important message</h1>"</email:content>
+    </email:body>
+</email:send>
+----
+
+In the example above, the `to-addresses` parameter lists the primary recipient addresses of the
+outgoing email. The `fromAddress` is the email sender address, and the `subject` is
+the email subject. The body parameter is composed of text content and a `contentType` that specifies the
+text mime type of the content (for example, `text/xml` or `text/plain`). If no body parameter is specified,
+the content of the message payload must be a text type, else the operation will fail
+with an `EMAIL:SEND` error.
+
+== To Send Attachments
+
+When sending attachments through SMTP, you use DataWeave to handle the attachments.
+
+In this example, a flow reads a JSON file using the File connector, then uses the Email connector to 
+send the contents of the file as an attachment over SMTP:
+
+[source, xml, linenums]
+----
+<flow name="attachment">
+  <file:read path="/file.json"/>
+  <email:send config-ref="config">
+      <email:to-addresses>
+          <email:to-address value="agusto.celentandios@mulesoft.com"/>
+      </email:to-addresses>
+      <email:body>
+          <email:content>Sending attachments!</email:content>
+      </email:body>
+      <email:attachments>#[
+          {
+            'json-attachment' : payload
+          }
+        ]</email:attachments>
+  </email:send>
+</flow>
+----
+
+As you can see, the `email:attachments` parameter expects a DataWeave expression in which
+each element is an attachment. For instance, the example above adds a new attachment
+named `json-attachment`. Notice that `payload` is the content of the 
+JSON file that was read by the File connector.
