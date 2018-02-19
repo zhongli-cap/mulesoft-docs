@@ -50,6 +50,8 @@ DataWeave supports these formats for input and output:
 [[format_cobol_copybook]]
 == Cobol Copybook
 
+Mime Type: `application/flatfile`
+
 // TODO: <<flat file>>
 A Cobol copybook is technically a type of flat file. The copybook provides information about the layout of records and fields in a Cobol data file.
 
@@ -124,33 +126,72 @@ output application/flatfile schemaPath="src/main/resources/schemas/QBReqRsp.esl"
 
 In the Transform component, you can define a Copybook type through the following method:
 
-* By pointing to a Flat File schema file.
+. Right-click the input payload in the Transform component, and select Set Metadata to open the Set Metadata Type dialog.
+. Provide a name for your copybook metadata, such as `copybook`.
+. Import your copybook schema.
+. Click Select.
++
+.Importing a Copybook Schema
+image:copybook_import.png[Importing a Copybook File]
++
 
-For example, assume that you have a schema file (`payment-1.ffd`) that looks like this:
+For example, assume that you have a copybook schema file (`mailing-record.cpy`) that looks like this:
+
+----
+01  MAILING-RECORD.
+    05  COMPANY-NAME            PIC X(30).
+    05  CONTACTS.
+        10  PRESIDENT.
+            15  LAST-NAME       PIC X(15).
+            15  FIRST-NAME      PIC X(8).
+        10  VP-MARKETING.
+            15  LAST-NAME       PIC X(15).
+            15  FIRST-NAME      PIC X(8).
+        10  ALTERNATE-CONTACT.
+            15  TITLE           PIC X(10).
+            15  LAST-NAME       PIC X(15).
+            15  FIRST-NAME      PIC X(8).
+    05  ADDRESS                 PIC X(15).
+    05  CITY                    PIC X(15).
+    05  STATE                   PIC XX.
+    05  ZIP                     PIC 9(5).
+----
+Note that copybook schemas must always begin with a `01` entry.
+
+When you import the schema, the Transform component converts the schema to a flat file that it stores in the `src/main/resources/schema` folder of your Mule project. In flat file format, the copybook schema above looks like this:
 
 ----
 form: COPYBOOK
-id: 'PAYMENT-RECORD'
+id: 'MAILING-RECORD'
 values:
-- { name: 'VENDOR-NAME', type: String, length: 25 }
-- { name: 'STREET-ADDRESS', type: String, length: 20 }
-- { name: 'CITY', type: String, length: 17 }
+- { name: 'COMPANY-NAME', type: String, length: 30 }
+- name: 'CONTACTS'
+  values:
+  - name: 'PRESIDENT'
+    values:
+    - { name: 'LAST-NAME', type: String, length: 15 }
+    - { name: 'FIRST-NAME', type: String, length: 8 }
+  - name: 'VP-MARKETING'
+    values:
+    - { name: 'LAST-NAME', type: String, length: 15 }
+    - { name: 'FIRST-NAME', type: String, length: 8 }
+  - name: 'ALTERNATE-CONTACT'
+    values:
+    - { name: 'TITLE', type: String, length: 10 }
+    - { name: 'LAST-NAME', type: String, length: 15 }
+    - { name: 'FIRST-NAME', type: String, length: 8 }
+- { name: 'ADDRESS', type: String, length: 15 }
+- { name: 'CITY', type: String, length: 15 }
 - { name: 'STATE', type: String, length: 2 }
-- { name: 'ZIP-CODE', type: Integer, length: 5, format: { justify: ZEROES, sign: UNSIGNED } }
-- { name: 'INVOICE-NUMBER', type: String, length: 15 }
-- { name: 'PAYMENT-AMOUNT', type: Decimal, length: 11, format: { implicit: 2, justify: ZEROES, sign: UNSIGNED } }
-- { name: 'FILLER1', usage: U, type: String, length: 10 }
+- { name: 'ZIP', type: Integer, length: 5, format: { justify: ZEROES, sign: UNSIGNED } }
 ----
 
-You can import the copybook to your Mule project from a Transform component in Studio 7 through the Set Metadata.
-
-//TODO: WHERE IS THIS PNG?
-// image::dataweave-copybook-schema-import.png[Copybook Import to Project]
-
-The imported file is copied to the `src/main/resources/schema` folder in your Mule project. You can then use the `schemaPath` property to reference it from the `output` directive. For example: `output application/flatfile  schemaPath="src/main/resources/schemas/payment-1.ffd"`
+After importing the schema, you can use the `schemaPath` property to reference the flat file through the `output` directive. For example: `output application/flatfile  schemaPath="src/main/resources/schemas/mailing-record.ffd"`
 
 [[format_csv]]
 == CSV
+
+Mime Type: `application/csv`
 
 CSV content is modeled in DataWeave as a list of objects, where every record is an object and every field in it is a property. For example:
 
@@ -273,6 +314,8 @@ image::dataweave-formats-4a556.png[]
 [[format_dataweave]]
 == DataWeave
 
+Mime Type: `application/dw`
+
 The DataWeave format is the canonical format for all transformations. Using it can helpful for understanding how input data is interpreted before it is transformed to a new format.
 
 This example shows how XML input is expressed in the DataWeave format.
@@ -311,6 +354,8 @@ This example shows how XML input is expressed in the DataWeave format.
 
 [[format_excel]]
 == Excel
+
+Mime Type: `application/xlsx`
 
 Only `.xlsx` files are supported (Excel 2007). `.xls` files are not supported by Mule runtime.
 
@@ -416,6 +461,8 @@ image:dataweave-formats-excel-metadata.png[]
 [[format_fixed_width]]
 == Fixed Width
 
+Mime Type: `application/flatfile`
+
 // TODO: LINK <<Flat File>> here.
 Fixed width types are technically considered a type of Flat File format, but when selecting this option the Transform component offers you settings that are better tailored to the needs of this format.
 
@@ -496,6 +543,8 @@ image::dataweave-formats-27b3c.png[]
 
 [[format_flat_file]]
 == Flat File
+
+Mime Type: `application/flatfile`
 
 === Reader Properties (for Flat File)
 
@@ -737,7 +786,7 @@ Note that in the DataWeave `write` function, you can also pass the property as a
 [[format_java]]
 == Java
 
-Format: `application/java`
+Mime Type: `application/java`
 
 This table shows the mapping between Java objects to DataWeave types.
 
@@ -817,6 +866,8 @@ In the Transform component, you can define a Java type through the following met
 [[format_json]]
 == JSON
 
+Mime Type: `application/json`
+
 JSON data structures are mapped to DataWeave data structures because they share a lot of similarities.
 
 === Writer Properties (for JSON)
@@ -858,6 +909,8 @@ In the Transform component, you can define a JSON type through the following met
 
 [[format_xml]]
 == XML
+
+Mime Type: `application/xml`
 
 The XML data structure is mapped to DataWeave objects that can contain other objects as values to their keys. Repeated keys are supported. Example:
 
@@ -1001,6 +1054,8 @@ In the Transform component, you can define a XML type through the following meth
 [[format_cdata]]
 === CData Custom Type (for XML)
 
+Mime Type: `application/xml`
+
 `CData` is a custom data type for XML that is used to identify a CDATA XML block. It can tell the writer to wrap the content inside CDATA or to check if the input string arrives inside a CDATA block. `CData` inherits from the type `String`.
 
 .DataWeave Script
@@ -1030,6 +1085,8 @@ output application/xml
 
 [[format_url_encoded]]
 == URL Encoding
+
+Mime Type: `application/x-www-form-urlencoded`
 
 A URL encoded string is mapped to a DataWeave object.
 
