@@ -12,33 +12,36 @@ Shared resources allow multiple development teams to work in parallel using the 
 
 == Prerequisites
 
-This document assumes that you are using Anypoint Studio with Mule runtime 3.6 or newer, or that you are building your applications outside Studio and deploying them to Mule Standalone *3.5.0* runtime or newer. 
+This document assumes that you are using Anypoint Studio with Mule runtime 4.0 or newer, or that you are building your applications using Studio and deploying them to Mule Standalone *4.0* runtime or newer. 
 
 == Limitations
 
-* Defining flows, subflows, or any message processors as shared resources is not supported. 
-* To share a WMQ connector as a shared resource, you need to remove the mule-transport-wmq-ee-<mule-version>.jar file from the $MULE_HOME/lib/mule/per-app/ directory and remove all the native jars for WMQ connectivity in your application's $MULE_HOME/apps/<my-app>/lib/ directory. Place all these jars in the $MULE_HOME/domains/<my-domain>/lib/ folder instead.
-* Adding properties in the configuration files of applications that use shared resources can result in issues, as these properties are shared with other apps in the domain and there may be conflicts. You can instead link:/mule-user-guide/v/3.9/setting-environment-variables[set environment variables].
-* Only the following connectors and related specifications can be specified as shared resources at this time: +
-** HTTP/HTTPS (both endpoints and connectors)
-** VM
-** TLS Context elements
-** JMS
-** JMS Caching Connection Factory
-** Database
-** WMQ
-** JBoss Transaction Manager
-** Bitronix Transaction Manager
+* Defining flows, subflows, or any message processors as shared resources is not supported. Domains are not meant to share behaviour, they are meant to share resources only.
 
 == Basic Anatomy
+
+=== Studio project
 
 The following files are key within the Mule Domain Project:
 
 [%autowidth.spread]
 |===
+|*/src/main/mule/mule-domain-config.xml* |This is the shared resources configuration file. This file must have the `mule-domain-config.xml` file name.
+|*pom.xml* |This is the dependencies file descriptor. It's just a maven pom file with requires plugins for domains projects.
+|*/mule-artifact.json* |This file is a descriptor for the domain artifact.
+|===
+
+=== Domain artifact
+
+The following files are the ones that you can find when you package a domain into a jar file:
+
+[%autowidth.spread]
+|===
 |*mule-domain-config.xml* |This is the shared resources configuration file. This file must have the `mule-domain-config.xml` file name.
-|*/lib* |This directory can contain libraries associated with the domain. Place the JDBC drivers for the datasources that you define as shared resources here or JMS broker APIs needed for the JMS connector.
-|*mule-deploy.properties* | This optional file may contain two configuration properties are equivalent to the ones in a Mule application: *redeployment.enabled* and *loader.overrides*. See link:/mule-user-guide/v/3.9/mule-application-deployment-descriptor#deployment-descriptor-in-a-domain[Deployment Descriptor in a Domain] for more details.
+|*/repository* |A maven like repository with all the dependencies of the domain.
+|*/META-INF/maven/groupId/artifactId/pom.xml* |Artifact maven descriptor file.
+|*/META-INF/mule-artifact/classloader-model.json* |Internal mule file used for dependency management.
+|*/META-INF/mule-artifact/mule-artifact.json* |This file is a descriptor for the domain artifact.
 |===
 
 == Configuration
@@ -65,33 +68,26 @@ image:new+domain.png[new+domain] +
 +
 image:create+new+domain.png[create+new+domain] +
 +
-Provide a name for the project and select a runtime. Optionally complete the Maven settings if you plan to use Maven with this project, and optionally create a .gitignore file if you plan to share this project via git or github.
+Provide a name for the project and select a runtime. Optionally create a .gitignore file if you plan to share this project via git or github.
 
-[NOTE]
-====
-You can also create a domain project outside Studio, to do so create the following file structure in your file system:
-
-image:domain-folders.png[domain-folders]
-
-Note that the `lib` folder is optional.
-====
 
 === Defining Shared Resources
 
-You can configure the domain project that you just created in the previous step by defining shared resources in the the  `mule-domain-config.xml` file. You can define multiple resources in this configuration file. In Anypoint Studio, there are two different views for editing this file. The `source` view should be the most familiar for those used to the XML editor in regular Studio Mule projects:
+You can configure the domain project that you just created in the previous step by defining shared resources in the the  `mule-domain-config.xml` file. You can define multiple resources in this configuration file. In Anypoint Studio, there are two different views for editing this file:
 
-image:design+source.png[design+source]
+* Configuration file: This view should be the most familiar for those used to the XML editor in regular Studio Mule projects
+* Global Elements: This view provides a graphical interface for defining shared resources.
 
-Include, at minimum, the namespace and XML schema location for the domain, as shown below. Be sure to use the version, *Community* or *Enterprise*, that matches the resource that you are creating. VM, WMQ, and the Bitronix Transaction Manager require the Enterprise version.
-
-Add additional namespaces and schema locations for each resource that you want to share. See the example definitions for each supported shared resource below for full namespace definitions required for each. Note that the examples are separated into separate XML configurations for clarity, but you can define multiple shared resources in a single `mule-domain` project.
+You can add modules/connectors dependencies to you domain project so you can use them as shared resources.
 
 === Associating Applications with the Domain
 
 [NOTE]
 Applications may only be associated with one domain at a time.
 
-In Anypoint Studio, to associate an existing application with a domain, edit the `mule-project.xml` file located at root level in the project. In the graphical view of this file, you see a *Domain* field, which by default is set to *default*, this value gives each project its independent domain. Change this value, the dropdown list on this field displays all of the domains you've created in the current workspace.
+In Anypoint Studio, to associate an existing application with a domain:
+
+. In the project explorer view double click on the mule application *properties* > *Mule Project* see a *Domain* field, which by default is set to *default*, this value gives each project its independent domain. Change this value, the dropdown list on this field displays all of the domains you've created in the current workspace.
 
 image:assign+domain.png[assign+domain]
 
@@ -99,13 +95,13 @@ Note that when picking a domain, the Server Runtime of your project automaticall
 
 [NOTE]
 ====
-If you're creating your applications outside Studio, then to associate an existing application with a domain, edit the `mule-deploy.properties` file to include the domain property:
+If you're creating your applications outside Studio, then to associate an existing application with a domain, edit the `mule-artifact.json` file to include the domain property:
 
-`domain= <name of domain folder>`
+`domain: <name of domain folder>`
 
 For example: 
 
-`domain=mule-test-domain`
+`domain: mule-test-domain`
 ====
 
 === Referencing Shared Resources
@@ -114,7 +110,7 @@ In the following example `mule-domain-config.xml`, an HTTP connector is define
 
 [source,xml,linenums]
 ----
-include::_sources/shared-resources_01.xml[]
+include::_sources/shared-resources_1.xml
 ----
 
 Any Mule application associated with the domain can make use of the shared resource by referencing it within the configuration, just as you would reference a resource within the project itself. In the example below, the HTTP listener connector references the shared resource named `HTTP_Listener_Configuration`. 
