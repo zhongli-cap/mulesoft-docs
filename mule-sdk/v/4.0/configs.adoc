@@ -157,21 +157,21 @@ a specific default, but instead a descriptive name is used
 
 == Getting the configuration name
 
-For logging or debugging reasons, we may want to know the name that the config has
-on the dsl. To this purpose, we can use the `@RefName` annotation. This annotation must
-be used on fields of type `String` and no two fields  in the same class should bear this
+For logging or debugging reasons, we may want to know the name that this config instance
+ has on the application. To this purpose, we can use the `@RefName` annotation. This annotation must
+be used on fields of type `String` and no two fields in the same class should bear this
 annotation .Let's see an example of how to use it:
+
+On this example we can see how to log the name of our component when it's getting initialized,
+this way we can have traceability of the different config instances.
 
 [source, java, linenums]
 ----
-@Extension(name="singleConfig")
-@Configurations(Config.class)
-public class SingleConfigModule {
-}
-
 @Configuration(name="config")
 @Operations(Operations.class)
-public class Config {
+public class Config implements Initialisable {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
 
   @RefName // <1>
   private String configName;
@@ -183,20 +183,24 @@ public class Config {
     return someParameter;
   }
 
-  protected String getConfigName() {
-    return configName;
+  @Override
+  public void initialise(){
+    LOGGER.debug("Initializing config with name: " + configName);
   }
+
 }
 ----
 
-<1> The `@RefName` annotation signals that the name of the configuration used in the dsl
+<1> The `@RefName` annotation signals that the name of the configuration used in the app
 should be injected to the field `configName`.
 
 We can see a concrete example of a dsl to see what would happen:
 
 [source, xml, linenums]
 ----
-<single-config:config name="exampleConfig" someParameter="aParameter">
+<my-extension:config name="exampleConfig" someParameter="aParameter">
 ----
 
-In this case, the variable `configName` would take the value "exampleConfig".
+In this case, the variable `configName` would take the value "exampleConfig". When
+this config is initialized we will see this reflected on the logs with the message:
+ "Initializing config with name: exampleConfig"
