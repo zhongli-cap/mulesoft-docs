@@ -1,0 +1,142 @@
+= Polling Sources
+*Available since version 1.1*
+
+Polling Sources are Sources that instead of being triggered by an external action, they poll
+data items periodically depending on a `scheduling strategy` that determines the frequency at
+which the poll happens. Every item is dispatched to the flow as a single `Message`.
+
+== How to create a Polling Source
+
+To create a Polling Source, first we will need to use add our Source class to the
+`@Sources` annotation on our extension class, just like regular Sources. For a Source
+to behave as a PollingSource, instead of extending the class `Source<T,A>`, it will have
+to extend from `PollingSource<T, A>`.
+
+By extending from `PollingSource<T, A>` you will need to implement the methods `poll` and
+`onRejectedItem`.
+
+- `pool` is responsible for obtaining the items to be dispatched and communicate them through the `pollContext`
+using the `accept` method.
+
+- `onRejectedItem` will be called if one of the items dispatched was rejected (either by watermarking,
+idempotency, server overload, etc.), this method will be called to released any resources associated to result set
+to the `PollItem`
+
+Let's put as example a simplified version of the directory listener of FTP Connector:
+
+[source, java, linenums]
+----
+public class FtpDirectoryListener extends PollingSource<InputStream, FtpFileAttributes> {
+  @Override
+  public void poll(PollContext<InputStream, FtpFileAttributes> pollContext) {
+    if (pollContext.isSourceStopping()) {
+      return;
+    }
+    List<FtpFileAttributes> attributesList = listFiles().getAttributes();
+
+    for (FtpFileAttributes attributes : attributesList) {
+      if(pollContext.isSourceStopping()){  // <1>
+        break;
+      }
+      processFile(attributesList, pollContext)
+    }
+  }
+
+  @Override
+  public void onRejectedItem(Result<InputStream, FtpFileAttributes> result, SourceCallbackContext callbackContext) {
+    closeQuietly(result.getOutput());
+  }
+
+}
+----
+
+<1> Note that the `pollContext` provides information on whether the Source is stopping, and this is taken into
+account before any time consuming task.
+
+== Using the Polling Context
+
+There are some things that are missing on the last example that are done in the `processFile` method. These
+are the steps required to dispatch the messages to the flow. This is done using the `PollContext`.
+
+The `accept` method from the `PollContext` is the one in charge of dispatching the polled items into the flow. It
+receives as parameter a `Consumer<PollItem>`
+
+Here you will see what that `processFile` method from the previous example is doing:
+
+[source, java, linenums]
+----
+private void processFile(FtpFileAttributes attributes, PollContext<InputStream, FtpFileAttributes> pollContext) {
+  PollItemStatus status = pollContext.accept(item -> {     // <1>
+    SourceCallbackContext ctx = item.getSourceCallbackContext();   // <2>
+    FtpFileSystem fileSystem = openConnection();
+    ctx.bindConnection(fileSystem);   // <3>
+    Result<InputStream, FtpFileAttributes> result = fileSystem.read(config, attributes.getPath(), false);
+    item.setResult(result); //  <4>
+    item.setId(attributes.getPath());  // <5>
+    item.setWatermark(attributes.getTimestamp());  // <6>
+  });
+}
+----
+
+<1> The `accept` method dispatches a message to the flow. This returns what happened to the item.
+<2> Get the callback context.
+<3> Bind the connection to the context so that we can retrieve it later.
+<4> Set the message that will be dispatched to the flow.
+<5> Set an id to the item so that idempotency can be checked.
+<6> Set the watermark to the item so that watermark can be checked.
+
+=== PollItemStatus
+
+After calling the `accept` method, you will get a `PollItemStatus`, this is an `Enum` that
+can take the following values:
+
+- *ACCEPTED* :  The item was accepted and has been scheduled for execution.
+
+- *FILTERED_BY_WATERMARK* :  The item was rejected because watermarking was enabled and it was filtered on that ground.
+
+- *ALREADY_IN_PROCESS* : The item was rejected because idempotency was enabled and another thread or node is already processing this item.
+
+- *SOURCE_STOPPING* : The item was rejected because the source has received the stop signal.
+
+=== Idempotency
+
+Idempotency solves the problem that no item is polled twice. The SDK will make sure that
+no other thread or cluster node is processing an item of the same id, providing processing idempotency.
+No two items with the same ID will be processed at the same time. If a node polls an item with the id
+if an item that is being processed, it will be dropped and the `onRejectedItem` method will be called.
+
+=== Watermarking
+
+What do you do when you are polling an incremental source of data and you only want the new data?
+Should you manually divide the new data from the old data on each call? No, by using watermarking you can
+solve this problem easily.
+
+By setting an incrementing value to the items watermark, every other poll will drop and
+call `onRejectedItem` on items which watermark values are lower than the current watermark value.
+On the example shown before, the watermark chosen is the timestamp of the file.
+
+On which criteria does the SDK knows how to compare watermarks?
+
+If the watermarks used implement `Comparable`, the natural order of those values will be used. There
+is no need to set a criteria.
+
+What if the watermark values does not implement `Comparable` or I want to use another criteria
+that is not the natural order?
+
+You can simply set a `Comparator` to the `PollContext` by calling its method `setWatermarkComparator`.
+
+== How to use Polling Sources in a Flow
+
+The SDK will automatically adds a `scheduling strategy` parameter and the runtime will use that strategy
+to automatically schedule executions of the `poll` method.
+
+Here is an example of the usage of the FTP directory listener polling source:
+
+[source, xml, linenums]
+----
+<ftp:listener config-ref="config" directory="path/" autoDelete="false" watermarkEnabled="true">
+  <scheduling-strategy>
+    <fixed-frequency startDelay="40000" frequency="1000" timeUnit="MILLISECONDS"/>
+  </scheduling-strategy>
+</ftp:listener>
+----
