@@ -4,31 +4,98 @@ The Mule 4 connector provides the ability to list emails in any part of
 the flow, unlike the old Mule 3 transport which can only retrieve emails as a result
 of inbound endpoint polling.
 
-Note that both POP3 and IMAP configurations contains a `list` operation. This section covers both
-together and then explains the differences. Though the examples use `list-pop3`
-or `list-imap`, all the sections apply for both configurations unless stated otherwise.
+NOTE: both POP3 and IMAP configurations contains a `list` operation. This section covers both
+together and explains the differences. The examples used in this section might use `list-pop3`
+or `list-imap` but all the sections apply for both configurations *unless stated otherwise*.
+
+== Configuring the Connector
+
+There are two configurations that enables you to list the emails stored in a server: The POP3 Configuration and
+the IMAP configuration.
+
+They share a basic set of the parameters that are required to establish a connection: the server host and port, and
+an username and password to connect with a protected mail server if required (Both username and password are
+optional because the servers might not be secured with a username and password).
+
+Lets see an example of a POP3 and IMAP configurations:
+
+.POP3 Configuration
+[source, xml, linenums]
+----
+<email:pop3-config name="pop3-config">
+    <email:pop3-connection host="pop.gmail.com" port="995" user="pablo.musumeci@mulesoft.com" password="#netherlands!"/>
+</email:pop3-config>
+----
+
+.IMAP Configuration
+[source, xml, linenums]
+----
+<email:imap-config name="imap-config">
+    <email:imap-connection host="imap.gmail.com" port="912" user="pablo.musumeci@mulesoft.com" password="#netherlands!"/>
+</email:imap-config>
+----
+
+They look similar, for differences take look at the Configurations section in
+the full link:email-documentation[Email Connector Technical Reference].
+
+=== Secured Connections
+
+The IMAP and POP3 configurations provides a secured connection type to work over the secured
+versions of the protocols (POP3S, IMAPS) allowing you to configure a TLS
+context, the same way as many others connectors do, to enabled SSL/TLS encryption.
+
+Let's see an IMAPS example:
+
+.IMAP Configuration with TLS
+[source, xml, linenums]
+----
+<email:imap-config name="tls">
+    <email:imaps-connection host="${port}" port="${port}">
+        <tls:context enabledProtocols="TLSv1.2,SSLv3">
+            <tls:key-store path="aKeystore" password="password"/>
+            <tls:trust-store path="aTruststore.jks" password="changeit"/>
+        </tls:context>
+    </email:imaps-connection>
+</email:imap-config>
+----
+
+NOTE: A TLS context is also available for the POP3S connection the same way as it is for IMAPS.
+
+== Listing Emails
+
+The list operations will return all the emails in the configured mailbox server (specified in the connection)
+that reside in a parameterized mailbox folder.
 
 The basic syntax to list the emails in a mailbox is:
 
+.For POP3
 [source, xml, linenums]
 ----
 <email:list-pop3 config-ref="pop3-config" mailboxFolder="INBOX"/>
 ----
 
-This simple example returns all the emails in the configured POP3 mailbox server that
-reside in the INBOX folder.
+.For IMAP
+[source, xml, linenums]
+----
+<email:list-imap config-ref="imap-config" mailboxFolder="INBOX"/>
+----
 
-=== Getting the Email's Data
+This simple examples returns all the emails in the configured mailbox servers that
+reside in the *INBOX* folder.
 
-As explained before, incoming emails carry metadata (subject, received date, and so on) in
-the message attributes, while the payload carries the email body content and attachments
-that you can access. Here is an example:
+NOTE: The `config-ref` attributes points to the configs declared in the configuration examples.
+
+== Getting the Email's Data
+
+Incoming emails carry the content of the email in the payload, both email body and attachments
+if they have any. Let's look the following example in which we iterate between all the
+retrieved emails:
 
 [source, xml, linenums]
 ----
 <flow name="retrieveWithAttachments">
+    ...
     <email:list-imap config-ref="imap-config"/>
-    // foreach to work with single emails in the payload
     <foreach>
         <set-variable variableName="email-content" value="payload.body" />
         <set-variable variableName="json-attachment" value="payload.attachments.json" />
@@ -36,13 +103,28 @@ that you can access. Here is an example:
 </flow>
 ----
 
-When working with a single email in the payload, you can specify `payload.body` to access the
-email content. The example sets this to a variable called `email-content`. To access 
-attachments, you specify `payload.attachments.{nameOfTheAttachment}`. The example retrieves an attachment called `json` and sets it to a new variable called `json-attachment`.
+When working with a single email in the payload, you do `payload.body` to access the
+email content, For instance the example sets the body to a variable called `email-content`.
+
+To access the email attachments, you can do `payload.attachments.{nameOfTheAttachment}`, the example
+sets an attachment called `json` that is being carried by the retrieved email to a new variable `json-attachment`.
+
+== Attributes
+
+When listing emails, users are often not only interested in the email's content, but in its metadata, as
+well (for example, the subject, from addresses, to addresses, received date, and so on).
+These attributes vary depending on the type of configuration that you are using, because the
+IMAP protocol provides more metadata about the retrieved email like the `recent`, `seen`, `deleted`, and `answered` flags.
+
+The email connector uses Mule message attributes to access this information, while the message payload, as explained
+before, always contains the email's content.
+
+For details on the structure of email attributes, please read the link:email-documentation[Email Module Documentation Reference].
 
 == Matching
 
-When listing emails, you can filter emails that match certain criteria using the `<email:pop3-matcher>` and `<email:imap-matcher>` elements. These elements define the criteria that can be used to process an email or not.
+When listing emails, you can filter emails that match certain criteria using the `<email:pop3-matcher>`
+and `<email:imap-matcher>` elements. These elements define the criteria that can be used to process an email or not.
 
 This example of an IMAP matcher rejects emails with subjects that do not match
 the `[0-9]` regular expression and that have not been seen before.
@@ -109,4 +191,4 @@ The IMAP matcher looks like this:
   answered="EXCLUDE|INCLUDE|REQUIRE"/>
 ----
 
-Notice that the IMP matcher includes the `recent`, `seen`, `deleted`, and `answered` parameters.
+Notice that the IMAP matcher includes the `recent`, `seen`, `deleted`, and `answered` parameters.
