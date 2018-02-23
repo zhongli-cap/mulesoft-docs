@@ -2,13 +2,15 @@
 
 Behavior Driven Development (BDD) is the language for writing tests to run using bat. BDD is an embedded domain specific language (EDSL) that resembles other testing frameworks, such as Mocha and Jasmine.
 
-== Usage
-
 The following statement is required:
 
 `import * from bat::BDD`
 
-Other import statements and the following example shows how you typically begin writing a test:
+This statement imports the Domain Specific Language (DSL) testing library BDD.dwl, which defines words you frequently use when writing, such as describe, it, GET, POST, and sleep)
+
+This statement imports common matchers, such as mustEqual, mustMatch, every, oneOf, and assert.
+
+The following example shows how you typically begin writing a test:
 
 [source,code,linenums]
 ----
@@ -51,23 +53,41 @@ describe("the login flow") in [
 ]
 ----
 
+== Test Files
 
-=== Test blocks
+Create a `.dwl` file for each functional scenario. A folder-based organization of files is recommended. This organization accommodates reports the BAT testing generates. For example:
 
-Test blocks make the test more readable. You can write every test block as function a call or custom interpolation. Use backticks (```) to enclose a test block.
-
-Test blocks also have a shorthand name to _skip the block_ described as `x<name>`. For example, the skipped version of `describe` is `xdescribe`.
-
-[source,code,linenums]
 ----
-describe("A flow")  in [ ... ] // Describes a sequence of test blocks
-xdescribe("A flow") in [ ... ] // The same, but skipped.
-
-describe `A flow` in [ ... ]   // The same as describe, but with a custom interpolation
-xdescribe `A flow` in [ ... ]  // The same, but skipped.
+tests
+├── CoreServices
+│   └── Sanity.dwl
+└── DesignCenter
+    ├── APIDesigner
+    │   └── Designer.dwl
+    └── Mozart
+        ├── Datasense.dwl
+        └── GetProjects.dwl
 ----
 
-The following functions follow Fowler's _GivenWhenThen_ structure:
+A test file must contain a `describe` expression. 
+
+----
+import * from bat::BDD
+---
+describe `Demo scenario` in [
+
+]
+----
+
+A test file must contain at least one step. The following example performs a `GET http://httpbin.com/get` and an [assertion].
+
+== Test Blocks
+
+Test blocks make the test more readable. You can write every test block as function a call or custom interpolation. 
+
+=== Test Functions
+
+You use the following functions, which follow Fowler's _GivenWhenThen_ structure, in tests:
 
 [%header,cols="3*a"]
 |===
@@ -83,6 +103,28 @@ The following functions follow Fowler's _GivenWhenThen_ structure:
 |`it should "str"`|test step|No
 |`it must ""` |test step|Yes
 |===
+
+=== Skipping a Test Block
+
+Test blocks also have a shorthand name to _skip the block_ described as `x<name>`. For example, the skipped version of `describe` is `xdescribe`.
+
+[source,code,linenums]
+----
+describe("A flow")  in [ ... ] // Describes a sequence of test blocks
+xdescribe("A flow") in [ ... ] // The same, but skipped.
+
+describe `A flow` in [ ... ]   // The same as describe, but with a custom interpolation
+xdescribe `A flow` in [ ... ]  // The same, but skipped.
+----
+
+=== Custom Interpolators
+
+Custom interpolators provide a way to call functions and decompose interpolations in two lists:
+
+* The first list contains all the string literals.
+* The second one contains the interpolated values. 
+
+You do _not_ need to coerce the values into strings. Enclose a custom interpolation text and value in backticks (```).
 
 Every item in the following block can be used as custom interpolators and has the `x<name>` version.
 
@@ -204,7 +246,7 @@ describe("User trades stocks") in [
 
 == Execution Control and Deleting Assets
 
-If you get a failure in the middle of a test, you need to delete created assets as described here. For example, the user creates an asset, preforms a validation, and then deletes it.
+If you get a failure in the middle of a test, you need to delete any created assets. For example, the user creates an asset, preforms a validation, and then deletes it.
 Typically, that validation fails, and since it breaks the test, the asset is not deleted and your database starts to accumulating test data. Use the BDD DSL and the "*Stops execution if it fails*" property of the test blocks to solve this problem.
 
 In the following example, if the middle step (change name) fails, the project is not deleted because the execution stops.
@@ -225,9 +267,9 @@ describe `update project names` in [
 ]
 ----
 
-To recommended solution to this problem is to use the right words to describe your test. For example:
+You can prevent this problem by using the following recommended words in your test code:
 
-* `should` when something MAY fail, but is not mandatory for the test
+* `should` when something _might_ fail, but is not mandatory for the test
 * `must` when something, such as project creation, needs to be executed to continue
 
 The fixed example might look like this:
