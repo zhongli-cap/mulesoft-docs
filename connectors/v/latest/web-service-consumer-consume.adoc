@@ -1,0 +1,175 @@
+= To Consume a Web Service
+:keywords: core, connector, web service consumer, WSS, service, consumer, wsdl, soap
+
+Once your Web Service Consumer configuration is created you will be able to start
+consuming SOAP operations from the configured service. (If you did not create a
+Web Service Consumer configuration read the link:/connectors/web-service-consumer-configure[Web Service Consumer Configuration Documentation]).
+
+The WSC contains a single operation, the Consume (`wsc:consume`) operation.
+This operation has 2 most important parameters: the Operation (`operation`) and
+the Message (`wsc:message`).
+
+The basic syntax of the consume operation is:
+
+.Basic Consume Operation Example
+[source,xml,linenums]
+----
+<wsc:consume config-ref="config" operation="clients-list">
+    <wsc:message>
+        <wsc:body>#[payload]</wsc:body>
+    </wsc:message>
+</wsc:consume>
+----
+
+If something goes wrong when dispatching the SOAP message you will get an
+`WSC:CANNOT_DISPATCH` error.
+
+== The Operation Parameter
+
+The operation parameter defines which SOAP operation of the web service will be invoked,
+in design time the operation parameter will define the input and output types for the
+consume operation, they will change depending on which operation you choose.
+
+==  The Message Parameter
+
+The message parameter is a representation of the `SOAP:ENVELOP` and
+is composed by 3 elements: Body, Headers and Attachments, all of them optional.
+
+=== Body
+
+The body is the main part of the message and contains the actual SOAP message intended
+for the ultimate endpoint of the SOAP message. This parameter is always an XML application-specific
+element.
+
+A key concept of the body element is that accepts embedded DW scripts as values so that you can construct the XML request
+without having a side effect on the message nor having multiple components to create it. As default,
+the value for the message body is `#[payload]`, this means that as default it expects that the
+incoming payload is the XML entity ready to be shipped to the service.
+
+Let's see a quick example of a transformation inside the body element:
+
+.DataWeave expression inside the body parameter
+[source,xml,linenums]
+----
+<wsc:consume config-ref="config" operation="addClients">
+    <wsc:message>
+        <wsc:body>
+        #[
+        %dw 2.0
+        output application/xml
+        ns con http://service.soap.clients.namespace/
+        ---
+        con#clients: {
+            client: {
+                name: "Natasha",
+                lastname: "Ferrari"
+            },
+            client: {
+                name: "Lucas",
+                lastname: "Barzola"
+            }
+        }]
+        </wsc:body>
+    </wsc:message>
+</wsc:consume>
+----
+
+If the body is not a valid XML or the request cannot be created for some reason
+you will get a `WSC:BAD_REQUEST` error
+
+NOTE: If no body content is provided the Web Service Consumer will try to generate one. This will
+only work for cases when no XML entity is expected in the body.
+
+=== Headers
+
+The *optional* headers element contains application-specific information
+(like authentication, payment, etc) about the SOAP message. Like the body this
+element is an XML entity and can be constructed using an embedded DW script as value
+as shown in the following example
+
+.DataWeave expression inside the body parameter
+[source,xml,linenums]
+----
+<wsc:consume config-ref="config" operation="addClients">
+    <wsc:message>
+        <wsc:body>#[payload]</wsc:body>
+        <wsc:headers>
+          #[
+          %dw 2.0
+          output application/xml
+          ns con http://service.soap.clients.namespace/
+          ---
+          "headers": {
+              con#user: "NahuelMonin",
+              con#pass: "%M4g\/iT0Rn4!"
+          }]
+        </wsc:header>
+    </wsc:message>
+</wsc:consume>
+----
+
+=== Attachments
+
+The attachments element enables you to bound attachment to the SOAP message.
+The way we create attachments to be sent over SOAP is by declaring a DW script
+in which each entry will represent an attachment and it's value will be the attachment
+content.
+
+Let's see the following example and analyze it:
+
+.DataWeave expression inside the body parameter
+[source,xml,linenums]
+----
+<wsc:consume config-ref="config" operation="addClients">
+    <wsc:message>
+        <wsc:body>#[payload]</wsc:body>
+        <wsc:attachments>
+          #[{ clientsJson: vars.jsonFile } ]
+        </wsc:attachments>
+    </wsc:message>
+</wsc:consume>
+----
+
+Here we declare a new attachment called *"clientsJson"* which content is
+what is stored in the variable called `jsonFile`, this variable for example
+could be set from a `file:read` operation.
+
+== Output
+
+The output of the consume operation represents an incoming SOAP message containing
+the same elements that the message parameter has and you can access each part of it.
+
+Let's see an example:
+
+.DataWeave expression inside the body parameter
+[source,xml,linenums]
+----
+<flow name="output">
+  <wsc:consume config-ref="config" operation="addClients">
+      <wsc:message>
+          <wsc:body>#[payload]</wsc:body>
+      </wsc:message>
+  </wsc:consume>
+  <set-variable name="soap.body" value="#[payload.body]">
+  <set-variable name="soap.auth.header" value="#[payload.headers.auth]">
+  <set-variable name="soap.attachment.json" value="#[payload.attachments.json]">
+</flow>
+----
+
+Here we store the content of the body in a new variable called `soap.body`,
+a header called `auth` into a `soap.auth.header` variable and finally the
+the content of an attachment called `json` into a variable called `soap.attachment.json`
+
+== Attributes
+
+When consuming a web service operation, users are often not only interested in response content,
+but in metadata of the underlying transport used to dispatch the messages as well. For Example
+when using HTTP the attributes will carry the HTTP headers bounded to the HTTP request (content-length, status, etc)
+
+The Web Service Consumer will use the Mule Message Attributes to access this information.
+
+
+== See Also
+
+* link:/connectors/web-service-consumer-reference[Web Service Consumer Technical Reference]
+* link:/connectors/web-service-consumer-configure[To Configure the WSC]

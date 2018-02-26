@@ -1,0 +1,74 @@
+= To Configure the Web Service Consumer
+:keywords: core, connector, web service consumer, WSS, service, consumer, wsdl, soap
+
+To be able to consume a SOAP Web Service operation you will need to create a configuration
+pointing to the service that you want to consume.
+
+The Web Service Consumer (WSC) only has a single configuration. The most important
+configuration parameters are the the WSDL Location (`wdslLocation`), the Service (`service`)
+and the Port (`Port`), the configuration will not be valid if one of those is missing.
+
+The WSDL Location is the path or URL where the WSDL is located (local or remote) and
+the Service and Port are the parameters that specify which SOAP operations can be executed
+using the configuration.
+
+There is one more important parameter: the Service Address (`address`) where the actual requests
+are going to be dispatched to. This one is usually auto-populated when the Service and Port
+are specified, but sometimes the Service-Port pair does not indicates an address and
+is your responsibility as user to indicate the correct one.
+
+Let's see a quick configuration example:
+
+.Simple Web Service Consumer Configuration
+[source,xml,linenums]
+----
+<wsc:config name="wsc">
+    <wsc:connection wsdlLocation="http://www.webservicex.com/globalweather.asmx?WSDL"
+                    service="GlobalWeather"
+                    port="GlobalWeatherSoap"/>
+</wsc:config>
+----
+
+NOTE: the described configuration does not contains the address parameter because
+the Service and Port pair declares a valid address. You can take a look at the WSDL in the
+example, the Global Weather service is a public service.
+
+== Setting a Custom HTTP Transport Configuration
+
+As default the Web Service Consumer will use a simple, non-protected, HTTP configuration
+to dispatch all outgoing SOAP messages, but for the cases when a more advanced HTTP configuration
+is required the Web Service Consumer can be parameterized with an HTTP connector configuration
+that will be used to dispatch the messages. Take a look at the following example:
+
+.Custom Transport Web Service Consumer Configuration
+[source,xml,linenums]
+----
+<http:request-config name="basic-auth">
+    <http:request-connection host="www.someplace.com" port="8182" protocol="HTTP">
+        <http:authentication>
+            <http:basic-authentication username="alejandro.garcia" password="nariz"/>
+        </http:authentication>
+    </http:request-connection>
+</http:request-config>
+
+<wsc:config name="with-custom-transport">
+    <wsc:connection wsdlLocation="http://www.host.com?WSDL" service="Service" port="Port">
+        <wsc:custom-transport-configuration>
+            <wsc:http-transport-configuration requesterConfig="basic-auth"/>
+        </wsc:custom-transport-configuration>
+    </wsc:connection>
+</wsc:config>
+----
+
+In the example an HTTP Requester configuration with HTTP basic authentication is declared
+and then referenced in the `custom-transport-configuration` element in the WSC configuration.
+Now the WSC will dispatch each one of the requests using the provided advanced configuration.
+
+== See Also
+
+* link:/connectors/web-service-consumer-consume[To Consume a Web Service]
+* link:/connectors/http-connector[HTTP Connector Documentation]
+* link:/connectors/web-service-consumer-reference[Web Service Consumer Technical Reference]
+
+NOTE: The Web Service Consumer configuration does also support WSS security strategies.
+See the Technical Reference for more information.
