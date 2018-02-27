@@ -1,8 +1,11 @@
-= Static Metadata Annotations
+= Custom Static Metadata
 
-When explaining what static metadata is, the cases mentioned were cases on which the connector developer
-did not have to add any annotation for it to work. This are the cases of simple java types and custom
-POJOs. On those cases the structure is well known or can be introspected.
+*Available since version 1.1*
+
+We’ll use Static Metadata to reference the Metadata that is known at compile time an
+available from the types in the connector’s jar. Simple java types are part of this
+static Metadata, as well as custom POJOs defined by the developer in its model. The
+relevant part is that the structure is well known or can be introspected, without depending on other Parameters.
 
 Static Metadata is the Metadata bounded to a component that won't change depending
 on the value of another parameters, it is known at compile time. The advantage of static
@@ -10,14 +13,89 @@ metadata over dynamic is that, because it does not change and is known at compil
 time, there is no need to recalculate its structure depending on another parameter value. This means that
 the resolution is already done when developing an application.
 
-On this section you will see usages of static metadata resolution that are not automatically handled.
+The cases mentioned were cases on which the connector developer did not have to add
+any annotation for it to work (simple java type or POJOs). On the other hand, you will
+not always have a java class to back your static metadata. On these other cases you must
+use custom static metadata.
+
+On this section you will see usages of custom static metadata resolution. Most common
+usages of this type of resolutions are when you know exactly how the structure you are expecting is
+but there is no POJO or java class to back the structure.
+
+== Static Type Resolvers
+
+The way to resolve custom static metadata for input parameters, output payload or output attributes
+is very similar and it is shown on the next examples:
+
+On each example, the resolvers extends of an abstract class that implements `StaticResolver`.
+`getStaticMetadata` is the method that has to be implemented in order to resolve the metadata.
+
+=== InputStaticTypeResolver
+
+To use custom static metadata resolution on the input parameters of an operation, you
+must annotate the parameter with `@TypeResolver` and the value for the annotation must be
+a `InputStaticTypeResolver`.
+
+This is an example of a `InputStaticTypeResolver`, it must implement the method `getStaticMetadata`:
+
+[source, java, linenums]
+----
+public class JsonPersonInputStaticTypeResolver extends InputStaticTypeResolver {
+  @Override
+  public MetadataType getStaticMetadata() {
+    ObjectTypeBuilder object = BaseTypeBuilder.create(MetadataFormat.JSON).objectType();
+    object.id("json-object");
+    object.addField().key("name").value().stringType();
+    object.addField().key("last-name").value().stringType();
+    return object.build();
+  }
+}
+----
+
+=== OutputStaticTypeResolver
+
+to use custom static metadata resolution on the output payload of an operation, you
+must annotate the method with `@OutputResolver` and the output value for the annotation must be
+a `OutputStaticTypeResolver`.
+
+This is an example of a `OutputStaticTypeResolver`, it must implement the method `getStaticMetadata`:
+
+[source, java, linenums]
+----
+public class CsvOutputStaticTypeResolver extends OutputStaticTypeResolver {
+  @Override
+  public MetadataType getStaticMetadata() {
+    return BaseTypeBuilder.create(MetadataFormat.CSV).objectType().id("csv-object").build();
+  }
+}
+----
+
+=== AttributesStaticTypeResolver
+
+to use custom static metadata resolution on the output attributes of an operation, you
+must annotate the method with `@OutputResolver` and the attributes value for the annotation must be
+a `OutputStaticTypeResolver`.
+
+This is an example of a `AttributesStaticTypeResolver`, it must implement the method `getStaticMetadata`:
+
+[source, java, linenums]
+----
+public class CsvAttributesStaticTypeResolver extends AttributesStaticTypeResolver {
+
+  @Override
+  public MetadataType getStaticMetadata() {
+    ObjectTypeBuilder object = BaseTypeBuilder.create(MetadataFormat.CSV).objectType();
+    object.addField().key("location").value().stringType();
+    object.addField().key("size").value().numberType();
+    return object.build();
+  }
+}
+----
 
 == XML and JSON Types
 
-*Available since version 1.1*
-
-Sometimes operations require parameters to be JSON or XML types that follow a certain structure. You use annotations so that 
-DataSense can signal the type (JSON or XML) and structure of a certain parameter, output payload, or output attributes.
+Operations may require parameters to be JSON or XML types that follow a certain structure.
+It is possible to signal this to DataSense using the proper XSD or JSON schemas.
 
 === JSON Type
 
