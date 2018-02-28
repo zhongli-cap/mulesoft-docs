@@ -1,15 +1,15 @@
 = Using XQuery with the XML Module
 :keywords: XML, XQuery
 
-The `<xml-module:xquery-transform>` operation supports evaluation of XQuery expressions.
+The `<xml-module:xquery-transform>` operation supports the evaluation of XQuery expressions.
 
-Because XQuery expressions can match any number of individual elements, this operation returns a List of Strings. If no element matched the expression, an empty list will be returned.
+Because XQuery expressions can match any number of individual elements, this operation returns a List of Strings. If no element matches the expression, the operation returns an empty list.
 
-[TIP]
-Although we support the XQuery standard, remember that DataWeave is capable of achieving the same use cases and Mulesoft's recommended tool for extracting/transforming XML documents
+Note that though MuleSoft supports the XQuery standard, DataWeave is capable of achieving the same use cases and is the recommended tool for extracting and transforming XML documents.
 
-As an example, let's look at how to use XQuery to manipulate the following list of books:
+This example shows how to use XQuery to manipulate a list of books:
 
+.Input: Book List
 [source, xml, linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
@@ -103,8 +103,9 @@ As an example, let's look at how to use XQuery to manipulate the following list 
 </BOOKLIST>
 ----
 
-Now we can apply the following example transformation:
+This example uses XQuery to transform the book list above:
 
+.XQuery Transformation Script
 [source, xml, linenums]
 ----
  <xml-module:xquery-transform>
@@ -123,8 +124,9 @@ Now we can apply the following example transformation:
 </xml-module:xquery-transform>
 ----
 
-This will a produce a List of Strings, in which each entry will correspond to each of the following `<book>` elements:
+The XQuery transformation produces a List of Strings in which each entry corresponds to each of the following `<book>` elements:
 
+.Output XML
 [source, xml, linenums]
 ----
 <book>
@@ -177,8 +179,9 @@ This will a produce a List of Strings, in which each entry will correspond to ea
 </book>
 ----
 
-By default, the operation will will attempt to transform an XML document at the message payload. You can however use the `content` parameter to supply the input document:
+By default, the operation attempts to transform an XML document at the message payload level. However, you can use the `content` parameter to supply the input document:
 
+.Example: Using the content Parameter
 [source, xml, linenums]
 ----
 <flow name="books">
@@ -201,12 +204,13 @@ By default, the operation will will attempt to transform an XML document at the 
 </flow>
 ----
 
-In this example you can see how we get the content from someplace else (in this case a file in the filesystem) and then reference it using a simple expression.
+The example above gets the content from elsewhere (in this case, from a file in the filesystem) and then references it through a simple expression.
 
-== Externalizing the XQuery script to a separate file
+== Externalizing the XQuery Script to a Separate File
 
-In many cases it is a good practice not to have the XQuery script embedded in your application and instead ship it in a different file. That's also easy to do:
+To avoid embedding the XQuery script in your Mule app, you can pass it to the module through a file, for example:
 
+.Example
 [source, xml, linenums]
 ----
 <xml-module:xquery-transform>
@@ -214,31 +218,33 @@ In many cases it is a good practice not to have the XQuery script embedded in yo
 </xml-module:xquery-transform>
 ----
 
-A more complex use case is one in which the actual script to use depends on some external condition. For example, imagine a multi-tenant integration in which the actual transformation to use depends on a user id:
+In a more complex use case, the script you use might depend on some external condition. For example, imagine a multi-tenant integration in which the actual transformation to use depends on a `userID`:
 
+.Complex Example
 [source, xml, linenums]
 ----
 <flow name="multitenantExample">
     <http:listener path="transform" allowedMethods="POST" config-ref="httpListener" /> // <1>
-    <file:read path="#['xquery/$(attributes.queryParam.userId).xquery']" target="xquery" />
+    <file:read path="#['xquery/$(attributes.queryParam.userId).xquery']" target="xquery" /> // <2>
      <xml-module:xquery-transform>
         <xml-module:xquery>#[vars.xquery]</xml-module:xquery>
     </xml-module:xquery-transform>
 </flow>
 ----
 
-<1> This example flow is triggered through an HTTP request. 
-<2> Assuming that the user id will be provided as a query param, we use the file connector to go fetch the file holding the correct XQuery and store it in a variable.
-<3> Finally, we execute a transformation using an expression to point to the XQuery script we just obtained
+<1> This flow is triggered through an HTTP request.
+<2> Assuming that the `userID` is provided as a query parameter, the example uses the File connector read the correct XQuery script and store it in a variable.
+<3> The module executes a transformation using an expression that points to the XQuery script retrieved through the Read operation.
 
-[TIP]
-The usage of the HTTP and File connectors are just for the purpose of the example. They are not required to achieve similar use cases.
+Note that the HTTP and File connectors are just used as an example. They are not required to achieve similar use cases.
 
-== Using context properties and multiple inputs
+== Using Context Properties and Multiple Inputs
 
-Such as the XPath and XSLT counterparts, this operation supports context parameters, which is basically the ability to pass arguments into the transformation.
+Like its `xpath` and `xslt` counterparts, the `xquery` operation supports context parameters that can pass arguments to the transformation.
 
-Suppose we want to combine the books XML above with the following cities XML document:
+For example, assume that you want to combine the `books` XML above with the following `cities` XML document:
+
+.Input
 [source, xml, linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
@@ -253,42 +259,46 @@ Suppose we want to combine the books XML above with the following cities XML doc
 
 Let's look at an example for this use case:
 
+.XQuery Transformation Script
 [source, xml, linenums]
 ----
 <flow name="multipleInputs">
-    <file:read path="books.xml" target="books" />
-    <file:read path="cities.xml" target="cities" /> // <1>
-    <xml-module:xquery-transform>
-        <xml-module:xquery>
-            <![CDATA[
-                xquery version "3.0";
-                declare variable $document external;
-                declare variable $cities external; // <2>
-                declare variable $books external; // <3>
-                <mixes>
-                {
-                    for $b in fn:doc($books)/BOOKLIST/BOOKS/ITEM,
-                        $c in fn:doc($cities)/cities/city // <4>
+  <file:read path="books.xml" target="books" />
+  <file:read path="cities.xml" target="cities" /> // <1>
+  <xml-module:xquery-transform>
+    <xml-module:xquery>
+      <![CDATA[
+          xquery version "3.0";
+          declare variable $document external;
+          declare variable $cities external; // <2>
+          declare variable $books external; // <3>
+          <mixes>
+            {
+              for $b in fn:doc($books)/BOOKLIST/BOOKS/ITEM,
+                $c in fn:doc($cities)/cities/city // <4>
 
-                    return <mix title="{$b/TITLE/text()}" city="{$c/@name}" /> // <5>
-                }
-                </mixes>
-            ]]>
-        </xml-module:xquery>
-        <xml-module:context-properties>#[{'books' : vars.books, 'cities': vars.cities}] </xml-module:context-properties> // <6>
-    </xml-module:xquery-transform>
+              return <mix title="{$b/TITLE/text()}" city="{$c/@name}" /> // <5>
+            }
+          </mixes>
+      ]]>
+    </xml-module:xquery>
+    <xml-module:context-properties>
+      #[{'books' : vars.books, 'cities': vars.cities}]
+    </xml-module:context-properties> // <6>
+  </xml-module:xquery-transform>
 </flow>
 ----
 
-<1> Read the input documents and store the contents in variables. In this example we use the File connector but any data source is acceptable
-<2> Declare the `$cities` variable in the XQuery script
-<3> Declare the `$books` variable in the XQuery script
-<4> Reference both documents using the `$` prefix and iterate both of them
-<5> Produce the output elements
-<6> Use DataWeave and the `<xml-module:context-properties>` parameter to bind the properties
+<1> Read the input documents, and store the contents in variables. This example uses the File connector, but any data source is acceptable.
+<2> Declare the `$cities` variable in the XQuery script.
+<3> Declare the `$books` variable in the XQuery script.
+<4> Reference both documents using the `$` prefix, and iterate both of them.
+<5> Produce the output elements.
+<6> Use DataWeave and the `<xml-module:context-properties>` parameter to bind the properties.
 
-This will output a List of String with only one item, which looks like this:
+The script will output a List of Strings with only one item:
 
+.Output
 [source, xml, linenums]
 ----
 <mixes>
@@ -325,6 +335,6 @@ This will output a List of String with only one item, which looks like this:
 </mixes>
 ----
 
-== See also
+== See Also
 
-* link:xml-module[XML Module documentation]
+link:xml-module[XML Module documentation]
