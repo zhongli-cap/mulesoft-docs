@@ -1,16 +1,15 @@
 = Using XPath with the XML Module
 :keywords: XML, xpath
 
-The `<xml-module:xpath-extract>` operation supports evaluation of XPath expressions.
+The `<xml-module:xpath-extract>` operation supports the evaluation of XPath expressions.
 
-Because XPath expressions can match any number of individual elements, this operation returns a List of Strings. If no element matches the expression, an empty list is returned.
+Because XPath expressions can match any number of individual elements, this operation returns a List of Strings. If no element matches the expression, the operation returns an empty list.
 
-XPath expressions are also namespace-aware, which is why this operation allows namespace mappings. These mappings will be merged with any defined in the referenced namespace-directory, meaning that the evaluation will combine both sets of namespace mappings.
+XPath expressions are also namespace-aware, so this operation allows namespace mappings. These mappings are merged with any `namespaces` defined in the referenced `namespace-directory`, meaning that the evaluation combines both sets of namespace mappings.
 
-[TIP]
-Although MuleSoft supports the XPath standard, remember that DataWeave is capable of achieving the same use cases and is Mulesoft's recommended tool for extracting and transforming XML documents.
+Note that though MuleSoft supports the XPath standard, DataWeave is capable of achieving the same use cases and is the recommended tool for extracting and transforming XML documents.
 
-The next example shows how to work with a sample XML that contains the script of the play Othello by William Shakespeare. The XML file looks roughly like this:
+This example shows how to work with XML that contains the script of the play Othello by William Shakespeare. The XML file looks like this:
 
 [source, xml, linenums]
 ----
@@ -60,8 +59,10 @@ The next example shows how to work with a sample XML that contains the script of
 <!-- A LOT MORE CONTENT -->
 ----
 
-Suppose you want to extract all the lines that contain the work `handkerchief`.
+[[othello_lines]]
+Now assume that you have the text of the entire play in the format shown above, and you use this script to extract all the lines that contain the word `handkerchief`:
 
+.XPath Script
 [source, xml, linenums]
 ----
 <xml-module:xpath-extract xpath="//LINE[contains(., $word)]"> // <1>
@@ -72,9 +73,10 @@ Suppose you want to extract all the lines that contain the work `handkerchief`.
 <1> Provides an XPath expression that uses the `$` prefix to reference context properties.
 <2> Uses DataWeave in the `context-properties` parameter to produce the context properties.
 
-This will output the following List of Strings (each line will be a different item in the list):
+The XPath script above outputs the following List of Strings, where each `LINE` is a different item in the list:
 
-```
+.Output
+----
 <LINE>For the same handkerchief?</LINE>
 <LINE>What handkerchief?</LINE>
 <LINE>What handkerchief?</LINE>
@@ -102,39 +104,39 @@ This will output the following List of Strings (each line will be a different it
 <LINE>It was a handkerchief, an antique token</LINE>
 <LINE>O thou dull Moor! that handkerchief thou speak'st of</LINE>
 <LINE>How came you, Cassio, by that handkerchief</LINE>
-```
+----
 
-By default, the operation will attempt to transform an XML document at the message payload. You can however use the `content` parameter to supply the input document:
+Note that by default, the operation attempts to transform an XML document at the message payload level. However, you can use the `content` parameter to supply the input document:
 
 [source, xml, linenums]
 ----
 <flow name="linesFromOthello">
     <file:read path="othello.xml" target="othello" />
-    <xml-module:xpath-extract xpath="//LINE[contains(., $word)]>
+    <xml-module:xpath-extract xpath="//LINE[contains(., $word)]">
         <xml-module:content>#[vars.othello]</xml-module:content>
         <xml-module:context-properties>#[{'word': 'handkerchief'}]</xml-module:context-properties>
     </xml-module:xpath-extract>
 </flow>
 ----
 
-In this example, you can see how to get the content from elsewhere (in this case a file in the filesystem) and then reference it using a simple expression.
+The example above gets the content from elsewhere (in this case, from a file in the filesystem) and then references it using a simple expression.
 
 == Mapping Namespaces
 
-There are cases in which the input XML document may contain elements of different namespaces. For example, consider the following document:
+There are cases in which the input XML document contains elements with different namespaces. For example, consider the following document:
 
 [source, xml, linenums]
 ----
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   <soap:Body foo="bar">
-    <ns1:echo xmlns:ns1="http://simple.component.mule.org/">
+    <ns1:echo xmlns:mule="http://simple.component.mule.org/">
       <ns1:echo>Hello!</ns1:echo>
     </ns1:echo>
   </soap:Body>
 </soap:Envelope>
 ----
 
-Let's look at an example for this use case:
+The next example maps each `prefix` used in the XPath expressions to the corresponding namespace `uri`.
 
 [source, xml, linenums]
 ----
@@ -148,9 +150,7 @@ Let's look at an example for this use case:
 </flow>
 ----
 
-In this example, you can see how to map the prefixes used in the XPath expressions to the corresponding namespace URIs.
-
-But what happens if you actually need to execute several XPath expressions that use the same namespaces? You definitively don't want to do the mapping each time. In that case, you can create a `namespace-directory` to contain the mappings and then reference it:
+But what happens if you need to execute several XPath expressions that use the same namespaces? To avoid performing the mapping each time, you can create a `namespace-directory` for the mappings and then reference that directory, for example:
 
 [source, xml, linenums]
 ----
@@ -160,18 +160,19 @@ But what happens if you actually need to execute several XPath expressions that 
         <xml-module:namespace prefix="mule" uri="http://simple.component.mule.org/"/>
     </xml-module:namespaces>
 </xml-module:namespace-directory>
-    
+
 <flow name="xpathWithFullNs">
-    <xml-module:xpath-extract xpath="/soap:Envelope/soap:Body/mule:echo/mule:echo" // <2>
-         namespaceDirectory="fullNs"/> // <3>
+    <xml-module:xpath-extract
+      xpath="/soap:Envelope/soap:Body/mule:echo/mule:echo"
+      namespaceDirectory="fullNs"/> // <2><3>
 </flow>
 ----
 
 <1> The `namespace-directory` element is used to map prefixes to the actual namespace URIs. Notice these prefixes should match those used in the input document.
-<2> You can then reference those prefixes in your XPath expression. 
+<2> You can then reference those prefixes in your XPath expression.
 <3> Finally, use the `namespaceDirectory` parameter to reference the mapping created in step 1.
 
-Finally, you can combine use cases! You can have a global `namespaceDirectory` that contains some mappings and then add additional ones at the operation level. This combination is useful if you have a lot of documents that, for example, all contain the `soap` namespace, but there's only one that contains the `mule` namespace:
+Finally, you can combine use cases. For example, you can have a global `namespaceDirectory` that contains some mappings and then add additional ones at the operation level. This combination is useful if you have a lot of documents that, for example, all contain the `soap` namespace but only one of them contains the `mule` namespace:
 
 [source, xml, linenums]
 ----
@@ -182,8 +183,9 @@ Finally, you can combine use cases! You can have a global `namespaceDirectory` t
 </xml-module:namespace-directory>
 
 <flow name="xpathWithMergedNs">
-    <xml-module:xpath-extract xpath="/soap:Envelope/soap:Body/mule:echo/mule:echo" // <2>
-    namespaceDirectory="partialNs"> // <3>
+    <xml-module:xpath-extract
+      xpath="/soap:Envelope/soap:Body/mule:echo/mule:echo"
+      namespaceDirectory="partialNs"> // <2> <3>
         <xml-module:namespaces>
             <xml-module:namespace prefix="mule" uri="http://simple.component.mule.org/"/> // <4>
         </xml-module:namespaces>
@@ -191,24 +193,22 @@ Finally, you can combine use cases! You can have a global `namespaceDirectory` t
 </flow>
 ----
 
-<1> Declare a `namespace-directory` just like before, but only supply the common namespaces.
+<1> Declare a `namespace-directory` like before, but only supply the common namespaces.
 <2> Provide your XPath expression.
 <3> Reference the partial namespace directory.
 <4> Provide the additional mapping.
 
-[TIP]
-In any of the examples above, the prefixes used in the mappings and XPath expressions must match the ones used in the input document.
+It is important to note that the prefixes used in the mappings and XPath expressions must match the ones used in the input document.
 
 == Using XPath as a Function
 
-The XML module also provides a DataWeave function for extracting values using XPath. This is useful in cases such as a `<choice>` or `<foreach>` routers.
+The XML module provides a DataWeave function for extracting values using XPath. This is useful in cases such as a `<choice>` or `<foreach>` routers.
 
-[TIP]
-You can use this function inside any DataWeave transformation
+Note that can also use this function inside any DataWeave transformation.
 
-=== Using XPath function with <foreach>
+=== Using the XPath Function with <foreach>
 
-Going back to the Othello lines example, imagine that you really want to iterate through all those lines and process them separately:
+Returning to the <<othello_lines, Othello lines>> example, imagine that you want to iterate over all those lines and process them separately:
 
 [source, xml, linenums]
 ----
@@ -217,13 +217,13 @@ Going back to the Othello lines example, imagine that you really want to iterate
 </foreach>
 ----
 
-1. The first argument is the XPath expression.
-2. The second one is the input document, in this case, the message payload.
-3. The third one is the context properties. Since in this case, we don't need any, we just pass an empty object (`{}`)
+* The first argument is the XPath expression.
+* The second one is the input document, in this case, the message payload.
+* The third one is the context properties. Because this case does not require any, the function passes an empty object (`{}`).
 
 === Using XPath Function with <choice>
 
-Going back to the previous example, suppose you want to do something if the input document does not contain the word `handkerchief`.
+Returning to the <<othello_lines, Othello lines>> example, suppose you want to do something if the input document does not contain the word `handkerchief`.
 
 [source, xml, linenums]
 ----
@@ -234,11 +234,11 @@ Going back to the previous example, suppose you want to do something if the inpu
 </choice>
 ----
 
-1. Since the `XmlModule::xpath` function returns a list, we use DataWeave's `isEmpty()` function to test whether the output is empty or not.
-2. The first argument of the XPath function is an expression, this time using the `$work` context property.
-3. The second argument is the input document, this time within a variable.
-4. Lastly, we provide the context properties values.
+* Since the `XmlModule::xpath` function returns a list, the example uses the DataWeave `isEmpty()` function to test whether the output is empty or not.
+* The first argument of the XPath function is an expression that uses the `$word` context property.
+* The second argument is the input document within a variable.
+* The third argument provides the context properties values.
 
 == See also
 
-* link:xml-module[XML Module documentation]
+link:xml-module[XML Module documentation]
