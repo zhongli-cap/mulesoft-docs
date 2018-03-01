@@ -3,53 +3,31 @@
 :toc:
 :toc-title:
 
-The Mule 4 SFTP connector provides ability to read a file at any given time of the flow, unlike the old Mule 3 transport which can only read files as a result of inbound endpoint polling.
+The SFTP connector can read a file at any point in the flow, unlike in Mule 3, where the transport can only read files as a result of inbound endpoint polling.
 
-The syntax to read a file is:
+Here is the syntax for reading a file:
 
 [source, xml, linenums]
 ----
 <sftp:read path="#[path]"
-lock="true|false"
-outputEncoding="UTF-8"
-outputMimeType="application/xml" />
+  lock="true|false"
+  outputEncoding="UTF-8"
+  outputMimeType="application/xml" />
 ----
 
-The operation above reads the file in the given path. It returns a MuleMessage with the following attributes:
+The operation above reads the file in the given path. It returns a Mule message (`MuleMessage`) with the following attributes:
 
-* The file's content as payload
-* The file's metadata in the message attributes
-* If the file does not exist, you will get a `SFTP:ILLEGAL_PATH` error.
+* The file's content as the payload.
+* The file's metadata in the message attributes.
+* If the file does not exist, you receive a `SFTP:ILLEGAL_PATH` error.
 
-The supplied path MUST point to an actual file. It’s not possible to read a directory, in such cases, you will get a `SFTP:ILLEGAL_PATH` error.
+Note that the path must point to an actual file. The operation does not read directories. If there is no file, you will receive a `SFTP:ILLEGAL_PATH` error.
 
-== Mime Types and encoding
+// == INCLUDE SHARED READ OP CONTENT FOR FILE, FTP, AND SFTP CONNECTORS
+include::include-read-operation.adoc[]
 
-The SFTP Connector does its best to auto determine a file’s mimeType based on its extension. However, there are cases in which that best guess is not enough, and the user will have first-hand knowledge of the file’s content. In such cases, you can force that mimeType to a particular value by using the outputMimeType parameter.
+// == File Locking SHARED BY FTP AND SFTP only
+include::include-file-lock.adoc[]
 
-The same process works for encoding. By default, the connector will assume that the runtime’s default encoding matches the one in the file. You can set this by using the outputEncoding parameter.
-
-== Why MimeTypes matter
-
-With DataWeave as the default expression language in Mule 4, DataWeave expressions are embeddable inside operations that generate payloads and other values. Having the correct mimeType set helps DataWeave auto-assign types and, in turn, also generate the correct outputs, while improving the user experience by maximizing the use of DataSense’s functionality.
-
-== File Locking
-
-File system level locks are not possible in SFTP, so the lock is a Mule lock. That means that the lock will only protect the file against other flows in the same Mule application, but it will not protect the file against external processes. Do keep in mind that if the Mule application is running on a cluster, the lock will be distributed.
-
-The lock will be automatically released when one of the following things happen:
-
-* The Mule flow, which locked the file, ends
-* The file content has been fully read
-
-Also, take into account that the file might already be locked by somebody else, in which case the connector won’t be able to lock it and you will get a `FTP:FILE_LOCK` error.
-
-== Streaming
-
-This operation leverages the new repeatable streams functionality introduced in Mule 4. It returns a list of messages, each one representing one of the found files. Each of those messages holds a stream to the found file, and that stream is repeatable by default.
-
-For more information, read about link:/mule-user-guide/v/4.0/streaming-about[how automatic streaming works in Mule 4].
-
-== See also
-
-link:/mule-user-guide/v/4.0/streaming-about[Streaming in Mule 4.0]
+//== STREAMING INCLUDE in File, FTP, and SFTP Connector docs
+include::include-streaming.adoc[]
