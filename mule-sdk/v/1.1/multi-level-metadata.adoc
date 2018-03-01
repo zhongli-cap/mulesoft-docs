@@ -1,19 +1,19 @@
 = Multi Level Metadata
 
-The metadata key id does not always need to be a `String` type. It can be a complex type that
-holds the necessary information to resolve the metadata. Imagine the case where the user
-will use an operation that invokes an action provided by a service. To know the metadata of what the action
-require as arguments or what it returns, you will have to know which is the service and which is the action
-to be executed, this will be your metadata key id.
+Imagine the case where the user will use an operation that invokes an action provided by a service.
+To know the metadata of what the action require as arguments or what it returns, you
+will have to know which is the service and which is the action to be executed, this will be your metadata key id.
+For this cases, the metadata key id is not required to be a single `String`, but instead it can contain multiple parts
+bundled in a complex parameter that holds the necessary information to resolve the metadata.
 
 == Implementing a Multi Level Metadata Key
 
 The different parameters of the metadata key must have an order in which they will have
-to be filled. This order will be a number starting on 1. Returning to the same example, the user
-will fill the service field first and then which action to invoke. Then, the service
-parameter will have the order 1 and the action parameter order 2.
+to be filled, starting on 1. Returning to the same example, the user will fill the
+service field first and then which action to invoke. Then, the service parameter will
+have the order 1 and the action parameter order 2.
 
-All the parameters of the `MetadataKeyId` must be annotated with the @MetadataKeyPart annotation with
+All the parameters of the POJO representing the `MetadataKeyId` must be annotated with the @MetadataKeyPart annotation with
 the order value set. These annotated fields must be of type `String`.
 
 This is an example of how would this metadata key id class look like:
@@ -30,13 +30,6 @@ public class ActionIdentifier{
   @MetadataKeyPart(order = 2) // <1>
   private String action;
 
-  public ActionIdentifier(){}
-
-  public ActionIdentifier(String service, String action) {
-    this.service = service;
-    this.action = action;
-  }
-
   @Override
   public String getService() {
     return service;
@@ -45,6 +38,16 @@ public class ActionIdentifier{
   @Override
   public String getAction() {
     return action;
+  }
+
+  @Override
+  public void setService(String service) {
+    this.service = service;
+  }
+
+  @Override
+  public void setAction(String action) {
+    this.action = action;
   }
 }
 ----
@@ -55,7 +58,7 @@ This is an example of an operation that uses a `MetadataKeyId` that is a complex
 ----
 @OutputResolver(output = OutputOperationTypeResolver.class)
 public Object invoke( @ParameterGroup(name = "Operation") @MetadataKeyId(OperationTypeKeysResolver.class) ActionIdentifier identifier,
-                      @TypeResolver(InputOperationTypeResolver.class) Map<String, String> args){
+                      @TypeResolver(InputOperationTypeResolver.class) Map<String, Object> args){
   return invokeAction(identifier.getService(), identifier.getAction(), args);
 }
 ----
@@ -150,9 +153,9 @@ public class OperationTypeKeysResolver implements PartialTypeKeysResolver<Action
                                          FailureCode.INVALID_METADATA_KEY);
     }
 
-    MetadataKeyBuilder key = MetadataKeyBuilder.newKey(key.getService()); <2>
+    MetadataKeyBuilder key = MetadataKeyBuilder.newKey(key.getService()); // <2>
     for(String action : getActions(key.getService())){
-      key.withChild(MetadataKeyBuilder.newKey(action).build());
+      key.withChild(MetadataKeyBuilder.newKey(action).build()); // <3>
     }
     return key;
   }
@@ -163,63 +166,71 @@ public class OperationTypeKeysResolver implements PartialTypeKeysResolver<Action
 <1> Only the services are retrieved, the actions of a service will be retrieved on demand.
 <2> Build a single `MetadataKey` tree with a new complete level of metadata, in this case, the
 actions level.
+<3> Add the actions of that service as children.
 
-
-== Restricted Partial Fetching
+== Using User Input As Partial Level
 
 *Available since version 1.1*
 
-There are parts of the `MetadataKey` that you may not want to hint the user. This may be
-because the universe of possibilities it too big, or because it is a custom field. Take as example
-a `MetadataKey` that has a part that is a `String` representing a java class. It would be both very time
-consuming to retrieve all the classes and complicated for the user to have so many possibilities on a
-dropdown.
+There may be cases where you can't hint the user a part of your MetadataKey, like when the
+universe of options is too big (for example, it makes no sense to show all the classes in a classpath
+in a dropdown), or when the starting point of the ID is a free input (for example, a query).
+
+Take as example a `MetadataKeyId` that has a part that is a `String` representing a java class.
+It would be both very time consuming to retrieve all the classes and complicated for the
+user to have so many possibilities on a dropdown.
 
 Because of this you can signal that a `MetadataKeyPart` will not be provided by the resolver and must be
 inserted by the user. This is done by setting to false the `providedByKeyResolver` value on the `MetadataKeyPart`
 annotation.
 
-This is an example where the service name is not given by the resolver :
+This is an example where the POJO representing the `MetadataKeyId`, represents a java
+method:
 
 [source, java, linenums]
 ----
-public class ActionIdentifier{
+public class MethodIdentifier{
 
   @Parameter
+  @Alias("class")
   @MetadataKeyPart(order = 1, providedByKeyResolver = false) // <1>
-  private String service;
+  private String clazz;
 
   @Parameter
+  @Alias("method")
   @MetadataKeyPart(order = 2)
-  private String action;
+  private String methodId;
 
-  public ActionIdentifier(){}
-
-  public ActionIdentifier(String service, String action) {
-    this.service = service;
-    this.action = action;
+  @Override
+  public String getClazz() {
+    return clazz;
   }
 
   @Override
-  public String getService() {
-    return service;
+  public String getMethodId() {
+    return methodId;
   }
 
   @Override
-  public String getAction() {
-    return action;
+  public void setClazz(String clazz) {
+    this.clazz = clazz;
+  }
+
+  @Override
+  public void setMethodId(String methodId) {
+    this.methodId = methodId;
   }
 }
 ----
 
-<1> The service field will have to be inserted by the user without hints.
+<1> The clazz field will have to be inserted by the user without hints.
 
-This also means that on this case the `getKeys` method does not need to return all the
-possible services:
+This also means that on this case the `getKeys` method cannot return all the
+possible classes:
 
 [source, java, linenums]
 ----
-public class OperationTypeKeysResolver implements PartialTypeKeysResolver<ActionIdentifier> {
+public class MethodTypeKeysResolver implements PartialTypeKeysResolver<MethodIdentifier> {
 
   @Override
   public Set<MetadataKey> getKeys(MetadataContext context) throws MetadataResolvingException, ConnectionException {
@@ -227,17 +238,17 @@ public class OperationTypeKeysResolver implements PartialTypeKeysResolver<Action
   }
 
   @Override
-  public MetadataKey resolveChilds(MetadataContext metadataContext, ServiceOperation key)
+  public MetadataKey resolveChilds(MetadataContext metadataContext, MethodIdentifier key)
       throws MetadataResolvingException, ConnectionException {
 
-    if(key.getService() == null){
-      throw new MetadataResolvingException("Missing Service name. Cannot resolve Actions without a service",
+    if(key.getClazz() == null){
+      throw new MetadataResolvingException("Missing Class name. Cannot resolve Methods without a target Class",
                                          FailureCode.INVALID_METADATA_KEY);
     }
 
-    MetadataKeyBuilder key = MetadataKeyBuilder.newKey(key.getService()); <2>
-    for(String action : getActions(key.getService())){
-      key.withChild(MetadataKeyBuilder.newKey(action).build());
+    MetadataKeyBuilder key = MetadataKeyBuilder.newKey(key.getClazz()); // <2>
+    for(String methodId : getMethodIds(key.getClazz())){
+      key.withChild(MetadataKeyBuilder.newKey(methodId).build()); // <3>
     }
     return key;
   }
@@ -246,3 +257,6 @@ public class OperationTypeKeysResolver implements PartialTypeKeysResolver<Action
 ----
 
 <1> return an empty set of `MetadataKey` since the user will provide this information.
+<2> Build a single `MetadataKey` tree with a new complete level of metadata, in this case, the
+methodIds level.
+<3> Add the methodIds of that class as children.

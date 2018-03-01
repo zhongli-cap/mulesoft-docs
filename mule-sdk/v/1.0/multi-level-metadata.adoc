@@ -1,17 +1,19 @@
 = Multi Level Metadata
 
-The metadata key id does not always need to be a `String` type. It can be a complex type that
-holds the necessary information to resolve the metadata. Imagine the case where the user
-will use an operation that invokes an action provided by a service. To know the metadata of what the action
-require as arguments or what it returns, you will have to know which is the service and which is the action
-to be executed, this will be your metadata key id.
+Imagine the case where the user will use an operation that invokes an action provided by a service.
+To know the metadata of what the action require as arguments or what it returns, you
+will have to know which is the service and which is the action to be executed, this will be your metadata key id.
+For this cases, the metadata key id is not required to be a single `String`, but instead it can contain multiple parts
+bundled in a complex parameter that holds the necessary information to resolve the metadata.
+
+== Implementing a Multi Level Metadata Key
 
 The different parameters of the metadata key must have an order in which they will have
-to be filled. This order will be a number starting on 1. Returning to the same example, the user
-will fill the service field first and then which action to invoke. Then, the service
-parameter will have the order 1 and the action parameter order 2.
+to be filled, starting on 1. Returning to the same example, the user will fill the
+service field first and then which action to invoke. Then, the service parameter will
+have the order 1 and the action parameter order 2.
 
-All the parameters of the `MetadataKeyId` must be annotated with the @MetadataKeyPart annotation with
+All the parameters of the POJO representing the `MetadataKeyId` must be annotated with the @MetadataKeyPart annotation with
 the order value set. These annotated fields must be of type `String`.
 
 This is an example of how would this metadata key id class look like:
@@ -28,13 +30,6 @@ public class ActionIdentifier{
   @MetadataKeyPart(order = 2) // <1>
   private String action;
 
-  public ActionIdentifier(){}
-
-  public ActionIdentifier(String service, String action) {
-    this.service = service;
-    this.action = action;
-  }
-
   @Override
   public String getService() {
     return service;
@@ -43,6 +38,16 @@ public class ActionIdentifier{
   @Override
   public String getAction() {
     return action;
+  }
+
+  @Override
+  public void setService(String service) {
+    this.service = service;
+  }
+
+  @Override
+  public void setAction(String action) {
+    this.action = action;
   }
 }
 ----
@@ -53,7 +58,7 @@ This is an example of an operation that uses a `MetadataKeyId` that is a complex
 ----
 @OutputResolver(output = OutputOperationTypeResolver.class)
 public Object invoke( @ParameterGroup(name = "Operation") @MetadataKeyId(OperationTypeKeysResolver.class) ActionIdentifier identifier,
-                      @TypeResolver(InputOperationTypeResolver.class) Map<String, String> args){
+                      @TypeResolver(InputOperationTypeResolver.class) Map<String, Object> args){
   return invokeAction(identifier.getService(), identifier.getAction(), args);
 }
 ----
