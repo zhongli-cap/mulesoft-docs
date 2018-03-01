@@ -1,0 +1,167 @@
+= Migrating the Object Store Connector
+
+The Object Store Connector in Mule 4 is very similar to the one in Mule 3. The most
+impacted areas between these mayor versions were, the creation of custom object Stores,
+and the keys type. Now the creation of a custom object store does not require the
+usage of Spring or the knowledge of the existence of certain java classes. Regarding the
+keys, instead of being able to use any `Serializable`, they must be a `String` now.
+
+== What's covered in this section:
+
+* <<namespace>>
+* <<configs-object-stores>>
+* <<custom-object-store>>
+* <<change-on-keys>>
+* <<storing-values>>
+* <<persistent-default-value>>
+* <<dispose-clear>>
+
+
+[[namespace]]
+=== Namespace Change
+
+On the Mule 3 ObjectStore Connector the namespace used was `objectstore` . This namespace
+has change to `os` on the new Mule 4 Connector.
+
+.Mule 3 example
+[source,xml,linenums]
+----
+<objectstore:contains config-ref="ObjectStoreConnector" key="#[flowVars.userId]"/>
+----
+
+.Mule 4 example
+[source,xml,linenums]
+----
+<os:contains key="#[vars.userId]" objectStore="customObjectStore"/>
+----
+
+[[configs-object-stores]]
+=== Using Top Level Objects
+
+On Mule 3 most of the connector operations require a Connector Configuration. On Mule 4
+most operation will instead receive a reference to an ObjectStore which is a top level
+element. If no object store is passed to the operation, the default object store will be
+used.
+
+[[custom-object-store]]
+=== Creating Custom Object Stores
+
+On Mule 3, in order to create a new ObjectStore you needed to create a spring bean and
+know the specific java classes used for the ObjectStore. On Mule 4 this is much easier,
+you just have to create a top level element that represents the ObjectStore.
+
+On Mule 4 you no longer manage partitions on the object store.
+
+This are examples of how this was done on Mule 3 and how it is done now on Mule 4:
+
+.Mule 3 example
+[source,xml,linenums]
+----
+<spring:beans>
+    <spring:bean id="myCustomObjectStore" class="org.mule.util.store.SimpleMemoryObjectStore"/>
+</spring:beans>
+
+<objectstore:config name="ObjectStoreConnector" objectStore-ref="myCustomObjectStore"  partition="users" entryTtl="3600000" expirationInterval="10000" maxEntries="1000" persistent="true"/>
+----
+
+On a flow you could use :
+
+[source,xml,linenums]
+----
+<objectstore:contains config-ref="ObjectStoreConnector" key="#[flowVars.userId]"/>
+----
+
+.Mule 4 example
+[source,xml,linenums]
+----
+  <os:object-store name="customObjectStore"  maxEntries="1000" entryTtl="1" entryTtlUnit="HOURS" expirationIntervalUnit="SECONDS" expirationInterval="10"/>
+----
+
+On a flow you can use :
+
+[source,xml,linenums]
+----
+  <os:contains key="#[vars.userId]" objectStore="customObjectStore"/>
+----
+
+Note that on Mule 4 you can specify the time units for both the entry time to live and the
+frequency on which you will check if entries have expired or exceed the maximum amount of
+entries.
+
+[[change-on-keys]]
+=== Changes to Keys
+
+On Mule 3 the keys used to reference values on an object store could be any `Serializable`. On Mule 4
+only `String` objects are used for this purpose.
+
+In case that you are using a `Serializable` that is not a `String` as keys, you should convert
+it into  `String` values.
+
+[[storing-values]]
+=== Storing a value
+
+On Mule 4 the value parameter now is taken as a content parameter, this means that
+it should be defined inline. This was configured as an attribute on Mule 3.
+
+Also, the way to update a value on an object store had a minor change. On Mule 3 you had a
+flag called `overwrite` that by default comes as false. On Mule 4 you have a flag
+called `failIfPresent` that by default comes as false. This means that now when using the store
+operation with an already used key, the default behavior is to overwrite the value.
+
+When migrating pay close attention to how flags are configure, since the default behaviors
+are different.
+
+.Mule 3 example
+[source,xml,linenums]
+----
+<objectstore:store config-ref="ObjectStoreConnector" key="#[flowVars.userId]" value-ref="#[flowVars.userAddress]" overwrite="true" />
+----
+
+.Mule 4 example
+[source,xml,linenums]
+----
+<os:store key="#[vars.userId]" objectStore="customObjectStore">
+			<os:value ><![CDATA[#[vars.userAddress]]]></os:value>
+</os:store>
+----
+
+[[persistent-default-value]]
+=== Default Value to Persistent Attribute
+
+On Mule 4 object stores are persistent by default, while on the Mule 3 connector they
+are stored on-memory by default. Because of this you will have to be carefull when
+migrating your implementation. Not saying explicitly the percistancy of the object store
+will mean different things.
+
+This example shows how after migrating, the persistent attribute had to be explicitly added:
+
+.Mule 3 example
+[source,xml,linenums]
+----
+<objectstore:config name="ObjectStoreConnector" partition="users"/>
+----
+
+.Mule 4 example
+[source,xml,linenums]
+----
+<os:object-store name="customObjectStore" persistent="false"/>
+----
+
+[[dispose-clear]]
+=== Cleaning an Object Store
+
+The dispose operation on Mule 3 was used to clear a specific partition of an object store.
+On Mule 4 we have the clear operation that clears a whole object store. There is no
+notion of partition anymore.
+
+.Mule 3 example
+[source,xml,linenums]
+----
+<objectstore:dispose-store config-ref="ObjectStoreConnector" partitionName="users"/>
+----
+
+.Mule 4 example
+[source,xml,linenums]
+----
+<os:clear objectStore="customObjectStore"/>
+----
