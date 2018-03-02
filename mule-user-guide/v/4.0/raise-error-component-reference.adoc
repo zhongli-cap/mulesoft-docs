@@ -4,16 +4,29 @@
 This component will generate a link:mule-user-guide/v/4.0/mule-error-concept[Mule Error],
 as if a failure had occurred, allowing you to customize its description and type.
 
-The following example flow produces a `CONNECTIVITY` error and will result in a
-500 response with body `Could not connect to backend.`.
+Note that you can only use core types, such as `SECURITY`, or custom ones.
+Core errors must use the implicit namespace while custom ones are forced to declare one.
+The custom error namespace must not be used elsewhere in your app, meaning you cannot
+use `HTTP` as namespace if you are using HTTP operations, for example. Once you've
+declared a custom namespace by using it in a `raise-error`, you can use it in other
+`raise-error` components and custom types.
+
+The following example flow produces an `ACCOUNT:INSUFFICIENT_FUNDS` error when a
+transfer amount surpasses the available balance, preventing the transfer from
+taking place. Additionally, it generates a dynamic description by providing an
+expression with failure details.
 
 .Example: XML Configuration of the Flow
 [source,xml,linenums]
 ----
 <flow name="raise-error-example-flow">
-  <http:listener config-ref="HTTP_Listener_Configuration" path="/"/>
-  <raise-error type="CONNECTIVITY" description="Could not connect to backend."/>
-  <logger message="Never logged" level="INFO"/>
+  <http:request url="https://unsecurebank.com/balance" target="balance"/>
+  <choice>
+      <when expression="#[payload.amount > vars.balance]">
+          <raise-error type="ACCOUNT:INSUFFICIENT_FUNDS" description="#['Cannot transfer $(payload.amount) since only $(vars.balance) are available.']"/>
+      </when>
+  </choice>
+  <http:request url="https://unsecurebank.com/transfer"/>
 </flow>
 ----
 
@@ -31,15 +44,10 @@ The following example flow produces a `CONNECTIVITY` error and will result in a
 
 |===
 
-Note that you can only raise core errors, such as `SECURITY`, or custom ones.
-A custom error features a specific error namespace that's not used elsewhere in
-your app, meaning you cannot use `HTTP` as namespace if you are using HTTP operations,
-for example.  
-
-This raises an error with a dynamic description by using expressions and features
-a custom type using the `ORDERS` namespace:
+This raises an error with a static description and features a custom type using
+the `ORDERS` namespace:
 
 [source, xml, linenums]
 ----
- <raise-error description="#['Email ' ++ payload.email + ' is invalid. Cannot complete transaction.']" type="ORDER:INVALID_DATA"/>
+ <raise-error description="Email is invalid. Cannot complete transaction." type="ORDER:INVALID_DATA"/>
 ----
