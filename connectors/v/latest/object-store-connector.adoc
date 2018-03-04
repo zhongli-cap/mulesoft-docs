@@ -11,50 +11,61 @@ An Object Store is a Mule component that allows for simple key-value storage. Al
 
 Additionally, Mule Runtime uses Object Stores to support some of its own components, for example:
 
-* The cache module uses an Object Store to maintain all of the cached data.
+* The Cache module uses an Object Store to maintain all of the cached data.
 * The OAuth module (and every OAuth enabled connector) uses Object Stores to store the access and refresh tokens.
 * The `<until-successful/>` component uses an Object Store to store all the messages it has to retry. So, if Mule crashes, those messages are not lost and can continue processing when it recovers.
 
-
 == Object Store Limitations
 
-Object Stores are not a universal solution for data storage. They do not replace a database, and they are not suitable for every use case. Most importantly, they do not support transactional access or modification. For use cases in which link:https://en.wikipedia.org/wiki/ACID[ACID] semantics are needed, or cases in which you expect the same key to be updated in parallel, consider some other solution.
+Object Stores are not a universal solution for data storage. They do not replace a database, and they are not suitable for every use case. Most importantly, they do not support transactional access or modification. For use cases in which link:https://en.wikipedia.org/wiki/ACID[ACID] semantics are needed, or for cases where you expect the same key to be updated in parallel, consider another solution.
 
-== Scopes of Object Store
+== Using the Default Object Store
 
-By default, each Mule application has a default object store, which is persistent. This default object store is always available to the Mule application without any configuration. Flows can persist and share data using this default object store. Moreover, when the Mule application is deployed into CloudHub workers using Anypoint Platform Runtime Manager, the contents of the Mule application's default object store are visible in Runtime Manager in the Mule application's Application Data tab.
+By default, each Mule app has an Object Store that is persistent and always available to the app _without any configuration_. Flows can use it to persist and share data.
 
-Note: To specify the default object store, do not select or create an Object Store reference. In the XML element for each object store component, be sure there is no *objectStore* attribute specified. Any time you include the objectStore attribute, the default object store will not be used.
+If you want to use the default Object Store, you can specify a `key` for the Object Store without selecting or creating an Object Store reference for the Object Store operation, and without specifying an `objectStore` attribute in the XML element for the Object Store component.
 
-However, you can also define additional object stores. Custom object stores have a variety of custom configuration parameters and option which can differ from the default object store's behavior, including specifying if the object store should be persistent (Where the object store data survives the Mule runtime crashing), or transient (where data does not survive the Mule runtime crashing).  Some common reasons to define additional custom object stores can be:
+Note that the Mule app is deployed into CloudHub workers through Anypoint Platform Runtime Manager, the contents of the Mule app's default Object Store are visible in Runtime Manager, within the Mule app's Application Data tab.
 
-* You want to partition your information by storing them in different stores
-* You want to use advanced ObjectStore features such as:
-** Transient/Persistent storage
-** Specify a time to live (TTL)
-** Specify a max capacity
-* You want to keep different components from sharing state by feeding them with different stores
-* You want different components to share information by feeding them with the same store
+It is important to understand that the only Object Store displayed in the Runtime Manager Application Data tab is the default Object Store.
 
-You can define an object store globally in the application so it can be referenced by name and shared between multiple components, or you can create a object store which is “private” to a particular component.
+== Using a Custom Object Store
 
-Note: The only object store displayed in the Runtime Manager Application Data tab is the default persistent object store.
+Custom Object Stores must specify an `objectStore` attribute. These Object Stores can be configured to behave differently than the default Object Store. For example, you can indicate whether the Object Store is persistent (so that the Object Store data survives a Mule Runtime crash) or transient (where data does not survive a Mule Runtime crash). Here are some common reasons for defining custom Object Stores:
 
-=== Use a Global ObjectStore when:
+* You want to partition your information by storing it in different Object Stores.
+* You want to use advanced Object Store features such as these:
+** Transient/Persistent storage.
+** Specification of a time to live (TTL).
+** Specification of a max capacity.
+* You want to keep different components from sharing state by feeding them with different Object Stores.
+* You want different components to share information by feeding them with the same Object Stores.
 
-* Need to share state across components: Because the store can be reference by name, other components could also use it. Suppose you have a second instance of the salesforce connector, only that configured slightly different. You can use this other instance using the same tokens, avoiding the need to authenticate again.
-* Need to share state across Cluster Nodes: When you’re using Mule in cluster mode, you may want to have information which is available to every node in the cluster. Global ObjectStores are ideal for that.
-* Need to use the information in your application’s logic: The ObjectStore connector is not only capable of defining that store, it can also manipulate it. All of the operations we first described operate over the default object store by default. But they also accept referencing a global object store, so that you can act on them instead of the default one. For example, suppose you want to have an audit flow which verifies if certain users are currently authorized. You could do something like this:
+=== Global and Local (Private) Object Stores
+
+You can define an Object Store globally in the app so it can be referenced by name and shared between multiple components, or you can create an Object Store that only for a particular component.
+
+==== When to use a Global Object Store
+
+You should use a global Object Store if any of these conditions is true:
+
+* You need to share state across components: Because the Object Store can be referenced by name, more than one component can use it. Suppose you have a two instances of the Salesforce connector that are configured in slightly different ways. You can use both instances with the same tokens, avoiding the need to authenticate again.
+* You need to share state across Cluster Nodes: When you are using Mule in cluster mode, you might want to have information that is available to every node in the cluster. Global Object Stores are ideal for that.
+* You need to use information in your app's logic: The Object Store connector is not only capable of defining that store, it can also manipulate it.
++
+All Object Store operations can reference a global Object Store. For example, suppose you want to have an audit flow that verifies whether certain users are currently authorized. You might do something like this:
 
 `<os:contains id="#[userId]" objectStore="tokensStore" />`
 
-=== Use a Private ObjectStore to:
+=== When to use a Private Object Store
 
-* Share state can either be a feature or a security risk.
-* Be able to manipulate the store from the connector can either be a feature, or something error prone. Some developer could accidentally end up doing a bad use of the clear operation and delete all the authorization data.
+* For cases where shared state a security risk, you should use a private Object Store.
+* For cases where you do not want anyone to manipulate the store from the connector level. For example, you want to avoid the chance that someone changes the configuration of a Clear operation so that it deletes all your authorization data.
 
-See also
+See Also
 
-* link:object-store-to-store-and-retrieve[To Store and Retrieve information from an Object Store]
-* link:object-store-to-define-a-new-os[To Define a new Object Store]
-* link:object-store-to-watermark[Example: Watermark]
+link:object-store-to-store-and-retrieve[To Store and Retrieve information from an Object Store]
+
+link:object-store-to-define-a-new-os[To Define a new Object Store]
+
+link:object-store-to-watermark[Example: Watermark]
