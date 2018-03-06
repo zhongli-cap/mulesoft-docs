@@ -1,53 +1,37 @@
-= To Read a File with the File Connector
+= To Read a File Using the File Connector
 :keywords: file, connector, read
 :toc:
 :toc-title:
 
-The Mule 4 File connector provides ability to read a file at any given time of the flow, unlike the old Mule 3 transport which can only read files as a result of inbound endpoint polling.
+The File connector can read a file at any point in the flow, unlike in Mule 3, where the transport can only read files as a result of inbound endpoint polling.
 
-The syntax to read a file is:
+Here is the syntax for reading a file:
 
 [source, xml, linenums]
 ----
 <file:read path="#[path]"
-lock="true|false"
-outputEncoding="UTF-8"
-outputMimeType="application/xml" />
+  lock="true|false"
+  outputEncoding="UTF-8"
+  outputMimeType="application/xml" />
 ----
 
 The operation above reads the file in the given path. It returns a `MuleMessage` with the following attributes:
 
 * The file's content as payload.
 * The file's metadata in the message attributes.
-* If the file does not exist, you get a `FILE:ILLEGAL_PATH` error.
+* If the file does not exist, you receive a `FILE:ILLEGAL_PATH` error. Note that the operation does not read directories.
 
-The supplied path MUST point to an actual file. It’s not possible to read a directory. In such cases, you will get a `FILE:ILLEGAL_PATH` error.
-
-== Mime Types and Encoding
-
-The File Connector does its best to auto determine a file’s mime type (`mimeType`) based on its extension. However, there are cases in which that best guess is not enough, and you need first-hand knowledge of the file’s content. In such cases, you can force that `mimeType` to a particular value by using the `outputMimeType` parameter.
-
-The same process works for encoding. By default, the connector will assume that the runtime’s default encoding matches the one in the file. You can set this by using the `outputEncoding` parameter.
-
-== Why Mime Types Matter
-
-With DataWeave as the default expression language in Mule 4, DataWeave expressions are embeddable inside operations that generate payloads and other values. Having the correct `mimeType` set helps DataWeave auto-assign types and, in turn, also generate the correct outputs, while improving the user experience by maximizing the use of DataSense’s functionality.
+// == INCLUDE SHARED READ OP CONTENT FOR FILE, FTP, AND SFTP CONNECTORS
+include::common-read-operation.adoc[]
 
 == File Locking
 
-The File connector now supports a file system lock on the file when it is being read. You can do this by simply setting the lock parameter to true (defaults to false). When enabled, this feature asks the operating system to lock the file, which prevents any other process (or Mule flow) from accessing that file when the lock is held. The lock will be automatically released when one of the following things happens:
+You can set a file system lock on the file when it is being read by setting the `lock` parameter to `true` (defaults to `false`). When enabled, this feature asks the operating system to lock the file, which prevents any other process (or Mule flow) from accessing that file while the lock is held. The lock is automatically released when one of the following things occurs:
 
 * The Mule flow, which locked the file, ends.
 * The file content has been fully read.
 
-Also, take into account that the file might already be locked by somebody else, in which case the connector won’t be able to lock it and you will get a `FILE:FILE_LOCK` error.
+Note that if the file is already locked by someone else, the connector will not be able to lock it, and you will receive a `FILE:FILE_LOCK` error.
 
-== Streaming
-
-This operation leverages the new repeatable streams functionality introduced in Mule 4. It returns a list of messages, each one representing one of the found files. Each of those messages holds a stream to the found file, and that stream is repeatable by default.
-
-For more information, read about link:/mule-user-guide/v/4.0/streaming-about[How Automatic Streaming Works in Mule 4].
-
-== See also
-
-link:/mule-user-guide/v/4.0/streaming-about[Streaming in Mule 4.0]
+//== STREAMING INCLUDE in File, FTP, and SFTP Connector docs
+include::common-streaming.adoc[]

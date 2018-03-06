@@ -1,0 +1,223 @@
+= Reconnection on Connectors
+:keywords: anypoint, studio, reconnection strategies, reconnection strategy, retry policies, retry
+
+The SDK and Mule provides out of the box reconnection strategies to be applied
+on all connectors that works with connections, this support is generic, so
+the experience of configuring and adjusting reconnection rules is the same
+cross connectors.
+
+==== How the SDK will know when trigger a reconnection?
+
+That is the purpose of this document, the SDK and Mule provides the reconnection
+engine, but the connector is responsible of communicating when a reconnection
+should be done, when a connection is down and is required a new one.
+
+== What is a connection error?
+
+Until now it's been explained that reconnection mechanism is to be able to obtain
+a new valid connection when the existing one doesn't work anymore and doesn't
+let the connector execute their business logic, to this kind of errors is what
+is called connection or connectivity errors.
+
+Is very important to distinguish when consider an error as a connectivity one
+or not, so here are some examples:
+
+=== Examples of connection errors:
+
+* Connection Timeout
+* Invalid Credentials
+* Token Expired
+
+=== Examples of non connection errors:
+
+* Missing required HTTP Query Param when doing a HTTP request
+* Directory doesn't exist when trying to copy a file
+* Publish a Null message to Slack
+* Syntax error when executing a Database Query.
+
+== How to trigger a reconnection
+
+The main thing on reconnection is to be able to communicate correctly when a
+connectivity error occurred and is required to reconnect, how to communicate
+the error may differ depending in the component where the error has been detected.
+
+Now is going to be explained how to trigger a reconnection for each component of
+a connector.
+
+=== Connection Provider
+
+==== Creating Connection
+
+Connection Providers are the firsts moments of a connection life, at this moment
+the connection provider can fail trying to create a connection because of several
+problems, so in this moment the Connection Provider is able to communicate the
+connectivity error and trigger a reconnection, which means try to create the
+connection again.
+
+When creating the connection, `connect()` method, to declare a connection problem
+and is required a reconnection a <<connection-exception,`ConnectionException()`>>
+should be thrown.
+
+[source, java, linenums]
+----
+@Override
+public Connection connect() throws ConnectionException {
+  Connection connection;
+  try {
+    connection = new Connection();
+  } catch (Exception e) {
+    throw new ConnectionException("Error occurred trying to connect.", e);
+  }
+  return connection;
+}
+----
+
+==== Validating Connection
+
+The SDK is capable of in any time grab a living connection and validate it
+against the Connection Provider that created it, this is to be sure that the
+connection is still valid.
+
+To validate the connection `validate(Connection)` will be invoked, and the
+connection provider should check if the given connection is valid or not.
+If the Connection Provider detects that the given Connection is not valid anymore
+it should communicate a <<connections#connection-validation-result, connection validation result>>
+with a failure result `ConnectionValidationResult.failure(Cause, Exception)`, this
+will disconnect and invalidate the current connection if possible and a new
+connection will be created again.
+
+.Example: Validation over connection
+[source, java, linenums]
+----
+@Override
+public ConnectionValidationResult validate(Connection connection) {
+  if(connection.isValid()){
+    return ConnectionValidationResult.success();
+  } else {
+    return ConnectionValidationResult.failure("Connection Problem", new RuntimeException());
+  }
+}
+----
+
+=== Operations
+
+Operations can fail due to multiple causes, bad parameters values, unexpected errors,
+but errors can also be due to a *connectivity errors*, in those cases to communicate
+that the error comes from a non working connection is to thrown a <<connection-exception,`ConnectionException()`>> .
+As consequence, throwing `ConnectionException` *will trigger the connection reconnection and
+the operation will be executed again*.
+
+==== Operation Example
+.Example
+[source, java, linenums]
+----
+public void operationTriggersReconnection(@Connection Connection connection, boolean connectionException){
+    if(connectionException){
+      throw new ConnectionException("Connection Error"); //<1>
+    } else {
+      throw new RuntimeException(); //<2>
+    }
+}
+----
+<1> If a `ConnectionException` is thrown the used connection will be invalidated,
+the connection provider will try to create a new valid connection and if a
+connection is available the operation will be executed again.
+<2> If any other exception is thrown, the error will be considered as an business
+error, the connection won't be invalidated and the operation won't be executed again.
+
+=== Sources
+
+Because a <<sources-config-connection#obtaining-a-connection, Sources are responsible of creating their own Connections>>, how a Source
+trigger reconnections differs a little compared to Operations.
+If a connection has been successfully created but later this got disconnected,
+the source should communicate the failure connection: <<connection-exception,`ConnectionException(Exception, Connection)`>> .
+
+Also Sources has two stages, when it is <<starting-source, starting>> and
+when is <<running-source, running>>, each moment has to communicate their
+connectivity failures in different ways.
+
+WARNING: No communicating the failure Connection in the `ConnectionException`
+could make reconnection mechanism to not work properly.
+
+[[starting-source]]
+==== Starting Source
+
+When starting a Source, the execution of the `onStart()` method, if a connection
+problem is found and is required to be raised, in the same way as operations, a
+`ConnectionException()` must be thrown.
+Throwing the connection exception, the Source will be stoped, and will try to
+reconnect and start the Source again.
+
+.Example
+[source, java, linenums]
+----
+@Override
+public void onStart(SourceCallback<String, Void> sourceCallback) throws MuleException {
+Connection connection = connectionProvider.connect();
+  try {
+    connection.startStreaming();
+  } catch(Exception e){
+    throw new ConnectionException(e, connection); //<1>
+  }
+}
+----
+
+[[running-source]]
+==== Running Source
+
+When the Source started correctly, which means, the `onStart()` method finished
+correctly and the remaining logic is running on other threads.
+
+When running on other thread the SDK is unable to detect any kind of error being
+raised with a `throw` statement, the errors must be communicated through the
+`SourceCallback`, using the `onConnectionException()`.
+
+.Example
+[source, java, linenums]
+----
+@Connection
+ConnectionProvider<Connection> connectionProvider;
+
+@Inject
+SchedulerService schedulerService;
+
+private Scheduler scheduler;
+
+@Override
+public void onStart(SourceCallback<Connection, Void> sourceCallback) throws MuleException {
+  Connection connection = connectionProvider.connect();
+    scheduler = schedulerService.ioScheduler(); //<1>
+    scheduler.execute(() -> {
+      while (true) {
+        try {
+          connection.receiveMessage();
+        } catch (Exception e){
+          sourceCallback.onConnectionException(new ConnectionException(e, connection)); //<2>
+        }
+      }
+    });
+}
+----
+<1> Creating a scheduler to run the Source logic in a new Thread.
+<2> Communicating to the `SourceCallback` the `ConnectionException` containing
+the failure connection that should be replaced.
+
+==== See Also
+
+* link:sources-config-connection[Sources Configuration and Connections]
+* link:sources-lifecycle[Sources Lifecycle]
+
+[[connection-exception]]
+== Connection Exception
+
+A `ConnectionException` can be built with the following properties:
+
+* *Message* : String which describes the current error.
+* *Cause* : If present, Throwable which indicates the cause the current error.
+* link:errors[*ErrorType*] : If present, ErrorType describing the current error.
+* *Connection* : If present, Object representing the failure connection, this will
+be used to disconnect and destroy it.
+
+==== See Also
+
+* link:errors[Errors on Modules]

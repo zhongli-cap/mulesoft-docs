@@ -1,28 +1,20 @@
 = Transactions
 :keywords: mule, sdk, operation, source, tx, transactions, xa
 
-The SDK gives the capability to create connectors that are able to join and create
-a new transactions in a Mule Flow, including Source and Operations executions to
-work as a unit where, so if a problem occurs inside the flow, all the components
-participating in the transaction will rollback their execution as a unit, rolls
-back the operations within the transaction so that no one part results in partial completion.
+The SDK supports the creation of connectors that join and create a new transaction in a Mule Flow, including Source and Operation executions that work as a unit. So, if a problem occurs inside the flow, all the components participating in the transaction will roll back their execution as a unit. All operations within the transaction are rolled back so that no one part results in partial completion.
 
 == Implementing Transactions in a Connector
 
-Mule’s transaction support works on the premise of a transactional resource
-identified by a key. *SDK* follows this concept reusing the connection abstraction
-an using the component connection as the key of the transaction.
-This means that in order to have a transaction, the extension must have a
-`ConnectionProvider` which yields instances of the `TransactionalConnection` interface.
+Mule transaction support works on the premise of a transactional resource identified by a key. The SDK follows this same concept of reusing the connection abstraction and using the component connection as the key of the transaction.
 
-=== TransactionalConnection
+An extension must have a `ConnectionProvider` in order to have a transaction because the `ConnectionProvider` yields instances of the `TransactionalConnection` interface.
 
-To enable transactions in your connector the first requisite is having a
-<<connections#, Connection Provider>> which provides connections implementing the
- `TransactionalConnection` interface.
+=== TransactionalConnection Interface
 
-The connection must implement methods `TransactionalConnection` that are used
- to communicate the beginning and conclusion of a transaction.
+To enable transactions in your connector, you need a Connection Provider (<<connections#, `ConnectionProvider`>>) because it provides  connections that implement the `TransactionalConnection` interface.
+
+The connection must implement `TransactionalConnection` methods that are used to communicate the beginning and conclusion of a transaction.
+
 
 [source, java, linenums]
 ----
@@ -53,7 +45,7 @@ public class TxConnection implements TransactionalConnection {
 
 ----
 
-Implementing this interface requires to implement the following three methods:
+Implementing this interface requires implementation of the following methods:
 
 [%header%autowidth.spread]
 |====
@@ -68,35 +60,29 @@ must be be rollbacked.
 // proper operations doc. The same with Sources.
 === Transactions in Operations
 
-To make an Operation work under a transaction the `@Connection` parameter should
-be a transactional capable connection, this means a connection implementing
-`TransactionalConnection`.
+To make an operation work under a transaction, the `@Connection` parameter should be a transactional-capable connection, that is, a connection that implements `TransactionalConnection`.
 
 ==== Transactional Actions
 
-When an operation is transactional, a synthetic parameter named `transactionalAction`
-is automatically added to it. That parameter is an enum type which can take 3
-possible values:
+When an operation is transactional, a synthetic parameter named `transactionalAction` is automatically added to it. That parameter is an Enum type that can take these values:
 
 [%header%autowidth.spread]
 |=======
 | Action Name | Description
-|*ALWAYS_JOIN* | This means that the connector will always join to the existent
-transaction, which implies if, there is no transaction or the current transaction
-is not compatible with the current Operation, the operation execution will fail.
-|*JOIN_IF_POSSIBLE* (Default) | If there is a transaction available, then use it, otherwise
-continue processing
+|*ALWAYS_JOIN* | The connector will always join the existing transaction. If there is no transaction, or if the current transaction is not compatible with the current operation, the operation will fail to execute.
+|*JOIN_IF_POSSIBLE* (Default) | If a transaction is available, use it. Otherwise, continue processing.
 |*NOT_SUPPORTED* | The operation will execute outside any ongoing transaction.
 |=======
 
 [source, xml, linenums]
 ----
 <try transactionalAction="BEGIN_OR_JOIN">
-      <transactional-connector:work config-ref="config" transactionalAction="ALWAYS_JOIN"/>
+  <transactional-connector:work config-ref="config"
+    transactionalAction="ALWAYS_JOIN"/>
 </try>
 ----
 
-===== Operation Transactional Actions inside the Operation Code
+===== Operation Transactional Actions Inside the Operation Code
 
 In some cases the Connector developer would like to know at Operation level which
 `transactionalAction` has been configured in the Mule Application, for this use case

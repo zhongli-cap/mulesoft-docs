@@ -1,30 +1,30 @@
-= Example: To do Watermarks with ObjectStore
+= Example: Setting Up Watermarks with an Object Store
 :keywords: ObjectStore, watermark, synchronization
 :toc:
 :toc-title:
 
 toc::[]
 
-== Example: Watermark
+Watermarking is a technique for storing and retrieving the point at which a periodic synchronization should resume the next time it's executed. Watermarking is a common use of the object store.
 
-Watermark is a technique for storing and retrieving the point from which a periodical synchronization should resume the next time it's executed.
-Watermarking is a typical example of object store use. We’ll take this example since it’s not only representative on a real life ObjectStore, but also to highlight how the experience is improved compared with Mule 3.
+== Background for Mule 3 Users
 
-For an explanation of what watermarks are and how we used to approach that problem in Mule 3, please read link:https://blogs.mulesoft.com/dev/anypoint-platform-dev/data-synchronizing-made-easy-with-mule-watermarks/[this blog post] before continuing.
+For an explanation of what watermarks are and how MuleSoft approached that problem in Mule 3, see link:https://blogs.mulesoft.com/dev/anypoint-platform-dev/data-synchronizing-made-easy-with-mule-watermarks/[this blog post].
 
-That approach was really old, back from Mule 3.5 in year 2013, and at the time it made tons of sense. As the Anypoint platform grew and our use cases became more complicated, limitations started to appear:
+Limitations of the Mule 3 approach:
 
-* Although the old <watermark> component did allow for setting a custom ObjectStore, there was no easy way to create it. This is a problem we already addressed in this document and know the new ObjectStore connector fixes
-* The <watermark> element required the <poll> component (now replaced with <scheduler>) to return an iterable payload. Furthermore, you were required to fully iterate that payload in order to obtain the new watermark value. Failure to do so, would result in the value being wrongfully updated or not updated at all
-* There was no way to update the watermark with a contingency value in case of the flow throwing an error
-How and when the value got updated was not completely clear.
+* Although the Mule 3 `<watermark/>` component allowed for setting a custom `ObjectStore`, there was no easy way to create it. Mule 4 fixes this issue.
+* The `<watermark/>` element required the `<poll/>` component (replaced by  `<scheduler/>` in Mule 4) to return an iterable payload, and you had to fully iterate over that payload to obtain the new watermark value. Failure to do so resulted in the value being wrongfully updated or not updated at all.
+* There was no way to update the watermark with a contingency value if the flow threw an error. How and when the value got updated was not completely clear.
 
-When we sat down to figure out how to improve this use case, we realised that the real root of the problem was that in reality the <watermark> shouldn’t be necessary at all. It’s existence was just a consequence of limitations in other components:
+When we sat down to figure out how to improve this use case, we realized that the real root of the problem was that in reality the <watermark> shouldn’t be necessary at all. It’s existence was just a consequence of limitations in other components:
 
-* The watermark’s artificial iteration was just a way to compensate for the fact that many data sets could only be iterated once, specially when dealing with binary streams or with connectors doing auto paging. This problem is now fixed in Mule 4 thanks to the repeatable streaming feature
-* The component’s automatic handling of the ObjectStore was just to compensate for UX problems on the old ObjectStore support. If the new connector were to provide easier semantics, it wouldn’t be needed at all.
+* The watermark’s artificial iteration was just a way to compensate for the fact that many data sets could only be iterated once, especially when dealing with binary streams or with connectors doing auto paging. This problem is now fixed in Mule 4 thanks to the repeatable streaming feature
+* The component’s automatic handling of the `ObjectStore` was just to compensate for UX problems on the old `ObjectStore` support. If the new connector were to provide easier semantics, it wouldn’t be needed at all.
 
-Then, the new way of achieving the same use case described in the Mule 3 blog post is this:
+== Mule 4 Example
+
+This example shows how to use Mule 4 to perform the use case described in the Mule 3 blog.
 
 [source, xml, linenums]
 ----
@@ -42,24 +42,30 @@ Then, the new way of achieving the same use case described in the Mule 3 blog po
        </sfdc:salesforce-query>
     </sfdc:query>
     <flow-ref name="doYourIntegrationLogic" />
-<os:store key="watermark" failIfPresent="false" failOnNullValue="false" objectStore="watermarkStore">
+    <os:store key="watermark" failIfPresent="false"
+     failOnNullValue="false" objectStore="watermarkStore">
         <os:value>#[max(payload map $.LastModifiedDate)]</os:value>
     </os:store>
 </flow>
 ----
 
+The example is a generic flow that does not require a specific type of trigger. Though you might invoke it from another flow, or you might use a `<scheduler/>` to trigger the flow, you can produce watermark semantics without forcing any type of trigger.
 
-Let’s break the example down step by step:
+Then the example defines a custom `ObjectStore` for the watermark, but it is also possible to use the `ObjectStore` that is available implicitly to every app. So you do not need to define a custom `ObjectStore`.
 
-* First, this flow is generic. It doesn’t require to be triggered in any specific way. It could be invoked from another flow, you could add a <scheduler> to it, it doesn’t matter. You can now achieve watermark semantics without forcing any type of trigger.
-* This configuration starts by defining a custom ObjectStore for the watermark. This is not needed. You could not define an ObjectStore and just use the one that every application has implicit. But just for the sake of the example, we’ll use our own here.
-* The flow starts with a retrieve operation to get the last watermark value. Notice that:
-** The retrieve operation specifies a default value. This is so that when the flow runs for the first time and no watermark was calculated yet, you still get a usable value. This avoids the need for a <choice> -> <contains> kind of pattern.
-** The target parameter is used to tell the connector not to override the message payload with the watermark, but instead put it in a variable. Because this has no side effect on the message, the flow is now reusable and easier to maintain, since you could add any kind of operation before the retrieve operation, nothing would break.
-* Then we perform the query, in which we use the watermark to filter the obtained results
-* Then we do whatever processing is needed. This can be anything from sending to another system, transforming, it doesn’t matter.
-* And finally, we update the watermark value. There’s a lot to be said about this step too:
-** The new watermark value should be the maximum updated timestamp. We use a DW expression to obtain that value
-** Notice that thanks to the repeatable streaming feature, we now don’t care about what the integration logic was. Even if the query operation is auto paged (which it is!), this feature guarantees that we can still iterate the resultset again.
-** The failIfPresent parameter is set to false. Otherwise, the operation would only work the first time and fail if the watermark were already in the object store. By setting it to false, the value will be updated if present
-** And finally, the failOnNullValue parameter was set to false. Why? Because if the query comes back empty, the DW expression which looks for the max value will return null, because there’s no value. By setting this to true, the connector will automatically skip null values saving the user from using a <choice> router to check the condition
+The flow starts by retrieving the last watermark value. The Retrieve operation (`<os:retrieve/>`) specifies a default value (`<os:default-value/>`) that is available the first time the flow runs, before the first watermark is calculated. This configuration avoids the need for a `<choice> -> <contains>` type of pattern.
+
+Note that the Retrieve operation stores the watermark value in a target value (`target="watermark"`) to prevent the connector from overriding the message payload. This makes the flow reusable and easier to maintain. You can safely add any kind of operation before the Retrieve operation.
+
+The query (`<sfdc:query/>`) uses the watermark (`vars.watermark`) to filter the obtained results.
+
+The `<flow-ref />` points to another flow that does whatever processing is needed, for example, sending data to another system, performing a transformation, or something else.
+
+The last step (in `<os:store/>`) is to update the watermark value:
+
+* The new watermark value should be the maximum updated timestamp. The example uses `<os:value/>` to provide a DataWeave expression that obtains that value.
++
+Note that the repeatable streaming feature prevents the need for you to know the integration logic. Even though the query operation auto-paged, this feature guarantees that you can still iterate the result set again.
++
+* `failIfPresent` is set to `false` so that the value will be updated if it is present. Otherwise, the operation would only work the first time and fail if the watermark were already in the object store.
+* `failOnNullValue` is set to `false`, so if the query comes back empty, the DataWeave expression (which looks for the max value) will return null. Setting it to `true` makes the connector skip null values, which prevents the need to use a `<choice/>` router to check the condition.

@@ -1,56 +1,50 @@
-= To write a file with the FTP connector
-:keywords: ftp, connector, write
+= To Write a File Using the FTP Connector
+:keywords: file, connector, write
 :toc:
 :toc-title:
 
-This operation writes a given Content into the given Path on demand. In principle, this seems pretty straightforward, but it does contain a number of usability features to help with the most common use cases.
+A Write operation is available to the File, FTP, and SFTP connectors. For these connectors, the operation writes content into the given path on demand. It supports common use cases described below.
 
-== Embedded DW transformations
+== Embedded DataWeave Transformations
 
-When used in its default form, the connector will write whatever is in the message payload:
+By default, the connector writes whatever is in the message payload:
 
+.Example: FTP Connector
 [source, xml, linenums]
 ----
 <ftp:write path="output.csv" />
 ----
 
-But what happens if the payload is not in csv format and you actually need to make a transformation? You could place a DataWeave transformation before the write operation, but that would cause the message payload to change and impacted the operation placed after the write operation.
+However, if the payload is a different format (for example, not CSV) and you need to transform it before writing it, what do you do? If you place a Transform component before the Write operation, the message payload changes and that impacts the operation that is placed after the Write operation.
 
-To avoid this undesired impact, you can now place the transformation inside the write operation:
+To avoid this undesired impact, you can place the transformation inside the Write operation to generate content that will be written without producing a side effect on the message in transit.
 
+The next example uses the FTP connector to write the content:
+
+.Example: Transformation within an FTP Write Operation
 [source, xml, linenums]
 ----
 <ftp:write path="output.csv">
-   <ftp:content>#[%dw 2.0
-
-  output application/csv
-  ---
-  payload.customers.email
-  ]
+  <ftp:content>#[%dw 2.0
+                 output application/csv
+                 ---
+                 payload.customers.email
+                ]
   </ftp:content>
 </ftp:write>
 ----
 
+== Writing into Directories
 
-Now, the transformation can be used for generating the content that will be written and has no side effect on the message in transit.
+If any of the `a`, `b`, or `c` directories in the example below do not exist, the Write operation will fail by default. However, if you set the `createParentDirectories` to `true`, the connector will automatically create any missing directories.
 
-== Writing into directories
-
-Consider the following:
-
+.Example: FTP Connector writes to a Directory
 [source, xml, linenums]
 ----
 <ftp:write path="a/b/c/myFile.txt" />
 ----
 
-If any of the a, b, or c directories do not exist, this operation fails by default. However, by setting the `createParentDirectories` to true, the connector will automatically create any missing directories.
-
-== Writing to existing files
-
-There are 3 types of file write modes, which become increasingly important when trying to write to an existing file:
-
-* OVERWRITE: If the file exists, then overwrite it completely
-* APPEND: If the file exists, then write at the end of it
-* CREATE_NEW: This means that the operation should result in a new being created. If the file is already there, then you will get an error
-
-This operation also supports locking, in a similar fashion to the read operation. The main difference is that the lock will be automatically released once the write operation finishes.
+// INCLUDE FOR THESE SECTIONS:
+// == Writing to Existing Files
+// == Locks
+include::common-write.adoc[]
