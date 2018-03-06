@@ -1,0 +1,166 @@
+= Secure Configuration Properties
+
+Secure properties can encrypt properties and store the encrypted text in secure properties files.
+
+You can configure secure properties file through the Secure Configuration Properties module (`<secure-properties:config>`), for example:
+
+.Example: Secure Configuration Properties with Default Values
+[source,xml, linenums]
+----
+<secure-properties:config key="${runtime.property}"
+  file="file1.yaml" name="test">
+    <secure-properties:encrypt/> <!--1-->
+</secure-properties:config>
+
+<global-property name="prop" value="my-${secure::property.key1}"/> <!--2-->
+----
+<1> The `<secure-properties:encrypt>` tag is required even when using the default values.
+<2> The prefix `secure::` is required for loading the key.
+
+In the example above:
+
+* A decryption key is passed into the Mule runtime at deployment time as a system environment variable `runtime.property`. This property must be the exact key used to encrypt the values stored in the `file1.yaml` file.
+* The default encryption algorithm and mode is used.
+* If the actual (decrypted) value of the property `property.key1` is, for example, `"property"`, the value of the property `prop` will be `"my-property"`.
+
+You can also change the encryption algorithm and crypto mode by setting additional attributes of the `<secure-properties:encrypt>` tag, for example:
+
+.Example: Secure Configuration Properties with Custom Values
+[source,xml, linenums]
+----
+<secure-properties:config key="${runtime.property}"
+  file="file1.properties" name="test">
+    <secure-properties:encrypt
+      algorithm="AES" mode="CBC"/>
+</secure-properties:config>
+----
+
+The example uses the `AES` algorithm with `CBC` mode.
+
+== Attributes
+
+[cols="1,3", options="header"]
+|===
+| Secure Configuration Properties Attributes |
+
+| Name
+| A unique name for your global secure configuration properties.
+
+| Key
+| The word or phrase to unlock the properties value according to the system property that you define in this field. For example, `${production.myproperty}` instructs Mule to demand the key at runtime.
+
+| File
+| The location of the file that the key unlocks. See <<supported_files>>.
+|===
+
+[cols="1,3", options="header"]
+|===
+| Secure Configuration Properties Encrypting Attributes |
+
+| Algorithm
+| The type of algorithm you use to encrypt the content of the property. See <<supported_algorithms>> for a complete list.
+
+| Mode
+| The procedure that allows Mule to repeatedly use a block cipher with a single key. See <<supported_modes>> for a full list.
+|===
+
+[[supported_files]]
+== Supported Files
+
+The Secure Configuration Properties module supports both YAML configuration files and properties files, as shown in the examples above. The recommended approach is to use YAML configuration files, because it allows the addition of type validations and autocompletion.
+
+Encrypted values should be defined between the sequence `![value]`, as shown in the example below. The `file1.yaml` file can also contain non-encrypted values, for example:
+.Example: file1.yaml
+----
+encrypted:
+    key: "![nHWo5JhNAYM+TzxqeHdRDXx15Q5R56YVGiQgXCoBJew=]"
+
+testPropertyA: "testValueA"
+testPropertyB: "testValueB"
+----
+
+Here is the same configuration as above using a Spring-formatted properties file:
+.Example: file1.properties
+----
+encrypted.key=![nHWo5JhNAYM+TzxqeHdRDXx15Q5R56YVGiQgXCoBJew=]
+
+testPropertyA=testValueA
+testPropertyB=testValueB
+----
+
+Both encrypted and non-encrypted values can be used anywhere in the Mule app. Here is a flow that uses the encrypted `encrypted.key` value to set the payload:
+.Example: Use of Secure Property
+[source,xml, linenums]
+----
+<flow name="main">
+    <set-payload value="${secure::encrypted.key}"/>
+</flow>
+----
+At runtime, the decryption algorithm is used to store the decrypted value of `encrypted.key` into memory.
+
+**Note**: When using encrypted properties, it is especially important to secure access to the operating system. Anyone who can run a `ps` command or view a Java console will be able to see the decrypted values that are stored in the Mule app's memory.
+
+Here is a flow that uses a non-encrypted value from the same secure properties file:
+.Example: Use of Non-encrypted Properties
+[source,xml, linenums]
+----
+<flow name="mainNonEncrypted">
+    <set-payload value="${secure::testPropertyA}"/>
+</flow>
+----
+
+Notice that you still have to use the `secure::` prefix to access values inside a secure properties file, even if the values are non-encrypted. This behavior allows you to switch between files (or environments) without changing the entire configuration.
+
+Here is a complete Mule app that includes the XSD schema and namespace for the Secure Configuration Properties Configuration module  ()`secure-properties:config`):
+.Complete Example
+[source,xml, linenums]
+----
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+
+    <secure-properties:config key="${runtime.property}" file="file1.properties" name="test">
+        <secure-properties:encrypt algorithm="AES" mode="CBC"/>
+    </secure-properties:config>
+
+    <flow name="mainNonEncrypted">
+        <set-payload value="${secure::testPropertyA}"/>
+    </flow>
+
+</mule>
+----
+
+[[supported_crypto]]
+== Supported Algorithms and Modes
+
+[[supported_algorithms]]
+Supported Algorithms:
+* AES (default)
+* Blowfish
+* DES
+* DESede
+* Camellia
+* CAST5
+* CAST6
+* Noekeon
+* Rijndael
+* SEED
+* Serpent
+* Skipjack
+* TEA
+* Twofish
+* XTEA
+* RC2
+* RC5
+* RC6
+* RCA
+
+[[supported_modes]]
+Supported Modes:
+* CBC (default)
+* CFB
+* ECB
+* OFB
