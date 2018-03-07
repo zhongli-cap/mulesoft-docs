@@ -18,7 +18,8 @@ On Mule 4 all keys must be of type `String`.
 * <<storing-values>>
 * <<persistent-default-value>>
 * <<dispose-clear>>
-
+* <<dual-store>>
+* <<remove-behavior>>
 
 [[namespace]]
 == Namespace Change
@@ -43,14 +44,14 @@ has change to `os` on the new Mule 4 Connector.
 
 You may have noticed in the previous example that the `config-ref` parameter was removed, and
 instead an `objectStore` parameter appears. This is because on Mule 3 most of the connector
-operations require a _Connector Configuration reference_, while on Mule 4 operations most
+operations require a _Connector Configuration reference_, while on Mule 4 most
 operations will instead receive a reference to an _Object Store top level element_.
 
 [[custom-object-store]]
 == Creating Custom Object Stores
 
 Custom Object Stores are global definitions of an OS that you can reference by name
-when an Object Store is required by an operation, allowing you to tweak and configure the
+to use it in an operation, allowing you to tweak and configure the
 Object Store behavior to your needs.
 
 On Mule 3, in order to create a new ObjectStore you needed to create a spring bean and
@@ -93,6 +94,8 @@ persistent custom object stores:
 </flow>
 ----
 
+In this snippet a couple of things are to be noted:
+
 <1> Creates the custom object store using Spring beans and a reference to a java class.
 
 <2> References the custom object store in a configuration.
@@ -101,6 +104,8 @@ persistent custom object stores:
 payload what is going to be stored.
 
 <4> The payload is stored in the object store.
+
+Implementing the same app in Mule 4 would look like this:
 
 .Mule 4 example
 [source,xml,linenums]
@@ -114,27 +119,29 @@ payload what is going to be stored.
 <flow name="storeBook">
   <http:listener config-ref="HTTP_Listener_config" path="/store"/>
   <os:store key="#[attributes.queryParams.id]" objectStore="booksObjectStore" failIfPresent="true"> // <2>
-    <os:value ><![CDATA[#[%dw 2.0
-output application/json
----
-{
-  id: attributes.queryParams.id,
-  book: attributes.queryParams.book,
-  author: attributes.queryParams.author
-}]]]></os:value>
+    <os:value>
+    #[{
+      id: attributes.queryParams.id,
+      book: attributes.queryParams.book,
+      author: attributes.queryParams.author
+    }]
+    </os:value>
   </os:store>
 </flow>
 
 <flow name="retrieveBook">
   <http:listener config-ref="HTTP_Listener_config" path="/retrieve"/>
   <os:retrieve key="#[attributes.queryParams.id]" objectStore="booksObjectStore"/>
+  <set-payload value="#[output application/json --- payload]">
 </flow>
 ----
+
+As you may see, main differences are:
 
 <1> A new object store is created without any knowledge of spring beans nor java classes. Note that
 what is being defined here is no a configuration, but rather an object store top level element.
 
-<2> Without the need to store a value on a variable or the payload, an inline DataWeave expression
+<2> Without the need to store a value on a variable or the payload, an inline expression
 defines what is going to be stores in the object store.
 
 Note that on Mule 3 you used to have to specify a partition of the Object Store. On
@@ -204,15 +211,12 @@ the client variable.
 <flow name="storeClient">
   <http:listener config-ref="HTTP_Listener_config" path="/put"/>
   <os:store key="#[payload.id]" objectStore="Object_store" failIfPresent="true">
-    <os:value ><![CDATA[#[%dw 2.0 // <1>
-    output application/json
-    ---
-    {
+    <os:value >#[{ // <1>
       id: payload.id,
       name: payload.name,
       lname: payload.lname,
       age: payload.age
-    }]]]></os:value>
+    }]</os:value>
   </os:store>
 </flow>
 ----
@@ -262,3 +266,18 @@ notion of partition anymore.
 ----
 
 WARNING: On Mule 4 the clear operation will clear the whole Object Store.
+
+[[dual-store]]
+== Removal of the Dual Store Operation
+
+The Mule 3 Object Store Connector had an operation `dual-store` that stored a value using key and
+also stored the same key using value. As key is restricted to be a `String`, on Mule 4 this operation
+would not make sense, so it was removed.
+
+[[remove-behavior]]
+== Remove Operation Behavior
+
+On Mule 3 the `remove` operation had a flag named `ignoreNotExists` which defaults to false
+that indicated whether the operation should fail if the key that was going to be removed did not
+exist. On Mule 4 if the key does not exist, the error `OS:KEY_NOT_FOUND` will be thrown and the you
+can handle it however you want on the error handling.
