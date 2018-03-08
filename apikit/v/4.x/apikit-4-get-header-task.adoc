@@ -6,26 +6,28 @@ image::apikit-for-soap-53dc2.png[apikit-for-soap-53dc2]
 
 . In the SoapUI, modify the OrderTshirt request by entering a value for the API key. For example, enter `987654321` between the `<apiKey>` tags.
 
-. In Studio, edit the DataWeave code to get the API key, which is an inbound property, from the header:
+. In Studio, edit the DataWeave code to get the API key, which is an header property:
 +
 [source,xml,linenums]
 ----
-%dw 1.0
-%output application/xml
-%namespace ns0 http://mulesoft.org/tshirt-service
+%dw 2.0
+output application/java
+ns ns0 http://mulesoft.org/tshirt-service
 ---
 {
-  ns0#OrderTshirtResponse: {
-    orderId: "I got a request from "
-    ++ payload.ns0#OrderTshirt.name
-    ++ ", using the following auth header "
-    ++ inboundProperties['soap.AuthenticationHeader'].ns0#AuthenticationHeader.apiKey
-  }
+    body: {
+        ns0#OrderTshirtResponse: {
+            orderId: "I got a request from " 
+            ++ (payload.body.ns0#OrderTshirt.name  
+            ++ "using the following auth header") 
+            ++ payload.headers.header.ns0#AuthenticationHeader.apiKey
+        }
+    } write "application/xml"
 }
 ----
 +
 . Save and rerun the project.
-. In SoapUI, send a request, and check that the response changes to the following:
+. In SoapUI, send a request to the OrderTshirt endpoint, and check that the response appears as follows:
 +
 [source,xml,linenums]
 ----
