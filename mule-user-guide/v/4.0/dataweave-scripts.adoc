@@ -77,10 +77,10 @@ The DataWeave header contains the directives, which define high-level informatio
 +
 Example: `%dw 2.0`
 +
-* Output type: The mime type that for the script to output. The default is to output the same type as input type.
+* Output type: The format that for the script to output. The default is to output the same type as input type.
 +
 Example: `output application/xml`
-Note that only one output type can be specified. See <<dataweave-formats, DataWeave Formats>> for a list of valid mime types.
+Note that only one output type can be specified. See <<dataweave-formats, DataWeave Formats>> for a list of valid data formats.
 +
 * Namespaces: Used to import a namespace.
 +
@@ -118,8 +118,81 @@ var toUser = (user) -> {firstName: user.name, lastName: user.lastName}
 
 == DataWeave Body
 
-The DataWeave body contains the expression that generates the output structure. Note that the mime types of the input and output data are always normalized into canonical DataWeave model prior to transformation. So for example, XML (`application/xml`) input is normalized to DataWeave before it is transformed and output to JSON (`application/json`).
+The DataWeave body contains the expression that generates the output structure. Note that MuleSoft provides a canonical way for you to work on data (a query, transform, build process) with the DataWeave model.
 
+A good mental model for approaching the transformation script is to normalize the input to `application/dw`. This can help you determine whether an error is a formatting or a scripting error. So, for example, you might normalize your `application/xml` input to `application/dw` before providing your script that outputs to JSON (`application/json`).
+
+.Example: JSON Input
+[source,JSON,linenums]
+----
+{
+    "size" : 1,
+    "person": {
+      "name": "Nial"
+    }
+}
+----
+
+The DataWeave script outputs the DataWeave format (`application/dw`).
+
+.Example: DataWeave Script that Outputs application/dw
+[source,DataWeave,linenums]
+----
+%dw 2.0
+output application/dw
+---
+payload
+----
+
+The script produces `application/dw` output without an error.
+
+.Example: application/dw Output
+----
+{
+  size: 1,
+  person: {
+    name: "Nial"
+  }
+}
+----
+
+However, if you output the JSON to XML, you will receive an error (`Unexpected internal error`) because the JSON input lacks a single root. So the error is a formatting error.
+
+.Example: Script that Outputs application/xml and Produces an Error
+[source,DataWeave,linenums]
+----
+%dw 2.0
+output application/xml
+---
+payload
+----
+
+To fix the script, you need to provide a single XML root, for example:
+
+.Example: Script that Outputs application/xml
+[source,DataWeave,linenums]
+----
+%dw 2.0
+output application/xml
+---
+{
+    "myroot" : payload
+}
+----
+
+.Example: XML Output Containing a Single XML Root
+[source,XML,linenums]
+----
+<?xml version='1.0' encoding='UTF-8'?>
+<myroot>
+  <size>1</size>
+  <person>
+    <name>Nial</name>
+  </person>
+</myroot>
+----
+
+Numerous <<see_also, other examples>> are available throughout the DataWeave documentation, and see link:dataweave-formats[Data Formats Supported by DataWeave].
 // TODO: NEED MORE INFO HERE... show XML vs DW vs JSON
 
 == DataWeave Output
@@ -131,7 +204,13 @@ The data model of the produced output could consist of these data types:
 * Objects: A collection of key-value pairs, for example: `{"key": "some value"}`. The values can be any supported data type.
 // TODO: ARE THERE ANY OTHERS?
 
-
+[[see_also]]
 == See Also
 
-* link:dataweave-types#functions-and-lambdas[Functions and Lambdas]
+link:dataweave-selectors[DataWeave Selectors]
+
+link:dw-functions[DataWeave Functions]
+
+link:dataweave-cookbook[DataWeave Cookbook]
+
+link:dataweave-types#functions-and-lambdas[Functions and Lambdas]
