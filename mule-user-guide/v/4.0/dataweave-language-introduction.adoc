@@ -99,8 +99,83 @@ fun toUser = (user) -> {firstName: user.name, lastName: user.lastName}
 
 == DataWeave Body
 
-The expression in the body acts on the input data to produce output in the mime type that is specified or based on the algorithm used to determine the mime type automatically.
+The DataWeave body contains an expression that generates the output structure. Note that MuleSoft provides a canonical way for you to work on data with the DataWeave model: a query, transform, build process.
 
+A good mental model for approaching the transformation script is to normalize the input to <<dataweave-formats#format_dataweave, `application/dw`>>. This can help you determine whether an error is a formatting or a scripting error. So, for example, you might normalize your `application/xml` input to `application/dw` before providing your script that outputs to JSON (`application/json`).
+
+.Example: JSON Input
+[source,JSON,linenums]
+----
+{
+    "size" : 1,
+    "person": {
+      "name": "Nial"
+    }
+}
+----
+
+The DataWeave script outputs the DataWeave format (`application/dw`).
+
+.Example: DataWeave Script that Outputs application/dw
+[source,DataWeave,linenums]
+----
+%dw 2.0
+output application/dw
+---
+payload
+----
+
+The script produces `application/dw` output without an error.
+
+.Example: application/dw Output
+----
+{
+  size: 1,
+  person: {
+    name: "Nial"
+  }
+}
+----
+
+However, if you output the JSON to XML, you will receive an error (`Unexpected internal error`) because the JSON input lacks a single root. So the error is a formatting error.
+
+.Example: Script that Outputs application/xml and Produces an Error
+[source,DataWeave,linenums]
+----
+%dw 2.0
+output application/xml
+---
+payload
+----
+
+To fix the script, you need to provide a single XML root, for example:
+
+.Example: Script that Outputs application/xml
+[source,DataWeave,linenums]
+----
+%dw 2.0
+output application/xml
+---
+{
+    "myroot" : payload
+}
+----
+
+.Example: XML Output Containing a Single XML Root
+[source,XML,linenums]
+----
+<?xml version='1.0' encoding='UTF-8'?>
+<myroot>
+  <size>1</size>
+  <person>
+    <name>Nial</name>
+  </person>
+</myroot>
+----
+
+The DataWeave documentation provides numerous <<see_also, other examples>>.
+
+// TODO: NEED MORE INFO HERE... show XML vs DW vs JSON
 
 ////
 Note that the output of a DataWeave expression can include these data types:
@@ -123,6 +198,20 @@ Comments that use a Java-like syntax are also accepted by DataWeave.
 == dwl File
 
 In addition to specifying DataWeave scripts in the Transform and other components, you can also specify the scripts in a `.dwl` file. In Studio projects, your script files are stored in `src/main/resources`.
+
+[[see_also]]
+== See Also
+
+link:dataweave-selectors[DataWeave Selectors]
+
+link:dw-functions[DataWeave Functions]
+
+link:dataweave-cookbook[DataWeave Cookbook]
+
+link:dataweave-formats[Data Formats Supported by DataWeave]
+
+link:dataweave-types#functions-and-lambdas[Functions and Lambdas]
+
 
 ////
 == See Also
