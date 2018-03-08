@@ -101,7 +101,7 @@ fun toUser = (user) -> {firstName: user.name, lastName: user.lastName}
 
 The DataWeave body contains an expression that generates the output structure. Note that MuleSoft provides a canonical way for you to work on data with the DataWeave model: a query, transform, build process.
 
-A good mental model for approaching the transformation script is to normalize the input to <<dataweave-formats#format_dataweave, `application/dw`>>. This can help you determine whether an error is a formatting or a scripting error. So, for example, you might normalize your `application/xml` input to `application/dw` before providing your script that outputs to JSON (`application/json`).
+A good mental model for approaching the transformation script is to normalize the input to <<dataweave-formats#format_dataweave, `application/dw`>>. This can help you determine whether an error is a formatting or a scripting error. So, for example, you might transform your `application/json` input to `application/dw` if you get an error when trying to transform it to XML (`application/xml`).
 
 .Example: JSON Input
 [source,JSON,linenums]
@@ -114,7 +114,18 @@ A good mental model for approaching the transformation script is to normalize th
 }
 ----
 
-The DataWeave script outputs the DataWeave format (`application/dw`).
+If you use the following script in the attempt to transform the JSON above to XML, you will receive an error (`Unexpected internal error`) because the JSON input lacks a single root. So the error is caused by a formatting error.
+
+.Example: Script that Outputs application/xml and Produces an Error
+[source,DataWeave,linenums]
+----
+%dw 2.0
+output application/xml
+---
+payload
+----
+
+To determine that the DataWeave code in the script above works, you can change the output format to `application/dw` like this:
 
 .Example: DataWeave Script that Outputs application/dw
 [source,DataWeave,linenums]
@@ -125,7 +136,7 @@ output application/dw
 payload
 ----
 
-The script produces `application/dw` output without an error.
+Now the script produces `application/dw` output without an error:
 
 .Example: application/dw Output
 ----
@@ -137,18 +148,7 @@ The script produces `application/dw` output without an error.
 }
 ----
 
-However, if you output the JSON to XML, you will receive an error (`Unexpected internal error`) because the JSON input lacks a single root. So the error is a formatting error.
-
-.Example: Script that Outputs application/xml and Produces an Error
-[source,DataWeave,linenums]
-----
-%dw 2.0
-output application/xml
----
-payload
-----
-
-To fix the script, you need to provide a single XML root, for example:
+Notice that the output does not provide a single root, required by the XML format. So, to fix the script for XML output, you need to provide a one, for example:
 
 .Example: Script that Outputs application/xml
 [source,DataWeave,linenums]
@@ -160,6 +160,8 @@ output application/xml
     "myroot" : payload
 }
 ----
+
+Now the output meets the requirements of the XML format and produces the output correctly.
 
 .Example: XML Output Containing a Single XML Root
 [source,XML,linenums]
@@ -173,7 +175,7 @@ output application/xml
 </myroot>
 ----
 
-The DataWeave documentation provides numerous <<see_also, other examples>>.
+Note that the DataWeave documentation provides numerous <<see_also, transformation examples>>.
 
 // TODO: NEED MORE INFO HERE... show XML vs DW vs JSON
 
