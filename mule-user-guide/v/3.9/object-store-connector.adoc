@@ -4,7 +4,7 @@
 
 _Select_
 
-The Object Store Connector lets you connect to the object storage facility in Mule and exposes convenient methods for exploiting the capabilities of Mule Object Stores. Internally, Mule uses object stores in various filters, routers, and other message processors that need to store state between messages.
+The Object Store Connector lets you connect to the object storage facility in Mule and exposes convenient methods for exploiting the capabilities of Mule Object Stores. Internally, Mule uses object stores in various filters, routers, and other message processors that need to store state between messages. The Object Store connector works with the Object Store through references. Any transformations a user applies to an object store using the Object Store connector propagate to all references of that object store.
 
 [[prerequisites]]
 == Prerequisites
@@ -234,9 +234,10 @@ The following is an example objectstore configuration that specifies a partition
 
 If you do not specify a value for the objectstore-ref, the `_defaultUserObjectStore` is used, which is equivalent to this configuration:
 
-[source, xml]
+[source, xml,linenums]
 ----
-<objectstore:config name="ObjectStore__Configuration" objectstore-ref="_defaultUserObjectStore"  persistent="true"/>
+<objectstore:config name="ObjectStore__Configuration" 
+objectstore-ref="_defaultUserObjectStore"  persistent="true"/>
 ----
 
 If you don't want to use one of the default object stores, you can define your own Java bean and reference it instead in the objectstore-ref attribute.
@@ -258,15 +259,15 @@ We recommend that you keep Studio up to date with its latest version. 
 
 The Object Store connector is an operation-based connector, which means that when you add the connector to your flow, you need to configure a specific operation for the connector to perform. See the entire operation processors list in the link:https://mulesoft.github.io/objectstore-connector[github.io] or click individually on the listed operations below. The connector currently supports the following list of operations, each requiring certain attributes to be set:
 
-* https://mulesoft.github.io/objectstore-connector/2.1.0/apidocs/objectstore-apidoc.html#_contains[Contains]
-* https://mulesoft.github.io/objectstore-connector/2.1.0/apidocs/objectstore-apidoc.html#_dual_store[Dual store]
-* https://mulesoft.github.io/objectstore-connector/2.1.0/apidocs/objectstore-apidoc.html#_remove[Remove]
-* https://mulesoft.github.io/objectstore-connector/2.1.0/apidocs/objectstore-apidoc.html#_retrieve[Retrieve]
-* https://mulesoft.github.io/objectstore-connector/2.1.0/apidocs/objectstore-apidoc.html#_retrieve_all_keys[Retrieve all keys]
-* https://mulesoft.github.io/objectstore-connector/2.1.0/apidocs/objectstore-apidoc.html#_retrieve_and_store[Retrieve and store]
-* https://mulesoft.github.io/objectstore-connector/2.1.0/apidocs/objectstore-apidoc.html#_store[Store]
+* <<Contains Processor>>
+* <<Dual Store Processor>>
+* <<Remove Processor>>
+* <<Retrieve Processor>>
+* <<Retrieve All Keys Processor>>
+* <<Retrieve and Store Processor>>
+* <<Store Processor>>
 
-NOTE: The Dual store operation may be misleading. The function of this operation is to do two writes to object store, the first with `objectStore.store(key, value)` and the second with the `objectStore.store(value, key)` operation.
+NOTE: The Dual store operation may be misleading. The function of this operation is to do two writes to the object store, the first with `objectStore.store(key, value)` and the second with the `objectStore.store(value, key)` operation.
 
 [[adding-to-a-flow]]
 === Adding to a Flow
@@ -306,7 +307,7 @@ The following Mule App stores employee data containing employee identifier, firs
 +
 image:user-manual-e8636.png[Store and Retrieve Employee data]
 
-Start with the flow to store employee data.
+=== Store Employee Data
 
 . Create a new Mule Project in Anypoint Studio.
 . Drag a HTTP connector onto the canvas and configure the following parameters: +
@@ -322,7 +323,7 @@ image:objectstore-http-props-store.png[objectstore http config props for store e
 +
 . Next, drag the Object Store connector next to the Transform Message component and configure it according to the steps below:
 . Click the plus sign next to the Connector Configuration field to add a new *Object Store Global Element*.
-.. Configure the global element according to the table below:
+. Configure the global element according to the table below:
 +
 [%header%autowidth.spread]
 |===
@@ -331,11 +332,12 @@ image:objectstore-http-props-store.png[objectstore http config props for store e
 |Partition|Name of the partition|`employees`
 |===
 +
-.. The corresponding XML configuration should be as follows:
+The corresponding XML configuration should be as follows:
 +
-[source,xml]
+[source,xml,linenums]
 ----
-<objectstore:config name="ObjectStore__Configuration" partition="employees" doc:name="ObjectStore: Configuration"/>
+<objectstore:config name="ObjectStore__Configuration" 
+  partition="employees" doc:name="ObjectStore: Configuration"/>
 ----
 +
 . Back in the properties editor of the Object Store connector, configure the remaining parameters:
@@ -354,9 +356,12 @@ image:objectstore-http-props-store.png[objectstore http config props for store e
 +
 . Check that your XML looks as follows:
 +
-[source,xml]
+[source,xml,linenums]
 ----
-<objectstore:store config-ref="ObjectStore__Configuration" key="#[message.inboundProperties.'http.query.params'.id]" value-ref="#[payload]" doc:name="Store employee"/>
+<objectstore:store config-ref="ObjectStore__Configuration" 
+  key="#[message.inboundProperties.'http.query.params'.id]" 
+  value-ref="#[payload]" 
+  doc:name="Store employee"/>
 ----
 +
 . Similarly, drag another *Object Store connector* to get all keys from Store.
@@ -373,9 +378,10 @@ image:objectstore-http-props-store.png[objectstore http config props for store e
 +
 . Check that your XML looks as follows:
 +
-[source,xml]
+[source,xml,linenums]
 ----
-<objectstore:retrieve-all-keys config-ref="ObjectStore__Configuration" doc:name="Get all keys"/>
+<objectstore:retrieve-all-keys config-ref="ObjectStore__Configuration" 
+  doc:name="Get all keys"/>
 ----
 +
 . Add a *Logger* scope after the Object Store connector to print the data that is being passed by the All keys operation in the Mule Console. Configure the Logger according to the table below.
@@ -398,8 +404,9 @@ image:objectstore-http-props-store.png[objectstore http config props for store e
 |Level|INFO
 |===
 
-Now lets add another flow to retrieve employee data stored previously.
+=== Retrieve Employee Data
 
+. Add another flow to retrieve employee data stored previously.
 . Drag a Flow Component below the above flow.
 . Drag a HTTP connector onto the canvas and configure the following parameters:
 +
@@ -454,7 +461,7 @@ image:objectstore-http-props-retrieve.png[objectstore http config props for retr
 |===
 
 [[example-code]]
-=== Example Code
+=== Example XML Code
 
 Paste this code into your XML Editor to quickly load the flow for this example use case into your Mule application.
 
@@ -462,17 +469,27 @@ Paste this code into your XML Editor to quickly load the flow for this example u
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+<mule xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore"
+xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" 
+xmlns="http://www.mulesoft.org/schema/mule/core" 
+xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
 	xmlns:spring="http://www.springframework.org/schema/beans"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+	http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
+http://www.mulesoft.org/schema/mule/objectstore 
+http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
 http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
-http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
-    <objectstore:config name="ObjectStore__Configuration" partition="employees" doc:name="ObjectStore: Configuration"/>
-    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+http://www.mulesoft.org/schema/mule/ee/tracking 
+http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <objectstore:config name="ObjectStore__Configuration" 
+    partition="employees" doc:name="ObjectStore: Configuration"/>
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" 
+    port="8081" doc:name="HTTP Listener Configuration"/>
     <flow name="objectstore-store-employee-flow">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/store" doc:name="HTTP"/>
         <dw:transform-message doc:name="Transform Message">
@@ -486,14 +503,17 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 		age: inboundProperties.'http.query.params'.age
 }]]></dw:set-payload>
         </dw:transform-message>
-        <objectstore:store config-ref="ObjectStore__Configuration" key="#[message.inboundProperties.'http.query.params'.id]" value-ref="#[payload]" doc:name="Store employee"/>
+        <objectstore:store config-ref="ObjectStore__Configuration" 
+	key="#[message.inboundProperties.'http.query.params'.id]" 
+	value-ref="#[payload]" doc:name="Store employee"/>
         <objectstore:retrieve-all-keys config-ref="ObjectStore__Configuration" doc:name="Get all keys"/>
         <logger message="Keys : #[payload]" level="INFO" doc:name="Log Employee Id's"/>
         <set-payload value="Keys : #[payload]" doc:name="Show Employee Id's"/>
     </flow>
     <flow name="objectstore-retrieve-employee-flow">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/retrieve" doc:name="HTTP"/>
-        <objectstore:retrieve config-ref="ObjectStore__Configuration" key="#[message.inboundProperties.'http.query.params'.id]" doc:name="Retrieve Employee"/>
+        <objectstore:retrieve config-ref="ObjectStore__Configuration" 
+	key="#[message.inboundProperties.'http.query.params'.id]" doc:name="Retrieve Employee"/>
         <logger message="Employee: #[payload]" level="INFO" doc:name="Log Employee"/>
         <set-payload value="Employee : #[payload]" doc:name="Show Employee"/>
     </flow>
@@ -501,7 +521,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 ----
 
 [[run]]
-=== Run Time
+== Run Time
 
 . Save and run the project as a Mule Application.
 . Open a web browser and enter the below to check the response.
@@ -540,9 +560,475 @@ Inside the `<version>` tags, put the desired version number, the word `RELEASE` 
 * 1.3.3
 * 1.3.2
 
+== Object Store Connector Reference
+
+Generic module for accessing Object Stores.
+
+This can be used with Mule default implementations or one can be passed via ref. It allows you to store, retrieve, and remove objects from the store.
+
+Additional Info:
+
+* Requires Mule Enterprise License
+* Does not require an entitlement
+* Mule Version: 3.6.0 or higher
+
+== Connector Configuration
+
+`<objectstore:config>`
+
+Configuration Object Store global configuration settings.
+
+[%header%autowidth.spread]
+|===
+|Attribute |Description
+|name |The name of this configuration for later reference.
+
+Type: String +
+Default: None +
+Required: Yes
+|partition |Name of the partition in the default in-memory or persistent object stores (this argument has no meaning if the object store is passed by ref using objectStore-ref).
+
+Type: String +
+Default: None +
+Required: No
+|persistent |Specified whenever the required store needs to be persistent or not (this argument has no meaning if the object store is passed by ref using objectStore-ref or no partition name is defined).
+
+Type: Boolean +
+Default: false +
+Required: No
+|objectStore |Reference to an Object Store bean. This is optional and if it is not specified, the default in-memory or persistent store is used.
+
+Type: ObjectStore<https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html[Serializable]> +
+Default: None +
+Required: No
+|entryTtl |Time to live for stored values in milliseconds. The maxEntries and expirationInterval attributes are required when using this parameter. Valid values: 0 for never expires, values greater than 0 expire in milliseconds.
+
+Type: Integer +
+Default: None +
+Required: No
+|maxEntries |Specifies the maximum number of entries. The entryTTL and expirationInterval attributes are required when using this parameter.
+
+Type: Integer +
+Default: None +
+Required: No
+|expirationInterval |Specifies the expiration check interval in milliseconds. The entryTTL and maxEntries attributes are required when using this parameter.
+
+Type: Integer +
+Default: None +
+Required: No
+|===
+
+== Contains Processor
+
+`<objectstore:contains>`
+
+Checks whether the object store contains the given key.
+
+XML Sample:
+
+`<objectstore:contains key="MUL0001" config-ref="config-name"/>`
+
+[%header%autowidth.spread]
+|===
+|Attribute |Description
+|config-ref |Specifies which configuration to use.
+
+Type: String +
+Default: None +
+Required: Yes
+|key |The identifier of the object to validate.
+
+Type: String +
+Default: None +
+Required: Yes
+|===
+
+Returns:
+
+[%header%autowidth.spread]
+|===
+|Java Type |Description
+|Boolean
+|True if the object store contains the key, or false if it doesn't.
+|===
+
+== Dispose Store Processor
+
+`<objectstore:dispose-store>`
+
+Removes a given partition without disposing the entirely Object Store. Whether using a persistent store or not, internally, this operation performs a clear() of the items, so a user should still be able perform other operations. For persistent stores, this operation only deletes the contents of the folder but not the folder itself.
+
+[%header%autowidth.spread]
+|===
+|Attribute |Description
+|config-ref |Specifies with configuration to use.
+
+Type: String +
+Default: None +
+Required: Yes
+|partitionName |The name of the object store.
+
+Type: String +
+Default: #[payload] +
+Required: No
+|===
+
+== Dual Store Processor
+
+<objectstore:dual-store>
+
+Stores a value using key and also stores a key using value. If an exception is thrown rolls back both operations. This allows an option to indicate if key would be overwritten or not.
+
+XML Sample:
+
+`<objectstore:dual-store key="MUL0001" value-ref="#[string:Jason Goldfish]" config-ref="config-name"/>`
+
+[%header%autowidth.spread]
+|===
+|Attribute |Description
+|config-ref |Specifies with configuration to use.
+
+Type: String +
+Default: None +
+Required: Yes
+|key |The identifier of the object to store.
+
+Type: String +
+Default: None +
+Required: Yes
+|value |The object to store. If you want this to be the payload, use `value-ref="#[payload]"`.
+
+Type: https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html[Serializable] +
+Default: None +
+Required: Yes
+|overwrite |True if you want to overwrite the existing object.
+
+Type: Boolean +
+Default: false +
+Required: No
+|===
+
+
+== Remove Processor
+
+`<objectstore:remove>`
+
+Remove the object for the respective key. This operation can fail silently based on the value passed in ignoreNotExists.
+
+XML Sample:
+
+`<objectstore:remove key="MUL0001" config-ref="config-name"/>`
+
+[%header%autowidth.spread]
+|===
+|Attribute |Description
+|config-ref |Specifies with configuration to use.
+
+Type: String +
+Default: None +
+Required: Yes
+|key |The identifier of the object to remove.
+
+Type: String +
+Default: None +
+Required: Yes
+|ignoreNotExists |Indicates whether or not the operation ignores NotExistsException from ObjectStore.
+
+Type: Boolean +
+Default: false +
+Required: No
+|===
+
+Returns:
+
+[%header%autowidth.spread]
+|===
+|Java Type |Description
+|https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html[Serializable]
+|The object that was previously stored for the given key. If the key does not exist and ignoreNotExists is true, the operation returns a null object.
+|===
+
+== Retrieve Processor
+
+`<objectstore:retrieve>`
+
+Retrieve an object from the object store and make it available in the specified property scope of a Mule Message.
+
+XML Sample:
+
+`<objectstore:retrieve key="MUL0001" defaultValue-ref="#[string:MuleSoft Employee]" config-ref="config-name"/>`
+
+[%header%autowidth.spread]
+|===
+|Attribute |Description
+|config-ref |Specifies with configuration to use.
+
+Type: String +
+Default: None +
+Required: Yes
+|key |The identifier of the object to retrieve.
+
+Type: String +
+Default: None +
+Required: Yes
+|defaultValue |The default value if the key does not exist.
+
+Type: https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html[Serializable] +
+Default: None +
+Required: No
+|targetProperty |The Mule Message property where the retrieved value is stored.
+
+Type: String +
+Default: None +
+Required: No
+|targetScope |The Mule Message property scope, only used when targetProperty is specified.
+
+Type: <<MulePropertyScope Enum>> +
+Default: INVOCATION +
+Required: No
+|===
+
+Returns:
+
+[%header%autowidth.spread]
+|===
+|Java Type |Description
+|https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html[Serializable]
+|The object associated with the given key. If no object for the given key was found this method throws an ObjectDoesNotExistException.
+|===
+
+== Retrieve All Keys Processor
+
+`<objectstore:retrieve-all-keys>`
+
+Returns a list of all the keys in the object store.
+
+IMPORTANT: Not all stores support this method. If the method is not supported, a java.lang.UnsupportedOperationException is thrown.
+
+[%header%autowidth.spread]
+|===
+|Attribute |Description
+|config-ref |Specify which config to use.
+
+Type: String +
+Default: None +
+Required: Yes
+|===
+
+Returns:
+
+[%header%autowidth.spread]
+|===
+|Java Type |Description
+|`List<String>`
+|A java.util.List with all the keys in the store.
+|===
+
+== Retrieve and Store Processor
+
+`<objectstore:retrieve-and-store>`
+
+Retrieves and stores in the same operation.
+
+[%header%autowidth.spread]
+|===
+|Attribute |Description
+|config-ref |Specifies with configuration to use.
+
+Type: String +
+Default: None +
+Required: Yes
+|key |The identifier of the object to retrieve.
+
+Type: String +
+Default: None +
+Required: Yes
+|defaultValue |The default value if the key does not exist.
+
+Type: https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html[Serializable] +
+Default: None +
+Required: No
+|storeValue |The object to store. If you want this to be the payload, use `value-ref="#[payload]"`.
+
+Type: https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html[Serializable] +
+Default: None +
+Required: Yes
+|targetProperty |The Mule Message property where the retrieved value is stored.
+
+Type: String +
+Default: None +
+Required: No
+|targetScope |The Mule Message property scope, only used when targetProperty is specified.
+
+Type: <<MulePropertyScope Enum>> +
+Default: INVOCATION +
+Required: No
+|===
+
+Returns:
+
+[%header%autowidth.spread]
+|===
+|Java Type |Description
+|https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html[Serializable]
+|The object associated with the given key. If no object for the given key was found this method throws an ObjectDoesNotExistException.
+|===
+
+== Store Processor
+
+`<objectstore:store>`
+
+Stores an object in the object store. This allows an option to indicate if key would be overwritten or not.
+
+XML Sample:
+
+`<objectstore:store key="MUL0001" value-ref="#[string:Jason Goldie]" config-ref="config-name"/>`
+
+[%header%autowidth.spread]
+|===
+|Attribute |Description
+|config-ref |Specifies with configuration to use.
+
+Type: String +
+Default: None +
+Required: Yes
+|key |The identifier of the object to store.
+
+Type: String +
+Default: None +
+Required: Yes
+|value |The object to store. If you want this to be the payload, use `value-ref="#[payload]"`.
+
+Type: https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html[Serializable] +
+Default: None +
+Required: Yes
+|overwrite |True if you want to overwrite the existing object.
+
+Type: Boolean +
+Default: false +
+Required: No
+|===
+
+== MulePropertyScope Enum
+
+[source,java,linenums]
+----
+java.lang.Object
+      java.lang.Enum<MulePropertyScope>
+            org.mule.modules.objectstore.MulePropertyScope
+----
+
+All Implemented Interfaces:
+
+Serializable, Comparable<MulePropertyScope>
+
+[source,java,linenums]
+----
+public enum MulePropertyScope
+extends Enum<MulePropertyScope>
+----
+Enum for Mule Property Scopes used for improving the user experience in Anypoint Studio.
+
+Enum Constant Summary:
+
+* INBOUND
+* INVOCATION
+* OUTBOUND
+* SESSION
+
+Method Summary:
+
+[%header%autowidth.spread]
+|===
+|Modifier and Type |Method and Description
+|String	|toString() 
+|String	|value() 
+|static MulePropertyScope |valueOf(String name)
+
+Returns the enum constant of this type with the specified name.
+
+|static MulePropertyScope[]	|values()
+
+Returns an array containing the constants of this enum type, in the order they are declared.
+|===
+
+Methods inherited from class java.lang.Enum: clone, compareTo, equals, finalize, getDeclaringClass, hashCode, name, ordinal, valueOf
+
+Methods inherited from class java.lang.Object: getClass, notify, notifyAll, https://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?is-external=true#wait()[wait], 
+https://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?is-external=true#wait(long)[wait], 
+https://docs.oracle.com/javase/7/docs/api/java/lang/Object.html?is-external=true#wait(long,%20int)[wait]
+
+Enum Constant Detail:
+
+[%header%autowidth.spread]
+|===
+|Enum |Detail
+|INBOUND |`public static final MulePropertyScope INBOUND`
+|INVOCATION |`public static final MulePropertyScope INVOCATION`
+|OUTBOUND |`public static final MulePropertyScope OUTBOUND`
+|SESSION |`public static final MulePropertyScope SESSION`
+|===
+
+==== values Method Detail
+
+[source,java]
+----
+public static MulePropertyScope[] values()
+----
+
+Returns an array containing the constants of this enum type, in the order they are declared. This method may be used to iterate over the constants as follows:
+
+[source,java,linenums]
+----
+for (MulePropertyScope c : MulePropertyScope.values())
+    System.out.println(c);
+----
+
+Returns:
+
+An array containing the constants of this enum type, in the order they are declared.
+
+==== valueOf Method Detail
+
+[source,java]
+----
+public static MulePropertyScope valueOf(String name)
+----
+
+Returns the enum constant of this type with the specified name. The string must match exactly an identifier used to declare an enum constant in this type. Extraneous whitespace characters are not permitted.
+
+Parameters: name - The name of the enum constant to be returned. +
+Returns: The enum constant with the specified name. +
+
+Throws: 
+
+* IllegalArgumentException - If this enum type has no constant with the specified name. +
+* NullPointerException - If the argument is null.
+
+==== value Method Detail
+
+[source,java]
+----
+public String value()
+----
+
+==== toString Method Detail
+
+[source,java]
+----
+public String toString()
+----
+
+Overrides:
+
+[source,java]
+----
+toString in class Enum<MulePropertyScope>
+----
+
+
 [[see-also]]
 == See Also
 
-* http://mulesoft.github.io/objectstore-connector/[Technical Reference]
 * link:/release-notes/objectstore-connector-release-notes[Release Notes]
 * https://support.mulesoft.com/s/article/ka434000000TQFoAAO/Entries-in-Objectstore-expires-before-configured-entryTTL-value[Entries in Objectstore expires before configured entryTTL value]
