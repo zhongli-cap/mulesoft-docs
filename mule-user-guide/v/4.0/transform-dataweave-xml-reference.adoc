@@ -40,154 +40,117 @@ If you use Maven on your project, you must also include the following dependenci
 
 [NOTE]
 For users of Mule Runtime version 3.8.0, the aftifactID you need to use is `mule-plugin-weave_2.11`, rather than just `mule-plugin-weave`.
+////
 
+== &#60;dw:transform-message/&#62;
+
+The `<ee:transform-message>` element is the top-level XML tag for the Transform component.
+
+[%header,cols="30a,70a"]
+|===
+| `<ee:transform-message>` Attributes | Description
+| `doc:name` | Defines the name of the element as it appears in the Studio canvas.
+| `mode` | Refers to link:dataweave-memory-management#deferred-execution[Deferred Execution]. Accepted values: `immediate` or `deferred`. See link:dataweave-memory-management[DataWeave Memory Management].
+|===
+
+== Adding DataWeave Scripts to the Transform Component
+
+You can either type your DataWeave code into your XML using `CDATA` within a <<transformation, Transformation>> element, or you can reference an external `.dwl` file.
+
+This example that writes a DataWeave script inline within a `<dw:set-payload>` transformation element:
+
+[source,xml,linenums]
+----
+<ee:transform doc:id="747f74d4-cb66-4f8e-8222-24784e6863ae"
+  doc:name="Transform" doc:timestamp="1510861248434">
+    <ee:message>
+        <ee:set-payload>
+          <![CDATA[%dw 2.0
+            output application/json
+            ---
+            {
+              // YOUR DW SCRIPT
+            }
+          ]]>
+       </ee:set-payload>
+</ee:transform>
+----
+
+Here is same example, calling an external `.dwl` file:
+
+[source,xml,linenums]
+----
+<ee:transform doc:id="747f74d4-cb66-4f8e-8222-24784e6863ae"
+  doc:name="Transform" doc:timestamp="1510861248434" doc:mode="immediate">
+    <ee:message>
+      <ee:set-payload resource="transform.dwl" />
+    </ee:message>
+</ee:transform>
+----
+
+The default location for these files is in the `src/main/resources` folder in your project.
+
+[[transformations]]
 == Transformations
 
-This is a child element of the parent <dw:transform-message>.
+A single Transform component element (`<ee:transform/>`) can specify content for all parts of the Mule Event:
 
-It contains the actual DataWeave transformation code. Depending on where you desire to put the output in the outgoing Mule message, you can define it via the element `sw:set-payload`, `dw:set-variable`, or `dw:set-session-variable`.
+* `<ee:message/>` can contain `<ee:set-payload/>` and `<ee:set-attributes/>`.
+* `<ee:variables/>` can contain one or more `<ee:set-variable/>` elements.
 
-[source,xml,linenums]
-----
-<dw:set-payload resource="classpath:path/transform.dwl"/>
-<dw:set-variable variableName="myVariable" resource="classpath:path/transform.dwl"/>
-<dw:set-session-variable variableName="mySessionVariable" resource="classpath:path/transform.dwl"/>
-----
-
-*Attributes of <dw:set-payload>* and other elements that describe transformations
-
-[%header,cols="30a,70a"]
-|===
-|Value |Description
-| resource | Point to a *.DWL* file containing a DataWeave transform
-|	variableName | When the desired output is a variable, this defines what to name that variable. Not applicable on `dw:set-paload`.
-|===
-
-
-== Handling Multiple Outputs
-
-A single Transform Message element can give shape to several different components of the output Mule message. Each of these output components must be defined in a separate `.dwl` file. For example one may be defining the payload contents, another those of an outbound property, and these will both be parts of the same output Mule message.
-
-
-You do this by adding multiple child elements inside the `dw:transform-message` component.
-
+.Example
 [source, xml, linenums]
 ----
-<dw:transform-message>
-            <dw:set-payload resource="classpath:path/transform.dwl"/>
-            <dw:set-variable variableName="myVariable" resource="classpath:path/transform.dwl"/>
-            <dw:set-session-variable variableName="mySessionVariable" resource="classpath:path/transform.dwl"/>
-</dw:transform-message>
+<ee:transform doc:id="747f74d4-cb66-4f8e-8222-24784e6863ae"
+  doc:name="Transform" doc:timestamp="1510861248434">
+    <ee:message>
+        <ee:set-payload resource="transform.dwl" />
+        <ee:set-attributes resource="myattributes.dwl" />
+    </ee:message>
+    <ee:variables>
+        <ee:set-variable variableName="myVar" resource="myvar.dwl"/>
+    </ee:variables>
+</ee:transform>
 ----
 
-Through the type of the child element, you specify where in the output Mule message to place the output of this new DataWeave transform. In case you're creating a new variable or property, you must also set a name for it.
-
-== Referencing External DW Files
-
-You can either type your DataWeave code into your XML code using C-Data within a <<transformation, Transformations>> element, or you can reference an external .dwl file.
-
-Below is an example that spells out the DataWeave code inline:
-
-[source,xml,linenums]
-----
-<dw:transform-message doc:name="Transform Message" mode="immediate">
-        <dw:set-payload>
-        	<![CDATA[
-			      %dw 1.0
-        		%output application/json
-        		---
-        		payload
-        	]]>
-	</dw:set-payload >
-</dw:transform-message>
-----
-
-Below is the same example, calling an external .dwl file:
-
-[source,xml,linenums]
-----
-<dw:transform-message doc:name="Transform Message" mode="immediate">
-        <dw:set-payload resource="transform.dwl" />
-</dw:transform-message>
-----
-
-
-The default location for these files is in the 'src/main/resources' folder in your project.
-
-== Input definitions
-
-This is a child element of <dw:transform-message>.
-
-It specifies certain optional parameters about the input.
-
-
-[source,xml,linenums]
-----
-<dw:input-payload mimeType="application/xml" doc:sample="sample_data/content.xml"/>
-----
-
-*Attributes of <dw:input-payload>*
+The child elements contain some of the same attributes.
 
 [%header,cols="30a,70a"]
 |===
-|Value |Description
-| mimeType | expected mime Type of the input
-| doc:sample | Points to a file containing a sample input, useful at design time when constructing the transformation via the UI. See <<Providing Input Sample Data>>.
+| Attributes | Description
+| `resource` | Points to a `.dwl` file containing a DataWeave transformation script. These values are solved statically. For example, using `<ee:set-payload resource="myscript-${env}.dwl"/>` generates this error in the Transform Message UI: `Unexpected end of input, expected header or content`.
+|	`variableName` | For output variables only, defines the name of the variable.
 |===
 
+////
+== Input definitions
+
+`<dw:input-payload/>` can specify optional parameters about the input, for example:
+
+[%header,cols="30a,70a"]
+|===
+| Attributes of `<dw:input-payload>` | Description
+| `mimeType` | Expected mime type of the input. If you do not provide this attribute, DataWeave will try to read the payload mime type from the metadata.
+| `doc:sample` | Points to a file containing a sample input, which is useful at design time when constructing the transformation through the UI. See <<Providing Input Sample Data>>.
+|===
+
+.Example
 [source,xml, linenums]
 ----
 <dw:transform-message doc:name="Transform Message">
-	<dw:input-payload mimeType="application/xml" doc:sample="sample_data/content.xml"/>
-	<dw:set-payload>
-	<![CDATA[%dw 1.0
-	%output application/java
-	---
-	{
-		// YOUR DW SCRIPT
-	}
-	]]>
-	</dw:set-payload>
+  <dw:input-payload mimeType="application/xml"
+   doc:sample="sample_data/content.xml"/>
+  <dw:set-payload>
+    <![CDATA[%dw 1.0
+      %output application/java
+      ---
+      {
+        // YOUR DW SCRIPT
+      }
+    ]]>
+  </dw:set-payload>
 </dw:transform-message>
 ----
-
-If you do not provide this attribute, DataWeave will try to read the payload MIME type from the metadata.
-
-
-== Reader Configuration
-
-This is a child element of an <dw:input-payload>.
-
-Each of these elements defines a specific property that tells the reader how to parse the input.
-
-[source,xml,linenums]
-----
-<dw:reader-property name="separator" value="|"/>
-<dw:reader-property name="header" value="false"/>
-----
-
-The reader properties that may be set vary depending on the type of the input. For a detailed list of the available properties for each type, see link:dataweave-formats[DataWeave formats].
-
-[source, xml, linenums]
-----
-<dw:input-payload doc:sample="list_csv.csv" mimeType="text/csv" >
-    <dw:reader-property name="separator" value="|"/>
-    <dw:reader-property name="header" value="false"/>
-</dw:input-payload>
-----
-
-
-For a detailed reference of what properties can be set in the Reader Configuration of each format, see the corresponding *reader properties* section:
-
-* link:dataweave-formats#csv[CSV]
-
-* link:dataweave-formats#xml[XML]
-
-* link:dataweave-formats#flat-file[Flat File]
-
-== Memory Management
-
-The dw component can be configured to handle the execution of a transformation of a large payload at a deferred time, and you can set the maximum size for which it will use memory rather than the hard disk. No configuration is necessary in the Transform Message component, but you may finetune certain parameters if you wish through the `mode` attribute. See link:dataweave-memory-management[DataWeave Memory Management].
 ////
 
 == Full XML Sample
