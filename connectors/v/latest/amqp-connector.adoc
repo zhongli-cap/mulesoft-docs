@@ -1,0 +1,84 @@
+= About the AMQP Connector
+:keywords: amqp, connector, amqp_0.9.1
+:toc:
+:toc-title:
+
+Release Notes: link:/release-notes/connector-amqp-1.0.0[Mule Runtime AMQP 1.0.0 Release Notes]
+
+The AMQP connector enables your application to do messaging using the AMQP v0.9.1. Its main features include:
+
+* Synchronous Message requesting, with timeout
+* Declaration of Queue/Exchanges through fallback in operations
+* All AMQP message properties, including custom headers
+* Reply to (publishing replies to the default exchange)
+* Automatic, Mule-driven and manual message acknowledgement
+* Manual message reject
+* Mandatory and immediate publishing parameters and handling of returned (undelivered) messages.
+* Prefetch size and count "quality of service" settings
+* noLocal and exclusive consumers
+* Non Secure and TLS Connection to a broker
+* Message Builder functionality.
+* RPC Pattern through request-reply consumption using private temporal queues
+
+* Fully Support for AMQP 0.9.1 spec
+
+[[configuration_settings]]
+== Configuring the connector
+
+Out of the box, the AMQP connector comes with a fine tunned set of default values, both for publishing and consuming messages. This means that the only requirement is for you to configure which connection should be used.
+
+This example sets a minimal connection to an AMQP broker in localhost using the default ports and non secured connection:
+
+[source, xml, linenums]
+----
+<amqp:config name="Amqp_Config" />
+----
+
+=== Defining Global Defaults
+
+The AMQP 'config' allows you to define multiple parameters that will be used as a default while consuming or publishing messages. This way, you can define a global default behaviour for all the operations associated the config and then override each parameter only in the operations that require a custom behaviour.
+
+For example, we can define the number of consumers that shall be spawned when a AMQP message source is bound to a queue
+
+[source, xml, linenums]
+----
+<amqp:config name="Amqp_Config">
+  <amqp:consumer-config numberOfConsumers="5" />
+  <amqp:publisher-config deliveryMode="TRANSIENT" />
+</amqp:config>
+----
+
+In this case, every operation 'listener' associated to this config will create 5 consumers each one with a channel of its own to listen to a queue. On the other hand, each 'publish' operation will not be logged if sent to a durable queue, as the delivery mode is transient.
+
+All of this properties can be overriden at operation level when required. Let's say we need to 'publish' with a persistent delivery mode:
+
+[source, xml, linenums]
+----
+<amqp:publish config-ref="Amqp_Config" deliveryMode="PERSISTENT"/>
+----
+
+
+[[connection_settings]]
+== Connecting to a Broker
+
+A AMQP connection is defined by a set of general parameters that apply for any connection, as the AMQP wire protocol is implemented upon TCP. 
+
+
+=== Providing Credentials For Authentication 
+
+In order to do establish an authenticated connection, you need to configure the 'username' and 'password' in the 'connection' element:
+
+[source, xml, linenums]
+----
+<amqp:config name="Amqp_Config" >
+	<amqp:connection password="#{env.pass}" username="${env.user}"/>
+</amqp:config>
+----
+
+== See Also
+* link:amqp-consume[How To Consume Messages]
+* link:amqp-publish[How To Publish Messages]
+* link:amqp-listener[How To Listen For New Messages]
+* link:amqp-ack[Handling Message Acknowledgement]
+* link:amqp-transactions[Handling Transactions in AMQP]
+* link:amqp-documentation[AMQP Connector Technical Reference]
