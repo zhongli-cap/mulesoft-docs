@@ -783,7 +783,37 @@ Updates data in a database.
 `<db:listener>`
 
 +++
-Selects from a table at a regular interval and generates one message per each obtained row. <p> Optionally, watermark and id columns can be provided. If a watermark column is provided, the values taken from that column will be used to filter the contents of the next poll, so that only rows with a greater watermark value are returned. If an id column is provided, this component will automatically make sure that the same row is not picked twice by concurrent polls
+In Anypoint Studio this operation is called On Table Row. 
+
+Unlike all other Database connector components, you add a Database listner to the source of a flow. The Database listener periodically selects from a database table at a regular interval and generates one message per each obtained row. 
+
+==== Avoiding Duplicate Processing of Database Records
+
+<p> Optionally, a watermark column or id column can be provided to the Database listener configuration. Either one of these column values will be persisted in an object store. You can modify the object store in the 
+
+==== Using an Id Column
+If the table has key or identity columns, where the database quarantees every value is unique, you can assign one of these columns as an *id* column, to prevent duplicate processing of rows from the table. 
+
+When an Id column is provided, this component will automatically make sure that the same row is not picked twice by concurrent polls. In other words, the Id column behaves as a type of cluster-friendly idempotent message filter. 
+
+
+==== Using a Watermark Column
+An Id column has unique values, guaranteeing that every new row will be returned once by a subsequent poll by the database listener. 
+
+An alternative filtering option is to use a *watermark* column. 
+
+When a watermark column is provided, the values returned from that database table's column are tested against the largest previous value, and rows are only returned if the watermark column is strictly greater than all previous values. 
+
+If the Watermark column is always increasing in the database, then a Watermark column will guarantee that older rows are never returned a second time in subsequent polls, but every new row is returned one time in one of the polling cycles. If a new row is equal to the existing watermark, then the new row is filtered out and not returned.  
+
+Unlike an id column, a watermark columnn can be any database table column,
+but has the additional restriction that the values must be strickly increasing in order to avoid duplicate processing of rows.  
+
+
+Note: 
+Although not a typical use case, you could assign the same identity column to a watermark, in which case only the results will only include rows whose id column is greater than any previous id column. 
+
+Note: 
 +++
 
 ==== Parameters
