@@ -1,10 +1,29 @@
 = About DataWeave Scripts
 :keywords: studio, anypoint, esb, transform, transformer, format, aggregate, rename, split, filter convert, xml, json, csv, pojo, java object, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping
 
-DataWeave scripts are divided into two sections divided by a triple-dash delimiter (`---`):
+DataWeave is the primarly data transformation language for Mule flows. You can write stand-alone DataWeave scripts in Transform Message components, or you can write in-line DataWeave expressions to transform data "in-place" to dynamically set the value of various properties, such as configuration fields in an event processor or global configuration element. In-line DataWeave expressions are enclosed in `#[ ]` code blocks. For example, you can use a DataWeave expression to set conditions in a Choice router, or to set the value of a Set Payload or Set Variable component.  
 
-* Header: Contains directives to apply to the expression in the body. The example shows some common directives (`%dw 2.0` and `output application/xml`).
-* Body: Contains an expression for generating the output structure.
+For example, the following DataWeave code set's a timestamp variable to the current time using the DataWeave `now()` method:
+
+.Example: Simple In-Line DataWeave Script
+[source, dataweave, linenums]
+----
+<set-variable value="#[now()]" variableName="timestamp" doc:name="Set timestamp" />
+----
+
+You can also store DataWeave code in external files and read them in to other DataWeave scripts, or you can factor DataWeave code into modules (libraries) of reusable DataWeave functions that can be shared by all the components in a Mule application.  
+
+
+=== The Structure of DataWeave Scripts
+DataWeave scripts and files are divided into two main sections:
+
+* The Header, which defines directives that apply to the body epression (optional).
+
+* The Body, which contains the expression to generate the output structure.
+
+When you include a header, the header appears above the body separated by a delimiter consisting of three dashes: "---". 
+
+Here is an example DataWeave file with an output directive declared in the header, followed by a DataWeave expression to create a user object that contains two child key/value pairs:
 
 .Example: Simple DataWeave Script
 [source, dataweave, linenums]
@@ -14,7 +33,7 @@ output application/xml
 ---
 {
   user: {
-    name: payload.user_name,
+    firstName: payload.user_firstname,
     lastName: payload.user_lastName
   }
 }
@@ -55,7 +74,7 @@ Valid values: link:dataweave-formats[Mime Types that are Supported by DataWeave]
 +
 Default: If no output is specified, the default output is based on an algorithm that examines the inputs (payload, variables, and so on) used in the script:
 +
-. If the there is no input, the default is `output application/java`.
+. If there is no input, the default is `output application/java`.
 . If all inputs are the same mime type, the script outputs to the same mime type. For example, if all input is `application/json`, then it outputs `output application/json`.
 . If the mime types of the inputs differ, and no output is specified,  the script throws an exception so that you know to specify an output mime type.
 +
@@ -139,7 +158,7 @@ A good mental model for approaching the transformation script is to normalize th
 {
     "size" : 1,
     "person": {
-      "name": "Nial"
+      "name": "Yoda"
     }
 }
 ----
@@ -155,7 +174,7 @@ output application/xml
 payload
 ----
 
-To determine that the DataWeave code in the script above works, you can change the output format to `application/dw` like this:
+To isolate the error to an output formatting error, instead of a syntax problem in your DataWeave code, you can change the output format to `application/dw` like this:
 
 .Example: DataWeave Script that Outputs application/dw
 [source,DataWeave,linenums]
@@ -173,12 +192,14 @@ Now the script produces `application/dw` output without an error:
 {
   size: 1,
   person: {
-    name: "Nial"
+    name: "Yoda"
   }
 }
 ----
 
-Notice that the output above does not provide a single root element, as required by the XML format. So, to fix the script for XML output, you need to provide a one, for example:
+This process lets you isolate errors that are output formatting errors instead of errors in your DataWeave code. In the previous example, you have now isolated the error to something specifically about XML data structures. 
+
+To troubleshoot this isssue, notice that the output above does not provide a single root element, as required by the XML format. So, to fix the script for XML output, you need to provide a single root element, for example:
 
 .Example: Script that Outputs application/xml
 [source,DataWeave,linenums]
@@ -191,7 +212,7 @@ output application/xml
 }
 ----
 
-Now the output meets the requirements of the XML format and produces the output correctly.
+Now the output meets the requirements, so when you change the output directive back to application/xml, the result produces valid XML output.
 
 .Example: XML Output Containing a Single XML Root
 [source,XML,linenums]
@@ -200,9 +221,20 @@ Now the output meets the requirements of the XML format and produces the output 
 <myroot>
   <size>1</size>
   <person>
-    <name>Nial</name>
+    <name>Yoda</name>
   </person>
 </myroot>
+----
+
+=== Including Headers in In-Line DataWeave Scripts
+You can also include header directives when you write in-line DataWeave scripts, by flattening all the lines in the DataWeave script into a single line. For smaller DataWeave scripts, this allows you to quickly apply header directives without having to add a separate Transform Message component to set a variable, then substitue the variable in the next Event processor. 
+
+For example, here is the Mule configuration XML to create the same valid XML output as the previous Transform Message component: 
+
+.Example: Simple In-Line DataWeave Script
+[source, dataweave, linenums]
+----
+<set-payload value="#[output application/xml --- { myroot: payload } ]" doc:name="Set Payload" />
 ----
 
 Note that the DataWeave documentation provides numerous <<see_also, transformation examples>>.
@@ -216,6 +248,8 @@ Note that the output of a DataWeave expression can include these data types:
 * Arrays: A sequence of comma separated values, for example: `1, 2, 3`. The values can be any supported data type.
 * Objects: A collection of key-value pairs, for example: `{"key": "some value"}`. The values can be any supported data type.
 ////
+
+== Transforming Data Formats in In-Line DataWeave Scripts
 
 == DataWeave Comments
 Comments that use a Java-like syntax are also accepted by DataWeave.
