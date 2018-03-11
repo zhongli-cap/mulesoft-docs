@@ -4,7 +4,7 @@
 Parameters are configurable arguments that belong to a given component. <<configs#, Configurations>>, <<module-structure#components, Components>>, and <<connections#, Connection Providers>> are called _parameterizables_ because
 they can be configured through their parameters.
 
-Parameters provide the information needed by the component so it can be configured in order work properly. Each parameter contains the following information:
+Parameters provide the information that the component needs so that it can be configured to work properly. Each parameter contains the following information:
 
 * A type that restricts the kind of value the parameter can have.
 * A name that uniquely identifies it.
@@ -106,7 +106,7 @@ There are three possible values:
 * `SUPPORTED` (default): The parameter can handle both expressions and simple values.
 * `NOT_SUPPORTED`: The parameter requires static values. Expressions are not supported.
 
-This values can be configured simply by adding the `@Expression` annotation.
+These values can be configured simply by adding the `@Expression` annotation.
 
 [source, java, linenums]
 ----
@@ -115,13 +115,13 @@ This values can be configured simply by adding the `@Expression` annotation.
 private String foo;
 ----
 
-So, the example above defines a parameter named `foo` of type `String` that can have either a static value (like `"bar"`) or an expression (like `"\#[vars.foo]"`).
+The example above defines a parameter named `foo` of type `String` that can have either a static value (like `"bar"`) or an expression (like `"\#[vars.foo]"`).
 
 === Optionality
 
-Parameters can be either required or optional.
+Parameters can be required or optional.
 
-Sometimes a parameter specifies information that is so crucial to what you are trying to do (for example, the host name while doing an HTTP Request) that there is no way to continue without it setting it. Other times, you can operate without that information or simply use a default value (for example, where a port is 80 in an HTTP listener).
+Sometimes a parameter specifies information that is so crucial to what you are trying to do (for example, the host name for an HTTP Request) that there is no way to continue without it setting it. Other times, you can operate without that information or simply use a default value (for example, where a port is 80 in an HTTP listener).
 
 A parameter is required by default, but you can easily change that by annotating it with `@Optional`, for example:
 
@@ -132,7 +132,7 @@ A parameter is required by default, but you can easily change that by annotating
 private Integer port;
 ----
 
-Take into account that `@Optional` only accepts `String` values, but the SDK will auto-convert it to your parameter's type.
+Note that `@Optional` only accepts `String` values, but the SDK will auto-convert it to your parameter's type.
 Additionally, if the parameter supports expressions, you can use one as the default value.
 
 Optional parameters can have a default value.
@@ -167,23 +167,23 @@ The `@ParameterDsl` annotation has two configurable elements:
   This is used for customizing the DSL of Complex Type Parameters, especially when you need to avoid
   the inline definition because it has illegal fields (like a `name` field) or because the structure
   is so complex that makes no sense to represent it inline.
-
++
 For example, if you use the `Options` type in a <<configs#, Configuration>> and declare the Parameter
 with `@ParameterDsl(allowInlineDefinition=false)`, you no longer have the child element:
-
++
 [source, xml, linenums]
 ----
 <module:config name="config-name" someConfigAttribute="value" options="#[vars.options]"/>
 ----
-
++
 * `allowReferences`: +
   Indicates whether the associated Parameter should support registry references when receiving an `String`.
   This is useful for controlling how the Parameter will behave upon configuration if the type of the
   Parameter doesn't provide enough information to automatically configure the references support.
-
++
 For example, in the JMS Connector, if you want want to avoid making users inject an object from
-the registry as a ConsumerType configuration, you declare it as not supporting references:
-
+the registry as a `ConsumerType` configuration, you declare it as not supporting references:
++
 [source, java, linenums]
 ----
 @Parameter
@@ -204,7 +204,7 @@ ones that *travel together* all the times.
 
 Using `@ParameterGroup` also makes a UI contribution rendering all the `@Parameters`
 inside the group together in a box, separating them from other `@Parameters` that don't
-belong to that group. For example:
+belong to that group, for example:
 
 image::parameters/group.png[Parameter Group]
 
@@ -243,7 +243,7 @@ public class ConnectionProperties {
 }
 ----
 
-And then is used like this:
+The example above could be used like this:
 
 [source, java, lineums]
 ----
@@ -254,38 +254,37 @@ private ConnectionProperties properties;
 `"Connection"` is the name of the `@ParameterGroup` and is the name that will be used in
 the UI.
 
-The class defining the `properties` `@ParameterGroup` will not have a parameter named *properties*.
-Instead, it will contain the parameters that are defined inside `ConnectionProperties`. Those are:
+The class defining the `properties` `@ParameterGroup` will not have a parameter named `properties`.
+Instead, it will contain the parameters that are defined inside `ConnectionProperties`:
 
-* A required parameter named host
-* An optional parameter named port
+* A required parameter named `host`.
+* An optional parameter named `port`.
 
-In other words, the class defining the parameter group is augmented with this extra parameters
-and will contain the parameters defined inside of `ConnectionProperties` plus all the other parameters it have declared.
+In other words, the class defining the parameter group is augmented with these extra parameters
+and will contain the parameters defined inside of `ConnectionProperties` plus all the other parameters it has declared.
 
-Take into account that each field annotated with `@ParameterGroup` must be a Java bean
-property (i.e: it needs to have setters and getters matching the field name).
+Note that each field annotated with `@ParameterGroup` must be a Java bean property (that is, it needs to have setters and getters matching the field name).
 
 == POJO vs Parameter Group
 
 `@ParameterGroup` can be configured so it can be written as a child element in the DSL
 instead of being spread around the component that declared it.
 
-In other words having an operation like this one:
+In other words, assume an operation like this:
 
 [source, java, lineums]
 ----
 public void execute(@ParameterGroup ConnectionProperties properties) { ... }
 ----
 
-we will have this DSL:
+This is the DSL for the operation above:
 
 [source, xml, linenums]
 ----
 <example:execute host="localhost" port="8080">
 ----
 
-But if we configured the parameter group using `@ParameterGroup(showInDsl=true)` instead, the DSL would look like:
+However, if you configure the parameter group using `@ParameterGroup(showInDsl=true)` instead, the DSL now looks like:
 
 [source, xml, linenums]
 ----
@@ -294,18 +293,10 @@ But if we configured the parameter group using `@ParameterGroup(showInDsl=true)`
 </example:execute>
 ----
 
-Since when a POJO `@Parameter` is defined we get the same DSL, this leads you to ask:
+When a POJO `@Parameter` is defined, you get the same DSL, so you might ask when to use a POJO instead of using a POJO annotated with `@ParameterGroup`?
 
-When should you I a POJO instead POJO annotated with `@ParameterGroup`?
+There are some subtle differences between these two concepts. You should definitely use a POJO if you care about the type as a whole and the structure it provides.
 
-There are some subtle differences between this two concepts.
-You should definitely use a POJO if you care about the type as a whole and the structure it provides.
+For example, `ConnectionProperties` (above) keeps two parameters together because they are always configured together. In this case, the parameters do not represent an entity in the module's domain. The `@ParameterGroup` is simply a handy way of keeping things that are related together and showing them together in the UI.
 
-When we defined `ConnectionProperties` above, we just wanted to keep two parameters that are always configured
-together but they don't represent an entity in our domain. It was only a handy way of keeping things that are
-related indeed and show them together in the UI, but don't mean anything in particular.
-
-But if we talk about our `Options` POJO defined above, we do care about the object per se instead of only caring about the parameters it contains.
-For instance, it would make sense to have a list of `Options`, because each object is something on its own (in the OOP sense).
-On the other hand if you can be using a class just for the sake of grouping things that go together but don't have any particular meaning on your module's domain,
-which is the purpose of having the parameter group.
+However, the `Options` POJO defined above concerns the object itself, not just the parameters it contains. For instance, it would make sense to have a list of `Options` because each object is something on its own (in the OOP sense). On the other hand, if you are using a class simply for the sake of grouping things together, without any particular meaning for your module's domain, then it makes sense to have a parameter group.
