@@ -1,0 +1,283 @@
+= Configuration Overrides
+
+:keywords: mule, sdk, config, configuration, override, parameter
+
+Operations and sources that depend on a configuration may want to use a value that
+is in the configuration, unless it is explicitly indicated in the component. In this cases is where
+a configuration override is used.
+
+== What is a Configuration Override
+
+This feature binds a parameter from a source or operation to a parameter that exists
+on a configuration. When a parameter is annotated with `@ConfigOverride` and a value is
+not specified for it on the dsl, the configuration value for the parameter with the same
+name will be injected on it.
+
+This annotation can either be applied to an argument of an Operation method or to a field
+of a Source. It cannot be used on configurations nor connections.
+
+This is an example of how to use the `@ConfigOverride` annotation:
+
+On the configuration a parameter is declared:
+
+[source, java, linenums]
+----
+@Parameter
+@Optional(defaultValue = "10")
+int maxRetries;
+----
+
+That configuration is used on an operation:
+
+[source, java, linenums]
+----
+public void request(@Config ConfigType config, @ConfigOverride int maxRetries)
+  // ...
+}
+----
+
+There are three different possibilities for how the parameter `maxRetries` on the operation
+`request` will get its value:
+
+*  The default value of the `maxRetries` parameter provided by the configuration will be used
+when neither the configuration nor the operation provide a value for `maxRetries`.
+
+[source, xml, linenums]
+----
+<extension:config name="sampleConfig">
+
+<flow name="requestFlow">
+  <extension:request config-ref="sampleConfig">
+</flow>
+----
+
+On the operation, the `maxRetries` parameter takes the value 10.
+
+* The value provided for the `maxRetries` parameter in the configuration will be used
+when the value for the parameter is not specified on the operation but is explicit on the configuration
+
+[source, xml, linenums]
+----
+<extension:config name="sampleConfig" maxRetries=2>
+
+<flow name="requestFlow">
+   <extension:request config-ref="sampleConfig">
+</flow>
+----
+
+On the operation, the `maxRetries` parameter takes the value 2.
+
+* The value provided for the `maxRetries` parameter in the operation is used When
+this parameter is explicitly added on the dsl.
+
+[source, xml, linenums]
+----
+<extension:config name="sampleConfig" maxRetries=2>
+
+<flow name="requestFlow">
+   <extension:request config-ref="sampleConfig" maxRetries=5>
+</flow>
+----
+
+On the operation, the `maxRetries` parameter takes the value 5.
+
+NOTE: This feature does not change the values on the configuration. It only injects the configuration values
+on the parameters or leaves the ones specified.
+
+== Configuration Override Requirements
+
+This are the requirements that have to be met for overriding configuration parameters:
+
+* The name and type of the parameter in the configuration must be the same as the one annotated with `@ConfigOverride`.
+
+* If an operation has a parameter annotated with `@ConfigOverride`, it must also have the corresponding Configuration as parameter.
+
+* If a source has a field annotated with `@ConfigOverride`, it must also have the corresponding Configuration as a field.
+
+== Configuration Override Parameter within Parameter Groups
+
+This annotation can also be used to reference a `Parameter` that belong to a `ParameterGroup` within
+a Configuration. This is an example of how to do it:
+
+[source, java, linenums]
+----
+public class ConfigType{
+
+  @ParameterGroup(name = "Strategy")
+  private RetryStrategy retryStrategy;
+
+  // ... Parameter getters
+}
+----
+
+[source, java, linenums]
+----
+public class RetryStrategy{
+
+  @Parameter
+  private int maxRetries;
+
+  @Parameter
+  private String retriesExhaustedMessage;
+
+  // ... Parameter getters
+}
+----
+
+On this operation we use the `@ConfigOverride` referencing `maxRetries` that is inside the
+`RetryStrategy` class:
+
+[source, java, linenums]
+----
+public void request(@Config ConfigType config, @ConfigOverride int maxRetries)
+  // ...
+}
+----
+
+== Configuration Override with POJOs
+
+If your configuration have parameters that are POJOs you can override those too. The content
+of the POJO parameter on the operation/source will either be totally defined by the configuration or
+totally defined by the operation. This means, you cannot define a partially populated POJO and expect the
+rest of the POJO to have the configuration values injected.
+
+The logic to decide which values to use is the same as if it was a simple java type.
+
+== Configuration Parameter without Default Value
+
+If the configuration parameter is optional, does not have a default value and an operation/source parameter
+references it with a `@ConfigOverride`, its value will default to null. Let's see an example of this:
+
+This is a parameter declared in the configuration:
+
+[source, java, linenums]
+----
+@Parameter
+@Optional
+int maxRetries;
+----
+
+This is an operation that has that configuration as a parameter and a configuration override
+parameter:
+
+[source, java, linenums]
+----
+public void request(@Config ConfigType config, @ConfigOverride int maxRetries)
+  // ...
+}
+----
+
+If `maxRetries` is not specified in the configuration and the operation, then its value
+will be null.
+
+== Configuration Override Example
+
+This is a simplified example of the usage of `@ConfigOverride` :
+
+The definition of the Configuration:
+
+[source, java, linenums]
+----
+@Configuration(name = "config")
+@Operations({AmqpConsume.class, AmqpPublish.class, AmqpPublishConsume.class, })
+public class AmqpConfig {
+
+  @Parameter
+  @Expression(NOT_SUPPORTED)
+  @Optional(defaultValue = "*/*")
+  private String contentType;
+
+
+  @Expression(NOT_SUPPORTED)
+  @ParameterGroup(name = "Consumer Config", showInDsl = true)
+  private AmqpConsumerConfig consumerConfig;
+
+
+  // ... All parameter getters
+
+}
+----
+
+This is the `AmqpConsumerConfig` class that has the parameters that will be referenced
+by the `@ConfigOverride` annotation on this example:
+
+[source, java, linenums]
+----
+public final class AmqpConsumerConfig {
+
+  @Parameter
+  @Optional(defaultValue = "IMMEDIATE")
+  @Expression(NOT_SUPPORTED)
+  private AckMode ackMode;
+
+  @Parameter
+  @Optional(defaultValue = "false")
+  @Expression(NOT_SUPPORTED)
+  private boolean noLocal;
+
+  @Parameter
+  @Optional(defaultValue = "false")
+  @Expression(NOT_SUPPORTED)
+  private boolean exclusiveConsumers;
+
+  @Parameter
+  @Optional(defaultValue = "4")
+  @Expression(NOT_SUPPORTED)
+  private int numberOfConsumers;
+
+  // ... All parameter getters
+}
+----
+
+Source that has a `AmqpConfig` and parameters with the `ConfigOverride` annotation:
+
+[source, java, linenums]
+----
+@Alias("listener")
+@EmitsResponse
+@MetadataScope(outputResolver = AmqpOutputResolver.class)
+public class AmqpListener extends Source<Object, AmqpMessageAttributes> {
+
+
+  @Connection
+  private ConnectionProvider<AmqpTransactionalConnection> connectionProvider;
+
+  private AmqpTransactionalConnection connection;
+
+  @Config
+  private AmqpConfig config; // <1>
+
+  @Parameter
+  private String queueName;
+
+  @Parameter
+  @ConfigOverride
+  private AckMode ackMode; // <2>
+
+  @Parameter
+  @ConfigOverride
+  private int numberOfConsumers; // <2>
+
+  @Parameter
+  @Optional
+  private String consumerTag;
+
+
+  @Override
+  public void onStart(SourceCallback<Object, AmqpMessageAttributes> sourceCallback) throws MuleException {
+    // ...
+  }
+  // ...
+  @Override
+  public void onStop() {
+    // ...
+  }
+  // ...
+}
+----
+
+<1> Configuration from which the values to override the `@ConfigOverride` annotated parameters
+will be taken.
+
+<2> Parameter that if not specified on the operation will inherit the configuration value of the
+one with the same name. Note that the parameters with these names belong to a `ParameterGroup`
