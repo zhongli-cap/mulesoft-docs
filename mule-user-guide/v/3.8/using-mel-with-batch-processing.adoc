@@ -40,6 +40,32 @@ These functions can be used anywhere in your batch jobs, in any component that s
 |`getLastException()` |Returns the Exception object for the last step in which the current record has failed. If the record hasn’t failed in any step, then it returns null.
 |===
 
+== Considerations involving exchange patterns and step failures
+
+Notice that the information retrieved by the MEL expressions are related to *step failures*. So in case an outbound endpoint is used, which has a one-way exchange pattern and an exception results from the dispatch of the message, this will not be considered a step failure. 
+
+For example, consider you have the following batch step:
+
+            <batch:step name="Batch_Step">
+<file:outbound-endpoint path="utput" outputPattern="test.file" connector-ref="File" responseTimeout="10000" />   
+            </batch:step>
+
+As the file outbound endpoint is one-way, no matter a problem is found in the file endpoint, the step will be considered successful, as the message is dispatched and the step continues processing.
+
+In order for this exception to be considered a step failure, you have to pocket this piece of asynchronous processing.
+
+For example, the following can be done:
+
+            <batch:step name="Batch_Step">
+                <logger message=" #[server.dateTime]: payload is: #[payload]" level="INFO" category="BATCH_STEP_BEGIN" />
+                <flow-ref name="create-file" />
+            </batch:step>
+
+
+    <flow name="create-file" processingStrategy="synchronous">
+        <file:outbound-endpoint path="src/test/resources/output" outputPattern="test.file" connector-ref="File" responseTimeout="10000" />
+    </flow>
+    
 == Example Use of A MEL Function in a Batch Job
 
 For example, suppose you have a batch job with the following Batch Step:
@@ -52,7 +78,6 @@ image:batch+function2.png[batch+function2]
 
 In this case, this expression will return a Java Map for the current record where the key is the name of the batch step and the value is the exception object. This expression will of course only evaluate batch steps through which the current record has already passed, it can't evaluate any batch steps that may come after it.
 
-== See Also
-
+    
 * Read a link:https://blogs.mulesoft.com/dev/mule-dev/handle-errors-batch-job/[Blog Post] about handling errors with Batch
 * Read more about using link:/mule-user-guide/v/3.8/mule-expression-language-mel[Mule Expression Language (MEL)]in your application
