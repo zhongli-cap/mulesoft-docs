@@ -21,12 +21,12 @@ link:index.adoc[Archived MuleSoft Documentation]
 +
 * Copy files to be archived from the `master` branch to this `archive` branch. See <<tools_tips>> below for guidance.
 +
-. Prepare the archive files for publication: 
+. Prepare the archive files for publication:
 +
 * Update the TOCs (top-level and product or product-version level `_toc.adoc` files) to reflect the archived state, for example: link:/mule-user-guide/v/3.4/_toc.adoc[Mule Runtime Doc Archives] and the link:_toc.adoc[Top-level TOC].
-* Update the top-level landing page (index.adoc) to include a link to the archived docs, for example: link:index.adoc[Archived MuleSoft Documentation] 
+* Update the top-level landing page (index.adoc) to include a link to the archived docs, for example: link:index.adoc[Archived MuleSoft Documentation]
 * Add ARCHIVE labels to the landing page for the newly archived docs, for example: link:/mule-user-guide/v/3.4/index.adoc[Mule Runtime (v3.4 Archives)].
-* Make sure that the `_config.yml` file reflects the correct setting for `isLatest: true|false`. For example, if the latest archived version was 3.3, and you are now adding 3.4 docs to the archive, you need to change the setting to `false` for the 3.3 docs and to `true` for the 3.4 docs, for example: https://github.com/mulesoft/mulesoft-docs/blob/archive/mule-user-guide/v/3.4/_config.yml[mule-user-guide/v/3.4/_config.yml]. Note that this setting affects what you see in the TOC, as well as the version drop-down menu in the topics. If no set/version of the docs in a given folder has `isLatest: true`, you won't see an entry for those docs in the left-nav/TOC. 
+* Make sure that the `_config.yml` file reflects the correct setting for `isLatest: true|false`. For example, if the latest archived version was 3.3, and you are now adding 3.4 docs to the archive, you need to change the setting to `false` for the 3.3 docs and to `true` for the 3.4 docs, for example: https://github.com/mulesoft/mulesoft-docs/blob/archive/mule-user-guide/v/3.4/_config.yml[mule-user-guide/v/3.4/_config.yml]. Note that this setting affects what you see in the TOC, as well as the version drop-down menu in the topics. If no set/version of the docs in a given folder has `isLatest: true`, you won't see an entry for those docs in the left-nav/TOC.
 * Fix any broken links in the files copied files to the `archive` branch (see <<tools_tips>> for more on this topic).
 +
 . Build to `_site` and test the docs locally.
@@ -47,7 +47,7 @@ link:index.adoc[Archived MuleSoft Documentation]
 +
 The `link_check` file clearly identifies links that are BROKEN in each file on the local site. Typically, there are a handful of patterns to what's broken, which makes the cleanup process manageable. For example, where there are links out to docs that are still out on `docs.mulesoft.com`, you can often do a global find and replace for all instances of that pattern. For example, assume `+link:/some_dir/v/1.1/some-file[Some Topic]+` in your `.adoc` file. You can do a global find and replace, that replaces `link:/some_dir/` with `link:https://docs.mulesoft.com/some_dir/`. This is the most common sort of fix.
 +
-This assumes you are hosting your build locally. You can use Apache HTTP for that. For guidance with that setup on Mac, see https://getgrav.org/blog/macos-sierra-apache-multiple-php-versions. You can ignore the PHP part. 
+This assumes you are hosting your build locally. You can use Apache HTTP for that. For guidance with that setup on Mac, see https://getgrav.org/blog/macos-sierra-apache-multiple-php-versions. You can ignore the PHP part.
 +
 * One easy way to get files from the `master` to the `archive` branch:
 +
@@ -57,3 +57,64 @@ This assumes you are hosting your build locally. You can use Apache HTTP for tha
 . Rename the folders back to their original name, for example: `$ cp -r /4.1_archive /4.1`
 . Add the contents of the folders to the `archive` branch: `$ git add /path/to/4.1/*`
 . Commit and push the new files in: `$ git commit -am 'all my new archive files'` then `$ git push`
+
+== How To Publish the Archive Site
+
+This procedure first builds the site from the `archive` branch of the doc repo (`mulesoft-docs.git`). Then it copies that build to the `develop` branch of `docs-archive-mulesoft-com.git` at  https://github.com/mulesoft-sites/docs-archive-mulesoft-com. Next, it pushes in all changes to `develop`, then merges that build into the `stg` and then the `dev` branches. Along the way, the steps also guide you through testing of builds from the branches where you build the site. The `develop`, `stg`, `dev` process are important stages of the site's pipeline. So you should do them all even if something seems redundant.
+
+. Build the site from this archive branch, cleaning out everything before building:
++
+`$ ./gradlew cleanAssets`
+`$ ./gradlew clean`
+`$ ./gradlew`
++
+. Once the site builds locally, make sure it looks OK to publish.
+. In a separate console tab or window, clone or check out the develop branch in the docs-archive-mulesoft-com repo.
++
+For guidance, see https://wiki.corp.mulesoft.com/display/HELP/MuleSoft-Sites
++
+. Copy the _contents_ of your site build (in (`_site/`) from the `archive` branch of the docs repo to the _top level_ of the the `develop` branch.
++
+For example:
++
+`$ cd docs-archive-mulesoft-com/`
+`$ git checkout develop`
+`$ git pull`
+`$ cp -r my-mulesoft-docs-archive-branch/_site/* .`
++
+. Do test "build" of the site following the instructions in https://wiki.corp.mulesoft.com/display/HELP/MuleSoft-Sites.
++
+This requires Docker. Be patient. It takes a couple of minutes for status to appear in the console.
+`$ docker run --rm --label=jekyll --volume="$(pwd):/srv/jekyll" -it -p 127.0.0.1:4000:4000 jekyll/jekyll:3.4.3 jekyll serve`
++
+Console output showing success:
+----
+SF-SDUKE2-OSX:docs-archive-mulesoft-com staceyduke$ docker run --rm --label=jekyll --volume="$(pwd):/srv/jekyll" -it -p 127.0.0.1:4000:4000 jekyll/jekyll:3.4.3 jekyll serve
+Configuration file: none
+Configuration file: none
+            Source: /srv/jekyll
+       Destination: /srv/jekyll/_site
+ Incremental build: disabled. Enable with --incremental
+      Generating...
+                    done in 46.563 seconds.
+ Auto-regeneration: enabled for '/srv/jekyll'
+Configuration file: none
+    Server address: http://0.0.0.0:4000/
+  Server running... press ctrl-c to stop.
+----
++
+. Check the local build through your browser at `0.0.0.0:4000`
+. If the build looks ok, add any new files, and commit any updates.
++
+`$ git add new_stuff_here`
+`$ git commit -am 'committing new stuff and mods'`
+. Now, merge it into the `stg` branch ( following instructions in https://wiki.corp.mulesoft.com/display/HELP/MuleSoft-Sites ):
++ `git checkout develop`
++ `git pull`
++ `git checkout stg`
++ `git pull`
++ `git merge origin/develop`
+. Check the build of `stg` at this URL:
+https://docs-archive.staging.mulesoft.com
+. If `stg` build looks right, you can roll it into `prod`, again following instructions in https://wiki.corp.mulesoft.com/display/HELP/MuleSoft-Sites.
+. TODO: EXPLAIN THE STG TO PROD STEPS
