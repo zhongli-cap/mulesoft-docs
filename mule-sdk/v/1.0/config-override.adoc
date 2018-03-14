@@ -2,23 +2,22 @@
 
 :keywords: mule, sdk, config, configuration, override, parameter
 
-Operations and sources that depend on a configuration may want to use a value that
-is in the configuration, unless it is explicitly indicated in the component. In this cases is where
-a configuration override is used.
+There are times when a certain parameter of your Configuration could be thought as a "global default", stating
+a default value/behavior for that parameter for other operations an sources to use. In that
+case you would also want to be able to override the value in certain components of the
+application, to keep it flexible. Lucky for you, @ConfigOverride allows you to do exactly that.
 
 == What is a Configuration Override
 
 This feature binds a parameter from a source or operation to a parameter that exists
 on a configuration. When a parameter is annotated with `@ConfigOverride` and a value is
-not specified for it on the dsl, the configuration value for the parameter with the same
+not specified for it on the DSL, the configuration value for the parameter with the _exactly_ same
 name will be injected on it.
 
 This annotation can either be applied to an argument of an Operation method or to a field
-of a Source. It cannot be used on configurations nor connections.
+of a Source, and it cannot be used on configurations nor connections.
 
-This is an example of how to use the `@ConfigOverride` annotation:
-
-On the configuration a parameter is declared:
+For example, if you have a Parameter declared in your Configuration like this:
 
 [source, java, linenums]
 ----
@@ -27,7 +26,7 @@ On the configuration a parameter is declared:
 int maxRetries;
 ----
 
-That configuration is used on an operation:
+And that configuration is used on an operation:
 
 [source, java, linenums]
 ----
@@ -36,7 +35,7 @@ public void request(@Config ConfigType config, @ConfigOverride int maxRetries)
 }
 ----
 
-There are three different possibilities for how the parameter `maxRetries` on the operation
+Then there are three different possibilities for how the parameter `maxRetries` on the operation
 `request` will get its value:
 
 *  The default value of the `maxRetries` parameter provided by the configuration will be used
@@ -68,7 +67,7 @@ when the value for the parameter is not specified on the operation but is explic
 On the operation, the `maxRetries` parameter takes the value 2.
 
 * The value provided for the `maxRetries` parameter in the operation is used When
-this parameter is explicitly added on the dsl.
+this parameter is explicitly added on the DSL.
 
 [source, xml, linenums]
 ----
@@ -86,7 +85,7 @@ on the parameters or leaves the ones specified.
 
 == Configuration Override Requirements
 
-This are the requirements that have to be met for overriding configuration parameters:
+There are a couple of requirements that have to be met for overriding configuration parameters:
 
 * The name and type of the parameter in the configuration must be the same as the one annotated with `@ConfigOverride`.
 
@@ -154,7 +153,7 @@ This is a parameter declared in the configuration:
 ----
 @Parameter
 @Optional
-int maxRetries;
+private String retriesExhaustedMessage;
 ----
 
 This is an operation that has that configuration as a parameter and a configuration override
@@ -162,12 +161,12 @@ parameter:
 
 [source, java, linenums]
 ----
-public void request(@Config ConfigType config, @ConfigOverride int maxRetries)
+public void request(@Config ConfigType config, @ConfigOverride String retriesExhaustedMessage)
   // ...
 }
 ----
 
-If `maxRetries` is not specified in the configuration and the operation, then its value
+If `retriesExhaustedMessage` is not specified in the configuration and the operation, then its value
 will be null.
 
 == Configuration Override Example
@@ -280,4 +279,24 @@ public class AmqpListener extends Source<Object, AmqpMessageAttributes> {
 will be taken.
 
 <2> Parameter that if not specified on the operation will inherit the configuration value of the
-one with the same name. Note that the parameters with these names belong to a `ParameterGroup`
+one with _exactly_ the same name. Note that the parameters with these names belong to a `ParameterGroup`
+
+Let's see an example of how the override behaves.
+
+[source, xml, linenums]
+----
+<amqp:config name="config">
+ <amqp:connection host="localhost" port="5671" virtualHost="/" username="guest" password="guest"/>
+ <amqp:consumer-config numberOfConsumers="16" /> // <1>
+</amqp:config>
+
+<flow name="amqpStatisticsListen">
+  <amqp:listener config-ref="config" queueName="statisticsQueue" numberOfConsumers="1"/> // <2>
+  <!-- process statistics -->
+  <logger level="INFO" message="#[payload]"/>
+</flow>
+----
+
+<1> In the Config, `numberOfConsumers` is set to 16 while `ackMode` takes the default value
+<2> In the Source, `numberOfConsumers` is specified so it will take the value 1, while `ackMode` is not, so
+it will take the value from the config, which is `IMMEDIATE`.
