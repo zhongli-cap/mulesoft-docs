@@ -1,27 +1,19 @@
 = Polling Sources
+
 *Available since version 1.1*
 
-Polling Sources are sources that, instead of being triggered by an external action, poll
-items periodically depending on a given `scheduling strategy` and automatically handle 
-idempotency and watermarking. On every poll action, many items can be dispatched
-to the flow, each as a single `Message`.
+Instead of getting triggered by an external action, Polling Sources are sources that  poll items periodically depending on a given `scheduling strategy` and automatically handle idempotency and watermarking. On every poll action, many items can be dispatched to the flow, each as a single `Message`.
 
 == Creating a Polling Source
 
-To create a Polling Source, you need to add the `Source` class to the
-`@Sources` annotation on the extension class, just like regular Sources. For a Source
-to behave as a `PollingSource`, instead of extending the class `Source<T,A>`, the class needs
-to extend from `PollingSource<T, A>`.
+To create a Polling Source, you need to add the `Source` class to the `@Sources` annotation on the extension class, just like regular Sources. For a Source
+to behave as a `PollingSource`, instead of extending the class `Source<T,A>`, the class needs to extend from `PollingSource<T, A>`.
 
-By extending from `PollingSource<T, A>` you will need to implement the methods `poll` and
-`onRejectedItem`.
+When extending from `PollingSource<T, A>`, you need to implement the methods `poll` and `onRejectedItem`.
 
-* `poll` is responsible for obtaining the items to be dispatched and communicating with them through the `pollContext`
-using the `accept` method.
+* `poll` is responsible for obtaining the items to be dispatched and communicating with them through the `pollContext` using the `accept` method.
 
-* `onRejectedItem` is called when one of the dispatch items was rejected (for example, by watermarking,
-idempotency or server overload). This method will be called to release any resources associated
-with the result set for the `PollItem`.
+* `onRejectedItem` is called when one of the dispatch items was rejected (for example, by watermarking idempotency or server overload). This method is called to release any resources associated with the result set for the `PollItem`.
 
 Here is an example of the declaration of these methods on the directory listener
 implementation for the FTP connector:
@@ -47,10 +39,9 @@ public class FtpDirectoryListener extends PollingSource<InputStream, FtpFileAttr
 
 This method gathers all the items to be dispatched and processes them one by one.
 
-The `accept` method from the `PollContext` is in charge of dispatching the polled items into the flow. It
-receives as parameter a `Consumer<PollItem>`
+The `accept` method from the `PollContext` is in charge of dispatching the polled items into the flow. It receives `Consumer<PollItem>` as a parameter.
 
-This example shows how to set the Message that will be dispatched to the flow:
+This example shows how to set the Message to dispatch to the flow:
 
 [source, java, linenums]
 ----
@@ -76,17 +67,14 @@ public class FtpDirectoryListener extends PollingSource<InputStream, FtpFileAttr
 // ...
 }
 ----
-<1> Note that the `pollContext` provides information on whether the Source is stopping. This must be taken into
-account before any time-consuming task.
+<1> Note that the `pollContext` provides information on whether the Source is stopping. This must be taken into account before any time-consuming task.
 <2> `accept` dispatches an item to the flow.
 <3> `setResult` is used to set the Message that is dispatched.
 
 === Idempotency
 
 Idempotency prevents items from getting polled twice. The SDK ensures that
-no other thread or cluster node is processing an item of the same ID, providing processing idempotency.
-No two items with the same ID will be processed at the same time. If a node polls an item with the ID
-of an item that is being processed, the item will be dropped, and the `onRejectedItem` method will be called.
+no other thread or cluster node is processing an item of the same ID, which provides processing idempotency. No two items with the same ID will be processed at the same time. If a node polls an item with the ID of an item that is being processed, the item will be dropped, and the `onRejectedItem` method will be called.
 
 [source, java, linenums]
 ----
@@ -118,18 +106,13 @@ public class FtpDirectoryListener extends PollingSource<InputStream, FtpFileAttr
 
 === Watermarking
 
-What do you do when you are polling an incremental source of data and you only want the new data?
-Should you manually divide the new data from the old data on each call? No, by using watermarking you can
-solve this problem easily.
+You can use watermarking when you are polling an incremental source of data and you only want the new data instead of manually dividing the new data from the old data on each call.
 
-By setting an incrementing value to the item's watermark, every other poll will drop and
-call `onRejectedItem` on any of the item's watermark values that are lower than the current watermark value.
-In the example shown before, the watermark chosen is the timestamp of the file.
+By setting an incrementing value to the item's watermark, every other poll will drop and call `onRejectedItem` on any of the item's watermark values that are lower than the current watermark value. In the example above, the chosen watermark is the timestamp of the file.
 
 What criteria does the SDK use to compare watermarks?
 
-If the watermarks that are used implement `Comparable`, the natural order of those values will be used. There
-is no need to set a criteria.
+If the watermarks that you use implement `Comparable`, the natural order of those values will be used. There is no need to set a criterion.
 
 [source, java, linenums]
 ----
@@ -167,15 +150,13 @@ public class FtpDirectoryListener extends PollingSource<InputStream, FtpFileAttr
 <1> A typical best practice is to let the user decide whether to use watermarking or not.
 <2> `setWatermark` sets the file timestamp as watermark.
 
-What if the watermark values do not implement `Comparable`, or what if I want to use another criteria
-that is not the natural order?
+What if the watermark values do not implement `Comparable`, or what if I want to use another criteria that is not the natural order?
 
 You can simply set a `Comparator` to the `PollContext` by calling its method `setWatermarkComparator`.
 
 === PollItemStatus
 
-If you call the `accept` method, you get a `PollItemStatus` in return. This is an `Enum` that
-can take the following values:
+If you call the `accept` method, you get a `PollItemStatus` in return. This is an `Enum` that can take the following values:
 
 * ACCEPTED:  The item was accepted and has been scheduled for execution.
 * FILTERED_BY_WATERMARK:  The item was rejected because watermarking was enabled, so it was filtered.
@@ -226,7 +207,7 @@ public class FtpDirectoryListener extends PollingSource<InputStream, FtpFileAttr
 
 === Getting the Source Callback Context
 
-If you need to save data to be used on the callback methods, the `item`
+If you need to save data to be used on the callback methods, `item`
 provides the `SourceCallbackContext` for it.
 
 This example shows how to get the context and then save data in it:
@@ -270,7 +251,7 @@ public class FtpDirectoryListener extends PollingSource<InputStream, FtpFileAttr
 }
 ----
 
-<1> Gets the context from the `item`.
+<1> Gets the context from `item`.
 <2> Saves data on the `SourceCallbackContext`.
 
 == Implementing the OnRejectedItem Method
@@ -278,7 +259,7 @@ public class FtpDirectoryListener extends PollingSource<InputStream, FtpFileAttr
 This method is called when one of the dispatched items was rejected. It should release
 any resource associated with the result set for the `PollItem`.
 
-This is an example of how to implement it:
+This example shows how to implement it:
 
 [source, java, linenums]
 ----
@@ -292,13 +273,11 @@ public class FtpDirectoryListener extends PollingSource<InputStream, FtpFileAttr
 }
 ----
 
-== How to use Polling Sources in a Flow
+== How to Use Polling Sources in a Flow
 
-The SDK automatically adds a `scheduling strategy` parameter to the source, enabling the user to provide any
-strategy (like `fixed-frequency`) to handle the polling executions. The runtime will use that strategy
-to automatically schedule executions of the `poll` method.
+The SDK automatically adds a `scheduling strategy` parameter to the source, enabling the user to provide any strategy (like `fixed-frequency`) to handle the polling executions. The runtime will use that strategy to automatically schedule executions of the `poll` method.
 
-Here is an example that uses the FTP directory listener polling source:
+Here is an example of the FTP directory listener that uses the polling source:
 
 [source, xml, linenums]
 ----
