@@ -1,124 +1,116 @@
-= Configuring an OAuth enabled module
+= Configuring an OAuth-Enabled Module
 :keywords: mule, sdk, security, oauth
+//TODO: SEE resourceOwnerId
 
-Another important aspect of an OAuth enabled modules is how to use it. As much as the SDK does to hide the complexities of
-the OAuth protocol, things like the OAuth dance are unavoidable. The SDK's approach to this problem is to standardize the
-experience of all OAuth modules to keep simplifying the user's experience.
+An important aspect of OAuth-enabled modules is how to use them. As much as the SDK does to hide the complexities of the OAuth protocol, things like the OAuth dance are unavoidable. The SDK's approach to this problem is to standardize the experience of all OAuth modules to keep simplifying the user experience.
 
-In this article we'll discuss the steps a user must take
-in order to use the module.
+This section discusses the steps a user must take to use the module.
 
 == Synthetic Parameters
 
-On top of everything that was explicitly defined in that Connection Provider, the SDK will automatically add some extra
-parameters automatically and will also inject the proper behavior for them.
+In addition to everything explicitly defined in the Connection Provider, the SDK automatically adds some extra parameters and injects the proper behavior for them.
 
 [options="header"]
 |===
 |Parameter Name|Required|Expressions|Default Value|Description
-|resourceOwnerId
+|`resourceOwnerId`
 |NO
 |SUPPORTED
 |N/A
-|In order to support multi tenancy, users can here specify the id of the tenant which owns the associated access and refresh tokens.
-When performing the authorization dance, this value will provide the id of the obtained token. When a component needs to obtain a new
-connection, it acts as a default owner id to use.
+|To support multi-tenancy, users can specify the ID of the tenant that owns the associated access and refresh tokens. When performing the authorization dance, this value will provide the ID of the obtained token. When a component needs to obtain a new connection, it acts as a default owner ID to use.
 
-|consumerKey
+|`consumerKey`
 |YES
 |NOT_SUPPORTED
 |N/A
-|The OAuth consumerKey as registered with the service provider
+|The OAuth `consumerKey` as registered with the service provider.
 
-|consumerSecret
+|`consumerSecret`
 |YES
 |NOT_SUPPORTED
 |N/A
-|The OAuth consumerSecret as registered with the service provider
+|The OAuth `consumerSecret` as registered with the service provider.
 
-|authorizationUrl
+|`authorizationUrl`
 |NO
 |NOT_SUPPORTED
-|Value provided in the @AuthorizationCode annotation
-|The service provider’s authorization URL
+|Value provided in the ``@AuthorizationCode` annotation.
+|The service provider’s authorization URL.
 
-|accessTokenUrl
+|`accessTokenUrl`
 |NO
 |NOT_SUPPORTED
-|Value provided in the @AuthorizationCode annotation
-|The service provider’s access token URL
+|Value provided in the `@AuthorizationCode` annotation.
+|The service provider’s access token URL.
 
-|state
+|`state`
 |NO
 |REQUIRED
 |N/A
-|A String value that you send when the OAuth dance is initiated and that is returned back by the service provider
-alongside the token callback. It is used to correlate dance initiations with token callbacks. Most common use case of
-this attribute is multi-tenancy.
+|A String value that you send when the OAuth dance is initiated and that is returned back by the service provider with the token callback. It is used to correlate dance initiations with token callbacks. The most common use case for this attribute is multi-tenancy.
 
-|scope
+|`scope`
 |NO
 |NOT_SUPPORTED
-|Value provided in the @AuthorizationCode annotation
-|The OAuth scopes to be requested during the dance. If not provided, it will default to those in the annotation
+|Value provided in the `@AuthorizationCode` annotation.
+|The OAuth scopes to be requested during the dance. If not provided, it will default to those in the annotation.
 
-|listenerConfig
+|`listenerConfig`
 |YES
 |NOT_SUPPORTED
 |N/A
-|A reference to an <http:listener-config /> to be used in order to create the listener that will catch the access token callback endpoint.
+|A reference to an `<http:listener-config />` to be used in order to create the listener that will catch the access token callback endpoint.
 
-|callbackPath
+|`callbackPath`
 |YES
 |NOT_SUPPORTED
 |N/A
-|The path of the access token callback endpoint
+|The path of the access token callback endpoint.
 
-|authorizePath
+|`authorizePath`
 |YES
 |NOT_SUPPORTED
 |N/A
-|The path of the local http endpoint which triggers the OAuth dance
+|The path of the local HTTP endpoint that triggers the OAuth dance.
 
-|externalCallbackUrl
+|`externalCallbackUrl`
 |NO
 |NOT_SUPPORTED
 |N/A
-|If the callback endpoint is behind a proxy or should be accessed through a non direct URL, use this parameter to tell the OAuth provider the URL it should use to access the callback
+|If the callback endpoint is behind a proxy or should be accessed through a non-direct URL, use this parameter to tell the OAuth provider the URL it should use to access the callback.
 
-|resourceOwnerId
+|`resourceOwnerId`
 |YES
 |SUPPORTED
 |N/A
-|The resourceOwnerId which each component should use if it doesn’t reference otherwise.
+|The `resourceOwnerId` that each component should use if it does not reference otherwise.
 
-|objectStore
+|`objectStore`
 |NO
 |NOT_SUPPORTED
 |N/A
-|A reference to the object store that should be used to store each resource owner id’s data. If not specified, runtime will automatically provision the default one.
+|A reference to the Object Store to user for storing each resource owner ID’s data. If not specified, the runtime will automatically provision the default one.
 
-|before
+|`before`
 |NO
 |NOT_SUPPORTED
 |N/A
-|The name of a flow to be executed right before starting the OAuth dance (see specific section about this below)
+|The name of a flow to be executed right before starting the OAuth dance (see <<before_flow, Before Flow>>).
 
-|after
+|`after`
 |NO
 |NOT_SUPPORTED
 |N/A
-|The name of a flow to be executed right after an accessToken has been received (see specific section about this below)
+|The name of a flow to be executed right after an `accessToken` has been received  (see <<after_flow, After Flow>>)
 |===
 
-== About the use of expressions
+== About the Use of Expressions
 
-As you can see in the table above, many of the synthetic parameters accept expressions. Using expressions there has the same effect
-as using expressions in a regular parameter: it will turn the configuration into a dynamic one.
+The table above identifies many of the synthetic parameters that accept expressions. Using expressions there has the same effect as using expressions in a regular parameter: It will turn the configuration into a dynamic one.
 
 == OAuth Connection DSL
 
-This is how the generated DSL  would look like:
+This is what the generated DSL looks like:
 
 [source, xml, linenums]
 ----
@@ -128,34 +120,30 @@ This is how the generated DSL  would look like:
 accessTokenUrl="http://..."/
 localAuthorizationUrl="http://localhost:8080/.." scope="this that and those" resourceOwnerId="#[ownerId]"
 before="myBeforeFlow" after="myAfterFlow" />
-        <sfdc:oauth-callback-config listenerConfig="myHtttpListener" callbackPath="/callback” authorizePath="/authorize" />
+        <sfdc:oauth-callback-config listenerConfig="myHtttpListener" callbackPath="/callback" authorizePath="/authorize" />
         <sfdc:oauth-store-config objectStore="oauthObjectStore" />
 </sfdc:config>
 ----
 
-Take aways:
-
-* Regular and OAuth parameters are all shown at the connection provider level, just like in any other provider
+* Regular and OAuth parameters are all shown at the connection provider level, just like in any other provider.
 * The parameters related to the Authorization Code Grant type (`consumerKey`, `consumerSecret`, `authorizationUrl`, `accessTokenUrl`,
 `localAuthorizationHost`, `localAuthorizationPort`, `localAuthorizationPath`, `before`, `after`, `scope`, `defaultResourceOwnerId`) will be
-placed on a child element called `<oauth-authorization-code>`
-* The parameters related to the callback, will be placed in a child element called `<oauth-callback-config>`
-* The parameters related to object store, will be placed in a child element called `<oauth-store-config>`
+placed on a child element called `<oauth-authorization-code>`.
+* The parameters related to the callback will be placed in a child element called `<oauth-callback-config>`.
+* The parameters related to object store will be placed in a child element called `<oauth-store-config>`.
 
-== Custom Logic Before & After dance
+== Custom Logic Before and After the Dance
 
-Many times users will want to execute some random logic just before initiating the OAuth dance or right after it has been completed.
-Example use cases of this is notifying an external system that a given owner id has been successfully on-boarded, keeping activity logs, etc.
+End users often want to execute some random logic just before initiating the OAuth dance or right after it has been completed. Use cases include notifying an external system that a given owner ID has been successfully on-boarded, keeping activity logs, and so on.
 
-Because now the authorization process is triggered by hitting an automatically created endpoint, is why the `<oauth-authorization-code>`
-child element has the `before` and `after` parameters that were previously discussed.
+The authorization process is triggered by hitting an automatically created endpoint, so the `<oauth-authorization-code>` child element has the `before` and `after` parameters.
 
-These optional parameters should be used to specify the name of a `<flow>` to be invoked before or after the OAuth dance.
+These optional parameters specify the name of a `<flow>` to be invoked before or after the OAuth dance.
 
+[[before_flow]]
 === Before flow
 
-The before flow will be executed just before the OAuth dance is started. The payload of the event sent to that flow will be an instance of
-`AuthorizationCodeRequest`, which is an immutable pojo that looks like this:
+The before flow will be executed just before the OAuth dance is started. The payload of the event sent to that flow will be an instance of `AuthorizationCodeRequest`, which is an immutable POJO that looks like this:
 
 [source, java, linenums]
 ----
@@ -183,19 +171,16 @@ public interface AuthCodeRequest {
 }
 ----
 
-In this flow the user can perform any custom logic as needed. Specially, the user can set flow variables which, if you keep reading,
-can become pretty helpful.
+In this flow, the user can perform any custom logic as needed. In particular, the user can set flow variables (see <<after_flow, After Flow>>).
 
+[[after_flow]]
 === After Flow
-The after flow is executed right after the access token has been received and stored. This flow is executed with an event which
-is equivalent to that which came out of the before flow (or a blank event if no before flow was defined), except for the payload,
-which is replaced by the same `AuthorizationCodeState` object that is injected in the `ConnectionProvider`, but any variables which were
-previously set are still there (or will be empty if there was no before flow defined).
+The after flow is executed right after the access token has been received and stored. This flow is executed with an event that is equivalent to what came out of the before flow (or a blank event if no before flow was defined), except for the payload,
+which is replaced by the same `AuthorizationCodeState` object that is injected in the `ConnectionProvider`. However, any variables previously set are still there (or will be empty if no before flow was defined).
 
-== Configuring a custom ObjectStore
+== Configuring a Custom ObjectStore
 
-The obtained access tokens are stored in an `ObjectStore`. By default, the SDK will store them in the application's default store,
-but users can define their own custom one:
+The obtained access tokens are stored in an `ObjectStore`. By default, the SDK will store them in the apps's default store, but users can define their own custom one, for example:
 
 [source, xml, linenums]
 ----
@@ -212,14 +197,14 @@ but users can define their own custom one:
         <sfdc:oauth-authorization-code consumerKey="${sfdc.consumerkey}" consumerSecret="${sfdc.consumersecret}"
         authorizationUrl="http://..." accessTokenUrl="http://..."/
         localAuthorizationUrl="http://localhost:8080/.." />
-        <sfdc:oauth-callback-config listenerConfig="myHtttpListener" callbackPath="/callback” authorizePath="/authorize" />
+        <sfdc:oauth-callback-config listenerConfig="myHtttpListener" callbackPath="/callback" authorizePath="/authorize" />
         <sfdc:oauth-store-config objectStore="tokenStore" /> // <2>
 </sfdc:config>
 ----
 
-<1> Define your custom store
-<2> Reference it on your module's config
+<1> Define your custom store.
+<2> Reference it on your module's config.
 
-== Next step
+== Next Step
 
-* <<oauth-dance#, Performing the OAuth dance with an OAuth enabled module>>
+<<oauth-dance#, Performing the OAuth Dance with an OAuth-Enabled Module>>
