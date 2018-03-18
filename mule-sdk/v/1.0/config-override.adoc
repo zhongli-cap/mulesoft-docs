@@ -2,22 +2,16 @@
 
 :keywords: mule, sdk, config, configuration, override, parameter
 
-There are times when a certain parameter of your Configuration could be thought as a "global default", stating
-a default value/behavior for that parameter for other operations an sources to use. In that
-case you would also want to be able to override the value in certain components of the
-application, to keep it flexible. Lucky for you, @ConfigOverride allows you to do exactly that.
+A parameter in your configuration that serves as a _global default_ specifies a default value or behavior for other operations and sources to use. For components in an app to override the value of that parameter, you can use `@ConfigOverride`.
 
-== What is a Configuration Override
+== What is a Configuration Override?
 
-This feature binds a parameter from a source or operation to a parameter that exists
-on a configuration. When a parameter is annotated with `@ConfigOverride` and a value is
-not specified for it on the DSL, the configuration value for the parameter with the _exactly_ same
+This feature binds a parameter from a source or operation to a parameter that exists on a configuration. When a parameter is annotated with `@ConfigOverride`, and a value is not specified for it through the DSL, the configuration value for the parameter with _exactly_ the same
 name will be injected on it.
 
-This annotation can either be applied to an argument of an Operation method or to a field
-of a Source, and it cannot be used on configurations nor connections.
+The `@ConfigOverride` annotation can be applied to an argument of an operation method or to a field of a source. However, it cannot be used on configurations or connections.
 
-For example, if you have a Parameter declared in your Configuration like this:
+For example, assume that a parameter is declared in your configuration like this:
 
 [source, java, linenums]
 ----
@@ -26,7 +20,7 @@ For example, if you have a Parameter declared in your Configuration like this:
 int maxRetries;
 ----
 
-And that configuration is used on an operation:
+Also assume that the above configuration is used on an operation:
 
 [source, java, linenums]
 ----
@@ -35,12 +29,10 @@ public void request(@Config ConfigType config, @ConfigOverride int maxRetries)
 }
 ----
 
-Then there are three different possibilities for how the parameter `maxRetries` on the operation
-`request` will get its value:
+There are a few possible ways that the parameter `maxRetries` (above) on the operation `request` will get its value:
 
-*  The default value of the `maxRetries` parameter provided by the configuration will be used
-when neither the configuration nor the operation provide a value for `maxRetries`.
-
+* The default value of the `maxRetries` parameter provided by the configuration is used when neither the configuration nor the operation provide a value for `maxRetries`.
++
 [source, xml, linenums]
 ----
 <extension:config name="sampleConfig">
@@ -49,12 +41,11 @@ when neither the configuration nor the operation provide a value for `maxRetries
   <extension:request config-ref="sampleConfig">
 </flow>
 ----
-
-On the operation, the `maxRetries` parameter takes the value 10.
-
-* The value provided for the `maxRetries` parameter in the configuration will be used
-when the value for the parameter is not specified on the operation but is explicit on the configuration
-
++
+On the operation, the `maxRetries` parameter takes the value `10`.
++
+* The value provided for `maxRetries` in the configuration is used when the value for the parameter is not specified on the operation but is explicit on the configuration.
++
 [source, xml, linenums]
 ----
 <extension:config name="sampleConfig" maxRetries=2>
@@ -63,12 +54,11 @@ when the value for the parameter is not specified on the operation but is explic
    <extension:request config-ref="sampleConfig">
 </flow>
 ----
-
-On the operation, the `maxRetries` parameter takes the value 2.
-
-* The value provided for the `maxRetries` parameter in the operation is used When
-this parameter is explicitly added on the DSL.
-
++
+On the operation, the `maxRetries` parameter takes the value `2`.
++
+* The value provided for the `maxRetries` parameter in the operation is used when this parameter is explicitly added to the DSL.
++
 [source, xml, linenums]
 ----
 <extension:config name="sampleConfig" maxRetries=2>
@@ -77,26 +67,24 @@ this parameter is explicitly added on the DSL.
    <extension:request config-ref="sampleConfig" maxRetries=5>
 </flow>
 ----
++
+On the operation, the `maxRetries` parameter takes the value `5`.
 
-On the operation, the `maxRetries` parameter takes the value 5.
-
-NOTE: This feature does not change the values on the configuration. It only injects the configuration values
-on the parameters or leaves the ones specified.
+Note that this feature does not change the values set on the configuration. It only injects the configuration values on the parameters or retains the specified values.
 
 == Configuration Override Requirements
 
-There are a couple of requirements that have to be met for overriding configuration parameters:
+There are a couple of requirements for overriding configuration parameters:
 
 * The name and type of the parameter in the configuration must be the same as the one annotated with `@ConfigOverride`.
 
-* If an operation has a parameter annotated with `@ConfigOverride`, it must also have the corresponding Configuration as parameter.
+* If an operation has a parameter annotated with `@ConfigOverride`, it must also have the corresponding configuration as parameter.
 
-* If a source has a field annotated with `@ConfigOverride`, it must also have the corresponding Configuration as a field.
+* If a source has a field annotated with `@ConfigOverride`, it must also have the corresponding configuration as a field.
 
 == Configuration Override Parameter within Parameter Groups
 
-This annotation can also be used to reference a `Parameter` that belong to a `ParameterGroup` within
-a Configuration. This is an example of how to do it:
+This annotation can also be used to reference a `Parameter` that belongs to a `ParameterGroup` within a configuration, for example:
 
 [source, java, linenums]
 ----
@@ -123,8 +111,7 @@ public class RetryStrategy{
 }
 ----
 
-On this operation we use the `@ConfigOverride` referencing `maxRetries` that is inside the
-`RetryStrategy` class:
+This operation below uses the `@ConfigOverride` that references `maxRetries` inside the `RetryStrategy` class:
 
 [source, java, linenums]
 ----
@@ -135,19 +122,16 @@ public void request(@Config ConfigType config, @ConfigOverride int maxRetries)
 
 == Configuration Override with POJOs
 
-If your configuration have parameters that are POJOs you can override those too. The content
-of the POJO parameter on the operation/source will either be totally defined by the configuration or
-totally defined by the operation. This means, you cannot define a partially populated POJO and expect the
-rest of the POJO to have the configuration values injected.
+Your configuration can override any parameters that are POJOs. The content
+of the POJO parameter on the operation or source will be totally defined by the configuration or totally defined by the operation. This means that you cannot define a partially populated POJO and expect the rest of the POJO to have the configuration values injected.
 
-The logic to decide which values to use is the same as if it was a simple java type.
+The logic to decide which values to use is the same as if it were a simple Java type.
 
-== Configuration Parameter without Default Value
+== Configuration Parameter without a Default Value
 
-If the configuration parameter is optional, does not have a default value and an operation/source parameter
-references it with a `@ConfigOverride`, its value will default to null. Let's see an example of this:
+An optional configuration parameter does not have a default value, so its value will default to null for any operation or source parameter that references it with `@ConfigOverride`.
 
-This is a parameter declared in the configuration:
+The parameter in this example is declared in the configuration:
 
 [source, java, linenums]
 ----
@@ -156,8 +140,7 @@ This is a parameter declared in the configuration:
 private String retriesExhaustedMessage;
 ----
 
-This is an operation that has that configuration as a parameter and a configuration override
-parameter:
+In the next example, an operation has configuration and configuration override parameters:
 
 [source, java, linenums]
 ----
@@ -166,14 +149,13 @@ public void request(@Config ConfigType config, @ConfigOverride String retriesExh
 }
 ----
 
-If `retriesExhaustedMessage` is not specified in the configuration and the operation, then its value
-will be null.
+If `retriesExhaustedMessage` is not specified in the configuration and the operation, its value will be null.
 
 == Configuration Override Example
 
-This is a simplified example of the usage of `@ConfigOverride` :
+This section provides is a simplified example that uses  `@ConfigOverride`.
 
-The definition of the Configuration:
+Here is the definition of the Configuration:
 
 [source, java, linenums]
 ----
@@ -197,8 +179,7 @@ public class AmqpConfig {
 }
 ----
 
-This is the `AmqpConsumerConfig` class that has the parameters that will be referenced
-by the `@ConfigOverride` annotation on this example:
+The `AmqpConsumerConfig` class has parameters that will be referenced by the `@ConfigOverride` annotation in this example:
 
 [source, java, linenums]
 ----
@@ -228,7 +209,7 @@ public final class AmqpConsumerConfig {
 }
 ----
 
-Source that has a `AmqpConfig` and parameters with the `ConfigOverride` annotation:
+This source has an `AmqpConfig` and parameters with the `ConfigOverride` annotation:
 
 [source, java, linenums]
 ----
@@ -275,13 +256,11 @@ public class AmqpListener extends Source<Object, AmqpMessageAttributes> {
 }
 ----
 
-<1> Configuration from which the values to override the `@ConfigOverride` annotated parameters
-will be taken.
+<1> Configuration that specifies the values that override the `@ConfigOverride` annotated parameters.
 
-<2> Parameter that if not specified on the operation will inherit the configuration value of the
-one with _exactly_ the same name. Note that the parameters with these names belong to a `ParameterGroup`
+<2> Parameter that if not specified on the operation will inherit the configuration value of the parameter with _exactly_ the same name. Note that the parameters with these names belong to a `ParameterGroup`.
 
-Let's see an example of how the override behaves.
+This example shows how the override behaves:
 
 [source, xml, linenums]
 ----
@@ -297,6 +276,5 @@ Let's see an example of how the override behaves.
 </flow>
 ----
 
-<1> In the Config, `numberOfConsumers` is set to 16 while `ackMode` takes the default value
-<2> In the Source, `numberOfConsumers` is specified so it will take the value 1, while `ackMode` is not, so
-it will take the value from the config, which is `IMMEDIATE`.
+<1> In the configuration, `numberOfConsumers` is explicitly set to `16`, but `ackMode` takes the default value.
+<2> In the source, `numberOfConsumers` is specified, so it will take the value `1`. `ackMode` is not specified, so it will take the value from the config, which is `IMMEDIATE`.
