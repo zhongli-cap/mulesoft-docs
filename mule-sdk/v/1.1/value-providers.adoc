@@ -38,25 +38,21 @@ public void publishAs(@Content Object content, UserRole roleEnum){
 
 This solution is easy and effective, but it carries several limitations and problems:
 
-* Required to set a custom value: Because the parameter is based on a Enum, you cannot define a custom value.
+* Does not support custom values: Because the parameter is based on a Enum, you cannot define a custom value. For example, if the service to which you are connecting can be configured with custom roles, you will not be able to continue using the `UserRole` Enum because it will limit the connector's capabilities.
 * The values are defined statically: You cannot change the values depending on a connection or configuration.
 * Java Enums have naming restrictions: You cannot have an Enum value starting with a Number or special characters.
 
-Returning to the `UserRole` example:
-
-If the service to which you are connecting can be configure with custom roles, you will not be able to continue using the `UserRole` Enum because it will limit the connector's capabilities.
-
-If you do not want to lose the drop-down list of known User Roles, you can use <<value_providers, Value Providers>> to define dynamic values.
+If need custom roles but do not want to lose the drop-down list of known User Roles, you can use <<value_providers, Value Providers>> for dynamic values and known values.
 
 [[value_providers]]
 == Value Providers
 
-Value Providers let you provide values in a dynamic and smart way for any parameter in any component of a connector: link:operations[Operations], link:sources[Sources], link:configs[Configurations], link:connections[Connection Providers], scopes, and so on.
+Value Providers is a mechanism for providing values in a dynamic and smart way for any parameter in any component of a connector: link:operations[Operations], link:sources[Sources], link:configs[Configurations], link:connections[Connection Providers], scopes, and so on.
 
 [[StaticUserRoleValueProvider]]
 === To Implement Value Providers
 
-This example produces the same behavior as the Enum solution above, but it provides the benefit of an open set of values.
+This example produces the same behavior as the Enum solution above, but it provides the benefit of an open set of values. It will support a custom value.
 
 . Create a Java Class implementing `ValueProvider`.
 +
@@ -91,14 +87,14 @@ image:value_providers/value-provider-static.gif[align="center"]
 
 === Value Providers with Connections or Configurations
 
-Value Providers can receive connections and configurations, so you can resolve values based on the current connection and configuration.
+Value Providers can receive connections and configurations. This makes it possible to resolve values based on the current connection and configuration.
 
 IMPORTANT: You cannot inject connections and configurations into Value
 Providers that are located in connection and configuration parameters.
 
 ==== Receiving a Connection or Configuration
 
-You use the `@Connection` and `@UseConfig` annotations to declare the use of a connections and configurations inside a Value Provider. To work, a Value Provider that uses the annotations depends on a _valid_ configuration or connection. The SDK ensures that the resolving logic will not be executed unless the connection and configuration are valid.
+You use the `@Connection` and `@UseConfig` annotations to declare the use of connections and configurations inside a Value Provider. To work, a Value Provider that uses these annotations depends on a _valid_ configuration or connection. The SDK ensures that the resolving logic will not be executed unless the connection and configuration are valid.
 
 [source, Java, linenums]
 ----
@@ -119,16 +115,16 @@ public class ConnectedValueProvider implements ValueProvider {
 }
 ----
 
-WARNING: The injected connections and configurations must be of type that is compatible with those defined in the operation or source where the Value Provider
+WARNING: The injected connections and configurations must be of a type that is compatible with those defined in the operation or source where the Value Provider
 is referenced.
 
 === Example 2: Connected Value Provider Use Case
 
-//TODO: USE OF "communicate"? Is there another word we can use?
+//TODO: USE OF "communicate"? Is there another word we can use? have this checked.
 
-In the previous Roles example above, the service could define custom roles, but it was not possible for the connector to communicate those roles.
+In the Roles example above, the service could define custom roles, but it was not possible for the connector to communicate those roles.
 
-Now that the Value Provider can resolve values, it is possible to communicate these roles because the connection can be used to fetch the available roles and communicate them through the Value Provider:
+Once the Value Provider is implemented to resolve values through a working connection, it becomes possible to fetch the available roles and communicate them through the Value Provider:
 
 [source, Java, linenums]
 ----
@@ -146,20 +142,16 @@ public class UserRoleValueProvider implements ValueProvider {
 
 === Value Providers that Depend on Other Parameters
 
-In addition to injecting connections and configurations, Value Providers can  depend on other parameters of the _same context_. The SDK ensures that the Value Provider resolving logic will no be executed until the required parameters are configured.
+In addition to injecting connections and configurations, Value Providers can  depend on other parameters of the _same context_. The SDK ensures that the Value Provider resolving logic will not be executed until the required parameters are configured.
 
 The words "_same context_" mean that if the Value Provider is used in a component, the required parameter must exist in that component. For example, if the configuration `FancyConfig` with a Value Provider in the parameter `dynamicParam` requires the value of the parameter `aConfigParam`, `aConfigParam` must exist in the `FancyConfig` configuration.
 
 CAUTION: The use of expressions in the required parameters might disable the
 execution of the Value Provider due to the impossibility of resolving the expression without an active event.
 
-==== Declaring required parameters
+==== Declaring Required Parameters
 
-To declare parameter that will be required to execute the resolving logic, in
-the same way as Connection and Configurations, is required to use the already know
-annotation of `@Parameter` in a field of the Value Provider with the *same type
-and name* of the required parameter.
-
+As with connectors and configurations, you use the `@Parameter` annotation to declare a parameter that is required for executing the resolving logic. You use the annotation in a field of the Value Provider with the *same type and name* as the required parameter, such as `String requiredParam` in these examples:
 
 .Example External parameters: Operation declaring two params, one with a value provider
 [source, Java, linenums]
@@ -183,24 +175,22 @@ public class ValueProviderWithRequiredParams implements ValueProvider {
     }
 }
 ----
-=====  What happens is the required parameter is not configured?
+=====  What Happens If The Required Parameter Is Not Configured?
 
-If the parameter is defined as required in the component and was not configured
-by the Mule developer, the value provider won't never be executed.
-Otherwise, if the parameter is defined as Optional, the Value Provider will be
-executed with a `Null` value and the nullability should be handled by the
-connector developer.
+If the parameter is defined as required in the component but is not configured
+by the end user, the Value Provider will not execute. However, if the parameter is defined as optional, the Value Provider will be executed with a `Null` value, so you will need to handle the nullability.
 
-===== Example 3: Value Provider with context parameters
+===== Example 3: Value Provider with Context Parameters
 
-Consider the case where you want to have a Date Picker, just Day and Month,
-both can be easily represented with two Enums, but there is a problem, not all
-months have the same amount of days, this could let the user configure invalid
-dates, how we could fix this usage problem?
+Consider the case where you want to have a Date Picker for the day and month.
+You can easily represent them with two Enums, but not all months have the same number of days. So the representation might allow the user to configure invalid
+dates.
 
-1. Define the operation to expose a Date Picker +
-The operation receives two parameters, an `monthEnum` which statically communicates all the
-available months and a `day`, which is used to communicate the Day of the month.
+To fix this issue:
+
+. Define an operation that exposes a Date Picker.
++
+The operation receives two parameters, an `monthEnum` that statically communicates all the available months and a `day` that is used to communicate the day of the month.
 +
 .Publish On Date Operation
 [source, Java, linenums]
@@ -208,9 +198,10 @@ available months and a `day`, which is used to communicate the Day of the month.
 public void publishOnDate(Month monthEnum, @OfValues(DayValueProvider.class) String day) {
 }
 ----
-
-2. Defining the Month Enum +
-The `Month` contains all the available months and knows the amount of days in each month.
++
+. Define the `Month` Enum.
++
+The `Month` contains all the available months and identifies the number of days in each month.
 +
 .MonthEnum Enum
 [source, Java, linenums]
@@ -231,13 +222,10 @@ public enum Month {
     }
 }
 ----
-
-3. Create Value Provider which consumes the selected Month
 +
-This Value Provider which will provide dynamically depending in the selected
-month all the available days in that Month.
-The `DayValueProvider` communicates that requires the parameter `monthEnum` to
-work
+. Create a Value Provider that consumes the selected Month.
++
+Depending on the selected month, the Value Provider will dynamically provide all the available days in that month. The `DayValueProvider` indicates that it requires the parameter `monthEnum` to work.
 +
 [source, Java, linenums]
 ----
@@ -262,10 +250,10 @@ public class DayValueProvider implements ValueProvider {
     }
 }
 ----
-
-4. *Result!* As can be seeing in the below animation, the `Day` selector
-gets populated dynamically depending in the `Month enum` parameter value.
-
++
+. Result!
++
+As shown in the animation below, the `Day` selector gets populated dynamically based on the `Month enum` parameter value.
 +
 image:value_providers/value-provider-months.gif[align="center"]
 
