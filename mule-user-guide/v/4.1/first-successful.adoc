@@ -1,0 +1,42 @@
+= First Successful Router
+:keywords: routers, flows, processor chain, async, aggregator, resequencer
+
+The First Successful router sends a message to the next message processor within a "circular" list of processor targets. It is a message processor that iterates through its list of child message processors, routing a received message to each of them in order until one processes the message successfully. If none succeed, an exception is thrown.
+
+Success is defined as:
+
+* If the child message processor thows an exception, this is a failure.
+
+* Otherwise:
+
+** If the child message processor returns a message that contains an exception payload, this is a failure.
+
+** If the child message processor returns a message that does not contain an exception payload, this is a success.
+
+** If the child message processor does not return a message (e.g. is a one-way connector), this is a success.
+
+This message processor was added in Mule 3.0.1.
+
+[source, xml, linenums]
+----
+<first-successful>
+    <http:request config-ref="Config_port90" path="weather-forecast" method="GET" doc:name="HTTP"/>
+    <http:request config-ref="Config_port91" path="weather-forecast" method="GET" doc:name="HTTP"/>
+    <http:request config-ref="Config_port92" path="weather-forecast" method="GET" doc:name="HTTP"/>
+    <vm:outbound-endpoint path="dead-letter-queue" />
+</first-successful>
+----
+
+*From 3.1.0* you can further customize the behavior of this router by specifying a _'failureExpression'_ that allows you to use link:/mule-user-guide/v/3.8/non-mel-expressions-configuration-reference[Mule Expressions] to define a failure. The _failureExpression_ attribute is configured as follows:
+
+[source, xml, linenums]
+----
+<first-successful failureExpression="exception-type:java.net.SocketTimeoutException">
+    <http:request config-ref="Config_port90" path="weather-forecast" method="GET" doc:name="HTTP"/>
+    <http:request config-ref="Config_port91" path="weather-forecast" method="GET" doc:name="HTTP"/>
+    <http:request config-ref="Config_port92" path="weather-forecast" method="GET" doc:name="HTTP"/>
+    <vm:outbound-endpoint path="dead-letter-queue" />
+</first-successful>
+----
+
+In the above example a failure expression is being used to more exactly define the exception type that will be considered a failure, alternatively you can use any other Mule expression that can be used with expression filters, just remember that the expression denotes failure rather than success.

@@ -1,0 +1,232 @@
+= DataWeave Functions for URL (`dw::core::URL`)
+
+== `compose`
+
+.compose(Array<String>, Array<String>): String
+
+Compose is a custom interpolator used to replace URL components by the encodeURIComponent result of it.
+
+.Transform
+[source,DataWeave, linenums]
+----
+%dw 2.0
+import * from dw::core::URL
+output application/json
+---
+{ 'composition': compose `encoding http://asd/$(' text to encode ')/text now` }
+----
+
+.Output
+[source,JSON, linenums]
+----
+{
+  "composition": "encoding http://asd/%20text%20to%20encode%20/text now"
+}
+----
+
+
+== `decodeURI`
+
+.decodeURI(String): String
+
+The `decodeURI()` function decodes a Uniform Resource Identifier (URI) previously created by encodeURI or by a similar routine. Replaces each escape sequence in the encoded URI with the character that it represents, but does not decode escape sequences that could not have been introduced by `encodeURI`. The character `#` is not decoded from escape sequences.
+
+.Transform
+[source,DataWeave, linenums]
+----
+%dw 2.0
+import * from dw::core::URL
+output application/json
+---
+{
+  a: decodeURI('http://asd/%20text%20to%20decode%20/text')
+}
+----
+
+.Output
+[source,JSON, linenums]
+----
+{
+  "a": "http://asd/ text to decode /text"
+}
+----
+
+
+== `decodeURIComponent`
+
+.decodeURIComponent(String): String
+
+The `decodeURIComponent()` function decodes a Uniform Resource Identifier (URI) component previously created by encodeURIComponent or by a similar routine.
+
+
+== `encodeURI`
+
+.encodeURI(String): String
+
+The `encodeURI()` function encodes a Uniform Resource Identifier (URI) by replacing each instance of certain characters by one, two, three, or four escape sequences representing the UTF-8 encoding of the character (will only be four escape sequences for characters composed of two "surrogate" characters).
+
+Assumes that the URI is a complete URI, so does not encode reserved characters that have special meaning in the URI.
+
+With the exception of the types in the table below, `encodeURI()` replaces all characters with the appropriate UTF-8 escape sequences.
+
+[%header%autowidth.spread]
+|===
+| Types      | Includes
+| Reserved characters  | ; , / ? : @ & = $
+| Unescaped characters | alphabetic, decimal digits, - _ . ! ~ * ' ( )
+| Number sign          | #
+|===
+
+.Transform
+[source,DataWeave, linenums]
+----
+%dw 2.0
+import * from dw::core::URL
+output application/json
+---
+{
+  a: encodeURI("http://asd/ text to encode /text ?")
+}
+----
+
+.Output
+[source,JSON, linenums]
+----
+{
+  "a": "http://asd/%20text%20to%20encode%20/text%20?"
+}
+----
+
+
+== `encodeURIComponent`
+
+.encodeURIComponent(String): String
+
+The `encodeURIComponent()` function encodes a Uniform Resource Identifier (URI) component by replacing each instance of certain characters by one, two, three, or four escape sequences representing the UTF-8 encoding of the character (will only be four escape sequences for characters composed of two "surrogate" characters).
+
+* `encodeURIComponent()` escapes all characters except these: alphabetic, decimal digits, and these: `- _ . ! ~ * ' ( )`
+
+* `encodeURIComponent()` differs from `encodeURI()`  in that it encodes reserved characters and the Number sign (`#`) of `encodeURI()`:
+
+[%header%autowidth.spread]
+|===
+| Type                 | Includes
+| Reserved characters  |
+| Unescaped characters | alphabetic, decimal digits, - _ . ! ~ * ' ( )
+| Number sign          |
+|===
+
+This transformation example compares the output of  `encodeURIComponent()` and `encodeURI()`, and `decodeURIComponent()` and `decodeURI()`.
+
+.Transform
+[source,DataWeave, linenums]
+----
+%dw 2.0
+import * from dw::core::URL
+output application/json
+---
+{
+  "comparing_encode_functions_output" : {
+  	"encodeURIComponent" : encodeURI(" PATH/ TO /ENCODE "),
+  	"encodeURI" : encodeURI(" PATH/ TO /ENCODE "),
+  	"encodeURIComponent_to_hex" : encodeURIComponent(";,/?:@&="),
+  	"encodeURI_not_to_hex" : encodeURI(";,/?:@&="),
+  	"encodeURIComponent_not_encoded" : encodeURIComponent("-_.!~*'()"),
+  	"encodeURI_not_encoded" : encodeURI("-_.!~*'()")
+  },
+  "comparing_decode_function_output": {
+  	"decodeURIComponent" : decodeURIComponent("%20PATH/%20TO%20/DECODE%20"),
+  	"decodeURI" : decodeURI("%20PATH/%20TO%20/DECODE%20"),
+  	"decodeURIComponent_from_hex" : decodeURIComponent("%3B%2C%2F%3F%3A%40%26%3D"),
+  	"decodeURI_from_hex" : decodeURI("%3B%2C%2F%3F%3A%40%26%3D"),
+  	"decodeURIComponent_from_hex" : decodeURIComponent("%2D%5F%2E%21%7E%2A%27%28%29%24"),
+  	"decodeURI_from_hex" : decodeURI("%2D%5F%2E%21%7E%2A%27%28%29%24")
+  }
+}
+----
+
+.Output
+[source,JSON, linenums]
+----
+{
+  "comparing_encode_functions_output": {
+    "encodeURIComponent": "%20PATH/%20TO%20/ENCODE%20",
+    "encodeURI": "%20PATH/%20TO%20/ENCODE%20",
+    "encodeURIComponent_to_hex": "%3B%2C%2F%3F%3A%40%26%3D",
+    "encodeURI_not_to_hex": ";,/?:@&=",
+    "encodeURIComponent_not_encoded": "-_.!~*'()",
+    "encodeURI_not_encoded": "-_.!~*'()"
+  },
+  "comparing_decode_function_output": {
+    "decodeURIComponent": " PATH/ TO /DECODE ",
+    "decodeURI": " PATH/ TO /DECODE ",
+    "decodeURIComponent_from_hex": ";,/?:@&=",
+    "decodeURI_from_hex": ";,/?:@&=",
+    "decodeURIComponent_from_hex": "-_.!~*'()$",
+    "decodeURI_from_hex": "-_.!~*'()$"
+  }
+}
+----
+
+== `parseURI`
+
+.parseURI(String): URI
+
+Parses an URL and returns a URI object. The `isValid: Boolean` property denotes if the parse was successful. Every field in the URI object is optional, and it will be present only if it was present in the original URL.
+
+.Transform
+[source,DataWeave, linenums]
+----
+%dw 2.0
+import * from dw::core::URL
+output application/json
+---
+{
+  'composition': parseURI('https://en.wikipedia.org/wiki/Uniform_Resource_Identifier#footer')
+}
+----
+
+.Output
+[source,JSON, linenums]
+----
+{
+  "composition": {
+    "isValid": true,
+    "raw": "https://en.wikipedia.org/wiki/Uniform_Resource_Identifier#footer",
+    "host": "en.wikipedia.org",
+    "authority": "en.wikipedia.org",
+    "fragment": "footer",
+    "path": "/wiki/Uniform_Resource_Identifier",
+    "scheme": "https",
+    "isAbsolute": true,
+    "isOpaque": false
+  }
+}
+----
+
+== URI Type
+
+// == URI
+
+// TODO . Definition
+
+[source, DataWeave, linenums]
+----
+type URI = {
+  isValid: Boolean,
+  host?: String,
+  authority?: String,
+  fragment?: String,
+  path?: String,
+  port?: Number,
+  query?: String,
+  scheme?: String,
+  user?: String,
+  isAbsolute?: Boolean,
+  isOpaque?: Boolean
+}
+----
+
+== See Also
+
+link:dw-functions[DataWeave Functions]
