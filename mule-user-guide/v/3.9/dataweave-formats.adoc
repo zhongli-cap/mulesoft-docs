@@ -202,10 +202,6 @@ See link:/anypoint-studio/v/6/input-output-structure-transformation-studio-task[
 
 == Excel
 
-[NOTE]
-Excel support is a beta feature for Mule Runtime 3.8.2. It isn't supported on earlier versions of the runtime. Only .xlsx files are supported (excel 2007), .xls files aren't supported on any Mule runtime version.
-
-
 === Canonical Model
 
 
@@ -742,6 +738,78 @@ See link:/anypoint-studio/v/6/input-output-structure-transformation-studio-task[
 == Cobol Copybook
 
 Copybook types are technically considered a type of <<Flat File>> format, but when selecting this option the Transform Message component offers you settings that are better tailored to the needs of this format.
+
+[[cobol_metadata]]
+=== Importing a Copybook Definition
+
+To import a copybook definition:
+
+. Click Define Metadata on the input Payload in the Transform component, and select Set Metadata to open the Set Metadata Type dialog.
++
+You need to create a metadata type to import a copybook definition.
++
+. Provide a name for your copybook metadata, such as `copybook`.
+. Select the Copybook type.
+. Import your copybook definition file.
+. Click Select.
++
+.Importing a Copybook Definition File
+image:copybook_import.png[Importing a Copybook Definition]
+
+For example, assume that you have a copybook definition file (`mailing-record.cpy`) that looks like this:
+
+.Example: Copybook Definition
+----
+01  MAILING-RECORD.
+    05  COMPANY-NAME            PIC X(30).
+    05  CONTACTS.
+        10  PRESIDENT.
+            15  LAST-NAME       PIC X(15).
+            15  FIRST-NAME      PIC X(8).
+        10  VP-MARKETING.
+            15  LAST-NAME       PIC X(15).
+            15  FIRST-NAME      PIC X(8).
+        10  ALTERNATE-CONTACT.
+            15  TITLE           PIC X(10).
+            15  LAST-NAME       PIC X(15).
+            15  FIRST-NAME      PIC X(8).
+    05  ADDRESS                 PIC X(15).
+    05  CITY                    PIC X(15).
+    05  STATE                   PIC XX.
+    05  ZIP                     PIC 9(5).
+----
+Note: Copybook definitions must always begin with a `01` entry. A separate record type is generated for each `01` definition in your copybook (there must be at least one 01 definition for the copybook to be usable, so add one using an arbitrary name at the start of the copybook if none is present). If there are multiple `01` definitions in the copybook file, you can select which definition to use in the transform from the dropdown list.
+
+When you import the schema, the Transform component converts the copybook file to a flat file schema that it stores in the `src/main/resources` folder of your Mule project. In flat file format, the copybook definition above looks like this:
+
+.Example: Flat File Schema
+----
+form: COPYBOOK
+id: 'MAILING-RECORD'
+values:
+- { name: 'COMPANY-NAME', type: String, length: 30 }
+- name: 'CONTACTS'
+  values:
+  - name: 'PRESIDENT'
+    values:
+    - { name: 'LAST-NAME', type: String, length: 15 }
+    - { name: 'FIRST-NAME', type: String, length: 8 }
+  - name: 'VP-MARKETING'
+    values:
+    - { name: 'LAST-NAME', type: String, length: 15 }
+    - { name: 'FIRST-NAME', type: String, length: 8 }
+  - name: 'ALTERNATE-CONTACT'
+    values:
+    - { name: 'TITLE', type: String, length: 10 }
+    - { name: 'LAST-NAME', type: String, length: 15 }
+    - { name: 'FIRST-NAME', type: String, length: 8 }
+- { name: 'ADDRESS', type: String, length: 15 }
+- { name: 'CITY', type: String, length: 15 }
+- { name: 'STATE', type: String, length: 2 }
+- { name: 'ZIP', type: Integer, length: 5, format: { justify: ZEROES, sign: UNSIGNED } }
+----
+
+After importing the schema, you can use the `schemaPath` property to reference the flat file through the `output` directive. For example: `output application/flatfile schemaPath="src/main/resources/mailing-record.ffd"`
 
 === Reader Properties
 
