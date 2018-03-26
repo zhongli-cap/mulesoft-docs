@@ -58,6 +58,30 @@ You write DataWeave expressions and scripts within message processors (component
 * The Transformer component is for creating scripts that perform data transformations, whether simple format conversions or complex data extraction and transformation processes.
 * Many Mule message processors support DataWeave expressions, allowing you to access and use core DataWeave functions on parts of the Mule event that you need.
 
+== A deeper look at how DataWeave determines the DataType
+
+Let's look more in depth about how DataWeave works inside mule:
+
+=== Input Part
+
+. Mule has an special object called a *TypedValue*, this class represents a Pair<Object,DataType> Being DataType = Pair<MimeType,Encoding>.
+. All variables and the payload are TypesValue. And it may also be present in a more nested places for example the list operation in File returns a List<TypedValue> therefore the payload is going to be TypedValue<List<TypedValue, DataType>, DataType<Java>>. This this allows DataWeave to list diferent types of files JSON, XML, CSV, etc and for DataWeave to read them all.
+
+=== DataType Part
+
+DataWeave uses the DataType part to determine what reader to use based on the MimeType and how to configure that reader (encoding , reader properties) based on the mimetype properties
+
+=== Output Part
+
+DataWeave always outputs a TypedValue. The intersting part is how DataWeave inferes the DataType part that drives what writer to use.
+
+. You can manually specify the DataType on the script with the output directive
+. If the script that is being executed is assigned to a MP field then the engine will give DataWeave the hint what is the expected type based on the metadata of that field. For example, if it is a Pojo then DW will know what class to instanciate and will know that it need to use the Java Writer, so you don't need to know all that internal details.
+. The interesting use case is when DataWeave cannot determine the DataType. Then DataWeave will:
+  .. will look at the script and see what inputs are being used if they are all of the same/compatible DataTypes then is going to use that. For example, in your script you put `<set-payload value="#[payload.foo]/>` DataWeave is going to look at the DataType of the payload. In this case the payload is JSON therefore DataWeave is going to use the JSON writer. If you have more than one input used and they are from different DataTypes an error is going to be thrown. For example, `<set-payload value="#[payload.foo ++ vars.bar]/>` being `vars.bar` of type XML and `payload` of type JSON. Sometimes, specifically with XML, you may write an expression on a set payload and it will fail because it is actually an invalid XML structure.
+  .. If no input is being used then Java writer is used  `<set-payload value="#[{a: true}]/>`  is going to output a java.util.Map with a entry ("a", true) 
+. For the logger message processor DataWeave has a special feature to avoid errors. DataWeave will try to use the logic under #3 but if it fails because that writer can not emit that DataStructure then DataWeave will use the DataWeave writer that can write out any Data Structure possible.
+
 == See Also
 
 * link:about-mule-event[About the Mule Event]
