@@ -43,7 +43,7 @@ DataWeave can read and write many types of data formats, such as JSON, XML, and 
 // TODO: PLAIN TEXT SECTION? <<format_plain_text>>
 
 ////
-TODO: ANA, PLS START HERE:
+// TODO: ANA, PLS START HERE:
 For DataWeave transformations, you can specify the mime type for the output data. For example, you might set the `output` header directive of an expression in the Transform component or a Write operation to `output application/json` or `output application/csv`.
 
 For input data, Mule components and DataWeave expressions typically attempt to infer the mime type from metadata that is associated with input payloads, attributes, and variables in the Mule event. For cases where a component cannot make that inference, you can specify a mime type. For example, you might set the Mime Type for the On New File component to `outputMimeType='application/csv'` on a CSV file. This setting provides information about the file format to the reader. However, note that it will not perform a transformation from one format to another.
@@ -53,27 +53,36 @@ You can also set special reader and writer properties for use by the reader or w
 [[reader_writer_properties]]
 == Using Reader and Writer Properties
 
-In some cases, it is necessary to modify or specify aspects of the format through format-specific properties. For example, you can specify CSV input and output properties, such as the `separator` delimiter. For Cobol copybook, you need to specify the path to a schema file using the `schemaPath` property.
+In some cases, it is necessary to modify or specify aspects of the format through format-specific properties. For example, you can specify CSV input and output properties, such as the `separator` (or delimiter) to use in the CSV file. For Cobol copybook, you need to specify the path to a schema file using the `schemaPath` property.
 
-You can specify reader properties through the `outputMimeType` attribute for a particular component in your Mule app. For example, this HTTP listener example identifies the `|` separator of a CSV input file:
+You can specify reader properties through the Mime Type (`outputMimeType`) attribute for components in your Mule app. All the listener components accept the Mime Type setting. For example, this HTTP listener example identifies the `|` separator for a CSV input file:
 
 .Example: Properties for the CSV Reader
 [source, XML, linenums]
 ----
-<http:listener doc:name="Listener" outputMimeType="application/csv; separator=|" config-ref="HTTP_Listener_config" path="/path"/>
+<file:listener doc:name="On New File" config-ref="File_Config" outputMimeType='application/csv; separator=","'>
+  <scheduling-strategy >
+    <fixed-frequency frequency="45" timeUnit="SECONDS"/>
+  </scheduling-strategy>
+  <file:matcher filenamePattern="comma_separated.csv" />
+</file:listener>
 ----
 
-For the CSV writer, you might provide the DataWeave `output` directive in your script or expression, for example:
+Note that the `outputMimeType` setting above helps the CSV _reader_ interpret the format and delimiter of the input `comma_separated.csv` file, not the writer.
+
+To specify the output format, you can provide the mime type and any writer properties to a writer, such as the CSV or JSON writer. For example, you might need to write a pipe (`|`) delimiter in your CSV output payload, instead of some other delimiter used in the input. To do this, you append the property and its value to the `output` directive of a DataWeave expression. For example, this Write operation specifies the pipe as a `separator`:
 
 .Example: output Directive for the CSV Writer
 [source,DataWeave,linenums]
 ---------------------------------------------------------------------
-output text/csv separator=",", header=false, quoteValues=true
+<file:write doc:name="Write" config-ref="File_Config" path="my_transform">
+  <file:content ><![CDATA[#[output application/csv separator="|" --- payload]]]></file:content>
+</file:write>
 ---------------------------------------------------------------------
 
-For more detail, see <<format_csv, CSV>>.
+The sections below list the reader and writer properties available for each supported format.
 
-ANA, PLS END HERE.
+//ANA, PLS END HERE.
 ////
 
 [[format_cobol_copybook]]
