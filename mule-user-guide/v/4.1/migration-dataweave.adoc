@@ -133,195 +133,83 @@ In DateWeave 2.0, you use the `if`.
 ----
 
 ////
-[[dw_content_types]]
-== Supported Content Types
+DataWeave 2.0 (packaged as part of Mule Runtime 4.0) introduces the following syntax changes over previous versions:
 
-* For the flat file, the content type is `application/flatfile` instead of `text\plain`.
-
-.Mule 3 example
-----
-text\plain
-----
-
-.Mule 4 example
-----
-application/flatfile
-----
-
-[[dw_operators]]
-== DataWeave Operators (Functions)
-
-* All operators are now functions (for example, `upper()`, `typeOf()`). Therefore, they must include their arguments between parenthesis.
+* Removed automatic coercion from Object to Array (implies, for example, that the `map` function no longer works over an Object).
+// TODO: should they use mapObject instead? Maybe we should give an example.
+* Updated version header to `%dw 2.0`.
+* Removed `%` from all other directives.
+* Changed all type names format, which are now written without a colon and with an upper case letter (for example, `String` instead of `:string`, as before), for example: `1 as String` returns `"1"``.
+* All operators are now functions (for example, `upper()`, `typeOf()`). Therefore, they must include their arguments between parentheses, for example, `upper("hello")` and `typeOf("hello")`.
+// TODO: IS THIS TRUE for all or just for those that take a single argument? We used to all all the functions operators.
 * Custom functions are declared in the DataWeave header via the keyword `fun`, rather than `function`. For example, `fun funName(args) = body`
+* The `..` operator is no longer used for selecting ranges (but still works as a descendants selector). Its functionality is replaced by `to`. Example: `[2 to 15]`.
 * `when`, `unless` and `otherwise` are no longer used for conditional logic. They have been replaced by `if` and `else`. This requires that you change the order of the expression. Example: `if payload is(String) uppercase(payload)`.
 * Binary functions (that take two arguments) support an alternative infix notation (arg1 function arg2). For example, `payload.*items contains "3"` instead of `contains(payload.*items, "3")`.
+* New key-value pair selector (`.&`) returns all matching keys and values. It returns them as a single object containing these.
+* New namespace selector (`.#`) returns the namespace used.
 * The functions `filter` and `groupBy` are overloaded to operate on objects.
 * The functions `map`, `mapObject` and `filter` support a null input (in which case they return null).
 * New supported syntax for `match` when using arrays `[head ~ tail]`
+* Namespace prefixes can no longer contain the character `-`.
 * Multiple functions are no longer packaged as part of the core functions module. The package they belong to must be manually imported in the header before they can be called.
 * Index parameter: Added `index` as a third parameter to `mapObject`, `pluck`, `filter`, and `groupBy`.
-
-.Mule 3 example
-----
-Mule 3 example goes here.
-----
-
-.Mule 4 example
-----
-Mule 4 example goes here.
-----
-
-== DataWeave Selectors
-
-* The `..` operator is no longer used for selecting ranges (but still works as a descendants selector). Its functionality is replaced by `to`. Example: `[2 to 15]`.
-* New key-value pair selector (`.&`) returns all matching keys and values. It returns them as a single object containing these.
-* New namespace selector (`.#`) returns the namespace used.
- ** Namespace prefixes can no longer contain the character `-`.
-* Repeated fields: Added the asterisk (`\*`) for repeated fields in an object, for example: `{ a*: String}`. This is primarily needed for XML, where the names of child elements can be repeated, unlike keys in Java and JSON objects.
-
-.Mule 3 example
-----
-Mule 3 example goes here.
-----
-
-.Mule 4 example
-----
-Mule 4 example goes here.
-----
-
-== DataWeave Syntax
-
 * Closed objects: For declared types, added the pipe (`|`) syntax to specify a closed (or exact) object. For example, if `{|a: String|}` is specified as a return type of a function, the function cannot return `{a: String, b: Number}`.
 * Ordered objects: Added the hyphen character (`-`) for ordered objects, for example: `{- a: String, b: Number -}`. The fields must be in the specified order.
+* Repeated fields: Added the asterisk (`\*`) for repeated fields in an object, for example: `{ a*: String}`. This is primarily needed for XML, where the names of child elements can be repeated, unlike keys in Java and JSON objects.
+* For the flat file, the content type is `application/flatfile` instead of `text\plain`.
+////
 
-== OTHER TODOS...
+////
+TODO IN SEPARATE TOPIC, POINTING TO DW TYPES PAGE.
+Declaring DW types
+declare the type of a variable or of a function param or return, e.g.,
+fun foo(arg1: {|a: String|}): String = arg1.a
+`{|a: String|}` is the type of arg1
 
-TODO: MENTIONS OF DATAWEAVE NOTE HERE. In most cases, the DW info relates to a change to a processor, so prob best fits into migration doc for that processor.
-* https://beta-anypt.docs-stgx.mulesoft.commule-4-changes
+var message: String = "foo"
+var user: {name*: String } = {name: "Mariano", name: "Leandro"}
+var a: Array<Number> = [1,2,3]
 
-NOTE: Content above CAME from here:
-* https://beta-anypt.docs-stgx.mulesoft.comdataweave2-syntax-changes)
+for example, our `map` function
+fun map <T,R>(lhs: Array<T>, rhs: (T, Number) -> R ): Array<R>
+this signature says that it has 2 type parameters, T and R
 
-TODO: Here are changes between 2.0 and 2.1 (TODO: determin which have migration impacts)
-* Do
-* Type System
-* Modules (imports)
-* Custom String interpolation
-* UrlEncoded, Multipart, text plain, binary (reader writers)
-* Object field selector
-* Functions for infix notation
-* Function overloading with different types
-////[[dw_header]]
+`lhs` is an argument of type `Array<T>` (edited)
 
-== DataWeave 1.0 to 2.0
+which is an array of `something`
 
-=== DataWeave Header Content
+that will be defined when the user calls the function
 
-Most of the header directives have been changed (expect for the version %dw directive)
+`rhs` is a lambda function, that has 2 inputs (T, Number) and returns something of type R (edited)
 
-| DW 1.0 | DW 2.0 |
-| %dw 1.0 | %dw 2.0|
-| %output| output |
-| %var   | var    |
-| %function | fun |
-| %namespace | ns |
+and the `map` function returns something of type `Array<R>`
+////
 
-We remove the `%` and in some cases we shorten it.
 
-=== Flow Controls
-
-==== When otherwise
-
-When otherwise was replaced by if else
-
-So for example
-
--------
-{
-    sex: "Male" when flowVar.sex == "M" otherwise "Female"
+////
+Passing Data in URI params:
+when you pass data in URI parameters, you need to encode them using that format
+if you have for example
+```{
+  "key1" : ["value", "value@"],
+  "key 2": "value 1",
+  "key3": "value",
+  "key 4 her%": null
 }
--------
 
-is now
+that has to be formatted as
+```key1=value&key1=value%40&key+2=value+1&key3=value&key+4+her%25
+```
+when used as URI parameters
 
--------
-{
-    sex: if(flowVar.sex == "M") "Male" else "Female"
-}
--------
+you put `application/x-www-form-urlencoded` as your output format
+with the header `output application/x-www-form-urlencoded` in the script
+////
 
-
-==== Pattern matcher
-
-Pattern matcher changed by adding the keyword `case` and `else` (instead of `default`)
-
-----
-'world' match {
-    :string -> true,
-    default -> false
-  }
-----
-
-Is now
-
-----
-'world' match {
-    case is String -> true,
-    else -> false
-  }
-----
-
-For type pattern matchers the is keyword needs to be set.
-
-
-=== Type references
-
-The `:` was removed from the type references and are now all camel case so `:string` is now `String`
-
-=== Object coercion
-
-In dw 1.0 is a user needed to select a key value pair from an object it required to do something like
-
-----
-%var payload = {a: 1, b:2}
----
-payload.a as :object
-----
-
-This expression returns `{a:1}`. The main problem with this was that as it was a coercion it also was included in the auto-coercion mechanism and it generated un desire/un-expected results.
-
-In dw 2.0 the coercion was removed and a new selector was introduce to be able to select key value parenthesis
-
-----
-var payload = {a: 1, b:2}
----
-payload.&a
-----
-
-This expression also returns `{a:1}`.
-
-
-=== Conditional key value parenthesis
-
-In dw 1.0 conditional key value pairs are declared with the `when` keyword
-----
-{
-    (a: 1) when payload.product == "Mule
-}
-----
-
-In dw 2.0 we use the `if`
-
-----
-{
-    (a: 1) if payload.product == "Mule
-}
-----
-
-
-To get started, see which of these have migration impacts: https://beta-anypt.docs-stgx.mulesoft.com/release-notes/mule-4.0-beta-release-notes#dataweave-2-0-new-features and see https://beta-anypt.docs-stgx.mulesoft.com/release-notes/mule-4.0-rc-release-notes.
-
-
+////
+* Changed pattern matching     ... how?
+* explain `[head ~ tail]` better
 ////
 
 == See Also
