@@ -1,13 +1,13 @@
 = Example: Using Constant Directives
 :keywords: studio, anypoint, transform, transformer, format, aggregate, rename, xml, json, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping, concatenate,
 
-This example builds URLs from constants that are defined as variables (`var`) in the DataWeave header. It also conditionally outputs fields when they present in the input.
+This example builds URLs from constants that are defined as variables (`var`) in the DataWeave header. It also conditionally outputs fields if they are present in the input.
 
 It uses these functions:
 
 * `++` (concatenate) to build constant directives into URLs.
 * `map` to go through the fields in the input.
-* `when` to output `summary` and `brand` fields.
+* `if` to output `summary` and `brand` fields.
 
 .DataWeave
 [source,DataWeave, linenums]
@@ -33,19 +33,19 @@ using (pageSize = payload.getItemsResponse.PageInfo.pageSize) {
         ({
             href: urlPage ++ "?pageIndex=" ++ (pageIndex - pageSize) ++ "&pageSize=" ++ requestedPageSize,
             rel: "prev"
-        }) when (pageIndex > 0)
+        }) if(pageIndex > 0)
      ],
      collection: {
         size: pageSize,
         items: payload.getItemsResponse.*Item map (item) -> {
             id: item.id,
-            type: item.type,
+            'type': item.'type',
             name: item.name,
-            (summary: item.summary) when item.summary?,
-            (brand: item.brand) when item.brand?,
+            (summary: item.summary) if(item.summary?),
+            (brand: item.brand) if(item.brand?),
             links: (item.images.*image map (image) -> {
                 href: trim(image),
-                rel: image.@type
+                rel: image.@'type'
             }) + {
                 href: baseUrl ++ "/" ++ item.id,
                 rel: "self"
@@ -54,6 +54,8 @@ using (pageSize = payload.getItemsResponse.PageInfo.pageSize) {
      }
 }
 ----
+
+//TODO: Note that `type` can be treated as a keyword here, so it is necessary to put quotes around it.
 
 .Input XML
 [source, xml, linenums]
