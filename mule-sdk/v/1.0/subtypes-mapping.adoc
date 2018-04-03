@@ -43,13 +43,19 @@ A much better way of doing this would be using `@SubTypeMapping`:
 ----
 
 @Extension(name = "HTTP")
-@SubTypeMapping(baseType = Authentication.class,
+@SubTypeMapping(baseType = Authentication.class, // <1>
     subTypes = {BasicAuthentication.class, DigestAuthentication.class, NtlmAuthentication.class})
 public class HttpConnector {
 
 }
 
-public class BasicAuthentication {
+public interface Authentication { // <2>
+
+  void authenticate(HttpRequestBuilder builder);
+
+}
+
+public class BasicAuthentication implements Authentication { // <3>
 
   @Parameter
   private String username;
@@ -60,7 +66,7 @@ public class BasicAuthentication {
 
 }
 
-public class DigestAuthentication {
+public class DigestAuthentication implements Authentication { // <4>
 
   @Parameter
   private String username;
@@ -71,7 +77,7 @@ public class DigestAuthentication {
 
 }
 
-public class NtlmAuthentication {
+public class NtlmAuthentication implements Authentication { // <5>
 
   @Parameter
   private String username;
@@ -91,7 +97,14 @@ public class NtlmAuthentication {
 }
 ----
 
-Now, when you declare a parameter of type Authentication:
+ <1> Declaration of the `SubTypeMapping`
+ <2> Generic `Authentication` interface
+ <3> Implementation of `Authentication` as `basic`
+ <4> Implementation of `Authentication` as `digest`
+ <5> Implementation of `Authentication` as `ntlm`
+
+Now, when you declare a parameter of the generic type `Authentication`:
+
 [source, Java, linenums]
 ----
 @Alias("request")
@@ -141,8 +154,8 @@ public class OAuthExtension {
 }
 ----
 
-1- Declare the import from the HTTP Authentication type.
-2- Add more subtype mappings to the `Authentication` type from the OAuth extension.
+<1> Declare the import from the HTTP Authentication type.
+<2> Add more subtype mappings to the `Authentication` type from the OAuth extension.
 
 Now, once the two new authentication methods are implemented, we can parameterize them to the HTTP connector in any application, without modifying any code of the original extension. That is, for the same application we had above, we can now do:
 
