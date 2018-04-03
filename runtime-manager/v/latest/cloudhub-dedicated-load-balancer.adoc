@@ -63,7 +63,76 @@ To associate an SSL endpoint you need to provide:
 [CAUTION]
 The private key file needs to be _passphraseless_
 
-Each SSL Endpoint can have multiple CA certificates and CRLs. Each of these certificates needs to be provided in a single unencrypted, _pem_ encoded file. Ordering for independent CA certificates is not important, but certificates in a chain of trust must be concatenated together.
+
+For example, you can create both a PEM encoded and not encyrpted certificate file and a private key using openssl. Here is an example of creating a self-signed certificate and corresponding private key: 
+
+[source,json,linenums]
+----
+openssl req -newkey rsa:2048 -nodes -keyout example-com-private.pem -x509 -days 3000 -out example-com-crt.pem 
+----
+
+This command prompts you for the certificate information. 
+
+You can also store the certificate information in a configuration file and pass that configuration file in to the openssl command. 
+
+For example, here is a certificate configuration file named `example-com.cfg` for the DNS domain example.com that includes some SAN (Subject Alternate Names) for two Mule applications app1.example.com and app2.example.com:
+
+[source,json,linenums]
+----
+[ req ]
+default_bits       = 2048
+distinguished_name = req_distinguished_name
+req_extensions     = req_ext
+prompt = no
+[ req_distinguished_name ]
+countryName                 = US
+stateOrProvinceName         = California
+localityName               = San Francisco
+organizationName           = MuleSoft
+commonName                 = example.com
+
+[ req_ext ]
+subjectAltName = @alt_names
+[alt_names]
+DNS.1   = app1.example.com
+DNS.2   = app2.example.com
+----
+
+Alternatively, here is an example of a wildcard certificate to support any subdomain name to example.com:
+
+[source,json,linenums]
+----
+[ req ]
+default_bits       = 2048
+distinguished_name = req_distinguished_name
+prompt = no
+[ req_distinguished_name ]
+countryName                 = US
+stateOrProvinceName         = California
+localityName               = San Francisco
+organizationName           = MuleSoft
+commonName                 = *.example.com
+----
+
+This wildcard ceritifcate is configured to support any subdomain request to example.com, so this would include `app1.example.com` and `app2.example.com`, as well as any future subdomain names, like `appN.example.com`. 
+
+You can then pass the certificate configuration file in to the openssl command:
+
+
+[source,json,linenums]
+----
+openssl req -newkey rsa:2048 -nodes -keyout example-com-private.pem -x509 -days 3000 -out example-com-crt.pem -config example-com.cfg
+----
+
+Then you can decrypt the private key using openssl:
+[source,json,linenums]
+----
+openssl rsa -in example-com-private.pem -out example-com-private-decrypted.pem
+----
+
+=== Configuring Certificates for Production
+In a production environment you would normally have your certificate signed by a valid Certificate Authority (CA). 
+Each SSL Endpoint can have multiple CA certificates and CRLs (Certificate Revocation Lists). Each of these certificates needs to be provided in a single unencrypted, _pem_ encoded file. Ordering for independent CA certificates is not important, but certificates in a chain of trust must be concatenated together.
 
 === Uploading Certificates
 
