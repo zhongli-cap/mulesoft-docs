@@ -131,10 +131,207 @@ You can send a `PATCH` request to the `/organizations/{orgid}/vpcs/{vpcId}/loadb
 ]
 ----
 
-[NOTE]
+=== Using the CloudHub REST API to Manage VPCs and Dedicated Load Balancers
 --
-It is recommended to use the CloudHub REST API to programmatically update your revocation lists. +
-In order to get the necessary vpcId, and loadbalancerId from the CLI, you can use a link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-describe-json[vpc JSON describe] and link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-describe-json[load-balancer JSON describe] command respectively.
+It is recommended to use the CloudHub REST API to programmatically update your revocation lists. You can also use the CloudHub REST API to check the status of your VPCs and dedicated load balancers. In particular, you can make REST API requests to see the status after you deploy changes to your VPCs and dedicated load balancers. 
+
+Many REST API calls require you to get the vpcId and loadbalancerId. Like the organizationId and environmentId tha is required for many Anypoint Platform REST API calls, these ids are not the same as the VPC and load-balancer names. 
+
++
+In order to get the necessary vpcId and loadbalancerId from the Anypoint CLI, you can use a link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-describe-json[vpc describe-json option] and link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-describe-json[load-balancer describe-json option] command respectively to display the raw JSON response from the REST API. This will include all the raw data, including the vpn-id and load-balancer id, respectively.
+
+For example, you can first list the available load-balancers for a particular Environment, within a particular business group, by using the anypoint-cli command:
+
+[source,Example,linenums]
+----
+> cloudhub vpc list
+
+┌────────────────────┬───────────────┬────────────────────┬────────────┬────────────┬────────────────────┬────────────────────┐
+│ Name               │ Region        │ CIDR Block         │ Inherited  │ Default    │ Environments       │ Business Groups    │
+├────────────────────┼───────────────┼────────────────────┼────────────┼────────────┼────────────────────┼────────────────────┤
+│ MyVPC              │ us-west-2     │ 10.0.0.0/16        │ No         │ Yes        │ Production         │ MyBusinessGroup    │
+└────────────────────┴───────────────┴────────────────────┴────────────┴────────────┴────────────────────┴────────────────────┘
+
+----
+
+Suppose this returns a vpc named MyVPC. You can then get the id for MyVPC by running the anypoint-cli commmand:
+
+[source,Example,linenums]
+----
+> cloudhub vpc describe-json MyVPC
+
+{ id: 'vpc-c6cb8cbf',
+  name: 'MyVPC',
+  region: 'us-west-2',
+  cidrBlock: '10.0.0.0/16',
+  internalDns: { dnsServers: [], specialDomains: [] },
+  isDefault: true,
+  associatedEnvironments: [ 'b139880f-1df7-4165-8449-b968adb80ee1' ],
+  ownerId: '9d63be6d-df6f-4454-9d95-5c5a7f3fa07c',
+  sharedWith: [],
+  firewallRules: 
+   [ { cidrBlock: '10.0.0.0/16',
+       protocol: 'tcp',
+       fromPort: 8092,
+       toPort: 8092 },
+     { cidrBlock: '0.0.0.0/0',
+       protocol: 'tcp',
+       fromPort: 8082,
+       toPort: 8082 },
+     { cidrBlock: '10.0.0.0/16',
+       protocol: 'tcp',
+       fromPort: 8091,
+       toPort: 8091 },
+     { cidrBlock: '0.0.0.0/0',
+       protocol: 'tcp',
+       fromPort: 8081,
+       toPort: 8081 } ] }----
+
+This will print out the raw JSON with all the details for MyVPC, including the `id` key/value pair. 
+
+You can also view the load-balancers associated with the VPC. For example: 
+
+[source,Example,linenums]
+----
+> cloudhub vpc describe-json MyVPC
+┌──────────────────────────────┬────────────────────────────────────────────────────────────────┐
+│ Name                         │ MyVPC                                                          │
+├──────────────────────────────┼────────────────────────────────────────────────────────────────┤
+│ Region                       │ us-west-2                                                      │
+├──────────────────────────────┼────────────────────────────────────────────────────────────────┤
+│ CIDR Block                   │ 10.0.0.0/16                                                    │
+├──────────────────────────────┼────────────────────────────────────────────────────────────────┤
+│ Inherited                    │ No                                                             │
+├──────────────────────────────┼────────────────────────────────────────────────────────────────┤
+│ Organization default         │ Yes                                                            │
+├──────────────────────────────┼────────────────────────────────────────────────────────────────┤
+│ Special domains              │                                                                │
+├──────────────────────────────┼────────────────────────────────────────────────────────────────┤
+│ DNS Servers                  │                                                                │
+├──────────────────────────────┼────────────────────────────────────────────────────────────────┤
+│ Firewall rules               │ 5                                                              │
+├──────────────────────────────┼────────────────────────────────────────────────────────────────┤
+│ Environments                 │ Production                                                     │
+├──────────────────────────────┼────────────────────────────────────────────────────────────────┤
+│ Business groups              │                                                                │
+├──────────────────────────────┼────────────────────────────────────────────────────────────────┤
+│ Load balancers               │ mydlb                                                          │
+└──────────────────────────────┴────────────────────────────────────────────────────────────────┘
+----
+
+
+You can also list all the load-balancers in the current environment and business group, then verify which VPC is associated with a particular load-balancer:
+
+[source,Example,linenums]
+----
+> cloudhub load-balancer list
+
+┌────────────────────┬────────────────────┬──────────┬────────────────────┬────────────────────┬────────────────────────────────────────┐
+│ Name               │ Domain             │ Status   │ VPC                │ IPs                │ Primary Certificate                    │
+├────────────────────┼────────────────────┼──────────┼────────────────────┼────────────────────┼────────────────────────────────────────┤
+│ mydlb              │ lb.anypointdns.net │ STARTED  │ MyVPC              │ 34.218.203.107     │ *.example.com                         │
+│                    │                    │          │                    │ 52.33.162.33       │                                        │
+└────────────────────┴────────────────────┴──────────┴────────────────────┴────────────────────┴────────────────────────────────────────┘
+
+----
+
+Once you know the dedicated load-balancer assigned to the VPC, you can get the load-balancer's id using a command like: 
+
+[source,Example,linenums]
+----
+> cloudhub load-balancer describe-json mydlb
+
+{ id: '5ac3cd7ce4b04ff3d4793cdf',
+  name: 'mydlb',
+  domain: 'lb.anypointdns.net',
+  state: 'STARTED',
+  ipAddresses: [ '34.218.203.107', '52.33.162.33' ],
+  ipWhitelist: [ '0.0.0.0/0' ],
+  httpMode: 'redirect',
+  defaultSslEndpoint: 1,
+  sslEndpoints: 
+   [ { privateKeyDigest: '018e174606dedb09eed8a2bc754d2e5812514c44',
+       publicKeyLabel: 'example-com-san-crt.pem',
+       publicKeyDigest: 'f7bdcec99fb2339933a8717f0af50a67a7dd73d6',
+       publicKeyCN: 'learn.mulesoft.com',
+       privateKeyLabel: 'example-com-private-decrypted.pem',
+       verifyClientMode: 'off',
+       tlsv1: false,
+       mappings: 
+        [ { inputUri: '/',
+            appName: '{subdomain}-app',
+            appUri: '/',
+            upstreamProtocol: 'http' } ] },
+     { privateKeyDigest: '568dc9fa0767d056087c3eb252ec7312bea70aac',
+       publicKeyLabel: 'example-com-wildcard-crt.pem',
+       publicKeyDigest: 'fa34cdbc545cef64e72c63b1f08863d2809bb52b',
+       publicKeyCN: '*.example.com.com',
+       privateKeyLabel: 'example-com-wildcard-private-decrypted.pem',
+       verifyClientMode: 'off',
+       tlsv1: false,
+       mappings: 
+        [ { inputUri: '/',
+            appName: '{subdomain}-app',
+            appUri: '/',
+            upstreamProtocol: 'http' } ] } ],
+  staticIPsDisabled: false,
+  vpcId: 'vpc-c6cb8cbf',
+  workers: 2,
+  vpc: { id: 'vpc-c6cb8cbf', name: 'MyVPC' } }
+----
+
+Once you have teh vpcId and loadbalancerId, you can make a REST API call to get the status of a load-balancer.
+
+One easy way to run this command is with the Anypoint Platform Developer Portal. First navigate to https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals and select the latest version of the CloudHub REST API, then select the link:https://anypoint.mulesoft.com/apiplatform/anypoint-platform/#/portals/organizations/68ef9520-24e9-4cf2-b2f5-620025690913/apis/8617/versions/2321502/pages/107964[API Reference tab]. 
+
+Scroll to the /organizations/{orgid}/vpcs/{vpcId}/loadbalancers/{lbId}/deployments resource, the click GET then click TRY IT. Fill in the Username and Password for the owner of the business group where the dedicated load balancer is deployed. 
+
+You can get the organization id using:
+
+[source,Example,linenums]
+----
+> account business-group list
+
+┌────────────────────────────────────────┬───────────────┬────────────────────────────────────────┐
+│ Name                                   │ Type          │ Id                                     │
+├────────────────────────────────────────┼───────────────┼────────────────────────────────────────┤
+│ MyBG                                   │ Master        │ fd604b43-365c-42e8-810f-733a2b7f411f   │
+└────────────────────────────────────────┴───────────────┴────────────────────────────────────────┘
+----
+
+Now you can fill in the organizationId, vpcId, and loadbalanderId values. 
+
+When you click GET, if all the ids are correct, you should receive a 200 status response. In the body is a history of every deployment to this dedicated load-balancer. The most recent deployment will be listed first in the JSON response:
+
+[source,Example,linenums]
+----
+{
+  "data": [
+    {
+      "id": "5ac41c26e4b04ff3d47a5e58",
+      "state": "DONE",
+      "ticketConfig": "{\"id\":\"5ac3cd7ce4b04ff3d4793cdf\",\"name\":\"mydlb\",\"prvtDomainPrefix\":\"mule-worker-internal-\",\"prvtDomainSuffix\":\"cloudhub.io\",\"imageName\":\"NGINX_V3\",\"instanceSize\":\"c4.large\",\"vpcId\":\"vpc-c6cb8cbf\",\"workers\":2,\"deploymentId\":\"5ac41c26e4b04ff3d47a5e58\",\"activeDeploymentId\":\"5ac41b0ee4b04ff3d47a5aaa\",\"staticIPsCount\":2,\"version\":17}",
+      "createTime": 1522801702520,
+      "startTime": 1522801702981,
+      "endTime": 1522801760928
+    },
+    {
+      "id": "5ac41b0ee4b04ff3d47a5aaa",
+      "state": "DONE",
+      "ticketConfig": "{\"id\":\"5ac3cd7ce4b04ff3d4793cdf\",\"name\":\"mydlb\",\"prvtDomainPrefix\":\"mule-worker-internal-\",\"prvtDomainSuffix\":\"cloudhub.io\",\"imageName\":\"NGINX_V3\",\"instanceSize\":\"c4.large\",\"vpcId\":\"vpc-c6cb8cbf\",\"workers\":2,\"deploymentId\":\"5ac41b0ee4b04ff3d47a5aaa\",\"activeDeploymentId\":\"5ac41a08e4b04ff3d47a5794\",\"staticIPsCount\":2,\"version\":16}",
+      "createTime": 1522801422315,
+      "startTime": 1522801422932,
+      "endTime": 1522801483543
+    }
+  ],
+  "total": 2
+}
+----
+
+You can use this REST API call to troubleshoot deployment issues. 
+
+For example, one common deployment issue is if you have misconfigured the certificate for one of the SSL endpoints in the dedicated load-balancer configuration. 
+
 --
 
 You can send a PATCH request to your load balancer's endpoint to update any other property.
@@ -194,6 +391,8 @@ For example, you can literally bind two hostnames for redirect:
 ‘app.example.com’ ->  application: `app` URI: `/example’
 ----
 
+In this case external requests to `https://app.example.com` would be directed to http://app.cloudhub.io/example
+
 Or you can define a pattern to hold the input value:
 
 [source,Example,linenums]
@@ -201,7 +400,7 @@ Or you can define a pattern to hold the input value:
 ‘example.com/{mypattern}’ -> application: `app-{mypattern}` URI: /data
 ----
 
-The example above ensures both ’example.com/bookings’ and ‘example.com/sales’ match to `app-bookings/data` and `app-sales/data` respectively, as the variable `mypattern` holds these values. +
+The example above ensures both ’example.com/bookings’ is directed to `app-bookings.cloudhub.io/data` and ‘example.com/sales’ is directed to ``app-sales.cloudhub.io/data`, as the variable `mypattern` holds these values. +
 
 For input=”bookings.example.com”, the pattern can be resolved by assigning `_mypattern_=”bookings” and for input=`sales.example.com`, the pattern is resolved to assign `_mypattern_=”sales”
 
@@ -231,14 +430,13 @@ Both input and output URLs can be defined using patterns or literal Strings.
 Mapping rules are attributes of the load balancer's SSL endpoint, which is identified by the certificate name. +
 When you create a mapping rule, you need to specify a certificate CN. Omitting the `[certificateName]` parameter adds the mappings to the default endpoint.
 
-If your SSL endpoint sets a link:https://en.wikipedia.org/wiki/Wildcard_certificate[wildcard certificate], and you want to use the subdomain portion in a mapping rule, you can use the pre-defined `{subdomain}` variable.
+If your SSL endpoint sets a link:https://en.wikipedia.org/wiki/Wildcard_certificate[wildcard certificate], such as `*.example.com`, and you want to use the subdomain portion of an input URL in a mapping rule, you can use the pre-defined `{subdomain}` variable.
 
-The rule which is defined first has high priority against other ones defined after it. This means that the first matched rule will be applied. +
-You can create, view and delete existing rules using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-add[mappings add], link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-describe[mappings describe] and link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-remove[mappings remove] commands respectively.
+In the list of mapping rules, the rule which is defined first has high priority against other ones defined after it. This means that the first matched rule will be applied. +
+You can create, view, and delete existing rules using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-add[mappings add], link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-describe[mappings describe] and link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-remove[mappings remove] commands respectively.
 
 === Mapping Rule Examples
 
-For these examples, suppose you have already configured a DNS CNAME record to route `example.com` to `lb-name.lb.anypointdns.net`. 
 
 The table below contains some mapping rule examples:
 
@@ -261,8 +459,14 @@ You can pass the app name as an input URI and map it directly to the app name in
 | 0 | /{app}/    | {app}             | /
 |===
 
-This rule maps `lb-demo.lb.anypointdns.net/{app}` to `{app}.cloudhub.io`. +
-{app} being a pattern for application name you choose to pass.
+This rule maps `example.com/{app}` to `{app}.cloudhub.io`. +
+{app} being a pattern for any application name you choose to pass in the inbound request.
+
+For this to work, you should configure a DNS CNAME record to route `example.com` to `lb-name.lb.anypointdns.net`, and you should configure the SSL endpoint with a certificate for the common name = example.com. 
+
+This mapping will also work if you call the dedicated load-balancer directly. So https://lb-name.lb.anypointdns.net/{app}` routes to `http://app.cloudhub.io`. 
+
+
 
 
 ==== Host Mapping
@@ -273,7 +477,7 @@ If you have a wildcard certificate (like `*.example.com`), you can use the ´sub
 |===
 |Rule # |Input URL 2+^| Output URL
 |   |  *URI*   |       *appName*    |  *appURI*
-| 0 | /        | {subdomain}   | /
+| 0 | /        | {subdomain}        | /
 |===
 This rule automatically maps any request passed to a subdomain of example.com to the corresponding appName. For example:
 
@@ -281,7 +485,9 @@ This rule automatically maps any request passed to a subdomain of example.com to
 * Passing `application.example.com` is mapped to `application.cloudhub.io`.
 
 The same applies for the link:https://en.wikipedia.org/wiki/Subject_Alternative_Name[Subject Alternative Names] (SANs) of your SSL Endpoints. +
-If you have different SANs configured for a certificate's common name, you can use the ´subdomain´ variable to map the subdomain portion of your domain name to your application. For this to work, however, your applications need to have the same name as the common portion of your domain name.
+
+
+Instead of using a wildcard certificate, which permits any subdomain application name to be passed through the dedicated load balancer, you can restrict the allowed subdomain names. To do this, you must have different SANs configured for a certificate's common name, you can use the ´subdomain´ variable to map the subdomain portion of your domain name to your application.  
 
 For example, having:
 
