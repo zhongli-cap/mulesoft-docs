@@ -3,13 +3,16 @@
 :toc:
 :toc-title:
 
+When you configure a Database operation using the Database Connector, there are several ways to add variable values to the SQL statement you execute in the database. 
+
+== Using Input Parameters to Protect Databasae Queries
 The select operation is used to retrieve information from the RDBMS. The primary concept of this operation is that you will supply a SQL query and use DataWeave to supply the parameters:
 
 [source,xml,linenums]
 ----
 <flow name="selectParameterizedQuery">
   <db:select config-ref="dbConfig">
-    <db:sql>select * from PLANET where name = :name</db:sql>
+    <db:sql>SELECT * FROM PLANET WHERE name = :name</db:sql>
     <db:input-parameters>
       #[{'name' : payload}]
     </db:input-parameters>
@@ -17,7 +20,11 @@ The select operation is used to retrieve information from the RDBMS. The primary
 </flow>
 ----
 
-As you can see in the above example, input parameters are supplied as key-value pairs, which we can now create by embedding a DataWeave script. Those keys are used in conjunction with the semicolon character (:) to reference to a parameter value by name. This is the recommended approach for using parameters in your query. The advantage of doing it this way are:
+As you can see in the above example, input parameters are supplied as key-value pairs, which we can now create by embedding a DataWeave script. Those keys are used in conjunction with the semicolon character (:) to reference to a parameter value by name. This is the recommended approach for using parameters in your query. 
+
+The alternative is to directly write ` <db:sql>SELECT * FROM PLANET WHERE name = #[payload] </db:sql>`, but this is a very dangerous practice that is not recommended. 
+
+The advantages of using input parameters to configure the WHERE clause in a SELECT statement this way are:
 
 * The query becomes immune to SQL injection attacks
 * The connector can perform optimizations that are not possible otherwise, which improves the application’s overall performance
@@ -27,11 +34,12 @@ DataSense is available for the operation's input and output. By analysing the qu
 
 == Dynamic Queries
 
-Sometimes, you not only need to parameterize the WHERE clause, but also parameterize parts of the query itself. Example use cases for this would be queries which need to hit online/historic tables depending on a condition, or complex queries where the project columns need to vary.
+Sometimes, you not only need to parameterize the WHERE clause, but also parameterize parts of the query itself. Example use cases for this would be queries which need to hit online vs. historic tables depending on a condition, or complex queries where the project columns need to vary.
 
-In Mule 3, the concept of select was split in parameterized and dynamic queries, and you couldn’t use both at the same time. You had to choose between having a dynamic query or having the advantages of using parameters (SQL Injection protection, PreparedStatement optimization, etc.). Furthermore, the syntax to do one or the other was different, so you had to learn two different ways of doing the same thing.
 
-But with the new Database Connector in Mule 4, you can now use both methods at the same time by using expressions in the query. In this example, you can see how a full expression is used to produce the query by building a string in which the table depends on a variable. An important thing to notice is that although the query text is dynamic, it is still using input parameters:
+
+
+In this example, you can see how a full expression is used to produce the query by building a string in which the table depends on a variable `$(vars.table)`. An important thing to notice is that although some of the query text is dynamic `"SELECT * FROM $(vars.table)`, the WHERE clause is still using the best practice of defining the WHERE condition using input parameters, in this case `WHERE name = :name`:
 
 [source,xml,linenums]
 ----
@@ -43,6 +51,10 @@ But with the new Database Connector in Mule 4, you can now use both methods at t
     </db:input-parameters>
 </db:select>
 ----
+
+[NOTE]
+In Mule 3, the concept of select was split in parameterized and dynamic queries, and you couldn’t use both at the same time. You had to choose between having a dynamic query or having the advantages of using parameters (SQL Injection protection, PreparedStatement optimization, etc.). Furthermore, the syntax to do one or the other was different, so you had to learn two different ways of doing the same thing. But with the new Database Connector in Mule 4, you can now use both methods at the same time by using expressions in the query. 
+
 
 Why do I need dynamic queries at all for the example above? Can I just treat the table like another Input Parameter? Then answer is no. Input Parameters can only be applied to parameters in a WHERE clause. To modify any other part of the query, you need to use DW’s interpolation operator.
 
@@ -76,7 +88,12 @@ The select operation provides to parameters to help with this: `fetchSize` and `
 </db:select>
 ----
 
-In this example, we are telling the connector to don't fetch more that 1000 rows, but to do it 200 at a time. This limits the ttoal amount of information that will be retrieved, and also guarantees that the data is pulled in small chunks.
+In this example, we are telling the connector to not fetch more that 1000 total rows as the result of an SQL SELECT query, but to try to only stream results from the Database to the Database Connector 200 at a time. So in this example it would require 5 separate network round trips to retrieve 1000 matching rows. 
+
+The combination limits the total amount of information that will be retrieved (the maxRows value), and also guarantees that the data is returned from the Database over the network in smaller chunks (the fetchSize value).
+
+[NOTE]
+The fetchSize is a hint to the JDBC driver and need not always be enforced. The behavior varies between JDBC driver providers. Often, the default fetchSize for a JDBC driver is 10. 
 
 == Setting a query timeout
 
