@@ -7,29 +7,38 @@
 [[mapobject1]]
 ===== mapObject({ (K)?: V }, (V, K, Number) -> Object): Object
 
-Similar to Map, but instead of processing only the values of an object, it processes both keys and values as a tuple. Also instead of returning an array with the results of processing these values through the lambda, it returns an object, which consists of a list of the key:value pairs that result from processing both key and value of the object through the lambda.
+Iterates through key-value pairs within an object and returns an object. You
+can retrieve the key, value, or index of any key-value pair in the object.
 
-The lambda is invoked with three parameters: *value*, *key* and *index*.
-If these parameters are not named, the value is defined by default as *$*, the key *$$* and the index *$$$*.
+This function is similar to `map`. However, instead of processing only values
+of an object, `mapObject` processes both keys and values as a tuple. Also,
+instead of returning an array with the results of processing these values
+through the function, it returns an object, which consists of a list of the
+key-value pairs that result from processing both key and value of the object
+through the function (a lambda).
+
+The function is invoked with three parameters: `value`, `key` and the `index`.
+The third parameter, `index`, is optional.
 
 .Transform
 [source,DataWeave,linenums]
 ----
 %dw 2.0
 output application/json
-var conversionRate=13.45
+var conversionRate=13
 ---
-priceList: payload.prices mapObject (
-  '$$':{
-    dollars: $,
-    localCurrency: $ * conversionRate
-  }
-)
+priceList: payload.prices mapObject(value, key, index) -> {
+  (key) : {
+       dollars: value,
+       localCurrency: value * conversionRate,
+       index_plus_1: index + 1
+   }
+}
 ----
 
-
+[[input_mapobject]]
 .Input
-[source,xml,linenums]
+[source,XML,linenums]
 ----
 <prices>
     <basic>9.99</basic>
@@ -38,58 +47,122 @@ priceList: payload.prices mapObject (
 </prices>
 ----
 
+[[output]]
 .Output
-[source,json,linenums]
+[source,JSON,linenums]
 ----
 {
   "priceList": {
     "basic": {
       "dollars": "9.99",
-      "localCurrency": 134.3655
+      "localCurrency": 129.87,
+      "index_plus_1": 1
     },
     "premium": {
       "dollars": "53",
-      "localCurrency": 712.85
+      "localCurrency": 689,
+      "index_plus_1": 2
     },
     "vip": {
       "dollars": "398.99",
-      "localCurrency": 5366.4155
+      "localCurrency": 5186.87,
+      "index_plus_1": 3
     }
   }
 }
 ----
 
+For each key-value pair in the input in the example, the key is preserved,
+and the value becomes an object with two properties: the original value and
+the result of multiplying the original value by a constant, a `var` that is
+defined as a directive in the header of the DataWeave script.
 
-[TIP]
-Note that when you use a parameter to populate one of the keys of your output, as with the case of $$ in this example, you must either enclose it in quote marks or brackets. '$$' or ($$) are both equally valid.
+Important:
+When you use a parameter to populate one of the keys of your output, you must
+either enclose the parameter in parentheses (for example, `(key)`), or
+you need to prepend it with a `$` and enclose it in quotation marks (for
+example, `'$key'`, as shown above). Otherwise, the name of the property is
+treated as a literal string.
 
-In the example above, as key and value are not defined, they're identified by the placeholders *$$* and *$*.
-For each key:value pair in the input, the key is preserved and the value becomes an object with two properties:
-one of these is the original value, the other is the result of multiplying this value by a constant that is defined as a directive in the header.
-
-The mapping below performs exactly the same transform, but it defines custom names for the properties of the operation, instead of using $ and $$. Here, 'category' is defined as referring to the original key in the object, and 'money' to the value in that key.
+If you do not name the parameters, you need to reference them through
+placeholders: `$` for the value, `$$` for the key, and `$$$` for the index,
+for example:
 
 .Transform
-[source,DataWeave,linenums]
+----
+%dw 2.0
+output application/xml
+---
+{ 'price' : 9 } mapObject('$$' : $)
+----
+
+.Output
+----
+<?xml version='1.0' encoding='UTF-8'?>
+<price>9</price>
+----
+
+The next example incorporates each index of the //* <<input_mapobject, price input>>
+above, as well as the input keys and values.
+
+.Transform
 ----
 %dw 2.0
 output application/json
-var conversionRate=13.45
 ---
-priceList: payload.prices mapObject ((money, category, index) ->
-  '$category':{
-    dollars: money,
-    localCurrency: money * conversionRate
-  }
+priceList: payload.prices mapObject(
+ ($$) : { '$$$' : $ }
 )
 ----
 
-[TIP]
-Note that when you use a parameter to populate one of the keys of your output, as with the case of *category* in this example, you must either enclose it in brackets or enclose it in quote marks adding a $ to it, otherwise the name of the property is taken as a literal string. '$category' or (category) are both equally valid.
+Notice that the index is surrounded in quotes (`'$$$'`) because this Numeric
+key must be coerced to a String and cannot be a Number. Alternatively, you
+could write `'$$$'` as `($$$ as String)`.
+
+When the preceding script receives the //* <<input_mapobject, price input>> above, it
+produces the following output:
+
+.Output
+{
+  "priceList": {
+    "basic": {
+      "0": "9.99"
+    },
+    "premium": {
+      "1": "53"
+    },
+    "vip": {
+      "2": "398.99"
+    }
+  }
+}
+
+The next example returns the same output as the first //* <<output, `mapObject`
+example>> above, which explicitly invokes the named parameters
+`(value, key, index)`.
+
+.Transform
+----
+%dw 2.0
+output application/json
+var conversionRate=13
+---
+priceList: payload.prices mapObject(
+ ($$): {
+   dollars: $,
+   localCurrency: $ * conversionRate,
+   index_plus_1: $$$ + 1
+ }
+)
+----
+
+When you use a parameter to populate one of the keys of your output,
+as with the case of `$$`, you must either enclose it in quote marks
+(for example, `'$$'`) or parentheses (for example, `($$)`). Both
+are equally valid.
 
 
 [[mapobject2]]
 ===== mapObject(Null, (Any, Any, Number) -> Any): Null
 
-Helper function that allows mapObject to work with null values
-
+Helper function that allows `mapObject` to work with null values.
