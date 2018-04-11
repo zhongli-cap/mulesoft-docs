@@ -1,0 +1,66 @@
+= About Customer Secrets Manager
+
+Anypoint Customer Secrets Manager lets you securely upload, store, and access the secrets used in your Mule applications. +
+Through CSM you can write, read, and manage your secrets, keys, and TLS certificates within a unique source from which other authorized platform services can manage them on your behalf.
+
+CSM lets you create secret groups, namespaces associated to your environment and business group, to which you associate your secrets. You can later configure your applications, or platform services to request those secrets, and control which services are authorized to access them. +
+This basic task of CSM is handled by two microservices: the secrets manager, that handles the upload, edit, and storage of your secrets; the secrets provider, which handles the provisioning of your stored secrets to the requesting clients.
+
+Customer Secrets Manager currently works with Mule flows, Design Center flows, Cloudhub, PCF, and PCE.
+
+== Customer Secrets Manager Components
+
+The Customer Secrets Manager is composed by one authentication client, three microservices that handle the secrets management, provision, and notifications; and a client to access the vault.
+
+image::index-1dcce.png[index-1dcce]
+
+* *Customer Secrets Authentication Client*
++
+This client is used by Secrets Manager and Secrets Provider to authenticate incoming requests.
++
+* *Secrets Manager*
++
+This service handles the upload and storing of your secrets. +
+Every time you upload a secret to your vault, the secrets manager establishes a reference to it, so it can be shared or read without revealing its content.
++
+* *Secrets Provider*
++
+This service handles the secrets for other platform service's consumption. +
+This is the only service that can read actual secrets and due to its nature, this is an internal service and not accessible from the public network. This service is used by the requesting client to consume the secret. +
++
+* *Notification Service*
++
+Handles updates to the stored secrets. It pushes notifications to the queue whenever a customer secret is updated.
++
+* *Vault Client*
++
+Handles all interactions with the vault server where your secrets are securely stored.
+
+== Customer Secrets Manager Usage Flows
+
+CSM functions following two main flows: The upload flow to add, edit, and delete your secrets; and the download flow in which the secret provider serves the secret to the requesting client.
+
+=== Upload Flow
+
+As a user, you need to login to Anypoint Platform and have the proper permissions to operate Customer Secrets Manager. This login information is checked by the CSM Authentication Client. +
+When creating, editing or deleting a secret, the secrets manager service must first assign you a lock. Only then you can upload changes to your secret group. +
+This lock prevents other users from modifying the same secret as you. This process is automatic, and there is no extra configuration needed from your end.
+
+You can upload changes from the Anyoint Platform UI, or using the Customer Secrets Manager API.
+
+// _TODO: Add links to the tasks.
+
+=== Download Flow
+
+This flow is operated by platform clients that request your secrets. +
+Before a client can request a secret from the secrets provider service, the secrets manager service must provide it with a grant. The client authenticates to the authentication client, gets a grant from the secrets manager, and then gets the secret from the secret provider service.
+
+The Secrets Provider response to the requesting client can be either plain or encrypted:
+
+** Plain: For clients that connect to the provider directly. +
+The payload is not encrypted but nonetheless sent over TLS, and hence protected under the TLS connection.
+** Encrypted: For clients that are intermediaries between the platform and the requesting client. +
+The payload is also encrypted, over and above from being protected under TLS connection.
+
+
+== See Also
