@@ -2,7 +2,7 @@
 :keywords: cxf, soap connector, error handling
 
 [NOTE]
-When sending requests to an external web service, the recommended approach is to use the link:https://developer.mulesoft.com/docs/display/current/Web+Service+Consumer[Web Service Consumer]﻿ rather than the CXF Module.
+When sending requests to an external web service, the recommended approach is to use the link:/mule-user-guide/v/3.5/web-service-consumer[Web Service Consumer]﻿ rather than the CXF Module.
 
 == Overview
 
@@ -15,7 +15,7 @@ Mule handles errors in one of two ways, depending on whether the CXF Web service
 
 The table below describes which error handling behavior Mule enforces depending on what the CXF Web service is doing when a fault or exception is thrown.
 
-[width="100%",cols="20%,20%,20%,20%,20%",options="header",]
+[%header,cols="5*"]
 |===
 |CXF Web Service Activity |Error Condition |Fault/Exception Thrown |Return SOAP Fault to caller |Propagate original cause of error in the Mule flow
 |Publishing |Something goes wrong while the Web service component in a flow is publishing a CXF Web service. |An exception is thrown by the component. |x | 
@@ -42,7 +42,7 @@ Because the default exception strategy is implicitly applied in all Mule flows, 
 
 You can customize a rollback exception strategy to handle exceptions and ensure that Mule returns a SOAP fault to the caller, or propagates the exception in the flow.
 
-[width="100%",cols="34%,33%,33%",options="header",]
+[%header,cols="34,33,33"]
 |===
 |Web Service Activity |Fault/Exception Thrown |Error Handling Behavior
 |Publishing |An exception is thrown by the component. |The rollback exception strategy handles the exception. It returns a SOAP fault message to the caller with the cause of the error.
@@ -67,10 +67,8 @@ image:rollback.png[rollback]
 
 [source,xml, linenums]
 ----
-<http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8080" doc:name="HTTP Listener Configuration"/>
- 
 <flow name="CXFWebService1">
-    <http:listener config-ref="HTTP_Listener_Configuration" path="hello"/>
+    <http:inbound-endpoint host="localhost" port="8080" path="hello"/>
     <cxf:jaxws-service serviceClass="org.mule.module.cxf.HelloWorld"/>
     <component class="org.mule.module.cxf.HelloWorldImpl"/>
     <rollback-exception-strategy>
@@ -110,7 +108,7 @@ For instance, use the catch exception strategy when:
 
 * you want a Mule flow to handle errors without returning a SOAP fault message to the caller
 
-[width="100%",cols=",",options="header"]
+[%header%autowidth.spread]
 |===
 |Web Service Activity |Fault/Exception Thrown |Error handling Behavior
 |Publishing |An exception is thrown by the component. |The catch exception strategy handles the exception. It does _not_ return a SOAP Fault message to the caller.
@@ -135,10 +133,8 @@ image:catch.png[catch]
 
 [source,xml, linenums]
 ----
-<http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8080" doc:name="HTTP Listener Configuration"/>
- 
 <flow name="CXFWebService1">
-    <http:listener config-ref="HTTP_Listener_Configuration" path="hello"/>
+    <http:inbound-endpoint host="localhost" port="8080" path="hello"/>
     <cxf:jaxws-service serviceClass="org.mule.module.cxf.HelloWorld"/>
     <component class="org.mule.module.cxf.HelloWorldImpl" />
     <catch-exception-strategy>
@@ -160,18 +156,16 @@ image:catch2_1.png[catch2_1]
 
 [source,xml, linenums]
 ----
-<http:request-config name="HTTP_Request_Configuration" host="localhost" port="${port1}" doc:name="HTTP Request Configuration"/>
-<http:request-config name="HTTP_Request_Configuration2" host="localhost" port="${port2}" doc:name="HTTP Request Configuration"/>
-  
- 
 <flow name="CXFWebService1" processingStrategy="synchronous">
     <inbound-endpoint address="vm://helloWorld" exchange-pattern="request-response"/>
     <cxf:jaxws-client serviceClass="org.mule.module.cxf.HelloWorld" operation="sayHi"/>
-    <http:request config-ref="HTTP_Request_Configuration" path="hello" method="GET" doc:name="HTTP"/>   
+    <http:outbound-endpoint host="localhost" port="${port1}" path="hello"
+    method="GET" exchange-pattern="one-way" />   
     <catch-exception-strategy>
         <set-payload value="#[groovy:message.getOriginalPayload()]"/>
         <cxf:jaxws-client serviceClass="org.mule.module.cxf.example.HelloWorld" operation="sayHi"/>
-        <http:request config-ref="HTTP_Request_Configuration2" path="hello" method="GET" doc:name="HTTP"/>      
+        <http:outbound-endpoint host="localhost" port="${port2}" path="hello"
+    method="GET" exchange-pattern="one-way" /> 
     </catch-exception-strategy>
 </flow>
 ----

@@ -1,12 +1,13 @@
 = Creating a Customer Transformer Class
+:keywords: customize, custom transformers
 
-A custom transformer is a user-defined transformer class that implements http://www.mulesoft.org/docs/site/current/apidocs/org/mule/api/transformer/Transformer.html[org.mule.api.transformer.Transformer]. Your class can extend http://www.mulesoft.org/docs/site/current/apidocs/org/mule/transformer/AbstractTransformer.html[AbstractTransformer] or http://www.mulesoft.org/docs/site/current/apidocs/org/mule/transformer/AbstractMessageAwareTransformer.html[AbstractMessageAwareTransformer], depending on your needs. This page describes how to create a custom transformer in more detail.
+A custom transformer is a user-defined transformer class that implements link:http://www.mulesoft.org/docs/site/current/apidocs/org/mule/api/transformer/Transformer.html[org.mule.api.transformer.Transformer]. Your class can extend link:http://www.mulesoft.org/docs/site/current/apidocs/org/mule/transformer/AbstractTransformer.html[AbstractTransformer] or link:http://www.mulesoft.org/docs/site/current/apidocs/org/mule/transformer/AbstractMessageAwareTransformer.html[AbstractMessageAwareTransformer], depending on your needs. This page describes how to create a custom transformer in more detail.
 
 Go here if you are looking for information about creating a transformer with the new link:/mule-user-guide/v/3.2/transformer-annotation[Transformer Annotation].
 
 == Transformer Classes
 
-http://www.mulesoft.org/docs/site/current/apidocs/org/mule/transformer/AbstractTransformer.html[AbstractTransformer] allows you to access and transform the source payload and to specify the encoding to use (if required). It defines methods for controlling the object types this transformer supports and validates the expected return type, leaving you to implement a single `doTransform()` method.
+link:http://www.mulesoft.org/docs/site/current/apidocs/org/mule/transformer/AbstractTransformer.html[AbstractTransformer] allows you to access and transform the source payload and to specify the encoding to use (if required). It defines methods for controlling the object types this transformer supports and validates the expected return type, leaving you to implement a single `doTransform()` method.
 
 [source, java, linenums]
 ----
@@ -18,7 +19,7 @@ public class OrderToHtmlTransformer extends AbstractTransformer
 }
 ----
 
-If you need to transform the message header and attachments, you can use http://www.mulesoft.org/docs/site/current/apidocs/org/mule/transformer/AbstractMessageAwareTransformer.html[AbstractMessageAwareTransformer] instead to change them directly on the message passed in. In this case, you return the transformed message payload by overriding the method `transform(MuleMessage message, String encoding)`. You can use `message.getProperty(Object key)` to retrieve the properties or `message.setProperty(Object key, Object value)` to set properties on the transformed message.
+If you need to transform the message header and attachments, you can use link:http://www.mulesoft.org/docs/site/current/apidocs/org/mule/transformer/AbstractMessageAwareTransformer.html[AbstractMessageAwareTransformer] instead to change them directly on the message passed in. In this case, you return the transformed message payload by overriding the method `transform(MuleMessage message, String encoding)`. You can use `message.getProperty(Object key)` to retrieve the properties or `message.setProperty(Object key, Object value)` to set properties on the transformed message.
 
 For example:
 
@@ -34,7 +35,7 @@ public class OrderToHtmlTransformer extends AbstractMessageAwareTransformer
 
 == Registering Source and Return Types
 
-You can specify which source types a transformer can accept and which type it will return. This allows Mule to validate the incoming message before invoking the transformer and to validate the output before sending the message on. If you create a MULE3USER:discoverable transformer, you must set the source and return types.
+You can specify what source types a transformer accepts and which types it returns. This allows Mule to validate the incoming message before invoking the transformer and to validate the output before sending the message on. If you create a discoverable transformer, you must set the source and return types.
 
 For example, for the Order bean to HTML transformer, you would specify in the constructor that the transformer converts only message payloads of type Order:
 
@@ -57,22 +58,22 @@ Notice that the above code sets the name of the transformer. Usually, you set th
 
 All objects in Mule have lifecycles associated with them. For transformers, there are two lifecycle methods that are most useful.
 
-By default `AbstractMessageAwareTransfromer` and `AbstractTransformer` both implement the http://www.mulesoft.org/docs/site/current/apidocs/org/mule/api/lifecycle/Initialisable.html[org.mule.api.lifecycle.Initialisable] interface. After all bean properties are set on the transformer (if any), the `doInitialise()` method is called. This is useful for transformers to do any initialization or validation work. For example, if a transformer requires that an external file be loaded before the transformer can operate, you would load the file via the `doInitialise()` method.
+By default `AbstractMessageAwareTransfromer` and `AbstractTransformer` both implement the link:http://www.mulesoft.org/docs/site/current/apidocs/org/mule/api/lifecycle/Initialisable.html[org.mule.api.lifecycle.Initialisable] interface. After all bean properties are set on the transformer (if any), the `doInitialise()` method is called. This is useful for transformers to do any initialization or validation work. For example, if a transformer requires that an external file be loaded before the transformer can operate, you would load the file via the `doInitialise()` method.
 
-If you want your transformer to clear up resources when the transformer is no longer needed, your transformer must implement http://www.mulesoft.org/docs/site/current/apidocs/org/rg/mule/api/lifecycle/Disposable.html[org.mule.api.lifecycle.Disposable] and implement the `dispose()` method.
+If you want your transformer to clear up resources when the transformer is no longer needed, your transformer must implement org.mule.api.lifecycle.Disposable and implement the `dispose()` method.
 
 == Creating Discoverable Transformers
 
 Mule can perform automatic transformations. For example, when you call the `getPayload()` method on a MuleMessage and pass in the required type as follows:
 
-[source, code, linenums]
+[source]
 ----
 Document doc = (Document)muleMessage.getPayload(org.dom4j.Document.class);
 ----
 
 Mule looks at the current payload type and tries to find a transformer that can convert it to an `org.dom4j.Document` object. Mule provides several standard transformers for switching between common types such as strings, byte[], InputStream, and more. Also, transports usually have transformers for specific message types such as JMSMessage or HttpRequest. When creating a custom transformer, you can set its priority higher than the standard transformers so that it takes precedence.
 
-To make a transformer discoverable, it must implement http://www.mulesoft.org/docs/site/current/apidocs/org/mule/api/transformer/DiscoverableTransformer.html[org.mule.api.transformer.DiscoverableTransformer]. This interface introduces two methods, `getPriorityWeighting()` and `setPriorityWeighting(int weighting)`. Weighting resolves conflicts when two or more transformers match the search criteria. The weighting is a number between 1 and 10, with 10 being the highest priority. As a rule, Mule transformers have a priority of 1 and should always have a lower priority than any custom transformers.
+To make a transformer discoverable, it must implement: link:http://www.mulesoft.org/docs/site/current/apidocs/org/mule/api/transformer/DiscoverableTransformer.html[org.mule.api.transformer.DiscoverableTransformer]. This interface introduces two methods, `getPriorityWeighting()` and `setPriorityWeighting(int weighting)`. Weighting resolves conflicts when two or more transformers match the search criteria. The weighting is a number between 1 and 10, with 10 being the highest priority. As a rule, Mule transformers have a priority of 1 and should always have a lower priority than any custom transformers.
 
 For example, to make the OrderToHtmlTransformer discoverable, you would define it as follows:
 
@@ -94,12 +95,12 @@ implements DiscoverableTransformer
 }
 ----
 
-This transformer converts from an Order object to a String, which the standard ObjectToString transformer also does, but ObjectToHtml will be used because it has a higher priority weighting. You could test this as follows:
+This transformer converts from an Order object to a String, which the standard ObjectToString transformer also does, but ObjectToHtml is used because it has a higher priority weighting. You can test this as follows:
 
 [source, code, linenums]
 ----
 MuleMessage message = new DefaultMuleMessage(new Order(...));
-String html = (String)muleMessage.getPayload(java.lang.String.class);
+String html = (String)muleMessage.getPayload(java.lang.String);
 ----
 
 == Registering the Transformer
@@ -108,12 +109,12 @@ After creating a transformer, you must register it so that Mule can discover it 
 
 Alternatively, if you want your transformer to be loaded automatically by Mule when your module (JAR) is on the class path, you add a `registry-bootstrap.properties` file to your JAR under the `/META-INF/services/org/mule/config` directory. The contents of `registry-bootstrap.properties` should look something like this:
 
-[source, code, linenums]
+[source]
 ----
 orderToHtml=com.foo.OrderToHtml
 ----
 
-When Mule starts, it will discover this bootstrap file before loading any configuration and will install any objects listed in the file into the local registry. For more information, see link:/mule-user-guide/v/3.2/bootstrapping-the-registry[Bootstrapping the Registry].
+When Mule starts, it discovers this bootstrap file before loading any configuration and installs any objects listed in the file into the local registry. For more information, see link:/mule-user-guide/v/3.2/bootstrapping-the-registry[Bootstrapping the Registry].
 
 == Examples
 
@@ -191,3 +192,4 @@ Alternatively you can configure transformer directly in the endpoint, as follows
     </vm:inbound-endpoint>
 ...
 ----
+

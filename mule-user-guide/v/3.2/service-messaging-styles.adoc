@@ -1,10 +1,6 @@
 = Mule Messaging Styles
 
-[ <<Overview>> ] [ <<One-way>> ] [ <<Request Response>> ] [ <<Synchronous>> ] [ <<Async Request Response>> ]
-
-== Overview
-
-Mule ESB can send messages _asynchronously_ (each stage of the message is on a different thread) or _synchronously_ (after the message is received by the component, it uses a single thread throughout the rest of its lifecycle and supports request-response). You can set the request-response property on the connector, on the endpoint, and implicitly within the transport.
+Mule can send messages _asynchronously_ (each stage of the message is on a different thread) or _synchronously_ (after the message is received by the component, it uses a single thread throughout the rest of its lifecycle and supports request-response). You can set the request-response property on the connector, on the endpoint, and implicitly within the transport.
 
 By default, a Mule service uses SEDA, which uses asynchronous, one-way staged queues. One thread is used for the inbound message, another thread is used for processing the message in the service component, and another thread is used for the outbound message. You can configure the message so that the inbound message is on one thread and the remaining stages are on a second thread, or so that all stages are on a single thread.
 
@@ -18,7 +14,7 @@ The rest of this page describes the various messaging styles in more detail and 
 
 image:pattern-asynchronous.png[pattern-asynchronous]
 
-[cols=",",]
+[%autowidth.spread]
 |===
 |*Description* |Receives a message and puts it on a SEDA queue. The callee thread returns and the message is processed by the SEDA thread pool. Nothing gets returned from the result of the call.
 |*Error Handling* |If an error occurs it is handled by the Mule server. An error endpoint can be used to route errors and the client that initiated the call can listen on the error queue in a separate thread, other have a specific error handling client.
@@ -58,7 +54,7 @@ image:pattern-asynchronous.png[pattern-asynchronous]
 
 image:pattern-request-response.png[pattern-request-response]
 
-[cols=",",]
+[%autowidth.spread]
 |===
 |*Description* |Receives a message and the component returns a message. If the component call returns null, then a `MuleMessage` with a `NullPayload` is returned. If the call method is _void_ the request message is returned.
 |*Mule Config* |The Mule service must have a synchronous inbound endpoint and no outbound endpoint configured. You set an endpoint as synchronous using `synchronous="true"`. HTTP/S, SSL, TCP, and Servlet endpoints are synchronous by default and do not require this setting.
@@ -96,7 +92,7 @@ image:pattern-request-response.png[pattern-request-response]
 
 == Synchronous
 
-*NOTE*: As of 3.0, the "synchronous" flag on endpoints has been replaced by the "exchange-pattern" attribute, whch has these possible values:
+*NOTE*: As of 3.0, the "synchronous" flag on endpoints has been replaced by the "exchange-pattern" attribute, which has these possible values:
 
 * one-way
 * request-response
@@ -109,7 +105,7 @@ A message is now processed synchronously if one of the following is true:
 
 image:pattern-synch-remotesync.png[pattern-synch-remotesync]
 
-[cols=",",]
+[%autowidth.spread]
 |===
 |*Description* |Receives a message and the component processes before sending it out on another endpoint. The request happens in the same thread. Mule blocks on the outbound endpoint to wait for a response from the remote application (if applicable) until the `responseTimeout` threshold is reached. If no response is received, it returns null. The synchronous call must be used if transactions are being used on the inbound endpoint. A synchronous call always returns a result, even if there is an outbound endpoint.
 |*Mule Config* |The Mule service must have a request-response inbound endpoint and an outbound endpoint configured. You set an endpoint as request-response using `message-exchange="request-response"`. HTTP/S, SSL, TCP, and Servlet endpoints are request-response by default and do not require this setting. N
@@ -156,7 +152,7 @@ image:pattern-synch-remotesync.png[pattern-synch-remotesync]
 
 image:pattern-async-request-response.png[pattern-async-request-response]
 
-[cols=",",]
+[%autowidth.spread]
 |===
 |*Description* |This pattern allows the back-end process to be forked to invoke other services and return a result based on the results of multiple service invocations. The _Async Reply Router_ is used to listen on a _Reply To_ endpoint for results.
 |*Mule Config* |Set the reply-to address on the outbound router, and set the <async-reply> element to listen on that reply endpoint. If you also want the caller to get a response, use a synchronous inbound endpoint by setting `message-exchange="request-response"`.

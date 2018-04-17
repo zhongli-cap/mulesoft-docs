@@ -22,10 +22,10 @@ image:cluster-diagram.png[cluster-diagram]
 
 Beyond benefits such as high availability through automatic failover, improved performance, and enhanced scalability, clustering Mule instances offers the following benefits:
 
-* Automatic coordination of access to resources such as files, databases, and FTP sources. Mule automatically manages which node will handle communication from a data source.
+* Automatic coordination of access to resources such as files, databases, and FTP sources. Mule automatically manages which node handles communication from a data source.
 * Automatic load balancing of processing within a cluster. If you divide your flows into a series of steps and connect these steps with a transport such as VM, each step is put in a queue, making it cluster enabled. Mule can then process each step in any node, and so better balance the load across nodes.
-* Cluster lifecycle management and control. See link:/mule-management-console/v/3.7/managing-mule-high-availability-ha-clusters[Managing Mule High Availability (HA) Clusters].
-* Cluster and node performance monitoring. See link:/mule-management-console/v/3.6/monitoring-a-cluster[Monitoring a Cluster].
+* Cluster lifecycle management and control. See link:/mule-management-console/v/3.3/managing-mule-high-availability-ha-clusters[Managing Mule High Availability (HA) Clusters].
+* Cluster and node performance monitoring. See link:/mule-management-console/v/3.3/monitoring-a-cluster[Monitoring a Cluster].
 * Raised alerts. You can set up an alert to appear when a node goes down and when a node comes back up.
 
 [NOTE]
@@ -39,31 +39,31 @@ All the nodes in a cluster share memory, as illustrated below:  +
 
 image:topology_4-cluster.png[topology_4-cluster]
 
-Mule uses an **active-active** model to cluster servers, rather than an **active-passive** model.
+Mule uses an *active-active* model to cluster servers, rather than an *active-passive* model.
 
-In an **active-passive** model, one server in a cluster acts as the *primary*, or active node, while the others are *secondary*, or passive nodes. The application in such a model runs on the primary server, and only ever runs on the secondary server if the first one fails. In this model, the processing power of the secondary node(s) is mostly wasted in passive waiting for the primary node to fail.
+In an *active-passive* model, one server in a cluster acts as the *primary*, or active node, while the others are *secondary*, or passive nodes. The application in such a model runs on the primary server, and only ever runs on the secondary server if the first one fails. In this model, the processing power of the secondary node(s) is mostly wasted in passive waiting for the primary node to fail.
 
-In an **active-active** model, no one server in the cluster acts as the primary server; all servers in the cluster support the application. This application in this model runs on all the servers, even splitting apart message processing between nodes to expedite processing across nodes.
+In an *active-active* model, no one server in the cluster acts as the primary server; all servers in the cluster support the application. This application in this model runs on all the servers, even splitting apart message processing between nodes to expedite processing across nodes.
 
 == About Queues
 
-You can set up a *VM queue* explicitly to *load balance* across nodes. Thus, if your entire application flow contains a sequence of child flows, Mule can assign each successive child flow to whichever node happens to be available at the time. Potentially, Mule can process a single message on multiple nodes as it passes through the entire application flow, as illustrated below:  +
+You can set up a *VM queue* explicitly to *load balance* across nodes. Thus, if your entire application flow contains a sequence of child flows, Mule can assign each successive child flow to whichever node happens to be available at the time. Potentially, Mule can process a single message on multiple nodes as it passes through the entire application flow, as illustrated below: 
 
 image:load_balancing.png[load_balancing]
 
 == About High-Reliability Applications
 
-A **high-reliability** application must feature the following:
+A *high-reliability* application must feature the following:
 
-. zero tolerance for message loss
-. a reliable underlying enterprise service bus (ESB)
-. highly reliable individual connections
+. Zero tolerance for message loss
+. Reliable underlying enterprise service bus (ESB)
+. Highly reliable individual connections
 
 The feature known as *transactionality* tracks application event sequences to ensure that each message-processing step gets completed successfully, and therefore, no messages get lost or processed incorrectly. If a step fails, for some reason, the transactional mechanism rolls back all previous processing events, then restarts the message processing sequence again.
 
 Transports such as JMS, VM, and JDBC provide built-in transactional support, thus ensuring that messages get processed reliably. For example, you can configure a transaction on an inbound JMS endpoint to remove messages from the JMS server only after the transaction has been committed. This ensures that the original message remains available for reprocessing if an error occurs during the processing flow.
 
-You must use *XA transactions* to move messages between dissimilar transports that support transactions. This ensures that the Mule commits associated transactions from both transports as a single unit. See link:/mule-user-guide/v/3.6/transaction-management[Transaction Management] for more information on XA and other types of transactions supported by Mule.
+You must use *XA transactions* to move messages between dissimilar transports that support transactions. This ensures that the Mule commits associated transactions from both transports as a single unit. See link:/mule-user-guide/v/3.3/transaction-management[Transaction Management] for more information on XA and other types of transactions supported by Mule.
 
 == Cluster Support for Transports
 
@@ -72,17 +72,17 @@ All Mule transports are supported within a cluster. Because of differences in th
 Mule supports three basic types of transports:
 
 * Socket-based transports read input sent to network sockets that Mule owns. Examples include TCP, UDP, and HTTP[S].
-* listener-based transports read data using a protocol that fully supports concurrent multiple accessors. Examples include JMS and VM.
-* resource-based transports read data from a resource that allows multiple concurrent accessors, but does not natively coordinate their use of the resource. For instance, suppose multiple programs are processing files in the same shared directory by reading, processing, and then deleting the files. These programs must use an explicit, application-level locking strategy to prevent the same file from being processed more than once. Examples of resource-based transports include File, FTP, SFTP, E-mail, and JDBC.
+* Listener-based transports read data using a protocol that fully supports concurrent multiple accessors. Examples include JMS and VM.
+* Resource-based transports read data from a resource that allows multiple concurrent accessors, but does not natively coordinate their use of the resource. For instance, suppose multiple programs are processing files in the same shared directory by reading, processing, and then deleting the files. These programs must use an explicit, application-level locking strategy to prevent the same file from being processed more than once. Examples of resource-based transports include File, FTP, SFTP, E-mail, and JDBC.
 
 All three basic types of transports are supported in clusters in different ways, as described below.
 
 * Socket-based
-** Since each clustered Mule instance runs on a different network node, each instance receives only the socket-based traffic sent to its node. Incoming socket-based traffic should be <<Clustering and Load Balancing>> to distribute it among the clustered instances.
+** Since each clustered Mule instance runs on a different network node, each instance receives only the socket-based traffic sent to its node. Incoming socket-based traffic should use <<Clustering and Load Balancing>> to distribute the traffic among the clustered instances.
 ** Output to socket-based transports is written to a specific host/port combination. If the host/port combination is an external host, no special considerations apply. If it is a port on the local host, consider using that port on the load balancer instead to better distribute traffic among the cluster.
 * Listener-based
 ** Listener-based transports fully support multiple readers and writers. No special considerations apply either to input or to output.
-** Note that, in a cluster, VM transport queues are a shared, cluster-wide resource. The cluster will automatically synchronize access to the VM transport queues. Because of this, a message written to a VM queue can be processed by any cluster node. This makes VM ideal for sharing work among cluster nodes.
+** Note that, in a cluster, VM transport queues are a shared, cluster-wide resource. The cluster automatically synchronizes access to the VM transport queues. Because of this, a message written to a VM queue can be processed by any cluster node. This makes VM ideal for sharing work among cluster nodes.
 * Resource-based
 ** Mule HA Clustering automatically coordinates access to each resource, ensuring that only one clustered instance accesses each resource at a time. Because of this, it is generally a good idea to immediately write messages read from a resource-based transport to VM queues. This allows the other cluster nodes to take part in processing the messages.
 ** There are no special considerations in writing to resource-based clustered transports:
@@ -92,9 +92,9 @@ All three basic types of transports are supported in clusters in different ways,
 
 == Clustering and Reliable Applications
 
-High-reliability applications (ones that have zero tolerance for message loss) not only require the underlying ESB to be reliable, but that reliability needs to extend to individual connections. link:/mule-management-console/v/3.6/reliability-patterns[Reliability Patterns] give you the tools to build fully reliable applications in your clusters.
+High-reliability applications (ones that have zero tolerance for message loss) not only require the underlying ESB to be reliable, but that reliability needs to extend to individual connections. link:/mule-user-guide/v/3.3/reliability-patterns[Reliability Patterns] give you the tools to build fully reliable applications in your clusters.
 
-Current Mule documentation provides link:/mule-management-console/v/3.6/reliability-patterns[code examples] that show how you can implement a reliability pattern for a number of different non-transactional transports, including HTTP, FTP, File, and IMAP. If your application uses a non-transactional transport, follow the reliability pattern. These patterns ensure that a message is accepted and successfully processed or that it generates an "unsuccessful" response allowing the client to retry.
+Current Mule documentation provides link:/mule-user-guide/v/3.3/reliability-patterns[code examples] that show how you can implement a reliability pattern for a number of different non-transactional transports, including HTTP, FTP, File, and IMAP. If your application uses a non-transactional transport, follow the reliability pattern. These patterns ensure that a message is accepted and successfully processed or that it generates an "unsuccessful" response allowing the client to retry.
 
 If your application uses transactional transports, such as JMS, VM, and JDBC, use transactions. Mule's built-in support for transactional transports enables reliable messaging for applications that use these transports.
 
@@ -104,9 +104,8 @@ These actions can also apply to non-clustered applications.
 
 When Mule clusters are used to serve TCP requests (where TCP includes SSL/TLS, UDP, Multicast, HTTP, and HTTPS), some load balancing is needed to distribute the requests among the clustered instances. There are various software load balancers available, two of them are:
 
-* Nginx, an open-source HTTP server and reverse proxy. You can use nginx's http://wiki.nginx.org/HttpUpstreamModule[HttpUpstreamModule] for HTTP(S) load balancing. You can find further information in the Linode Library entry http://library.linode.com/web-servers/nginx/configuration/front-end-proxy-and-software-load-balancing[Use Nginx for Proxy Services and Software Load Balancing].
-
-* The Apache web server, which can also be used as an HTTP(S) load balancer. You can find information on using the Apache web server for load balancing in the description of the http://httpd.apache.org/docs/2.2/mod/mod_proxy_balancer.html[Apache Module mod_proxy_balancer] and in the blog entry http://blog.search-computing.net/2010/04/load-balancing-with-apache-a-tutorial-on-mod_proxy_balancer-installation-and-configuration/[Load balancing with Apache: a tutorial on mod_proxy_balancer installation and configuration].
+* Nginx, an open-source HTTP server and reverse proxy. You can use Nginx's http://wiki.nginx.org/HttpUpstreamModule[HttpUpstreamModule] for HTTP(S) load balancing. You can find further information in the Linode Library entry http://library.linode.com/web-servers/nginx/configuration/front-end-proxy-and-software-load-balancing[Use Nginx for Proxy Services and Software Load Balancing].
+* The Apache web server, which can also be used as an HTTP(S) load balancer.
 
 There are also many hardware load balancers that can route both TCP and HTTP(S) traffic.
 
@@ -119,12 +118,12 @@ To evaluate Mule's HA clustering capabilities first-hand, download the link:/mu
 There are a number of recommended practices related to clustering. These include:
 
 * As much as possible, organize your application into a series of steps where each step moves the message from one transactional store to another.
-* If your application processes messages from a non-transactional transport, use a link:/mule-management-console/v/3.6/reliability-patterns[reliability pattern] to move them to a transactional store such as a VM or JMS store.
+* If your application processes messages from a non-transactional transport, use a link:/mule-user-guide/v/3.3/reliability-patterns[reliability pattern] to move them to a transactional store such as a VM or JMS store.
 * Use transactions to process messages from a transactional transport. This ensures that if an error is encountered, the message will be reprocessed.
 * Use distributed stores such as those used with the VM or JMS transport – these stores are available to an entire cluster. This is preferable to the non-distributed stores used with transports such as File, FTP, and JDBC – these stores are read by a single node at a time.
 * Use the VM transport to get optimal performance. Use the JMS transport for applications where data needs to be saved after the entire cluster exits.
 * Create the number of nodes within a cluster that best meets your needs.
-* Implement link:/mule-management-console/v/3.6/reliability-patterns[reliability patterns] to create high reliability applications.
+* Implement link:/mule-user-guide/v/3.3/reliability-patterns[reliability patterns] to create high reliability applications.
 
 == Prerequisites and Limitations
 
@@ -139,5 +138,5 @@ ClusterizableMessageSource dictates that only one application node inside a clus
 
 == See Also
 
-* http://www.mulesoft.com/managing-mule-esb-enterprise[Download a trial] of Mule with the Mule Management Console to experiment with High Availability. (Download **Runtime - Mule ESB Enterprise (with Management Tools)**.)
+* link:http://www.mulesoft.com/managing-mule-esb-enterprise[Download a trial] of Mule with the Mule Management Console to experiment with High Availability. (Download *Runtime - Mule ESB Enterprise (with Management Tools)*.)
 * link:/mule-user-guide/v/3.3/installing-a-commercial-license[Install an Enterprise License] to begin using the Mule Management Console to manage clusters in production.

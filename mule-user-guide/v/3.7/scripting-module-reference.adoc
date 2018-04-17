@@ -1,32 +1,38 @@
 = Scripting Module Reference
-:keywords: anypoint studio, esb, component, legacy code, script, java, javascript, python, ruby, groovy, custom code
+:keywords: anypoint studio, component, legacy code, script, java, javascript, python, ruby, groovy, custom code
 
 The scripting module provides facilities for using scripting languages in Mule. Any scripting languages that support link:http://www.jcp.org/en/jsr/detail?id=223[JSR-223] can be used inside Mule. Scripts can be used as implementations of components or transformers. Also, scripts can be used for expression evaluations, meaning message routing can be controlled using script evaluations on the current message. You can even configure Mule instances from scripts.
 
 == Component
 
-Defines a script component backed by a JSR-223 compliant script engine such as Groovy, JavaScript, or Ruby. Scripting allows you to either directly embed your script inside the XML config or reference a script using Spring's dynamic language support: http://static.springframework.org/spring/docs/2.5.x/reference/dynamic-language.html.
+Defines a script component backed by a JSR-223 compliant script engine such as Groovy, JavaScript, or Ruby. Scripting allows you to either directly embed your script inside the XML config or reference a script using link:http://docs.spring.io/autorepo/docs/spring-framework/4.1.6.RELEASE/spring-framework-reference/html/dynamic-language.html[Spring's dynamic language support].
+
+*Note*: Mule 3.7 and newer uses Spring 4.1.6.
 
 .Attributes of <component...>
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
+[%header,cols="30a,70a"]
 |===
-|Name |Type |Required |Default |Description
-|script-ref |string |no |  |A reference to a script object bean, that is, a `<script:script ...>` definition.
+|Name |Description
+|script-ref |A reference to a script object bean, that is, a `<script:script...>` definition.
+
+*Type*: string +
+*Required*: no +
+*Default*: none
 |===
 
 .Child Elements of <component...>
-[width="100%",cols="34%,33%,33%",options="header"]
+[%header,cols="30a,20a,50a"]
 |===
 |Name |Cardinality |Description
-|script |0..1 |A script to be executed by a JSR-223 compliant script engine such as Groovy, JavaScript(Rhino), Python, Ruby, or Beanshell.
-|java-interface-binding |0..* |A binding associates a Mule endpoint with an injected Java interface (this is like using Spring to inject a bean, but instead of calling a method on the bean a message is sent to an endpoint). Script bindings will only work with Java-based scripting languages. Right now there is no validation on when languages support Java bindinngs because there are so many scripting languages.
+|script |0..1 |A script to be executed by a JSR-223 compliant script engine such as Groovy, JavaScript (Rhino), Python, Ruby, or Beanshell.
+|java-interface-binding |0..* |A binding associates a Mule endpoint with an injected Java interface (this is like using Spring to inject a bean, but instead of calling a method on the bean a message is sent to an endpoint). Script bindings only work with Java-based scripting languages. Right now there is no validation on when languages support Java bindings because there are so many scripting languages.
 |===
 
-== Configuring an In-line Script
+== Configuring an Inline Script
 
-The following example demonstrates how to configure a Groovy script component with an in-line script:
+The following example demonstrates how to configure a Groovy script component with an inline script:
 
-[source, xml, linenums]
+[source,xml,linenums]
 ----
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -44,61 +50,59 @@ The following example demonstrates how to configure a Groovy script component wi
         return "$payload Received"
     </script:script>
  
-        <flow name="inlineScript">
-            <vm:inbound-endpoint path="vm:in1"/>
-            <script:component>
-                <script:script engine="groovy">
-                    return "$payload Received"
-                </script:script>
-            </script:component>
-            <vm:outbound-endpoint path="out1"/>
-        </flow>
-...
+    <flow name="inlineScript">
+      <vm:inbound-endpoint path="vm:in1"/>
+        <script:component>
+          <script:script engine="groovy">
+            return "$payload Received"
+          </script:script>
+        </script:component>
+      <vm:outbound-endpoint path="out1"/>
+    </flow>
+</mule>
 ----
 
 == Message Flows Using Bindings
 
-The following example demonstrates how to orchestrate message flows using bindings. The example calls out to two different flows and passes the results on to the outbound router:
+The following example demonstrates how to orchestrate message flows using bindings. The example calls out to two different flows and passes the results to the outbound router:
 
-[source, xml, linenums]
+[source,xml,linenums]
 ----
 <flow name="scriptWithBindings">
-            <inbound>
-                <inbound-endpoint ref="client_request"/>
-            </inbound>
-            <script:component>
-                <script:script engine="groovy">
-                    msg = CalloutService.doSomething(payload)
-                    return CalloutService.doSomethingElse(msg)
-                </script:script>
-                <script:java-interface-binding interface="org.mule.components.script.CalloutService" method="doSomething">
-                    <outbound-endpoint ref="callout_1" synchronous="true"/>
-                </script:java-interface-binding>
-                <script:java-interface-binding interface="org.mule.components.script.CalloutService" method="doSomethingElse">
-                    <outbound-endpoint ref="callout_2" synchronous="true"/>
-                </script:java-interface-binding>
-            </script:component>
-            <outbound>
-                <pass-through-router>
-                    <outbound-endpoint ref="client_response"/>
-                </pass-through-router>
-            </outbound>
-        </flow>
- 
-        <flow name="Callout1">
-            <inbound>
-                <inbound-endpoint ref="callout_1"/>
-            </inbound>
-            <test:component appendString=" Received by #[mule:context.serviceName]"/>
-        </flow>
- 
-        <flow name="Callout2">
-            <inbound>
-                <inbound-endpoint ref="callout_2"/>
-            </inbound>
-            <test:component appendString=" Received by #[mule:context.serviceName]"/>
-        </flow>
+  <inbound>
+    <inbound-endpoint ref="client_request"/>
+  </inbound>
+  <script:component>
+    <script:script engine="groovy">
+      msg = CalloutService.doSomething(payload)
+      return CalloutService.doSomethingElse(msg)
+    <script:java-interface-binding interface="org.mule.components.script.CalloutService" method="doSomething">
+      <outbound-endpoint ref="callout_1" synchronous="true"/>
+    </script:java-interface-binding>
+    <script:java-interface-binding interface="org.mule.components.script.CalloutService" method="doSomethingElse">
+      <outbound-endpoint ref="callout_2" synchronous="true"/>
+    </script:java-interface-binding>
+  </script:component>
+  <outbound>
+    <pass-through-router>
+      <outbound-endpoint ref="client_response"/>
+    </pass-through-router>
+  </outbound>
+</flow>
+<flow name="Callout1">
+  <inbound>
+    <inbound-endpoint ref="callout_1"/>
+  </inbound>
+  <test:component appendString=" Received by #[mule:context.serviceName]"/>
+</flow>
+<flow name="Callout2">
+  <inbound>
+    <inbound-endpoint ref="callout_2"/>
+  </inbound>
+  <test:component appendString=" Received by #[mule:context.serviceName]"/>
+</flow>
 ----
+
 
 == Scripting Module
 
@@ -106,20 +110,24 @@ The scripting module provides facilities for using scripting languages in Mule. 
 
 === Component
 
-Defines a script component backed by a JSR-223 compliant script engine such as Groovy, JavaScript, or Ruby. Scripting allows you to either directly embed your script inside the XML config or reference a script using Spring's dynamic language support: http://static.springframework.org/spring/docs/2.5.x/reference/dynamic-language.html.
+Defines a script component backed by a JSR-223 compliant script engine such as Groovy, JavaScript, or Ruby. Scripting allows you to either directly embed your script inside the XML config or reference a script using  link:http://docs.spring.io/autorepo/docs/spring-framework/4.1.6.RELEASE/spring-framework-reference/html/dynamic-language.html[Spring's dynamic language support].
 
 .Attributes of <component...>
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
+[%header,cols="30a,70a"]
 |===
-|Name |Type |Required |Default |Description
-|script-ref |string |no |  |A reference to a script object bean, that is, a `<script:script ...>` definition.
+|Name |Description
+|script-ref |A reference to a script object bean, that is, a `<script:script ...>` definition.
+
+*Type*: string +
+*Required*: no +
+*Default*: none
 |===
 
 .Child Elements of <component...>
-[width="100%",cols="34%,33%,33%",options="header"]
+[%header,cols="30a,20a,50a"]
 |===
 |Name |Cardinality |Description
-|script |0..1 |A script to be executed by a JSR-223 compliant script engine such as Groovy, JavaScript(Rhino), Python, Ruby, or Beanshell.
+|script |0..1 |A script to be executed by a JSR-223 compliant script engine such as Groovy, JavaScript (Rhino), Python, Ruby, or Beanshell.
 |java-interface-binding |0..* |A binding associates a Mule endpoint with an injected Java interface (this is like using Spring to inject a bean, but instead of calling a method on the bean a message is sent to an endpoint). Script bindings will only work with Java-based scripting languages. Right now there is no validation on when languages support Java bindinngs because there are so many scripting languages.
 |===
 
@@ -127,7 +135,7 @@ Defines a script component backed by a JSR-223 compliant script engine such as G
 
 When run inside Mule, scripts have a number of objects available to them in the script context. These are:
 
-[width="100%",cols="50%,50%",options="header"]
+[%header,cols="20a,80a"]
 |===
 |Name |Description
 |log |a logger that can be used to write to Mule's log file.
@@ -136,9 +144,9 @@ When run inside Mule, scripts have a number of objects available to them in the 
 |message |the current message.
 |originalPayload |the payload of the current message before any transforms.
 |payload |the transformed payload of the current message if a transformer is configured on the service. Otherwise this is the same value as _originalPayload_.
-|src |same as _payload_, kept for backward compatability.
+|src |same as _payload_, kept for backward compatibility.
 |service |a reference to the current service object.
-|id |the current event id.
+|id |the current event ID.
 |result |a placeholder object where the result of the script can be written to. Usually it's better to just return a value from the script unless the script method doesn't have a return value.
 |===
 
@@ -146,117 +154,123 @@ When run inside Mule, scripts have a number of objects available to them in the 
 
 Runs a script to perform transformation on the current message.
 
-.Attributes of <transformer...>
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
-|===
-|Name |Type |Required |Default |Description
-|===
+No Attributes of <transformer...>
 
 .Child Elements of <transformer...>
-[width="100%",cols="34%,33%,33%",options="header"]
+[%header,cols="30a,20a,50a"]
 |===
 |Name |Cardinality |Description
-|script |0..1 |A script to be executed by a JSR-223 compliant script engine such as Groovy, JavaScript(Rhino), Python, Ruby, or Beanshell.
+|script |0..1 |A script to be executed by a JSR-223 compliant script engine such as Groovy, JavaScript (Rhino), Python, Ruby, or Beanshell.
 |===
 
 === Filter
 
 Runs a script to perform filter on the current message.
 
-.Attributes of <filter...>
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
-|===
-|Name |Type |Required |Default |Description
-|===
+No Attributes of <filter...>
 
 .Child Elements of <filter...>
-[width="100%",cols="34%,33%,33%",options="header"]
+[%header,cols="30a,20a,50a"]
 |===
 |Name |Cardinality |Description
-|script |0..1 |A script to be executed by a JSR-223 compliant script engine such as Groovy, JavaScript(Rhino), Python, Ruby, or Beanshell.
+|script |0..1 |A script to be executed by a JSR-223 compliant script engine such as Groovy, JavaScript (Rhino), Python, Ruby, or Beanshell.
 |===
 
 === Script
 
-Represents a script that can be used as a component for a service or a transformer. The script text can be pulled in from a script file or can be embedded inside this element. A script can be executed by any JSR-223 compliant script engine such as Groovy, JavaScript(Rhino), Python, Ruby, or Beanshell.
+Represents a script that can be used as a component for a service or a transformer. The script text can be pulled in from a script file or can be embedded inside this element. A script can be executed by any JSR-223 compliant script engine such as Groovy, JavaScript (Rhino), Python, Ruby, or Beanshell.
 
 .Attributes of <script...>
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
+[%header,cols="20a,80a"]
 |===
-|Name |Type |Required |Default |Description
-|name |string |no |  |The name used to identify this script object. This is used when you want to reference this script object from a component or transformer.
-|engine |string |no |  |The name of the script engine being used. All scripting languages that support JSR-223 have a script engine name such as groovy, ruby, python, etc. If this value is not set, but a script file is configured, Mule will attempt to load the correct script engine according to the script file's extension.
-|file |string |no |  |The script file to load for this object. The file can be on the classpath or local file system.
+|Name |Description
+|name |The name used to identify this script object. This is used when you want to reference this script object from a component or transformer.
+
+*Type*: string +
+*Required*: no +
+*Default*: none
+|engine |The name of the script engine being used. All scripting languages that support JSR-223 have a script engine name such as groovy, ruby, python, etc. If this value is not set, but a script file is configured, Mule  attempts to load the correct script engine according to the script file's extension.
+
+*Type*: string +
+*Required*: no +
+*Default*: none
+|file |The script file to load for this object. The file can be on the classpath or local file system.
+
+*Type*: string +
+*Required*: no +
+*Default*: none
 |===
 
 .Child Elements of <script...>
-[width="100%",cols="34%,33%,33%",options="header"]
+[%header,cols="30a,20a,50a"]
 |===
 |Name |Cardinality |Description
 |text |0..1 |Used for embedding script code inside the XML. This is useful for simple scripts where you are just mocking up a quick application.
 |===
 
-=== Groovy refreshable
+=== Groovy Refreshable
 
 A wrapper for a component object that allows the underlying object to be reloaded at runtime. This makes it possible to hot-deploy new component logic without restarting.
 
 .Attributes of <groovy-refreshable...>
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
+[%header,cols="30a,70a"]
 |===
-|Name |Type |Required |Default |Description
-|name |string |yes |  |The name for this refreshable groovy bean wrapper.
-|refreshableBean-ref |string |no |  |The reference to a `groovy.lang.Groovy` object to use for this component.
-|methodName |string |no |  |The entrypoint method to invoke when a message is received for the object.
+|Name |Description
+|name |The name for this refreshable groovy bean wrapper.
+
+*Type*: string +
+*Required*: yes +
+*Default*: none
+|refreshableBean-ref |The reference to a `groovy.lang.Groovy` object to use for this component.
+
+*Type*: string +
+*Required*: no +
+*Default*: none
+|methodName |The entry point method to invoke when a message is received for the object.
+
+*Type*: string +
+*Required*: no +
+*Default*: none
 |===
 
-.Child Elements of <groovy-refreshable...>
-[width="100%",cols="34%,33%,33%",options="header"]
-|===
-|Name |Cardinality |Description
-|===
+No Child Elements of <groovy-refreshable...>
+
 
 === Lang
 
-This element allows the http://www.springframework.org/schema/lang namespace to be embedded. Within this element developers can include the Spring `lang` namespace.
+This element allows the link:http://www.springframework.org/schema/lang[Spring lang] namespace to be embedded. Within this element developers can include the Spring `lang` namespace.
 
-.Attributes of <lang...>
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
-|===
-|Name |Type |Required |Default |Description
-|===
+No Attributes of <lang...>
 
-.Child Elements of <lang...>
-[width="100%",cols="34%,33%,33%",options="header"]
-|===
-|Name |Cardinality |Description
-|===
+No Child Elements of <lang...>
 
-=== Script Configuration Builder (Deprecated, will be removed as of Mule 4.0)
 
-The link:http://www.mulesoft.org/docs/site/current/apidocs/org/mule/module/scripting/builders/ScriptConfigurationBuilder.html[ScriptConfigurationBuilder] allows developers to create a Mule instance from a JSR-223 compliant script. To load the manager from Groovy:
+=== Script Configuration Builder - Deprecated
 
-[source, java, linenums]
+(Deprecated, will be removed as of Mule 4.0)
+
+The link:http://www.mulesoft.org/docs/site/3.7.0/apidocs/org/mule/module/scripting/builders/ScriptConfigurationBuilder.html[ScriptConfigurationBuilder] allows developers to create a Mule instance from a JSR-223 compliant script. To load the manager from Groovy:
+
+[source,java,linenums]
 ----
 ConfigurationBuilder builder = new ScriptConfigurationBuilder("groovy", "../conf/mule-config.groovy");
-                MuleContext muleContext = new DefaultMuleContextFactory().createMuleContext(builder);
+MuleContext muleContext = new DefaultMuleContextFactory().createMuleContext(builder);
 ----
 
 Or to start the server from the command line:
 
-[source, code, linenums]
+[source,code,linenums]
 ----
 mule -M-Dorg.mule.script.engine=groovy
 -builder org.mule.module.scripting.builders.ScriptConfigurationBuilder
 -config ../conf/mule-config.groovy
 ----
 
-For more information about configuring a Mule instance from code or script see [Configuration Overview].
-
 === Script Context Bindings
 
 When run inside Mule, scripts have a number of objects available to them in the script context:
 
-[width="100%",cols="50%,50%",options="header"]
+[%header,cols="20a,80a"]
 |===
 |Name |Description
 |`id` |The current message ID.
@@ -277,13 +291,14 @@ If your script needs to return null, you must set result=null instead of simply 
 
 === Script Configuration Builder
 
- *Note*: Deprecated and will be removed in Mule 4.0.
+[NOTE]
+Deprecated and will be removed in Mule 4.0.
 
-The link:http://www.mulesoft.org/docs/site/3.5.0/apidocs/org/mule/module/scripting/builders/ScriptConfigurationBuilder.html[ScriptConfigurationBuilder] lets you create a Mule instance from a JSR-223 compliant script.
+The link:http://www.mulesoft.org/docs/site/3.7.0/apidocs/org/mule/module/scripting/builders/ScriptConfigurationBuilder.html[ScriptConfigurationBuilder] lets you create a Mule instance from a JSR-223 compliant script.
 
 To load the manager from Groovy:
 
-[source, java, linenums]
+[source,java,linenums]
 ----
 ConfigurationBuilder builder = new ScriptConfigurationBuilder("groovy", "../conf/mule-config.groovy"); 
 MuleContext muleContext = new DefaultMuleContextFactory().createMuleContext(builder);
@@ -291,7 +306,7 @@ MuleContext muleContext = new DefaultMuleContextFactory().createMuleContext(buil
 
 Or to start the server from the command line:
 
-[source, code, linenums]
+[source]
 ----
 mule -M-Dorg.mule.script.engine=groovy -builder org.mule.module.scripting.builders.ScriptConfigurationBuilder -config ../conf/mule-config.groovy 
 ----
@@ -300,22 +315,18 @@ mule -M-Dorg.mule.script.engine=groovy -builder org.mule.module.scripting.builde
 
 Runs a script to perform transformation on the current message.
 
-.Attributes of <transformer...>
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
-|===
-|Name |Type |Required |Default |Description
-|===
+No Attributes of <transformer...>
 
 .Child Elements of <transformer...>
-[width="100%",cols="34%,33%,33%",options="header"]
+[%header,cols="30a,20a,50a"]
 |===
 |Name |Cardinality |Description
-|script |0..1 |A script to be executed by a JSR-223 compliant script engine such as Groovy, JavaScript(Rhino), Python, Ruby, or Beanshell.
+|script |0..1 |A script to be executed by a JSR-223 compliant script engine such as Groovy, JavaScript (Rhino), Python, Ruby, or Beanshell.
 |===
 
 To use Groovy as an example, the following transformer configuration converts a comma-separated string of values to a `java.util.List`.
 
-[source, xml, linenums]
+[source,xml,linenums]
 ----
 <script:transformer name="stringReplaceWithParams">
         <script:script engine="groovy">
@@ -328,37 +339,39 @@ To use Groovy as an example, the following transformer configuration converts a 
     </script:transformer>
 ----
 
-==== Groovy refreshable
+==== Groovy Refreshable
 
 A wrapper for a component object that allows the underlying object to be reloaded at runtime. This makes it possible to hot-deploy new component logic without restarting.
 
 .Attributes of <groovy-refreshable...>
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
+[%header,cols="30a,70a"]
 |===
-|Name |Type |Required |Default |Description
-|name |string |yes |  |The name for this refreshable groovy bean wrapper.
-|refreshableBean-ref |string |no |  |The reference to a `groovy.lang.Groovy` object to use for this component.
-|methodName |string |no |  |The entrypoint method to invoke when a message is received for the object.
+|Name |Description
+|name |The name for this refreshable groovy bean wrapper.
+
+*Type*: string +
+*Required*: yes +
+*Default*: none
+|refreshableBean-ref |The reference to a `groovy.lang.Groovy` object to use for this component.
+
+*Type*: string +
+*Required*: no +
+*Default*: none
+|methodName |The entry point method to invoke when a message is received for the object.
+
+*Type*: string +
+*Required*: no +
+*Default*: none
 |===
 
-.Child Elements of <groovy-refreshable...>
-[width="100%",cols="34%,33%,33%",options="header"]
-|===
-|Name |Cardinality |Description
-|===
+No Child Elements of <groovy-refreshable...>
+
 
 ==== Lang
 
-This element allows the http://www.springframework.org/schema/lang namespace to be embedded. Within this element developers can include the Spring `lang` namespace.
+This element allows the link:http://www.springframework.org/schema/lang[Spring lang] namespace to be embedded. Within this element developers can include the Spring `lang` namespace.
 
-.Attributes of <lang...>
-[width="100%",cols="20%,20%,20%,20%,20%",options="header"]
-|===
-|Name |Type |Required |Default |Description
-|===
+No Attributes of <lang...>
 
-.Child Elements of <lang...>
-[width="100%",cols="34%,33%,33%",options="header"]
-|===
-|Name |Cardinality |Description
-|===
+No Child Elements of <lang...>
+

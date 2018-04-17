@@ -64,7 +64,7 @@ http://www.mulesoft.org/schema/mule/encryption http://www.mulesoft.org/schema/mu
 http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/secure-property-placeholder http://www.mulesoft.org/schema/mule/secure-property-placeholder/current/mule-secure-property-placeholder.xsd
-http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd" version="EE-3.6.0">
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd">
  
     <signature:config name="Signature" enableLanguage="true" doc:name="Signature">
         <signature:jce-signer-config algorithm="HmacMD5" key="JLfl5sER3kt4oVkzP2d39UQrUxrEK63LjmXAO45b6cU=" />
@@ -84,10 +84,9 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
      
     <encryption:config name="Encryption" doc:name="Encryption" />
      
-    <http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8081" doc:name="HTTP Listener Configuration"/>
-     
+
     <flow name="Get_CC_information" >
-        <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP Connector"/>
+            <http:inbound-endpoint host="localhost" port="8080"/>
         <expression-filter
             expression="#[message.inboundProperties.'http.query.params'.token] != null &amp;&amp; message.inboundProperties.'http.query.params'.user] !=null ]"
             doc:name="Expression" />
@@ -104,14 +103,14 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     </flow>
  
     <flow name="Decrypt_The_Request" >
-        <http:listener config-ref="HTTP_Listener_Configuration" path="decrypt" doc:name="HTTP Connector"/>
+        <http:inbound-endpoint host="localhost" port="8081" path="decrypt"/>
         <object-to-string-transformer doc:name="Object to String" />
         <encryption:decrypt config-ref="plainXml" using="XML_ENCRYPTER" doc:name="Decrypt the xml payload" />
         <logger level="INFO" message="#[new String(e.jce().encrypt(payload))]" doc:name="Log the return but encrypted" />
     </flow>
  
     <flow name="Get_secret_file" >
-        <http:listener config-ref="HTTP_Listener_Configuration" path="getFile" doc:name="HTTP Connector"/>
+        <http:inbound-endpoint host="localhost" port="8081" path="getFile"/>
         <expression-filter
             expression="#[message.inboundProperties.'http.query.params'.token] != null &amp;&amp; message.inboundProperties.'http.query.params'.user] !=null ]"
             doc:name="Expression" />
@@ -138,13 +137,13 @@ The sections below offer descriptions of the Anypoint Enterprise Security featur
 
 From a browser, an end user submits a request via the URL to the Mule application to acquire a customer’s credit card information. To submit this request, open your browser and type the following in the address bar:
 
-`http://localhost:8081/?user=Royal_Bank_of_Canada&token=z/TKVFswDDOQw2kjW9Y4jQ==`
+`+http://localhost:8081/?user=Royal_Bank_of_Canada&token=z/TKVFswDDOQw2kjW9Y4jQ==+`
 
 ==== Processing
 
 Upon receipt of an HTTP request, this flow uses a Mule Digital Signature Processor to verify the identity of the message’s sender. Mule evaluates the token it receives as a parameter of the request (that is, the token in the URL of the request). The table below describes the configurations of the Digital Signature Processor.
 
-[width="99",cols="20,75",]
+[cols="20,75"]
 |===
 |Config Reference |References the *Signature* global digital signature element
 |Operation |Indicates that the element verifies a signature, rather than apply a signature
@@ -189,7 +188,7 @@ After verifying that the requester is valid, Mule uses an expression to set the 
 
 Rather than returning the raw credit card information to the caller, Mule first encodes it using a Mule Message Encryption Processor. Using an XML encryption strategy, Mule encrypts the message payload. The table below describes the configurations of the encrypter.
 
-[width="99",cols="20,75",]
+[cols="20,75"]
 |===
 |Config Reference |References the *plainXML* global encryption element
 |Operation |Indicates that the element encrypts, rather than decrypt a message
@@ -223,7 +222,7 @@ image:get-cc-info-response.png[]
 
 ==== Requesting
 
-An end user submits a request to the Mule application to decrypt the message payload in order to acquire a customer’s unencrypted credit card information. Use an HTTP Request tool (such as the https://chrome.google.com/webstore/detail/rest-console/cokgbflfommojglbmbpenpphppikmonn[REST Console plugin] in the Chrome Web browser) to POST the request below to `http://localhost:8081/decrypt`
+An end user submits a request to the Mule application to decrypt the message payload in order to acquire a customer’s unencrypted credit card information. Use an HTTP Request tool (such as the link:https://chrome.google.com/webstore/detail/rest-console/cokgbflfommojglbmbpenpphppikmonn[REST Console plugin] in the Chrome Web browser) to POST the request below to `+http://localhost:8081/decrypt+`
 
 [source, xml, linenums]
 ----
@@ -239,14 +238,14 @@ After accepting an HTTP request from and end user, Mule converts the message pay
 
 Using an XML encryption strategy, Mule decrypts the message payload before logging the decryption activity. Mule then returns a response to the caller, which contains the unencrypted credit card data. The table below describes the configurations of the decrypter.
 
-[width="100%",cols="20a,75a",]
+[cols="20a,75a"]
 |===
 |Config Reference |References the *plainXML* global encryption element
 |Operation |Indicates that the element decrypts, rather than encrypt a message
 |Encrypter to use |Indicates the encryption strategy
 |===
 
-image:decrypt-xml.png[]
+image:decrypt-xml.png[decrypt-xml]
 
 [source, xml, linenums]
 ----
@@ -275,7 +274,7 @@ Finally, Mule uses the HTTP endpoint to pass the response — decrypted credit c
 
 From a browser, an end user submits a request via the URL to the Mule application to decrypt the contents of a particular file, then display the decrypted contents to the user. To submit this request, open your browser and type the following in the address bar:
 
-`http://localhost:8081/getFile?user=Royal_Bank_of_Canada&token=z/TKVFswDDOQw2kjW9Y4jQ==`
+`+http://localhost:8081/getFile?user=Royal_Bank_of_Canada&token=z/TKVFswDDOQw2kjW9Y4jQ==+`
 
 ==== Processing
 
