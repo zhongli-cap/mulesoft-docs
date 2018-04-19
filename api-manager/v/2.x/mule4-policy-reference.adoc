@@ -1,6 +1,9 @@
 = Mule Runtime 4.x Policy Reference 
 
-Rate limited APIs running under Mule 4 can use the following flags that APIs running under earlier releases cannot: Clusterizable and Expose headers
+Rate limited APIs running under Mule 4 can use the following flags that APIs running under earlier releases cannot: 
+
+* Clusterizable
+* Expose Headers
 
 == Clusterizable Flag
 
@@ -37,19 +40,52 @@ Other features that affect policies are:
 
 * Policy ordering
 +
-In API Gateway Runtime 2.x and Mule Runtime 3.x, with the exception of CORS which runs always first, Rate Limiting and Throttling policies run first in the chain. In Mule runtime 4.x, which policies run first is completely configurable with the exception of CORS.
-
+See <<About Policy Ordering>>.
++
 * DataWeave
 +
 MEL expressions are replaced by DataWeave.
-
++
 * Optional Client Secret
 +
 You can choose to check only the Client Id in your SLA policy. This is especially useful when combining this policy with a federated one.
-
++
 * Compatibility with federation policies
 +
 Federation policies (OpenAM, PingFederate, and OpenID Connect OAuth Token Access) are fully compatible with SLA policies. You can order all policies except CORS and client secret is not required. The OAuth policies can exchange the token for the client ID and feed the client ID to the SLA policy.
+
+== About Policy Ordering
+
+In API Gateway Runtime 2.x and Mule Runtime 3.x, with the exception of CORS which always runs first, Rate Limiting and Throttling policies run first in the chain. 
+
+In Mule runtime 4.x, the policies that run first is completely configurable with the exception of CORS.
+
+There is only one order for API policies, and they apply to both `<http-policy:source />` and `<http-policy:operation />`.
+
+Assume there are two API policies p1 and p2 applied in this order to an API implementation AI, for example, an API proxy.
+
+Both policies define `<http-policy:source />` and `<http-policy:operation />`.
+
+For an `<http:listener />` in AI, the order of invocation is: 
+
+. Client (request)
+. p1:source
+. p2:source (request)
+. AI (response)
+. p2:source
+. p1:source (response)
+. Client
+
+For an `<http:request />` from AI to an HTTP endpoint EP, the order is:
+
+. AI (request)
+. p1:operation
+. p2:operation
+. (request)
+. EP (response)
+. p2:operation
+. p1:operation (response)
+. AI
 
 == See Also
 
