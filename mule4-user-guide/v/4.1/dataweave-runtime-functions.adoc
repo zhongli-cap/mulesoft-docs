@@ -1,0 +1,95 @@
+= External Functions Available In DataWeave
+:keywords: lookup, properties, functions
+
+A number of functions are available in addition to DataWeave's, provided by both
+ the Mule Runtime and Modules/Connectors in your app.
+These functions can be used within DataWeave scripts and provide functionally beyond the
+language, specific to the component exposing them.
+
+== Mule Runtime Functions
+
+These functions are always available since they are injected by the Mule Runtime.
+
+=== Accessing Properties
+
+The `p` function provides access to properties, whether these are:
+
+* Mule property placeholders
+* System Properties
+* Environment properties
+
+The retrieval is done in the above order using the desired property name as a parameter.
+
+The following example will log the value of the property `some.property`.
+
+.Example: Property Function Usage
+[source,xml, linenums]
+----
+<configuration-properties file="properties.yaml"/>
+
+<flow name="simple">
+  <logger message="#[p('some.property')]"/>
+</flow>
+----
+
+If an entry for `some.property` is present in `properties.yaml` then that will be
+logged, otherwise if a system property with that name is present that will be logged.
+Finally, if there's no system property, environment properties will be checked.
+
+=== Executing a Flow
+
+The `lookup` function allows executing a flow within your app and retrieves the
+resulting payload, taking the flow's name and an input payload as parameters.
+
+The specified flow will be executed using the current attributes, variables and
+error, only replacing the payload for the parameter one, which must be a Java
+type.
+
+Learn more about `lookup` link:dataweave-lookup[here].
+
+=== Matching Errors by Types
+
+The `causedBy` function allows matching an error by it's type as an error handler
+would. This is useful when matching by a super type is required but specific sub type
+logic needed as well, or to handle a `COMPOSITE_ROUTING` error that contains child
+errors of different types.
+
+The error to match against can be implicit but the type is always a required parameter.
+
+In the following example, a global error handler is set up to handle `SECURITY`
+errors in a general way, yet specific actions are set up for `HTTP:UNAUTHORIZED`
+and `HTTP:FORBIDDEN` errors.
+
+.Example: Error Matcher Function Usage
+[source,xml, linenums]
+----
+<error-handler name="securityHandler">
+  <on-error-continue type="SECURITY">
+    <!-- general error handling for all SECURITY errors -->
+    <choice>
+      <when expression="#[error causedBy 'HTTP:UNAUTHORIZED']">
+        <!-- specific error handling only for HTTP:UNAUTHORIZED errors -->
+      </when>
+      <when expression="#[causedBy('HTTP:FORBIDDEN')]">
+        <!-- specific error handling only for HTTP:FORBIDDEN errors -->
+      </when>
+    </choice>
+  </on-error-continue>
+</error-handler>
+----
+
+Notice that the error parameter is used both explicitly and implicitly.
+
+== Connector and Module Functions
+
+Functions provided by Modules or Connectors will only be injected if said component
+is used in the app. Unlike the Runtime functions, using them requires providing
+a namespace, which will usually match the component name.
+
+For example, in an app using Batch one can use the following expression: `#[Batch::isSuccessfulRecord()]`.
+
+Check each component documentation for a list of exposed functions.
+
+== See Also
+
+* link:dw-functions[DataWeave Core Functions]
