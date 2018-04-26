@@ -1,8 +1,101 @@
-= To Import DataWeave Modules
+= To Import DataWeave Modules and Mappings
 :keywords: studio, anypoint, esb, transform, transformer, format, aggregate, rename, split, filter convert, xml, json, csv, pojo, java object, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping
 
-In DataWeave code, you can import additional components to extend the available functions. This may include additional modules that are packaged with Mule, such as the `dw::Crypto` module, or custom built modules that may contain any predefined functions you want.
+In DataWeave code, you can import additional components to extend the available variables and functions. This may include additional modules that are packaged with Mule, such as the `dw::Crypto` module, or custom built modules that may contain any predefined functions you want. 
 
+== Importing and Reusing Standard DataWeave Modules
+Here is an example of DataWeave code that imports the standard dw::Strings module, then uses the capitalize function from the dw::Strings module:
+
+.Example Module
+[source,DataWeave,linenums]
+----
+%dw 2.0
+output application/json
+
+import dw::core::Strings
+---
+(Strings::dasherize ( (payload pluck $$)[0] as String) ) : Strings::capitalize( (payload pluck $)[0] )
+----
+
+If the payload passed to this DataWeave expression is:
+
+.Example Input Payload
+[source,DataWeave,linenums]
+{
+    "some key": "bar"
+}
+----
+
+then the output of this DataWeave expression will be:
+
+.Example Output
+[source,DataWeave,linenums]
+{
+  "some-key": "Bar"
+}
+
+== Writing, Importing, and Reusing Custom DataWeave Modules
+You can also store any DataWeave functions and variables in external files and then import them in to any other event processor's DataWeave expressions. 
+
+A DataWeave module file can only contain `var`, `fun`, and `ns` declarations. It cannot contain a body expression and it cannot include an output directive. 
+
+Here is an example DataWeave module file:
+
+.Example Module
+[source,DataWeave,linenums]
+----
+%dw 2.0
+fun myfunc(name:String) = name ++ "_"
+----
+Notice this file does not contain an output directive, nor does it include the separator `---` nor any body expression after the separator. 
+
+== Creating, Importing, and Reusing a DataWeave Mapping File as a Function
+You can import any valid DataWaeve file in to another DataWeave transformation. If the DataWeave file does not contain an output directive nor a body expression, then the DataWeave file is called a DataWeave *Mapping* file. 
+
+Unlike a DataWeave Module, any functions and variables defined in the header are private and cannot be directly accessed through the DataWeave import declaration.  However, unlike a DataWeave Module that cannot have a body expression, with a DataWeave Mapping file, the body expression is available through a function call named `main`, which references the body expression. The `main` function must be called with any expected input data, such as the payload, flow variables, or other message attributes. 
+
+Here is an example of a DataWeave mapping file: 
+
+
+.Example Module
+[source,DataWeave,linenums]
+----
+%dw 2.0
+import dw::core::String
+
+fun capitalizeKey(value:String) = Strings::capitalize(value) ++ "Key"
+---
+{
+  capitalizeKey( (payload pluck $$)[0] as String ) : (payload pluck $)[0]
+}
+----
+
+Assume this DataWeave Mapping file is stored in the Mule project's modules folder in a file named MyMapping.dwl. 
+
+Here is an example of importing and reusing the body expression from this DataWeave Mapping file. 
+.Example
+[source,DataWeave,linenums]
+----
+%dw 2.0
+import modules::MyMapping
+output application/json
+---
+MyMapping::main({"payload": {user: "bar"}}
+----
+
+When you import a DataWeave mapping file, its body is considered to be an additional function named `main`. This function expects an input that follows the structure of the input that the transformation uses.
+
+Here is the result of this DataWeave mapping: 
+
+.Output
+[source,Json,linenums]
+----
+{
+    "UserKey": "bar"
+}
+----
+
+Notice that even though the capitalizeKey function is private, it is still used through the main function call, and the DataWeave Mapping file is also able to import and reuse the dw::core::Strings module. 
 
 == Import a Module
 
@@ -162,47 +255,7 @@ var myVar = "Test"
 ----
 
 
-== Import a Mapping as a Function
 
-When you import a `.dwl` file, its body is considered to be an additional function named `main`. This function expects an input that follows the structure of the input that the transformation uses.
-
-
-
-.Example
-[source,DataWeave,linenums]
-----
-%dw 2.0
-import modules::MyMapping
-output application/json
----
-MyMapping::main({"payload": {foo: "bar"}}
-----
-
-.Output
-[source,Json,linenums]
-----
-{
-    "foo": "bar"
-}
-----
-
-
-
-In this case, the module that's being imported is stored in the path `modules/MyMapping.dwl` and contains the following:
-
-
-.Reusable Mapping
-[source,DataWeave,linenums]
-----
-%dw 2.0
-output application/json
----
-{
-  foo: payload.name
-}
-----
-
-Note that there are no functions defined in this DataWeave code, yet the transformation described in the body is packaged as a function called `main`.
 
 == See Also
 
