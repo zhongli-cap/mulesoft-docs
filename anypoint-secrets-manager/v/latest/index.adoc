@@ -3,65 +3,51 @@
 Anypoint Secrets Manager uses secure vault technology to store and control access to private keys, passwords, certificates, and other secrets. +
 You can write, read, and manage your secrets, keys, and TLS certificates within a unique source from which other authorized platform services can access them on your behalf.
 
-Anypoint Secrets Manager lets you create secret groups, secrets vaults associated to your environment and business group, to which you associate your secrets. +
+Anypoint Secrets Manager can store and manage the following secret types:
+
+* *Shared Secrets*. +
+Shared secrets are used for symmetric encryption and decryption, where the secret is known by both the message sender and the message recipient. +
+Anypoint Secrets Manager lets you store three secret types used as shared secrets.
+** Passwords. +
+A password used by the sender and recipient to encode and decode the message.
+** Symmetric Keys +
+A public key cryptography used by the sender and recipient to encode and decode the message.
+** S3 Credentials. +
+A pair of security keys to access AWS S3 buckets.
+* *Certificates*. +
+Public X.509 certificates, electronic documents that bind together a public key with an identity (hostname, organization, or individual).
+* *Private Keys*. +
+A secret key value paired with a public key to set off algorithms for encryption and decryption.
+* *Keystore* +
+A repository of security certificates – either authorization certificates or public key certificates – along with their corresponding private keys.
+* *Truststore* +
+A repository of security certificates from other parties with which you expect to communicate, or from Certificate Authorities that you trust to identify other parties.
+* *Certificate Pin Set* +
+A repository of security certificates from other parties that associate a client or host with their expected X.509 certificate or public key.
+* *CRL Distributor* +
+An entity that creates and maintains a list of CA certificates that are no longer trusted because their associated private keys, or a signing CA, were compromised.
+* *TLS Context* +
+SSL Security Parameters (ciphers to use, TLS version, etc).
+
+Anypoint Secrets Manager lets you store these secrets into secret groups, vaults associated to your environment and business group. +
 Each individual Secrets Group has unique encryption keys with per instance access rules for read, write, and manage. You can later configure your applications, or platform services to request those secrets, and control which services are authorized to access them. +
-This basic task is handled by two microservices: the secrets manager, that handles the upload, edit, and storage of your secrets; and the secrets provider, which handles the provisioning of your stored secrets to the requesting clients.
+This basic task is handled by two microservices:
 
-Anypoint Secrets Manager currently works with Mule flows, Design Center flows, Cloudhub, PCF, and PCE.
-
-== Anypoint Secrets Manager Components
-
-The Anypoint Secrets Manager is composed by one authentication client, three microservices, and a client to access the vault.
-
-image::index-1dcce.png[index-1dcce]
-
-* *Authentication Client*
-+
-This client is used by Secrets Manager and Secrets Provider to authenticate incoming requests.
-+
-* *Secrets Manager*
-+
+* *Secrets Manager* +
 This service handles the upload and storing of your secrets. +
 Every time you upload a secret to your vault, the secrets manager establishes a reference to it, so it can be shared or read without revealing its content.
-+
-* *Secrets Provider*
-+
+
+* *Secrets Provider* +
 This service handles the secrets for other platform service's consumption. +
-This is the only service that can read actual secrets and due to its nature, this is an internal service and not accessible from the public network. This service is used by the requesting client to consume the secret. +
-+
-* *Notification Service*
-+
-Handles updates to the stored secrets. It pushes notifications to the queue whenever a Anypoint Secret is updated.
-+
-* *Vault Client*
-+
-Handles all interactions with the vault server where your secrets are securely stored.
+This is the only service that can read actual secrets and due to its nature, this is an internal service and not accessible from the public network. This service is used by the requesting client to consume the secret.
 
-== Anypoint Secrets Manager Usage Flows
+image::index-85615.png[]
 
-The Anypoint Secrets Manager functions follow two main flows: The upload flow to add, edit, and delete your secrets; and the download flow in which the secret provider serves the secret to the requesting client.
 
-=== Upload Flow
+Anypoint Secrets Manager does not save the actual values of your secrets within your application bundle. It saves a placeholder for those values, which is later replaced by the actual secret accessed only by the secrets provider when an authorized client requests it.
+//_TODO: Add example: (e.g org-acme-com->Design->SG1->key1). Maybe a graph?
 
-As a user, you need to login to Anypoint Platform and have the proper permissions to operate Anypoint Secrets Manager. This login information is checked by the  Authentication Client. +
-When creating, editing or deleting a secret, the secrets manager service must first assign you a lock. Only then you can upload changes to your secret group. +
-This lock prevents other users from modifying the same secret as you. This process is automatic, and there is no extra configuration needed from your end.
-
-You can upload changes from the Anyoint Platform UI, or using the Anypoint Secrets Manager API.
-
-// _TODO: Add links to the tasks.
-
-=== Download Flow
-
-This flow is operated by platform clients that request your secrets. +
-Before a client can request a secret from the secrets provider service, the secrets manager service must provide it with a grant. The client authenticates to the authentication client, gets a grant from the secrets manager, and then gets the secret from the secret provider service.
-
-The Secrets Provider response to the requesting client can be either plain or encrypted:
-
-** Plain: For clients that connect to the provider directly. +
-The payload is not encrypted but nonetheless sent over TLS, and hence protected under the TLS connection.
-** Encrypted: For clients that are intermediaries between the platform and the requesting client. +
-The payload is also encrypted, over and above from being protected under TLS connection.
+Anypoint Secrets Manager currently works with Mule flows, Design Center flows, Cloudhub, PCF, and PCE.
 
 
 == See Also
