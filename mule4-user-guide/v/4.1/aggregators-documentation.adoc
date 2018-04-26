@@ -1,0 +1,123 @@
+:toc:               left
+:toc-title:         File Connector
+:toclevels:         2
+:last-update-label!:
+:docinfo:
+:source-highlighter: coderay
+:icons: font
+
+
+= Aggregators Module Documentation Reference
+
++++
+The Aggregators module is used to collect Mule messages until a condition is met, then execute a processor's chain with the list of aggregated elements.
++++
+
+
+== Configurations
+---
+There is no configuration for Aggregators since the module is based only on operations. Each different type of aggregator will be a different operation configurable via it's parameters.
+
+== Aggregator types
+
+
+[[size-based-aggregator]]
+=== Size based Aggregator
+`<aggregators:size-based-aggregator>`
+
++++
+Aggregates elements until a pre-defined size is reached, executing the routes and listeners.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Name | String | The name of the aggregator. It can later be used to be referenced by an aggregator listener | {nbsp}| *x*{nbsp}
+| Content | Expression | The expression that defines what is going te be aggregated. The result of the evaluation will be the value stored in the aggregation | #[message] | {nbsp}
+| Max Size | Number | The total number of elements to be aggregated before considering the aggregation complete | {nbsp} | *x*{nbsp}
+| Timeout | Number |  A max time to wait for the aggregation to complete. If the timeout is reached before the total number of elements is equal to max size, the aggregation will be considered complete regarding that. A value of 0 is not supported since the group would be timing out constantly | -1(UNLIMITED) | {nbsp}
+| Timeout unit | Time Unit | The time unit in which to measure the timeout |  SECONDS | {nbsp}
+| Object Store | Object Store |  Either a name to reference a global object store or a definition of a private object store where the aggregated elements will be stored |  Default Object Store partition | {nbsp}
+| Aggregation Complete Route | Route |  Message processors that will be executed once the aggregation is complete | {nbsp} | *x*{nbsp}
+| Incremental Aggregation Route | Route | Message processors that will be executed for every new element that is aggregated | {nbsp} | {nbsp}
+|======================
+
+
+==== Throws
+* AGGREGATORS:AGGREGATOR_CONFIG {nbsp}
+
+[[time-based-aggregator]]
+=== Time based Aggregator
+`<aggregators:time-based-aggregator>`
+
++++
+Aggregates elements until a time period is completed, executing the routes and listeners.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Name | String | The name of the aggregator. It can later be used to be referenced by an aggregator listener | {nbsp}| *x*{nbsp}
+| Content | Expression | The expression that defines what is going te be aggregated. The result of the evaluation will be the value stored in the aggregation | #[message] | {nbsp}
+| Period | Number |  A time period to wait until considering the aggregation complete| {nbsp} | *x*{nbsp}
+| Period unit | Time Unit | The time unit in which to measure the time period |  SECONDS | {nbsp}
+| Max Size | Number | The total number of elements to be aggregated before considering the aggregation complete | -1(UNLIMITED) | {nbsp}
+| Object Store | Object Store |  Either a name to reference a global object store or a definition of a private object store where the aggregated elements will be stored |  Default Object Store partition | {nbsp}
+| Incremental Aggregation Route | Route | Message processors that will be executed for every new element that is aggregated | {nbsp} | {nbsp}
+|======================
+
+==== Throws
+* AGGREGATORS:AGGREGATOR_CONFIG {nbsp}
+
+[[group-based-aggregator]]
+=== Group based Aggregator
+`<aggregators:group-based-aggregator>`
+
++++
+Aggregates elements in different groups according to a group Id.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Name | String | The name of the aggregator. It can later be used to be referenced by an aggregator listener | {nbsp}| *x*{nbsp}
+| Content | Expression | The expression that defines what is going te be aggregated. The result of the evaluation will be the value stored in the aggregation | #[message] | {nbsp}
+| Group Id | Expression | The expression to be evaluated for every new message received in order to get the id for the message to be aggregated | #[correlationId] | {nbsp}
+| Group Size | Number | The size of the expected group to aggregate. All messages with the same correlation ID must have the same groupSize. If not, only the first message groupSize will be considered and a warning will be logged | #[itemSequenceInfo.sequenceSize] | {nbsp}
+| Eviction Time | Number | The time to remember a group ID once it was completed or timed out (0 means, don't remember, -1 remember forever) | 180 | {nbsp}
+| Eviction Time Unit | Time Unit | The time unit for the Eviction Time | SECONDS | {nbsp}
+| Timeout | Number |  A max time to wait for the aggregation of a group to complete. If the timeout is reached before the total number of elements in that group is equal to the group's size, the aggregation will be considered complete regarding that. A value of 0 is not supported since the group would be timing out constantly | -1(UNLIMITED) | {nbsp}
+| Timeout unit | Time Unit | The time unit in which to measure the timeout |  SECONDS | {nbsp}
+| Object Store | Object Store |  Either a name to reference a global object store or a definition of a private object store where the aggregated elements will be stored |  Default Object Store partition | {nbsp}
+| Aggregation Complete Route | Route |  Message processors that will be executed once the aggregation is complete | {nbsp} | *x*{nbsp}
+| Incremental Aggregation Route | Route | Message processors that will be executed for every new element that is aggregated | {nbsp} | {nbsp}
+|======================
+
+==== Throws
+* AGGREGATORS:GROUP_COMPLETED {nbsp}
+* AGGREGATORS:GROUP_TIMED_OUT {nbsp}
+* AGGREGATORS:NO_GROUP_ID {nbsp}
+* AGGREGATORS:NO_GROUP_SIZE {nbsp}
+* AGGREGATORS:AGGREGATOR_CONFIG {nbsp}
+
+
+== Sources
+
+[[aggregator-listener]]
+=== Aggregator Listener
+`<aggregators:aggregator-listener>`
+
++++
+Once the aggregator that is referenced by the listener completes an aggregation, the listener will be triggered with a list of all the elements.
++++
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Aggregator Name | String | The name of the aggregator to listen to. Once that aggregator releases it's elements the listener will be executed. Each listener can only references one aggregator and each aggreagaro can only be referenced by at most one listener | {nbsp} | *x*{nbsp}
+| Include Timed Out Groups | Boolean | It tells if the listener should be triggered due to a group being released by a time out | false | {nbsp}
+|======================
