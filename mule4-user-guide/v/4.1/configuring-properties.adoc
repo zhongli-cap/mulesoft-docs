@@ -1,48 +1,173 @@
-= About Configuration Properties in Mule Apps
+= Configuring Properties
+:keywords: anypoint, studio, on premises, on premise, properties, system properties, property placeholders, configuration properties
 
-Instead of using static values for connections and other configurations in your Mule app, you can create and use configuration properties that you define in a configuration file. You can manage the values from the configuration file and through system properties. Using system properties is useful if you need to change the settings when deploying to a new environment, as when you promote the application to a production environment.
+This page describes configuring properties, such as property placeholders and system properties.
 
-[[typical_use_case]]
-Typical use cases:
+== Property Placeholders
 
-* The configuration file provides default values that you can override through system properties.
-* You use a system property to choose a file with the properties that you need for the environment. In this case, you might have a configuration file for two different environments, for example, one file for development, another for production.
+You can use link:http://ant.apache.org/[Ant]-style property placeholders in your Mule configuration. For example:
 
-[[general_tasks]]
-General tasks for these use cases:
+[source,xml]
+----
+<smtp:outbound-endpoint user="${smtp.username}" password="${smtp.password}"/>
+----
 
-* Specifying each placeholder in a configuration file, for example:
-** In a YAML file: `port: 8080`
-** In a properties file: `port=8080`
-* Passing the key for the placeholder (such as `${port}`) to a connector or component in your Mule app.
-* Creating a global configuration property for your Mule app that references the configuration file, for example:
+The values for these placeholders can be made available in a variety of ways, as described in the sections that follow.
+
+== Global Properties
+
+You can use the `<global-property>` element to set a placeholder value from within your Mule configuration, such as from within another Mule configuration file. You can use the global property syntax to reference the values from a `.yaml` or `.properties` file, and create new (global) properties that depends on configuration properties, or secure configuration properties. To reference configuration properties, read the section on properties files.
+
+[source,xml, linenums]
+----
+<global-property name="smtp.host" value="smtp.mail.com"/>
+<global-property name="smtp.subject" value="Subject of Email"/>
+----
+
+== Properties Files
+
+In Anypoint Studio, you can add properties to the default properties file in your project's folders.
+
+image:properties+file.png[properties+file]
+
+To load properties from a custom file, you can place your custom properties file at `src/main/resources` and use the tag `<configuration-properties>`:
+
+[source,xml, linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+ 
+<configuration-properties file="smtp.yaml"/>
+
+<flow name="myProject_flow1">
+    <logger message="${propertyFromFile}" doc:name="System Property Set in Property File"/>
+</flow>
+----
+
+To load multiple properties files simply define a `<configuration-properties/>` tag for each file you want to load. 
+
+These files must be located at `src/main/resources`, inside your Mule project, or you can also use absolute paths.
+
+[[supported_files]]
+== Supported Files
+
+The Configuration Properties supports both YAML configuration files and Spring-formatted properties files, as shown in the examples above. The recommended approach is to use a YAML configuration files, because it allows the addition of type validations and autocompletion.
+
+We are not currently supporting any other type than String for YAML files. 
+
+== System Properties
+
+The placeholder value can come from a JDK system property. If you start Mule from the command line, you would specify the properties as follows:
+
+[source,xml]
+----
+mule -M-Dsmtp.username=JSmith -M-Dsmtp.password=ChangeMe
+----
+
+You can also edit the system properties in `conf/wrapper.conf` if you are deploying Mule as a webapp. When running Mule in a container.
+
+You can also specify the server ID in the `web.xml` file as follows:
+
+[source,xml, linenums]
+----
+<context-param>
+  <param-name>mule.serverId</param-name>
+  <param-value>MyServer</param-value>
+</context-param>
+----
+
+If you start Mule programmatically, you would specify the properties as follows before creating and starting the Mule context:
+
+[source,xml, linenums]
+----
+System.getProperties().put("smtp.username", "JSmith");
+System.getProperties().put("smtp.password", "ChangeMe");
+----
+
+=== Setting System Properties in Anypoint Studio
+
+You can also add properties when you launch your project on Anypoint Studio, through the Run Configurations menu:
+
+. Right-click your project in Package Explorer.
+. Click *Run As* > *Run Configurations*.
+. Pick the *Arguments* tab.
+. Add your arguments to the *VM arguments* field, preceding property names with *-D*
 +
-`<configuration-properties file="dev.yaml"/>` or `<configuration-properties file="${environment}.yaml"/>`
+image:Arguments+Tab.png[Arguments+Tab]
 +
-In the Studio UI, this XML is generated when you create a Global Element of type Configuration Properties.
+Your properties are now available each time you deploy your app through Studio. You can then reference them with the following syntax:
 +
-Note that `.properties` files are also acceptable here.
+[source,xml]
+----
+<logger message="${propertyFromJVMArg}" doc:name="System Property Set in Studio through JVM args"/>
+----
+
+== Environment Variables
+
+Environment variables can be defined in various different ways, there are also several ways to access these from your apps. Regardless of how an environment variable is defined, the recommended way to reference it is through the following syntax:
+
+[source,xml]
+----
+${variableName}
+----
+
+=== Environment Variables From the OS
+
+To reference a variable that is defined in the OS, you can simply use the following syntax:
+
+[source,xml]
+----
+<logger message="${USER}" doc:name="Environment Property Set in OS" />
+----
+
+=== Setting Environment Variables in Anypoint Studio
+
+You can set variables in Studio through the Run Configuration menu:
+
+. Right-click your project in Package Explorer.
+. Select *Run As* > *Run Configurations*.
+. Pick the Environment tab.
+. Click the *New* button and assign your variable a name and value.
 +
-* Specifying system properties as arguments to the command used to run the Mule app, for example:
-** Passing in `-Dport=80` to change the values of the placeholders in the configuration file.
-** Passing in `-Denvironment=prod` to change the configuration file that you pass to the global configuration property.
+image:Environment+Tab.png[Environment+Tab]
 
-More information about performing these tasks is available in the topics listed in the See Also section.
+Your variable is now available each time you deploy through Studio. You can reference it with the following syntax:
 
-== See Also
+[source,xml]
+----
+<logger message="${TEST_ENV_VAR}" doc:name="Environment Property Set in Studio"/>
+----
 
-* link:mule-app-properties-to-configure[To Create Property Placeholders for Mule Apps]
-* link:mule-app-properties-system[Working with System Properties]
-// * link:mule-app-property-placeholders-spring[To Create Placeholders for Spring Configurations]
+NOTE: The syntax makes no distinction between when you're referencing a variable in the OS and a variable defined here. In case names overlap, there's a radio button you can select when creating these variables that lets you define whether these variables overrides the original OS ones or not.
 
-////
-== Example
+image:Environment+Tab2.png[Environment+Tab2]
 
-Assume that you have properties files, one called `dev.yaml` (or `dev.properties`) where you specify development environment properties and another called `prod.yaml` (or `prod.properties`) where you specify properties for the development environment. You also have an `environment.properties` where you specify the environment (for example, `environment=dev`).
+== Setting Properties Values in Runtime Manager
 
-Assume that you have this global configuration property for your Mule app:
-`<configuration-properties file="${environment}.properties"/>`
+If you deploy your application to link:/runtime-manager/[Runtime Manager], you can also set properties through the Runtime Manager console. These can be defined when link:/runtime-manager/deploying-to-cloudhub[Deploying to CloudHub], or on an link:/runtime-manager/managing-applications-on-cloudhub[already running application].
 
-In this scenario, can use system properties to inject the properties of the correct configuration file from Studio or from the command line, for example:
-`-Denvironment=prod`
-////
+To create an environment variable or application property:
+
+. Log in to your Anypoint Platform account.
+. Click Runtime Manager.
+. Either click *Deploy Application* to deploy a new application, or select a running application and click *Manage Application*.
+. Select the *Properties* tab in the *Settings* section.
+
+See link:/runtime-manager/managing-applications-on-cloudhub[Managing Applications on CloudHub] and link:/runtime-manager/secure-application-properties[Secure Application Properties] for more details.
+
+== Properties Hierarchy
+
+Configuration properties can be overwritten. The Hierarchy in which these are treated is: 
+. Environment Properties
+. System Properties
+. Deployment Properties
+. Application Properties
+
+So, for example, if a configuration property is defined in a System Property, and there is also an application configuration property, the value for that application will be the last one. 
+
+Also, an application property could depend on Environment, System and/or Deployment properties. Deployment Properties could depend on System Properties, and so on. 
+
+
