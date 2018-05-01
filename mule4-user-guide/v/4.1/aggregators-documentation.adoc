@@ -7,10 +7,17 @@
 :icons: font
 
 
-= Aggregators Module Documentation Reference
+== Aggregators Module Documentation Reference
 
 +++
-The Aggregators module is used to collect Mule messages until a condition is met, then execute a processor's chain with the list of aggregated elements.
+The Aggregators module contains different types of aggregators capable of storing values and releasing them
+all together based on the configuration specified.
+An Aggregator is the component used to collect those values until a condition is met, then execute a processor's chain with the list of aggregated elements as the payload.
+<p>
+The basic aggregator configuration consists of the definition of the value that will be aggregated
+(extracted from the message via an expression evaluation), a condition that defines when the aggregation is complete, and a processor chain
+that will be executed once that condition is met.
+</p>
 +++
 
 
@@ -121,3 +128,31 @@ Once the aggregator that is referenced by the listener completes an aggregation,
 | Aggregator Name | String | The name of the aggregator to listen to. Once that aggregator releases it's elements the listener will be executed. Each listener can only references one aggregator and each aggreagaro can only be referenced by at most one listener | {nbsp} | *x*{nbsp}
 | Include Timed Out Groups | Boolean | It tells if the listener should be triggered due to a group being released by a time out | false | {nbsp}
 |======================
+
+
+== Time vs Event driven aggregations
+
++++
+There is a key concept needed to be understood in order to properly work with aggregators. As seen in the configurations, an
+aggregation can be considered complete based on a new event being added to the list (a max size was specified) or because some timeout or time period was completed. <br>
+That separates 2 different kind of triggers for aggregations, sync or event driven and async or time driven. This is important because the type of aggregation will define
+which chain of message processors will be executed with that list of elements.
+<p>
+If an aggregation is released by a time period or timeout completion, it will never execute the routes in it's definition. That would lead to an unwanted scenario where only a piece of a flow is executed, starting from the processor's chain
+ configured inside the aggregator and continuing with the message processors that follow it but without having executed any component from the flow's source to the aggregator itself.<br>
+ That is why the aggregator listener exists
+and why the time-based-aggregator does not accept an aggregation-comlete-route.
+</p>
+<p>
+On the other hand, if an aggregation is completed due to a new event being added to the aggregated elements list and reaching a max size,
+then both the aggregation-complete route will be executed and the aggregator listener that is hooked to that aggregator (in case there is one). That is possible because in order to have reached the aggregator,
+the message must have gone through every message processor prior to it and we can be sure that the whole flow was executed from it's source.
+</p>
+<p>
+Bottomline, if expecting an aggregation to be completed synchronously, then you can either define how to process it in a processor's chain inside the very same aggregator (aggregation-complete route) or
+in another flow with an aggregation listener as it source (or both). <br>
+Otherwise, if the aggregation will be triggered by a time period completion, the only way it will be processed is with a processor's chain defined in a separete flow and with an aggregator listener as it source.
+</p>
++++
+
+== Aggregators in a cluster
