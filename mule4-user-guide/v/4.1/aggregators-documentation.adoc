@@ -1,5 +1,5 @@
 :toc:               left
-:toc-title:         File Connector
+:toc-title:         Aggregators Module
 :toclevels:         2
 :last-update-label!:
 :docinfo:
@@ -9,19 +9,23 @@
 
 == Aggregators Module Documentation Reference
 
-+++
+
 The Aggregators module contains different types of aggregators capable of storing values and releasing them
 all together based on the configuration specified.
 An Aggregator is the component used to collect those values until a condition is met, then execute a processor's chain with the list of aggregated elements as the payload.
-<p>
+
 The basic aggregator configuration consists of the definition of the value that will be aggregated
 (extracted from the message via an expression evaluation), a condition that defines when the aggregation is considered complete, and a processor chain
 that will be executed once that condition is met.
-</p>
-+++
+
+An Aggregator is a pass-through router, meaning that the same message that processed by the aggregator is going to be processed by the message processors that follow it.
+The only modifications that it will have is the addition of some message attributes that give information about the aggregation.
+
+
 
 
 == Configurations
+
 ---
 There is no configuration for Aggregators since the module is based only on operations. Each different type of aggregator will be a different operation configurable via it's parameters.
 
@@ -32,9 +36,9 @@ There is no configuration for Aggregators since the module is based only on oper
 === Size based Aggregator
 `<aggregators:size-based-aggregator>`
 
-+++
+
 Aggregates elements until a pre-defined size is reached, executing the routes and listeners.
-+++
+
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
@@ -52,15 +56,15 @@ Aggregates elements until a pre-defined size is reached, executing the routes an
 
 
 ==== Throws
-* AGGREGATORS:AGGREGATOR_CONFIG {nbsp}
+* AGGREGATORS:AGGREGATOR_CONFIG
 
 [[time-based-aggregator]]
 === Time based Aggregator
 `<aggregators:time-based-aggregator>`
 
-+++
+
 Aggregates elements until a time period is completed, executing the routes and listeners.
-+++
+
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
@@ -76,15 +80,15 @@ Aggregates elements until a time period is completed, executing the routes and l
 |======================
 
 ==== Throws
-* AGGREGATORS:AGGREGATOR_CONFIG {nbsp}
+* AGGREGATORS:AGGREGATOR_CONFIG
 
 [[group-based-aggregator]]
 === Group based Aggregator
 `<aggregators:group-based-aggregator>`
 
-+++
+
 Aggregates elements in different groups according to a group Id.
-+++
+
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
@@ -92,9 +96,9 @@ Aggregates elements in different groups according to a group Id.
 | Name | Type | Description | Default Value | Required
 | Name | String | The name of the aggregator. It can later be used to be referenced by an aggregator listener | {nbsp}| *x*{nbsp}
 | Content | Expression | The expression that defines what is going te be aggregated. The result of the evaluation will be the value stored in the aggregation | #[message] | {nbsp}
-| Group Id | Expression | The expression to be evaluated for every new message received in order to get the id for the message to be aggregated | #[correlationId] | {nbsp}
-| Group Size | Number | The size of the expected group to aggregate. All messages with the same correlation ID must have the same groupSize. If not, only the first message groupSize will be considered and a warning will be logged | #[itemSequenceInfo.sequenceSize] | {nbsp}
-| Eviction Time | Number | The time to remember a group ID once it was completed or timed out (0 means, don't remember, -1 remember forever) | 180 | {nbsp}
+| Group Id | Expression | The expression to be evaluated for every new message received in order to get the id for the group where it should be aggregated | #[correlationId] | {nbsp}
+| Group Size | Number | The max size to assign to the group with the group ID resolved. All messages with the same group ID must have the same group size. If not, only the first resolved group size will be considered as correct and a warning will be logged for every one that does not match it | #[itemSequenceInfo.sequenceSize] | {nbsp}
+| Eviction Time | Number | The time to remember a group ID once it was completed or timed out (0 means: don't remember, -1: remember forever) | 180 | {nbsp}
 | Eviction Time Unit | Time Unit | The time unit for the Eviction Time | SECONDS | {nbsp}
 | Timeout | Number |  A max time to wait for the aggregation of a group to complete. If the timeout is reached before the total number of elements in that group is equal to the group's size, the aggregation will be considered complete regarding that. A value of 0 is not supported since the group would be timing out constantly | -1(UNLIMITED) | {nbsp}
 | Timeout unit | Time Unit | The time unit in which to measure the timeout |  SECONDS | {nbsp}
@@ -104,11 +108,11 @@ Aggregates elements in different groups according to a group Id.
 |======================
 
 ==== Throws
-* AGGREGATORS:GROUP_COMPLETED {nbsp}
-* AGGREGATORS:GROUP_TIMED_OUT {nbsp}
-* AGGREGATORS:NO_GROUP_ID {nbsp}
-* AGGREGATORS:NO_GROUP_SIZE {nbsp}
-* AGGREGATORS:AGGREGATOR_CONFIG {nbsp}
+* AGGREGATORS:GROUP_COMPLETED
+* AGGREGATORS:GROUP_TIMED_OUT
+* AGGREGATORS:NO_GROUP_ID
+* AGGREGATORS:NO_GROUP_SIZE
+* AGGREGATORS:AGGREGATOR_CONFIG
 
 
 == Sources
@@ -117,42 +121,64 @@ Aggregates elements in different groups according to a group Id.
 === Aggregator Listener
 `<aggregators:aggregator-listener>`
 
-+++
+
 Once the aggregator that is referenced by the listener completes an aggregation, the listener will be triggered with a list of all the elements.
-+++
+
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
-| Aggregator Name | String | The name of the aggregator to listen to. Once that aggregator releases it's elements the listener will be executed. Each listener can only references one aggregator and each aggreagaro can only be referenced by at most one listener | {nbsp} | *x*{nbsp}
-| Include Timed Out Groups | Boolean | It tells if the listener should be triggered due to a group being released by a time out | false | {nbsp}
+| Aggregator Name | String | The name of the aggregator to listen to. Once that aggregator releases it's elements the listener will be executed. Each listener can only reference one aggregator and each aggregator can only be referenced by at most one listener | {nbsp} | *x*{nbsp}
+| Include Timed Out Groups | Boolean | It tells if the listener should be triggered due to a group being released by a timeout | false | {nbsp}
 |======================
+
+== Aggregation attributes
+Each time a message goes through an aggregation, some attributes will be added to it with information about the aggregation.
+
+[cols=".^20%,.^20%,.^35%", options="header"]
+|======================
+| Name | Type | Description
+| Aggregation ID | String | The ID from the group where the element was aggregated. If the aggregation strategy does not aggregate by group, then this field will be an autogenerated value kept until the aggregation is released (e.g: group-based and time-based aggregators)
+| First Item Arrival Time | Date | The time when the first value was aggregated
+| Last Item Arrival Time | Date | The time when the last value was aggregated
+| Is Group Complete | Boolean | True if the aggregation is complete, False otherwise
+|======================
+
 
 
 == Time vs Event driven aggregations
 
-+++
 There is a key concept needed to be understood in order to properly work with aggregators. As seen in the configurations, an
-aggregation can be considered complete based on a new event being added to the list (a max size was specified) or because some timeout or time period was completed. <br>
+aggregation can be considered complete based on a new value being added to the list (a max size was specified) or because some timeout or time period was completed.
 That separates 2 different kind of triggers for aggregations, sync or event driven and async or time driven. This is important because the type of aggregation will define
 which chain of message processors will be executed with that list of elements.
-<p>
+
+First of all, it should be noted that for any time counter associated with an aggregator, it will start counting from the moment the first message arrives. Once the aggregation is complete, it will be reset and wait again until the next element arrives.
+
 If an aggregation is released by a time period or timeout completion, it will never execute the routes in it's definition. That would lead to an unwanted scenario where only a piece of a flow is executed, starting from the processor's chain
- configured inside the aggregator and continuing with the message processors that follow it but without having executed any component from the flow's source to the aggregator itself.<br>
+ configured inside the aggregator and continuing with the message processors that follow it but without having executed any component from the flow's source to the aggregator itself.
  That is why the aggregator listener exists
-and why the time-based-aggregator does not accept an aggregation-comlete-route.
-</p>
-<p>
+and why the time-based-aggregator does not accept an aggregation-complete-route.
+
 On the other hand, if an aggregation is completed due to a new event being added to the aggregated elements list and reaching a max size,
 then both the aggregation-complete route will be executed and the aggregator listener that is hooked to that aggregator (in case there is one). That is possible because in order to have reached the aggregator,
-the message must have gone through every message processor prior to it and we can be sure that the whole flow was executed from it's source.
-</p>
-<p>
+the message must have gone through every message processor prior to it and we can be sure that the whole flow was executed from it's source forward.
+
+
 Bottomline, if expecting an aggregation to be completed synchronously, then you can either define how to process it in a processor's chain inside the very same aggregator (aggregation-complete route) or
-in another flow with an aggregation listener as it source (or both). <br>
+in another flow with an aggregation listener as it source (or both). 
 Otherwise, if the aggregation will be triggered by a time period completion, the only way it will be processed is with a processor's chain defined in a separete flow and with an aggregator listener as it source.
-</p>
-+++
+
 
 == Aggregators in a cluster
+
+The module is developed to work in a cluster out of the box but there are some configuration details that need to be taken into account to prevent it to work unexpectedly.
+
+Whenever there is a time driven aggregation defined, once the first event arrives, it will be scheduled in the primary node of the cluster. Since new events will arrive in any node of the cluster, we need some way to notify the primary node and make it schedule that aggregation.
+In order to do that, there is another task in the primary node that checks at a fixed rate if a new aggregation should be scheduled.
+That could lead to a problem because if the interval between checks for new aggregation scheduling is much bigger than the actual timeout of the aggregation, that aggregation could be over before is even scheduled, or there may be big errors in the time computation.
+
+Given all this, there is a way to configure how frequently the primary node will check for new aggregations to be scheduled.
+You can either define this value by a global configuration property (in ms) : `schedulingPeriod` 
+or with a system property `-M-Dmule.schedulingPeriod`
