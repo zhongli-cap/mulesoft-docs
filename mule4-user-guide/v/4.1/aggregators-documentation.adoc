@@ -21,9 +21,6 @@ that will be executed once that condition is met.
 An Aggregator is a pass-through router, meaning that the same message that processed by the aggregator is going to be processed by the message processors that follow it.
 The only modifications that it will have is the addition of some message attributes that give information about the aggregation.
 
-
-
-
 == Configurations
 
 ---
@@ -89,6 +86,15 @@ Aggregates elements until a time period is completed, executing the routes and l
 
 Aggregates elements in different groups according to a group Id.
 
+Every time a new event arrives to the aggregator, the id of the element will be resolved. If a group with that id already exists in the aggregator, the value will be added to that group. Otherwise, a new group with that id will be created and the received element will be the first element in that group aggregation.
+
+Some new important concepts appear with the group based aggregator :
+
+* _Group timeout_ is when a group has to be released since all the necessary events of the group did not arrive within the expected time. If a group has timed out but is not yet evicted, it will reject any new elements that want to be added to that group.
+
+* _Group eviction_ is when a group is removed from the aggregator regardless of if it was completed or timed out. If a new element with that group's id is recieved by the aggregator, the group will be created again.
+
+Lastly, as the elements that arrive to group based aggregators are usually related to an splitted sequence, if the events have a *_sequenceNumber_*, they are sorted in increasing order prior to the aggregation release.
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
@@ -156,15 +162,17 @@ which chain of message processors will be executed with that list of elements.
 
 First of all, it should be noted that for any time counter associated with an aggregator, it will start counting from the moment the first message arrives. Once the aggregation is complete, it will be reset and wait again until the next element arrives.
 
-If an aggregation is released by a time period or timeout completion, it will never execute the routes in it's definition. That would lead to an unwanted scenario where only a piece of a flow is executed, starting from the processor's chain
- configured inside the aggregator and continuing with the message processors that follow it but without having executed any component from the flow's source to the aggregator itself.
- That is why the aggregator listener exists
-and why the time-based-aggregator does not accept an aggregation-complete-route.
+If an aggregation is released by a time period or timeout completion, it will never execute the routes in it's definition.
+That would lead to an unwanted scenario where only a piece of a flow is executed, starting from the processor's chain
+configured inside the aggregator and continuing with the message processors that follow it but without having executed
+any component from the flow's source to the aggregator itself.
+Meaning that the event must have been created within the aggregator and that is not something we want to do. Besides, if we consider the case of an aggregator inside a try scope where a transaction is started, the transaction context would not be available in the context of the MPs inside the aggregator.
+
+That is why the aggregator listener exists and why the time-based-aggregator does not accept an aggregation-complete-route.
 
 On the other hand, if an aggregation is completed due to a new event being added to the aggregated elements list and reaching a max size,
 then both the aggregation-complete route will be executed and the aggregator listener that is hooked to that aggregator (in case there is one). That is possible because in order to have reached the aggregator,
 the message must have gone through every message processor prior to it and we can be sure that the whole flow was executed from it's source forward.
-
 
 Bottomline, if expecting an aggregation to be completed synchronously, then you can either define how to process it in a processor's chain inside the very same aggregator (aggregation-complete route) or
 in another flow with an aggregation listener as it source (or both). 
