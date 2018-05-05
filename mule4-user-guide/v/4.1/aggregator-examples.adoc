@@ -1,0 +1,73 @@
+= Aggregators examples
+:keywords: aggregators, connector
+:toc:
+:toc-title:
+
+One common use case for using an aggregator is to store multiple values to then process them as a batch later.
+That is easily accomplished by using a size based aggregator.
+
+Suppose that the data that we want to aggregate is a person's name previously stored in a variable with name _personName_ and make batches of 100 elements. Once all the data is collected, we want to execute some logic defined in a flow with the name _whatToDoWithAllTheseNames_.
+
+So, we could use:
+
+[source, xml, linenums]
+----
+<aggregators:size-based-aggregator name="personsNameAggregator" maxSize="100">
+    <aggregators:content>#[vars.personName]</aggregators:content>
+    <aggregators:aggregation-complete>
+        <flow-ref name="whatToDoWithAllTheseNames"/>
+    <aggregators:aggregation-complete>
+<aggregators:size-based-aggregator/>
+----
+
+Now, suppose that we want to execute some action every time our list of names is filled by a 10%. We don't want to do this for every new element because that would mean too many executions. We can assume that the logic to be executed is in another flow named _partialAction_.
+We can use the incremental-aggregation route.
+
+[source, xml, linenums]
+----
+<aggregators:size-based-aggregator name="personsNameAggregator" maxSize="100">
+    <aggregators:content>#[vars.personName]</aggregators:content>
+    <aggregators:incremental-aggregation>
+        <choice>
+            <when expression="#[(sizeOf(payload) mod 10) == 0]">
+                <flow-ref name="partialAction"/>
+            </when>
+        </choice>
+    <aggregators:incremental-aggregation>
+    <aggregators:aggregation-complete>
+        <flow-ref name="whatToDoWithAllTheseNames"/>
+    <aggregators:aggregation-complete>
+<aggregators:size-based-aggregator/>
+----
+
+But what if we wanted don't want to be waiting forever to fill every batch. We may want to process all the events that we got even if the maxSize was not reached.
+There, we can configure a timeout for our aggregator, but taking into account that the aggregation-complete route will not be executed once a timeout happens so we need to include a listener.
+We'll set the waiting limit to 10 seconds.
+
+[source, xml, linenums]
+----
+<aggregators:size-based-aggregator name="personsNameAggregator" maxSize="100" timeout="10" timeoutUnit="SECONDS">
+    <aggregators:content>#[vars.personName]</aggregators:content>
+    <aggregators:incremental-aggregation>
+        <choice>
+            <when expression="#[(sizeOf(payload) mod 10) == 0]">
+                <flow-ref name="partialAction"/>
+            </when>
+        </choice>
+    <aggregators:incremental-aggregation>
+    <aggregators:aggregation-complete>
+        <flow-ref name="whatToDoWithAllTheseNames"/>
+    <aggregators:aggregation-complete>
+<aggregators:size-based-aggregator/>
+----
+
+And in another flow:
+[source, xml, linenums]
+----
+<aggregators:aggregator-listener aggregatorName="personsNameAggregator"/>
+<flow-ref name="whatToDoWithAllTheseNames"/>
+----
+
+Lastly, we can suppose that there was a change in the information that we recieve in the variables. Apart from the person's name, we get some other information.
+Not only that,but, we realise that we could process it better if we 
+
