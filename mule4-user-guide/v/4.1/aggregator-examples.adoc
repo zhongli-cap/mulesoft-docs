@@ -16,8 +16,8 @@ So, we could use:
     <aggregators:content>#[vars.personName]</aggregators:content>
     <aggregators:aggregation-complete>
         <flow-ref name="whatToDoWithAllTheseNames"/>
-    <aggregators:aggregation-complete>
-<aggregators:size-based-aggregator/>
+    </aggregators:aggregation-complete>
+</aggregators:size-based-aggregator>
 ----
 
 Now, suppose that we want to execute some action every time our list of names is filled by a 10%. We don't want to do this for every new element because that would mean too many executions. We can assume that the logic to be executed is in another flow named _partialAction_.
@@ -33,11 +33,11 @@ We can use the incremental-aggregation route.
                 <flow-ref name="partialAction"/>
             </when>
         </choice>
-    <aggregators:incremental-aggregation>
+    </aggregators:incremental-aggregation>
     <aggregators:aggregation-complete>
         <flow-ref name="whatToDoWithAllTheseNames"/>
-    <aggregators:aggregation-complete>
-<aggregators:size-based-aggregator/>
+    </aggregators:aggregation-complete>
+</aggregators:size-based-aggregator>
 ----
 
 But what if we wanted don't want to be waiting forever to fill every batch. We may want to process all the events that we got even if the maxSize was not reached.
@@ -54,11 +54,11 @@ We'll set the waiting limit to 10 seconds.
                 <flow-ref name="partialAction"/>
             </when>
         </choice>
-    <aggregators:incremental-aggregation>
+    </aggregators:incremental-aggregation>
     <aggregators:aggregation-complete>
         <flow-ref name="whatToDoWithAllTheseNames"/>
-    <aggregators:aggregation-complete>
-<aggregators:size-based-aggregator/>
+    </aggregators:aggregation-complete>
+</aggregators:size-based-aggregator>
 ----
 
 And in another flow:
@@ -68,6 +68,42 @@ And in another flow:
 <flow-ref name="whatToDoWithAllTheseNames"/>
 ----
 
-Lastly, we can suppose that there was a change in the information that we recieve in the variables. Apart from the person's name, we get some other information.
-Not only that,but, we realise that we could process it better if we 
+Lastly, we realise that we need to do a different processing for every person given it's nationality.
+Luckily for us, that information also comes in a variable but we want to process every person from the same country together in the same batch.
 
+We can split them with a group based aggregator.
+Let's assume that the person's nationality is previously stored in a variable with name _personNac_.
+
+Our flow should contain this:
+
+[source, xml, linenums]
+----
+<aggregators:group-based-aggregator name="personsNameByNacAggregator"
+                                    groupId="#[vars.pesonNac]"
+                                    groupSize="100"
+                                    timeout="10"
+                                    timeoutUnit="SECONDS"/>
+    <aggregators:content>#[vars.personName]</aggregators:content>
+    <aggregators:incremental-aggregation>
+        <choice>
+            <when expression="#[(sizeOf(payload) mod 10) == 0]">
+                <flow-ref name="partialAction"/>
+            </when>
+        </choice>
+    </aggregators:incremental-aggregation>
+    <aggregators:aggregation-complete>
+        <flow-ref name="whatToDoWithAllTheseNamesFromSomeCountry"/>
+    </aggregators:aggregation-complete>
+</aggregators:group-based-aggregator>
+----
+
+And we should also add a listener for timeouts:
+
+[source, xml, linenums]
+----
+<aggregators:aggregator-listener aggregatorName="personsNameByNacAggregator"/>
+<flow-ref name="whatToDoWithAllTheseNamesFromSomeCountry"/>
+----
+
+Notice that we did not configure an eviction time in the aggregator. That is because the default value is 0 (Evict right after the group is released)
+and is exactly what we want, so that if a group was completed or timed out, some next value can be added to the group without being rejected.
