@@ -18,7 +18,7 @@ The basic aggregator configuration consists of the definition of the value that 
 (extracted from the message via an expression evaluation), a condition that defines when the aggregation is considered complete, and a processor chain
 that will be executed once that condition is met.
 
-An Aggregator is a pass-through router, meaning that the same message that processed by the aggregator is going to be processed by the message processors that follow it.
+An Aggregator is a pass-through router, meaning that the same message that is processed by the aggregator is going to be processed by the components that follow it.
 The only modifications that it will have is the addition of some message attributes that give information about the aggregation.
 
 == Configurations
@@ -31,8 +31,24 @@ There is no configuration for Aggregators since the module is based only on oper
 
 [[size-based-aggregator]]
 === Size based Aggregator
-`<aggregators:size-based-aggregator>`
-
+[source, xml]
+----
+<aggregators:size-based-aggregator  name="sizeBasedAggregator"
+                                    maxSize="10"
+                                    timeout="60"
+                                    timeoutUnit="MINUTES"
+                                    objectStore="exampleObjectStore">
+    <aggregators:content>
+        #[message]
+    </aggregators:content>
+    <aggregators:incremental-aggregation>
+        ...
+    </aggregators:incremental-aggregation>
+    <aggregatos:aggregation-complete>
+        ...
+    </aggregators:aggregation-complete>
+</aggregators:size-based-aggregator>`
+----
 
 Aggregates elements until a pre-defined size is reached, executing the routes and listeners.
 
@@ -47,17 +63,34 @@ Aggregates elements until a pre-defined size is reached, executing the routes an
 | Timeout | Number |  A max time to wait for the aggregation to complete. If the timeout is reached before the total number of elements is equal to max size, the aggregation will be considered complete regarding that. A value of 0 is not supported since the group would be timing out constantly | -1(UNLIMITED) | {nbsp}
 | Timeout unit | Time Unit | The time unit in which to measure the timeout |  SECONDS | {nbsp}
 | Object Store | Object Store |  Either a name to reference a global object store or a definition of a private object store where the aggregated elements will be stored |  Default Object Store partition | {nbsp}
-| Aggregation Complete Route | Route |  Message processors that will be executed once the aggregation is complete | {nbsp} | *x*{nbsp}
-| Incremental Aggregation Route | Route | Message processors that will be executed for every new element that is aggregated. The payload will be the list of aggregated elements until this moment | {nbsp} | {nbsp}
+| Aggregation Complete Route | Route | Components chain that will be executed once the aggregation is complete | {nbsp} | *x*{nbsp}
+| Incremental Aggregation Route | Route | Components chain that will be executed for every new element that is aggregated. The payload will be the list of aggregated elements until this moment | {nbsp} | {nbsp}
 |======================
 
 
-==== Throws
+==== Raises
 * AGGREGATORS:AGGREGATOR_CONFIG
++
+{nbsp} Whenever maxSize or timeout have invalid values(e.g: maxSize < 0).
+
 
 [[time-based-aggregator]]
 === Time based Aggregator
-`<aggregators:time-based-aggregator>`
+[source, xml]
+----
+<aggregators:time-based-aggregator  name="timeBasedAggregator"
+                                    period="60"
+                                    periodUnit="MINUTES"
+                                    maxSize="10"
+                                    objectStore="exampleObjectStore">
+    <aggregators:content>
+        #[message]
+    </aggregators:content>
+    <aggregators:incremental-aggregation>
+        ...
+    </aggregators:incremental-aggregation>
+</aggregators:time-based-aggregator>`
+----
 
 
 Aggregates elements until a time period is completed, executing the routes and listeners.
@@ -73,15 +106,37 @@ Aggregates elements until a time period is completed, executing the routes and l
 | Period unit | Time Unit | The time unit in which to measure the time period |  SECONDS | {nbsp}
 | Max Size | Number | The total number of elements to be aggregated before considering the aggregation complete | -1(UNLIMITED) | {nbsp}
 | Object Store | Object Store |  Either a name to reference a global object store or a definition of a private object store where the aggregated elements will be stored |  Default Object Store partition | {nbsp}
-| Incremental Aggregation Route | Route | Message processors that will be executed for every new element that is aggregated. The payload will be the list of aggregated elements until this moment | {nbsp} | {nbsp}
+| Incremental Aggregation Route | Route | Components chain that will be executed for every new element that is aggregated. The payload will be the list of aggregated elements until this moment | {nbsp} | {nbsp}
 |======================
 
-==== Throws
+==== Raises
 * AGGREGATORS:AGGREGATOR_CONFIG
++
+{nbsp} Whenever period or maxSize have invalid values(e.g: Period = 0)
 
 [[group-based-aggregator]]
 === Group based Aggregator
-`<aggregators:group-based-aggregator>`
+[source, xml]
+----
+<aggregators:group-based-aggregator name="groupBasedAggregator"
+                                    groupId="#[correlationId]"
+                                    groupSize="#[itemSequenceInfo.sequenceSize]"
+                                    evictionTime="180"
+                                    evictionTimeUnit="SECONDS"
+                                    timeout="60"
+                                    timeoutUnit="MINUTES"
+                                    objectStore="exampleObjectStore">
+    <aggregators:content>
+        #[message]
+    </aggregators:content>
+    <aggregators:incremental-aggregation>
+        ...
+    </aggregators:incremental-aggregation>
+    <aggregatos:aggregation-complete>
+        ...
+    </aggregators:aggregation-complete>
+</aggregators:group-based-aggregator>`
+----
 
 
 Aggregates elements in different groups according to a group Id.
@@ -109,26 +164,37 @@ Lastly, as the elements that arrive to group based aggregators are usually relat
 | Timeout | Number |  A max time to wait for the aggregation of a group to complete. If the timeout is reached before the total number of elements in that group is equal to the group's size, the aggregation will be considered complete regarding that. A value of 0 is not supported since the group would be timing out constantly | -1(UNLIMITED) | {nbsp}
 | Timeout unit | Time Unit | The time unit in which to measure the timeout |  SECONDS | {nbsp}
 | Object Store | Object Store |  Either a name to reference a global object store or a definition of a private object store where the aggregated elements will be stored |  Default Object Store partition | {nbsp}
-| Aggregation Complete Route | Route |  Message processors that will be executed once the aggregation is complete | {nbsp} | *x*{nbsp}
-| Incremental Aggregation Route | Route | Message processors that will be executed for every new element that is aggregated. The payload will be the list of aggregated elements until this moment | {nbsp} | {nbsp}
+| Aggregation Complete Route | Route |  Components chain that will be executed once the aggregation is complete | {nbsp} | *x*{nbsp}
+| Incremental Aggregation Route | Route | Components chain that will be executed for every new element that is aggregated. The payload will be the list of aggregated elements until this moment | {nbsp} | {nbsp}
 |======================
 
-==== Throws
+==== Raises
 * AGGREGATORS:GROUP_COMPLETED
++
+{nbsp} When a new element has to be added to an already completed group (And the group was not yet evicted)
 * AGGREGATORS:GROUP_TIMED_OUT
++
+{nbsp} When a new element has to be added to a group that timed out (And the group was not yet evicted)
 * AGGREGATORS:NO_GROUP_ID
++
+{nbsp} When the expression that resolves to the group Id returns null
 * AGGREGATORS:NO_GROUP_SIZE
++
+{nbsp} When the expression that resolves to the group size returns null
 * AGGREGATORS:AGGREGATOR_CONFIG
++
+{nbsp} When the group size or timeout have invalid values (e.g: groupSize < 0)
 
 
 == Sources
 
 [[aggregator-listener]]
 === Aggregator Listener
-`<aggregators:aggregator-listener>`
+`<aggregators:aggregator-listener aggregatorName="exampleAggregator" includeTimedOutGroups="false">`
 
 
 Once the aggregator that is referenced by the listener completes an aggregation, the listener will be triggered with a list of all the elements.
+The aggregation listener can be used for any kind of aggregator but is really important for time driven aggregations. Those will be triggered asynchronously and not within an event context, hence, not executing any aggregator route and only being able to reach components in flows with an aggregator listener as source.
 
 
 ==== Parameters
@@ -158,14 +224,15 @@ Each time a message goes through an aggregation, some attributes will be added t
 There is a key concept needed to be understood in order to properly work with aggregators. As seen in the configurations, an
 aggregation can be considered complete based on a new value being added to the list (a max size was specified) or because some timeout or time period was completed.
 That separates 2 different kind of triggers for aggregations, sync or event driven and async or time driven. This is important because the type of aggregation will define
-which chain of message processors will be executed with that list of elements.
+which chain of components will be executed with that list of elements.
 
-First of all, it should be noted that for any time counter associated with an aggregator, it will start counting from the moment the first message arrives. Once the aggregation is complete, it will be reset and wait again until the next element arrives.
+First of all, it should be noted that for any time counter associated with an aggregator, it will start counting from the moment the first message of a group arrives. Once the aggregation is complete, it will be reset and wait again until the next element arrives.
+In the case of single group aggregators (time and size based) there will only be one time counter but for the group based aggregator, there is one counter per group.
 
 If an aggregation is released by a time period or timeout completion, it will never execute the routes in it's definition.
 That would lead to an unwanted scenario where only a piece of a flow is executed, starting from the processor's chain
-configured inside the aggregator and continuing with the message processors that follow it but without having executed
-any component from the flow's source to the aggregator itself.
+configured inside the aggregator and continuing with the components that follow it but without having executed
+any precious one from the flow's source to the aggregator itself.
 Meaning that the event must have been created within the aggregator and that is not something we want to do. Besides, if we consider the case of an aggregator inside a try scope where a transaction is started, the transaction context would not be available in the context of the MPs inside the aggregator.
 
 That is why the aggregator listener exists and why the time-based-aggregator does not accept an aggregation-complete-route.
@@ -190,6 +257,32 @@ That could lead to a problem because if the interval between checks for new aggr
 Given all this, there is a way to configure how frequently the primary node will check for new aggregations to be scheduled.
 You can either define this value by a global configuration property (in ms) : `schedulingPeriod` 
 or with a system property `-M-Dmule.schedulingPeriod`
+
+
+== Object store configuration
+
+For any aggregator, an object store can be configured either by referencing a global OS or creating a private one.
+
+* Global
+[source, xml]
+----
+<aggregators:size-based-aggregator name="globalOSAggregator"
+                                   maxSize="10"
+                                   objectStore="aGlobalObjectStore">
+
+----
+
+* Private
+[source, xml]
+----
+<aggregators:size-based-aggregator  name="privateOSAggregator" maxSize="10">
+    ...
+    <aggregators:object-store>
+        <os:private-object-store alias="privateObjectStore" persistent="false"/>
+    </aggregators:object-store>
+</aggregators:group-based-aggregator>
+----
+
 
 [[see_also]]
 == See Also
