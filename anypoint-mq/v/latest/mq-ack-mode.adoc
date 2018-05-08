@@ -1,5 +1,6 @@
 = About Acknowledgement Mode
 :keywords: mq, ack, nack, exception, strategy, mode
+:imagesdir: ./_images
 
 Anypoint MQ lets you determine how to process messages in Anypoint Studio using the Anypoint MQ connector.
 
@@ -11,6 +12,22 @@ want the current message. MQ returns the message to the queue so
 that another application can receive the message.
 
 The Anypoint MQ connector provides tools for setting these states globally or locally in your Studio application.
+
+*Notes:* 
+
+* With the Mule 4 Anypoint MQ connector, when using Ack and Nack components, you need to pass an AnypointMQMessageContext object. This object is in the MQ connector attributes to the Subscriber or Consumer components. You can insert `#[attributes]` in the Ack or Nack component that follows a Subscriber or Consumer and the MQ connector passes the AnypointMQMessageContext object for you. 
+* Other operations can potentially overwrite `#[attributes]` with new values, so if such operators exist in your flow between the Subscriber or Consumer and Ack/Nack, be sure to save Subscriber or Consumer's attributes in a variable to avoid losing it.
+
+Flow example:
+
+[source,xml,linenums]
+----
+<flow name="flow">
+    <anypoint-mq:subscriber doc:name="Subscriber" config-ref="Anypoint_MQ_Default_subscriber" destination="test"/>
+    <logger level="INFO" doc:name="Logger" message="Received MQ msg: #[payload]"/>
+    <anypoint-mq:ack doc:name="Ack" config-ref="Anypoint_MQ_Default_subscriber" messageContext="#[attributes]"/>
+</flow>
+----
 
 == Global and Local States
 
@@ -44,7 +61,7 @@ There are two possible outcomes:
 ----
 +
 * *MANUAL* - An application indicates that it sends its own Ack or Nack using the Anypoint MQ connector local state. The MQ connector doesn't provide any actions automatically. See xref:manualflow[Creating a Manual Acknowledge Flow in Anypoint Studio] for an example.
-* *NONE* - An application receives a message and the MQ connector immediately acknowledges and deletes the message. This state risks losing the message if it is not consumed correctly, but is typically used when there is a flow of constantly updating messages, such as a news feed where each subsequent message provides more detail on any messages that preceded the message. This state takes a risk, but makes coding easier. See xref:noneflow[Creating a None Acknowledge Flow in Anypoint Studio] for an example.
+* *NONE* - An application receives a message and the MQ connector immediately acknowledges and deletes the message. This state risks losing the message if it is not consumed correctly, but is typically used when there is a flow of constantly updating messages, such as a news feed where each subsequent message provides more detail on any messages that preceded the message. This state takes a risk, but makes coding easier. See xref:noneflow[Creating a None Acknowledge Flow in Anypoint Studio] for an example. *Note:* In Mule 4 MQ, NONE is called IMMEDIATE, but has the same functionality.
 +
 You can set the global state in the *Acknowledgement Mode* field:
 +
@@ -134,11 +151,14 @@ See xref:randomerror[Random Error Generator] for an explanation of how exception
 [[noneflow]]
 == Creating a None Acknowledge Mode in Anypoint Studio
 
-You can set the None Acknowledgement Mode from the Anypoint MQ connector's Global Element Properties:
+You can set the NONE Acknowledgement Mode from the Anypoint MQ connector's Global Element Properties:
 
 image:mq-global-mode-set.png[mq-global-mode-set]
 
-In the NONE flow, the Anypoint MQ connector always sends an ACK no matter what occurs. The example that follows emphasizes this risk by using the Java class xref:randomerror[RandomError] to create possible exceptions, but ignores the exceptions and sends the ACK regardless:
+In the NONE flow, the Anypoint MQ connector always sends an ACK no matter what occurs. 
+*Note:* NONE is called IMMEDIATE in the Mule 4 Anypoint MQ connector even though the functionality is the same.
+
+The example that follows emphasizes this risk by using the Java class xref:randomerror[RandomError] to create possible exceptions, but ignores the exceptions and sends the ACK regardless:
 
 [source,xml,linenums]
 ----
