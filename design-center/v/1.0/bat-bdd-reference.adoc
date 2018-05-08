@@ -14,7 +14,7 @@ The following example shows how you typically begin writing a test:
 
 [source,code,linenums]
 ----
-import * from bat::BDD         
+import * from bat::BDD
 import * from bat::Assertions
 import * from bat::Mutable
 
@@ -69,7 +69,7 @@ tests
         └── GetProjects.dwl
 ----
 
-A test file must contain a `describe` expression. 
+A test file must contain a `describe` expression.
 
 ----
 import * from bat::BDD
@@ -79,11 +79,11 @@ describe `Demo scenario` in [
 ]
 ----
 
-A test suite must contain at least one test (.dwl) file. 
+A test suite must contain at least one test (.dwl) file.
 
 == Test Blocks
 
-Test blocks make the test more readable. You can write every test block as function a call or custom interpolation. 
+Test blocks make the test more readable. You can write every test block as function a call or custom interpolation.
 
 === Test Keywords
 
@@ -102,6 +102,8 @@ You use the following keywords and follow Fowler's _GivenWhenThen_ structure, in
 |`must`       |Test step |Yes
 |`it should "str"`|Test step |No
 |`it must ""` |Test step |Yes
+|`while` |Test step | No
+|`until` |Test step | No
 |===
 
 === About a Test Block
@@ -122,7 +124,7 @@ xdescribe `A flow` in [ ... ]  // The same, but skipped.
 Custom interpolators provide a way to call functions and decompose interpolations in two lists:
 
 * The first list contains all the string literals.
-* The second one contains the interpolated values. 
+* The second one contains the interpolated values.
 
 You do not need to convert the values to strings. Enclose a custom interpolation text and value in backticks (```).
 
@@ -181,7 +183,7 @@ describe `User trades stocks` in [
         $.response.body.quantity == 150
       ]
     ]
-  ] 
+  ]
 ]
 ----
 
@@ -247,7 +249,7 @@ describe("User trades stocks") in [
 == To Control Execution and Delete Assets
 
 If you get a failure in the middle of a test, you need to delete any created assets. For example, the user creates an asset, performs a validation, and then deletes it.
-Typically, that validation fails, and since it breaks the test, the asset is not deleted and your database starts  accumulating test data. Typically this means changing a `must` to a `should` so that execution can continue, but not leave 
+Typically, that validation fails, and since it breaks the test, the asset is not deleted and your database starts  accumulating test data. Typically this means changing a `must` to a `should` so that execution can continue, but not leave
 a failed asset.
 
 Incorrect Example:
@@ -262,10 +264,10 @@ describe `update project names` in [
   ],
   it must 'update the name' in [
     updateProjectName() // FAILS
-  ], 
+  ],
   // Because the previous step is a `must` that failed, execution stops here and the next steps don't execute
   it must 'clean up deleting the project' in [
-    deleteProject()     // CANCELED
+    deleteProject()     // CANCELLED
   ]
 ]
 ----
@@ -293,8 +295,7 @@ describe `update project names` in [
      * if the validation fails.
      */
     updateProjectName() // FAILS
-  ], 
-  
+  ],
   // Because the previous step is a should and it failed, continue executing.
   it must 'clean up deleting the project' in [
     deleteProject()     // OK
@@ -313,7 +314,7 @@ For example:
 [source,code,linenums]
 ----
 describe `E2E Scenario` in [
-  it should 'always do something' in [ 
+  it should 'always do something' in [
     doSomething()
   ],
   it should 'do something else' in [
@@ -335,7 +336,7 @@ To make the code more readable and understandable, you can use two aliases for t
 [source,code,linenums]
 ----
 describe `E2E Scenario` in [
-  it should 'always do something' in [ 
+  it should 'always do something' in [
     doSomething()
   ],
   it must 'do something else' when config.runSanity in [
@@ -349,3 +350,57 @@ describe `E2E Scenario` in [
   ]
 ]
 ----
+
+== Executing Loop Sentences
+
+The while or until functions run the test while (or until) a condition becomes true or false. 
+
+Signature of the while function:
+
+* `while( sentence , condition, time per request, number of retries)`
+* `do { sentence } while (condition) //-> Default values: 1 second and 3 retries`.
+
+Signature for the until function:
+
+* `until( sentence , condition, time per request, number of retries)`
+* `do { sentence } until (condition) //-> Default values: 1 second and 3 retries`.
+
+Example:
+
+[source,java,linenums]
+----
+dwl
+import * from bat::BDD
+import * from bat::Assertions
+import * from bat::Types
+---
+suite("Example for until and while") in [
+  it should 'test the while prefix' in [
+    while(() -> GET `http://apimon.cloudhub.io/users` with {}, 
+    (x: BATHttpStep) -> x.result.response.status != 200, 10000, 5)
+  ],
+  it should 'test the while infix' in [
+    do {
+      () -> GET `http://apimon.cloudhub.io/users` with {} assert [
+          $.response.status mustEqual 200
+        ]
+    } while ($.response.status != 200)
+  ],
+  it should 'test the until prefix' in [
+    until(() -> GET `http://apimon.cloudhub.io/users` with {}, 
+     (x: BATHttpStep) -> x.result.response.status != 200, 10000, 5)
+  ],
+  it should 'test the until infix' in [
+    do {
+      () -> GET `http://apimon.cloudhub.io/users` with {} assert [
+          $.response.status mustEqual 200
+        ]
+    } until ($.result.response.status != 200)
+  ]
+]
+----
+
+== See Also
+
+* https://forums.mulesoft.com[MuleSoft Forum].
+* https://support.mulesoft.com[Contact MuleSoft Support].
