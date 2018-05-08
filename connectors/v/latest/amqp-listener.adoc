@@ -1,0 +1,106 @@
+= To Listen For New Messages
+:keywords: amqp, connector, consume, message, source, listener
+:toc:
+:toc-title:
+
+The Listener source in the AMQP connector provides ability to consume Messages as they arrive to an AMQP Queue.
+
+== Listening for New Messages
+The syntax to listen for new messages from a Queue is:
+
+[source, xml, linenums]
+----
+<amqp:listener config-ref="config" queueName="#[vars.queueName]"/>
+----
+
+The source above will listen for new messages in the Queue identified by the queue, returning a `AmqpMessage` each time a AMQP Message is available in the Queue.
+
+The _AmqpMessage_ will have:
+
+* The message's content as payload.
+* The message's metadata in the message attributes.
+
+By default, the Message consumed will be ACKed only when the execution of the flow receiving the message completes successfully.
+If instead, an error occurs during the execution of the flow, the Session will be recovered and the Message will be redelivered according to the recoverStrategy.
+
+For more information regarding a Message ACK, check the link:amqp-ack[How To Handle Message Acknowledgement].
+
+
+== Configuring Message Throughput
+
+When extra processing power is needed, the AMQP Listener allows you to configure the `numberOfConsumers` that a given listener will use to consume messages concurrently.
+By default, each listener will use four consumers that will produce messages concurrently, each using a separate channel. Since each consumer will wait for the Message to be processed, that means that you'll have a maximum of four messages in-flight at the same time.
+If you need to increase the concurrent message processing, just increase the `numberOfConsumers` in the Listener. Each consumer will use a different channel.
+
+== Mime Types and Encoding
+
+The AMQP Connector does its best to auto determine a Message’s mime type (`contentType`) based on the `contentType` property of the message. However, there are cases in which that best guess is not enough, and you need first-hand knowledge of the Message’s content.
+
+In such cases, you can force that content type to a particular value by using the `contentType` parameter.
+
+The same process works for encoding. By default, the connector will assume that the runtime’s default encoding matches the one in the Message if no other information is provided. You can set this by using the `inboundEncoding` parameter.
+
+== Declaring a Queue in the AMQP Listener
+
+By default, the `consume` operation will fail in case the defined queue does not exist with an `AMQP:QUEUE_NOT_FOUND` error.
+
+For cases where the queue has to be declared, a definition for the entity should be referenced or inline defined so that the queue is declared.
+
+[source, xml, linenums]
+----
+<amqp:listener config-ref="Amqp_Config" queueName="testQueue">
+	<amqp:fallback-queue-definition removalStrategy="SHUTDOWN" exchangeToBind="echangeToBind" />
+</amqp:listener>
+----
+
+Notice that in the definition of the queue a binding can be created using the parameter exchangeToBind.
+
+The queue can also be defined as a high level element:
+
+[source, xml, linenums]
+----
+<amqp:queue-definition name="targetQueueDefinition" exchangeToBind="testExchange" />
+
+<amqp:listener config-ref="Amqp_Config" queueName="testQueue" fallbackQueueDefinition="targetQueueDefinition">
+----
+
+A high level element can also be referenced using an expression.
+
+[source, xml, linenums]
+----
+<amqp:listener config-ref="Amqp_Config" queueName="testQueue" fallbackQueueDefinition="#[targetQueueDefinition]">
+----
+
+== How to avoid changing the AMQP Topography
+
+You can set the `createFallbackQueue` global config properties so that any declaration of AMQP queues is disabled. This parameter has been added for those scenarios where it must be guaranteed that no changes to the AMQP topography will be attempted. In those cases, both the declaration of queues which does not previously exist will result in an `AMQP:CREATION_NOT_ALLOWED` error.
+
+Take for example the following flow:
+
+[source, xml, linenums]
+----
+<amqp:config name="Amqp_Config" createFallbackQueue="false" >
+	<amqp:connection host="localhost" username="guest" password="guest" />
+</amqp:config>
+
+
+<flow name="mule-no-create-fallback-queue">
+	<amqp:listener config-ref="Amqp_Config" queueName="testQueue">
+		<amqp:fallback-queue-definition removalStrategy="SHUTDOWN" exchangeToBind="echangeToBind" />
+	</amqp:listener>
+	<amqp:consume config-ref="Amqp_Config" queueName="testQueue">
+		<amqp:fallback-queue-definition removalStrategy="SHUTDOWN" exchangeToBind="exchangeToBind" />
+	</amqp:consume>
+</flow>
+----
+
+If the `testQueue` exchange does not exist and the createFallbackQueue is set to false, the start of the listener shall derive in a `AMQP:CREATION_NOT_ALLOWED` error. 
+
+== Replying to Incoming Messages
+
+When an incoming AMQP Message declares a REPLY_TO property, the AMQP Listener will automatically produce a response *when the Message is processed successfully*, meaning that no error occurs during the flow execution.
+In that case, when the flow is completed a response will be published to the destination specified in the processed Message header.
+
+== See Also
+
+* link:amqp-consume[To Consume Messages]
