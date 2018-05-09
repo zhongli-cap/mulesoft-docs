@@ -7,12 +7,12 @@
 
 A Smart Connector is a component that can be used in Mule applications that's been custom created via a specific framework. This framework allows you to create components entirely by using other existing Mule components.
 
-Creating a Smart Connector should feel familiar to someone with experience creating Mule applications. The framework adds just a few syntactic idioms to enclose the main parts of Smart Connectors, such as `<module>`, `<operation>s`, and `<parameter>s`. Below is a short snippet that defines a single operation in the `Math Smart Connector`:
+Creating a Smart Connector should feel familiar to someone with experience creating Mule applications. The framework adds just a few syntactic idioms to enclose the main parts of Smart Connectors, such as `<module>`, `<operation>s`, and `<parameter>s`. Below is a short snippet that defines a single operation in the `Hello Smart Connector`:
 
 [source,xml,linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
-<module name="Hello Smart Connector" minMuleVersion="4.0.0" ...>
+<module name="Hello Smart Connector"  ...>
   <operation name="say-hello" doc:description="Greets you!">
     <body>
       <mule:set-payload value="Hello World!"/>
@@ -45,7 +45,7 @@ The structure of a Smart Connector is composed of three key elements that deline
 * The enclosing *Module*
 
 
-=== Operation
+=== Operations
 
 An `<operation>`, similar to a function, is a prescriptive way of defining a set of input parameters and a single output. Like a function, it has *input parameters*, it performs actions (described in the *body*) and has a single *output*. Unlike a function, the behavior of an operation could vary if it stores values or references external sources.
 
@@ -54,7 +54,7 @@ An `<operation>`, similar to a function, is a prescriptive way of defining a set
 +
 Keep in mind that these parameters are the only data that the message processors in the `<body>` scope have access to.
 * *Body*: defines a chain of components to be executed just like in a flow.
-* *Output*: declares the output of your smart connector. This is the payload of the event after being processed by the `<body>`.
+* *Output*: declares the output type of your smart connector. This is the payload's type of the event after being processed by the `<body>`.
 
 The following Smart Connector takes two numbers as parameters and has a single operation that sums them together:
 
@@ -128,6 +128,8 @@ To invoke this smart connector from a Mule Application, use it in a flow:
 * *CONTENT* implies support for DataWeave in place as a child element.
 * *PRIMARY* works similarly to *CONTENT* but maps to the payload by default.
 
+link:https://docs.mulesoft.com/mule-sdk/v/1.1/content-parameters[More info on roles]
+
 |summary
 |optional
 |NA
@@ -183,6 +185,8 @@ Attributes types definition are also supported by `<operation>`s, by adding an e
 
 |===
 
+Both outputs (`<output>` and `<output-attributes>`) are part of the (new) `MuleMessage` that will be created as soon as the control goes back to the invoker.
+
 === Properties
 
 ////
@@ -207,7 +211,7 @@ The following Smart Connector sends requests to link:https://developer.github.co
 
 [source,xml,linenums]
 ----
-<module name="Github" minMuleVersion="4.0.0" ...>
+<module name="Github"  ...>
   <property name="username" type="string" doc:description="Username credential."/>
   <property name="password" type="string" password="true" doc:description="Password credential"/>
 
@@ -221,7 +225,7 @@ The following Smart Connector sends requests to link:https://developer.github.co
 
   <operation name="get-user" doc:description="Lists public and private profile information when authenticated.">
     <body>
-      <httpn:request config-ref="github-httpreq-config" path="user" method="GET"/>
+      <httpn:request config-ref="github-httpreq-config" path="#['user/' ++ vars.username]" method="GET"/>
     </body>
     <output type="string" doc:description="User information if logged properly."/>
   </operation>
@@ -336,14 +340,6 @@ If the right credentials aren't provided, it returns this error response from Gi
 |===
 
 
-
-
-
-
-
-
-
-
 * *Global Elements*: Mule link:https://docs.mulesoft.com/mule-user-guide/v/3.7/global-elements[Global elements], such as `<http:requester-config ../>`, to delegate connectivity to, allowing the use of any other connector in a Smart Connector.
 
 There are cases where several operations need to handle a single state between them. This is the case of a connector that handles session to an external API.
@@ -366,11 +362,6 @@ The `<module>` element is the root element of the Smart Connector, which holds t
 |optional
 |"MuleSoft"
 |Vendor of the Smart Connector
-
-|minMuleVersion
-|required
-|NA
-|Defines the minimal Mule runtime version this Smart Connector runs on.
 
 |prefix
 |optional
@@ -439,7 +430,7 @@ The following module only has a `name` attribute `name="hello with spaces"`. Thi
 
 [source,xml,linenums]
 ----
-<module name="hello with spaces" minMuleVersion="4.0.0"
+<module name="hello with spaces"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation=" ... ">
   <operation name="an-operation" />
@@ -471,7 +462,7 @@ Then, from a command line execute the following:
 mvn archetype:generate                                       \
   -DarchetypeGroupId=org.mule.smart.connector                \
   -DarchetypeArtifactId=smart-connector-project-archetype    \
-  -DarchetypeVersion=1.0.0-BETA-SNAPSHOT                     \
+  -DarchetypeVersion=1.0.0                                   \
   -DgroupId=org.mule.smart.connector                         \
   -DartifactId=hello-smart-connector                         \
   -DmuleConnectorName=Hello
@@ -560,7 +551,7 @@ Lets say a specific connector needs the HTTP Connector and the OAuth module, the
 *2)* Add the proper schema location into the `<module>` root element.
 [source,xml,linenums]
 ----
-<module name="Hello Smart Connector" prefix="module-hello" minMuleVersion="4.0.0-BETA-SNAPSHOT"
+<module name="Hello Smart Connector" prefix="module-hello"
     ...
     xmlns:httpn="http://www.mulesoft.org/schema/mule/http"
     xmlns:oauth="http://www.mulesoft.org/schema/mule/oauth"
@@ -572,14 +563,14 @@ Lets say a specific connector needs the HTTP Connector and the OAuth module, the
 </module>
 ----
 
-== Relying on operations defined in the same module 
+== Relying on operations defined in the same module
 There will be scenarios where some operations will have repeated message processors, to which we could rely if they were encapsulated in an new operation and call it from other places.
 All the `<operation>`s defined in a `<module>` could be reused in *that same* `<module>` if they don't have cyclic dependencies.
 Lets assume there's a `<module>` that does some inserts and updates but first validates the input parameters, something like the following module:
 [source,xml,linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
-<module name="module-calling-operations-within-module" minMuleVersion="4.0.0"
+<module name="module-calling-operations-within-module"
         xmlns="http://www.mulesoft.org/schema/mule/module"
         xmlns:mule="http://www.mulesoft.org/schema/mule/core"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -647,7 +638,7 @@ The complete module will be something like the following:
 [source,xml,linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
-<module name="module-calling-operations-within-module" minMuleVersion="4.0.0"
+<module name="module-calling-operations-within-module"
         xmlns="http://www.mulesoft.org/schema/mule/module"
         xmlns:mule="http://www.mulesoft.org/schema/mule/core"
         xmlns:tns="http://www.mulesoft.org/schema/mule/module-calling-operations-within-module"
@@ -705,7 +696,7 @@ Let's take a simple example of a `<module name="module-using-file">` that depend
 [source,xml,linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
-<module name="module-using-file" minMuleVersion="4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<module name="module-using-file"  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xmlns="http://www.mulesoft.org/schema/mule/module"
         xmlns:file="http://www.mulesoft.org/schema/mule/file"
         xsi:schemaLocation="
@@ -723,7 +714,7 @@ If two, or more, global elements are being used in a `<module>` and provide test
 [source,xml,linenums]
 ----
 <?xml version="1.0" encoding="UTF-8"?>
-<module name="module-using-file" minMuleVersion="4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<module name="module-using-file"  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xmlns="http://www.mulesoft.org/schema/mule/module"
         xmlns:file="http://www.mulesoft.org/schema/mule/file"
         xsi:schemaLocation="
@@ -810,7 +801,7 @@ hello-smart-connector/smart-connector
 Once placed, we can start leveraging `type`s to the defined ones in the catalog as well as the primitive ones (*string*, *integer*, *boolean*, etc.), which in this scenario are `PersonXsdType` and `PersonJsonType` by just adding an operations such as:
 [source,xml,linenums]
 ----
-<module name="Hello Smart Connector" prefix="module-hello" minMuleVersion="4.0.0-BETA-SNAPSHOT" ... >
+<module name="Hello Smart Connector" prefix="module-hello" ... >
   ...
   <operation name="person-xml-to-json" doc:description="Takes a Person in XML format and translates it to JSON">
     <parameters>
@@ -908,7 +899,7 @@ To use the above operations, we would need to properly feed the values and execu
 It might be common that for parameterizing values that are not primitive types, the defined `<operation>` declare them as `role="CONTENT"` so that it won't be mandatory to use an extra processor in the `<flow>` to call the operation. Taking the `person-xml-to-json` operation, we will add the extra attribute to the `content` parameter:
 [source,xml,linenums]
 ----
-<module name="Hello Smart Connector" prefix="module-hello" minMuleVersion="4.0.0-BETA-SNAPSHOT" ... >
+<module name="Hello Smart Connector" prefix="module-hello" ... >
   ...
   <operation name="person-xml-to-json" doc:description="Takes a Person in XML format and translates it to JSON">
     <parameters>
@@ -966,7 +957,6 @@ Location `link:https://github.com/mulesoft-labs/smart-connectors-integration-tes
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 <module name="module-using-core"
-        minMuleVersion="4.0.0"
         doc:description="This module relies entirely in runtime provided components (no other Plugin dependencies)"
 
         xmlns="http://www.mulesoft.org/schema/mule/module"
@@ -1000,7 +990,6 @@ Location `link:https://github.com/mulesoft-labs/smart-connectors-integration-tes
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 <module name="module-using-custom-types-json"
-        minMuleVersion="4.0.0"
         doc:description="This module relies entirely in runtime provided components (no other Plugin dependencies)"
 
         xmlns="http://www.mulesoft.org/schema/mule/module"
@@ -1059,7 +1048,6 @@ Location `link:https://github.com/mulesoft-labs/smart-connectors-integration-tes
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 <module name="module-using-custom-types-xsd"
-        minMuleVersion="4.0.0"
         doc:description="This module relies entirely in runtime provided components (no other Plugin dependencies)"
 
         xmlns="http://www.mulesoft.org/schema/mule/module"
@@ -1119,7 +1107,6 @@ Location `link:https://github.com/mulesoft-labs/smart-connectors-integration-tes
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 <module name="module-using-dw"
-        minMuleVersion="4.0.0"
         doc:description="This module relies entirely in runtime provided components (no other Plugin dependencies) and DW"
 
         xmlns="http://www.mulesoft.org/schema/mule/module"
@@ -1153,7 +1140,6 @@ Location `link:https://github.com/mulesoft-labs/smart-connectors-integration-tes
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 <module name="module-using-file"
-        minMuleVersion="4.0.0"
 
         xmlns="http://www.mulesoft.org/schema/mule/module"
         xmlns:file="http://www.mulesoft.org/schema/mule/file"
@@ -1188,7 +1174,6 @@ Location `link:https://github.com/mulesoft-labs/smart-connectors-integration-tes
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 <module name="module-using-http"
-        minMuleVersion="4.0.0"
 
         xmlns="http://www.mulesoft.org/schema/mule/module"
         xmlns:mule="http://www.mulesoft.org/schema/mule/core"
@@ -1236,7 +1221,6 @@ Location `link:https://github.com/mulesoft-labs/smart-connectors-integration-tes
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 <module name="module-using-smart-connector"
-        minMuleVersion="4.0.0"
 
         xmlns="http://www.mulesoft.org/schema/mule/module"
         xmlns:module-using-core="http://www.mulesoft.org/schema/mule/module-using-core"
@@ -1260,7 +1244,6 @@ Location `link:https://github.com/mulesoft-labs/smart-connectors-integration-tes
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 <module name="module-using-validation"
-        minMuleVersion="4.0.0"
 
         xmlns="http://www.mulesoft.org/schema/mule/module"
         xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
