@@ -1,0 +1,180 @@
+= Using Generic Parameters For Extended Behavior
+
+:keywords: parameter, parameters, mule, sdk, dsl, xml, subtype, type
+
+Type definitions are a big part of a Module API in terms of the experience provided to the user. This means that leveraging the right construction of types can greatly simplify the API that you expose to the user.
+
+== Simplifying the UX with SubTypeMapping
+
+There are cases were a given parameter represents a generic component, like `authentication` or `destination`, which can have multiple valid sets of configurations. Your `authentication` can be of different types (`basic`, `digest`, `ntlm`, `oauth`) but it would be a terrible experience for the user to have all the parameters of each authentication available all at once.
+
+For example, if we want to have an `authentication` that supports `basic`, `digest` and `ntlm` in a single parameter, our Authentication element would look similar to:
+
+[source, Java, linenums]
+----
+public class Authentication {
+
+  @Parameter
+  private boolean useDigest; //<1>
+
+  @Parameter
+  private String username;
+
+  @Parameter
+  @Password
+  private String password;
+
+  @Parameter
+  @Optional
+  private String domain; //<2>
+
+  @Parameter
+  @Optional
+  private String workstation;
+
+}
+----
+
+Here, the user has faces a bad UX, since they have one parameter, (1) `useDigest`, that is only relevant to separate from `basic` and `digest`, and two other parameters (2)(`domain` and `workstation`) that are only relevant for `ntlm` configuration, in which case the `useDigest` value becomes irrelevant. As you can see, it's easy to get lost in the correct configuration even when you need only four parameters.
+
+A much better way of doing this would be using `@SubTypeMapping`:
+
+[source, Java, linenums]
+----
+
+@Extension(name = "HTTP")
+@SubTypeMapping(baseType = Authentication.class, // <1>
+    subTypes = {BasicAuthentication.class, DigestAuthentication.class, NtlmAuthentication.class})
+public class HttpConnector {
+
+}
+
+public interface Authentication { // <2>
+
+  void authenticate(HttpRequestBuilder builder);
+
+}
+
+public class BasicAuthentication implements Authentication { // <3>
+
+  @Parameter
+  private String username;
+
+  @Parameter
+  @Password
+  private String password;
+
+}
+
+public class DigestAuthentication implements Authentication { // <4>
+
+  @Parameter
+  private String username;
+
+  @Parameter
+  @Password
+  private String password;
+
+}
+
+public class NtlmAuthentication implements Authentication { // <5>
+
+  @Parameter
+  private String username;
+
+  @Parameter
+  @Password
+  private String password;
+
+  @Parameter
+  @Optional
+  private String domain;
+
+  @Parameter
+  @Optional
+  private String workstation;
+
+}
+----
+
+ <1> Declaration of the `SubTypeMapping`
+ <2> Generic `Authentication` interface
+ <3> Implementation of `Authentication` as `basic`
+ <4> Implementation of `Authentication` as `digest`
+ <5> Implementation of `Authentication` as `ntlm`
+
+Now, when you declare a parameter of the generic type `Authentication`:
+
+[source, Java, linenums]
+----
+@Alias("request")
+public class HttpRequesterProvider implements CachedConnectionProvider<HttpExtensionClient> {
+
+  @Parameter
+  private Authentication authentication;
+}
+----
+
+The user is able to declare each of the three possible values in a more concise and coherent way:
+
+[source, xml, linenums]
+----
+<http:request-connection>
+  <http:authentication>
+      <http:basic-authentication username="withBasic" password="123">
+  </http:authentication>
+</http:request-connection>
+
+<http:request-connection>
+  <http:authentication>
+      <http:digest-authentication username="withDigest" password="456">
+  </http:authentication>
+</http:request-connection>
+
+<http:request-connection>
+  <http:authentication>
+      <http:ntlm-authentication username="withNtlm" password="Beeblebrox" domain="Ursa-Minor"/>>
+  </http:authentication>
+</http:request-connection>
+----
+
+== Extending Behaviour With Modules Contribution
+
+Even better, you may want any Module to be able to provide it's own way of authentication. This can be done easily using a combination of `@Import` and `@SubTypeMapping`. In this case, we'll contribute an `oauth` authentication to the http module:
+
+
+[source, Java, linenums]
+----
+@Extension(name = "OAuth")
+@Import(type = HttpRequestAuthentication.class) //<1>
+@SubTypeMapping(baseType = Authentication.class, //<2>
+    subTypes = {DefaultAuthorizationCodeGrantType.class, ClientCredentialsGrantType.class})
+public class OAuthExtension {
+
+}
+----
+
+<1> Declare the import from the HTTP Authentication type.
+<2> Add more subtype mappings to the `Authentication` type from the OAuth extension.
+
+Now, once the two new authentication methods are implemented, we can parameterize them to the HTTP connector in any application, without modifying any code of the original extension. That is, for the same application we had above, we can now do:
+
+[source, xml, linenums]
+----
+<http:request-connection host="localhost" port="${oauth.server.port}">
+    <http:authentication> // <1>
+        <oauth:authorization-code-grant-type // <2>
+                clientId="${client.id}"
+                clientSecret="${client.secret}"
+                externalCallbackUrl="${local.callback.url}"
+                tokenManager="multitenantOauthConfig"
+                localAuthorizationUrl="${local.authorization.url}"
+                authorizationUrl="${authorization.url}"
+                refreshTokenWhen="#[attributes.statusCode == 500]"
+                tokenUrl="${token.url}">
+        </oauth:authorization-code-grant-type>
+    </http:authentication>
+</http:request-connection>
+----
+
+The `authentication` element (1) is the same, but now it is parameterized with an `authorization-code-grant-type` from the `oauth` namespace.

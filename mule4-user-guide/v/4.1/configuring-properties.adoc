@@ -1,0 +1,174 @@
+= Configuring Properties
+:keywords: anypoint, studio, on premises, on premise, properties, system properties, property placeholders, configuration properties
+
+This page describes configuring properties, such as property placeholders and system properties.
+
+== Property Placeholders
+
+You can use link:http://ant.apache.org/[Ant]-style property placeholders in your Mule configuration. For example:
+
+[source,xml]
+----
+<smtp:outbound-endpoint user="${smtp.username}" password="${smtp.password}"/>
+----
+
+The values for these placeholders can be made available in a variety of ways, as described in the sections that follow.
+
+== Global Properties
+
+You can use the `<global-property>` element to set a placeholder value from within your Mule configuration, such as from within another Mule configuration file. You can use the global property syntax to reference the values from a `.yaml` or `.properties` file, and create new (global) properties that depends on configuration properties, or secure configuration properties. To reference configuration properties, read the section on properties files.
+
+[source,xml, linenums]
+----
+<global-property name="smtp.host" value="smtp.mail.com"/>
+<global-property name="smtp.subject" value="Subject of Email"/>
+----
+
+== Properties Files
+
+In Anypoint Studio, you can add properties to the default properties file in your project's folders.
+
+image:properties+file.png[properties+file]
+
+To load properties from a custom file, you can place your custom properties file at `src/main/resources` and use the tag `<configuration-properties>`:
+
+[source,xml, linenums]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+ 
+<configuration-properties file="smtp.yaml"/>
+
+<flow name="myProject_flow1">
+    <logger message="${propertyFromFile}" doc:name="System Property Set in Property File"/>
+</flow>
+----
+
+To load multiple properties files simply define a `<configuration-properties/>` tag for each file you want to load. 
+
+These files must be located at `src/main/resources`, inside your Mule project, or you can also use absolute paths.
+
+[[supported_files]]
+== Supported Files
+
+The Configuration Properties supports both YAML configuration files and Spring-formatted properties files, as shown in the examples above. The recommended approach is to use a YAML configuration files, because it allows the addition of type validations and autocompletion.
+
+We are not currently supporting any other type than String for YAML files. 
+
+== System Properties
+
+The placeholder value can come from a JDK system property. If you start Mule from the command line, you would specify the properties as follows:
+
+[source,xml]
+----
+mule -M-Dsmtp.username=JSmith -M-Dsmtp.password=ChangeMe
+----
+
+You can also edit the system properties in `conf/wrapper.conf` if you are deploying Mule as a webapp. When running Mule in a container.
+
+You can also specify the server ID in the `web.xml` file as follows:
+
+[source,xml, linenums]
+----
+<context-param>
+  <param-name>mule.serverId</param-name>
+  <param-value>MyServer</param-value>
+</context-param>
+----
+
+If you start Mule programmatically, you would specify the properties as follows before creating and starting the Mule context:
+
+[source,xml, linenums]
+----
+System.getProperties().put("smtp.username", "JSmith");
+System.getProperties().put("smtp.password", "ChangeMe");
+----
+
+=== Setting System Properties in Anypoint Studio
+
+You can also add properties when you launch your project on Anypoint Studio, through the Run Configurations menu:
+
+. Right-click your project in Package Explorer.
+. Click *Run As* > *Run Configurations*.
+. Pick the *Arguments* tab.
+. Add your arguments to the *VM arguments* field, preceding property names with *-D*
++
+image:Arguments+Tab.png[Arguments+Tab]
++
+Your properties are now available each time you deploy your app through Studio. You can then reference them with the following syntax:
++
+[source,xml]
+----
+<logger message="${propertyFromJVMArg}" doc:name="System Property Set in Studio through JVM args"/>
+----
+
+== Environment Variables
+
+Environment variables can be defined in various different ways, there are also several ways to access these from your apps. Regardless of how an environment variable is defined, the recommended way to reference it is through the following syntax:
+
+[source,xml]
+----
+${variableName}
+----
+
+=== Environment Variables From the OS
+
+To reference a variable that is defined in the OS, you can simply use the following syntax:
+
+[source,xml]
+----
+<logger message="${USER}" doc:name="Environment Property Set in OS" />
+----
+
+=== Setting Environment Variables in Anypoint Studio
+
+You can set variables in Studio through the Run Configuration menu:
+
+. Right-click your project in Package Explorer.
+. Select *Run As* > *Run Configurations*.
+. Pick the Environment tab.
+. Click the *New* button and assign your variable a name and value.
++
+image:Environment+Tab.png[Environment+Tab]
+
+Your variable is now available each time you deploy through Studio. You can reference it with the following syntax:
+
+[source,xml]
+----
+<logger message="${TEST_ENV_VAR}" doc:name="Environment Property Set in Studio"/>
+----
+
+NOTE: The syntax makes no distinction between when you're referencing a variable in the OS and a variable defined here. In case names overlap, there's a radio button you can select when creating these variables that lets you define whether these variables overrides the original OS ones or not.
+
+image:Environment+Tab2.png[Environment+Tab2]
+
+== Setting Properties Values in Runtime Manager
+
+If you deploy your application to link:/runtime-manager/[Runtime Manager], you can also set properties through the Runtime Manager console. These can be defined when link:/runtime-manager/deploying-to-cloudhub[Deploying to CloudHub], or on an link:/runtime-manager/managing-applications-on-cloudhub[already running application].
+
+To create an environment variable or application property:
+
+. Log in to your Anypoint Platform account.
+. Click Runtime Manager.
+. Either click *Deploy Application* to deploy a new application, or select a running application and click *Manage Application*.
+. Select the *Properties* tab in the *Settings* section.
+
+See link:/runtime-manager/managing-applications-on-cloudhub[Managing Applications on CloudHub] and link:/runtime-manager/secure-application-properties[Secure Application Properties] for more details.
+
+== Properties Hierarchy
+
+Configuration properties can be overwritten. The Hierarchy in which these are treated is: 
+
+. Environment Properties
+. System Properties
+. Deployment Properties
+. Application Properties
+
+So, for example, if a configuration property is defined in a System Property, and there is also an application configuration property, the value for that application will be the last one. 
+
+Also, an application property could depend on Environment, System and/or Deployment properties. Deployment Properties could depend on System Properties, and so on. 
+
+

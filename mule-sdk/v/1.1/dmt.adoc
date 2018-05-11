@@ -1,0 +1,122 @@
+= DevKit Migration Tool (Beta Release)
+:keywords: mule, sdk, devkit, migration, migrate, connector
+
+Anypoint Connector DevKit is not compatible with Mule 4. If you developed your own
+DevKit project for Mule 3, you’ll need to migrate it to the new SDK in order to use it in a Mule 4 application.
+
+To help you with that there is the DevKit Migration Tool (DMT) that serves as a starting point for migrating
+from a Connector built with Devkit that runs on Mule 3.x to an Mule 4 SDK compatible project.
+
+== Migrating a Devkit Connector
+
+This tool is aimed to assist you on your migration. The tool will perform the heavy
+lifting for you, but it will still require your review and adjustment.
+*Manual work will be required to make the extension work properly*.
+
+Also, there are concepts which no longer exist in Mule 4/SDK such as inbound/outbound message properties or the ability to directly
+manipulate the Mule Message/Event and others concepts have changed considerably, such as the DataSense model.
+
+This tool will not be capable to migrate the specific pieces which are affected by unsupported components and
+will probably migrate code that will fail to follow the best practices that MuleSoft tries to enforce for SDK users.
+However, The tool will clearly mark the errors with inline comments in the generated code and will point you to documentation
+where you can find next steps to resolve the issue.
+
+Keep in mind that there are some capabilities, like changing or querying variables, that you simply will not be able to
+do anymore with the SDK, and will force you to change code and some behavior from your module.
+
+The way the DMT works is by generating new source code compatible with the new SDK extension model that wraps the current connector code
+(as it would any other Java library) and delegate responsibility for the code to the already-tested connector code.
+
+== Executing the DMT
+
+In order to execute the DMT, all you need to do is go to the connector's `pom.xml` file
+and change the parent artifact from this:
+
+[source, xml, linenums]
+----
+<parent>
+  <groupId>org.mule.tools.devkit</groupId>
+  <artifactId>mule-devkit-parent</artifactId>
+  <version>3.9.4</version>
+</parent>
+----
+
+To this one:
+
+[source, xml, linenums]
+----
+<parent>
+  <groupId>org.mule.tools.dmt</groupId>
+  <artifactId>mule-dmt</artifactId>
+  <version>0.9.1</version>
+</parent>
+----
+
+Now that the `parent` has been changed, just build your connector from your IDE or the command line like this:
+
+----
+mvn clean package
+----
+
+Once the process finishes, you should see a `Build Success` message, and you will find the generated
+extension project under the `_{rootdir}/target/generated-sources/extension_` folder.
+
+image::dmt.png["folder structure"]
+
+NOTE: Test classes are not going to be run, migrated, or copied (because it won't compile using the SDK). If for some reason you
+want to keep the test classes in the migrated project you can build the connector with this property `-DexcludeTests=false`.
+
+== Supported Components
+
+The following elements of a DevKit connector will be ported to its new extension representation.
+
+=== Processors
+
+All the processors will be migrated to Operations, all within the same class.
+Parameters of the Processor should be reflected in the Operation parameters and
+also elements as Config or injected fields present in the old Connector that should
+be setup will be passed in as parameters.
+
+See link:operations[SDK Operations Documentation Reference] to learn more about Extension Operations.
+
+=== Sources
+
+Both polling and triggered sources will be migrated to a new Source class.
+
+By default, code for Sources will compile and run, but comments will be added to the generated sources classes
+so you can improve the usability of your recently migrated connector.
+
+see: link:sources[SDK Sources Documentation Reference] to learn more about Extension Sources.
+
+=== Connection Strategies
+
+Both @Configuration and @ConnectionManagement Strategies are migrated.
+
+See: link:connections[Connections in the SDK] to learn more about connections.
+
+==== Configuration
+
+@Configuration strategies are going to be migrated to a CachedConnectionProvider, which
+will provide a single connection instance for all operations until that connection is stopped.
+
+==== Connection Management
+
+@ConnectionManagement strategies will be migrated to a PoolingConnectionProvider, so the generated
+connections are pooled. A cache of connections is maintained so that they can be reused when future requests require one.
+
+If the @ConnectionManagement connect method is marked as *Single Instance* are going to be migrated to a CachedConnectionProvider, like a Configuration.
+
+=== Also Supported
+
+* link:object-streaming[Paged Operations]
+* link:metadata[Metadata] (MetaData Objects are not migrated, manual migration to the MetadataTypes is required)
+* link:connections[OAuth Connection Strategy]
+* link:parameter-layout[Display Annotations]
+* link:errors[OnException Handlers]
+
+== Compatibility Rules
+
+When migrating a connector, you should understand the following compatibility rules:
+
+* Migration is guaranteed only for the latest devkit versions (3.8.0 or higher).
+* Connectors that do not respect the latest verifications or that use deprecated components or annotations will not be taken into account if any problem occurs while migrating.
