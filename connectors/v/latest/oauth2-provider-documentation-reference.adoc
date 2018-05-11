@@ -16,43 +16,131 @@ Note: If the app should behave as the Client in the OAuth2 Dance, then the Oauth
 
 == Configurations
 
-=== Default Configuration
+[[general-configuration]]
+=== General Configuration
 
 [source, xml]
- ----
- <oauth2-provider:config name="Validator"
-                             resourceOwnerSecurityProvider="resourceOwnerSecurityProvider"
-                             clientSecurityProvider="clientSecurityProvider"
-                             supportedGrantTypes="${allSupportedGrantTypes}"
-                             listenerConfig="listenerConfig">
-         <oauth2-provider:token-config path="/token" tokenStore="tokenObjectStore"/>
-         <oauth2-provider:authorization-config loginPage="static/auth.html" path="/authorize"/>
+----
+ <oauth2-provider:config name="OAuth2Provider"
+                         listenerConfig="httpListenerConfig"
+                         resourceOwnerSecurityProvider="resourceOwnerSecurityProvider"
+                         clientSecurityProvider="clientSecurityProvider"
+                         supportedGrantTypes="AUTHORIZATION_CODE"
+                         scopes="USER,ADMIN"
+                         defaultScopes="USER"
+                         clientStore="clientObjectStore">
+         <oauth2-provider:client-validation-rate-limiter>
+            <oauth2-provider:period-rate-limiter duration="600"
+                                                 durationTimeUnit="SECONDS"
+                                                 maximumFailureCount="5"/>
+         </oauth2-provider:client-validation-rate-limiter>
+         <oauth2-provider:token-config path="/token"
+                                       tokenStore="tokenObjectStore"
+                                       tokenTtl="86400"
+                                       tokenTtlTimeUnit="SECONDS">
+            <oauth2-provider:refresh-token-strategy>
+                <oauth2-single-refresh-token objectStore="refreshTokenObjectStore"/>
+            </oauth2-provider:refresh-token-strategy>
+         </oauth2-provider:token-config>
+         <oauth2-provider:authorization-config loginPage="static/auth.html"
+                                               path="/authorize"
+                                               objectStore="authorizationCodeObjectStore"/>
          <oauth2-provider:clients>
-             <oauth2-provider:client clientId="clientId1" secret="clientSecret1" principal="clusr"  type="CONFIDENTIAL">
+             <oauth2-provider:client clientId="clientId1"
+                                     clientName="someClient"
+                                     secret="clientSecret1"
+                                     principal="clusr"
+                                     description="Some test client"
+                                     type="CONFIDENTIAL">
                  <oauth2-provider:client-redirect-uris>
                      <oauth2-provider:client-redirect-uri value="http://fake/redirect"/>
                  </oauth2-provider:client-redirect-uris>
                  <oauth2-provider:client-authorized-grant-types>
                      <oauth2-provider:client-authorized-grant-type value="AUTHORIZATION_CODE"/>
                  </oauth2-provider:client-authorized-grant-types>
+                 <oauth2-provider:client-scopes>
+                     <oauth2-provider:client-scope value="USER"/>
+                 </oauth2-provider:client-scopes>
              </oauth2-provider:client>
          </oauth2-provider:clients>
      </oauth2-provider:config>
- ----
+----
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
-| Name | String | The name of the aggregator. It can later be used to be referenced by an aggregator listener | {nbsp}| *x*{nbsp}
-| Content | Expression | The expression that defines what is going te be aggregated. The result of the evaluation will be the value stored in the aggregation | #[message] | {nbsp}
-| Max Size | Number | The total number of elements to be aggregated before considering the aggregation complete | {nbsp} | *x*{nbsp}
-| Timeout | Number |  A max time to wait for the aggregation to complete. If the timeout is reached before the total number of elements is equal to max size, the aggregation will be considered complete regarding that. A value of 0 is not supported since the group would be timing out constantly | -1(UNLIMITED) | {nbsp}
-| Timeout unit | Time Unit | The time unit in which to measure the timeout |  SECONDS | {nbsp}
-| Object Store | Object Store |  Either a name to reference a global object store or a definition of a private object store where the aggregated elements will be stored |  Default Object Store partition | {nbsp}
-| Aggregation Complete Route | Route | Components chain that will be executed once the aggregation is complete | {nbsp} | *x*{nbsp}
-| Incremental Aggregation Route | Route | Components chain that will be executed for every new element that is aggregated. The payload will be the list of aggregated elements until this moment | {nbsp} | {nbsp}
+| Name | String | The name for the OAuth2 Provider | {nbsp}| *x*{nbsp}
+| Provider Name | String | The name supplied to the customers of the API. This is used as some responses of the OAuth2 API | Same as Name | {nbsp}
+| Listener Config | String | The name of an Http Listener Config to reference. It'll handle the token and authorization endpoints | {nbsp} | *x*{nbsp}
+| Resource Owner Security Provider | String | A reference to the Security Provider used to authenticate resource owners. Not needed if only CLIENT_CREDENTIALS grant type is used | {nbsp} | {nbsp}
+| Client Security Provider | String | A reference to the Security Provider used to authenticate clients. Not needed if only public clients or private clients with secrets are used | {nbsp} | {nbsp}
+| Client Store | Object Store | A reference to a globally defined object store or a definition of a private object store. It's used to store the registered clients information | Object Store created by the Object Store Manager | {nbsp}
+| Grant Types | String | A comma separated list of supported grant types. Possible values are: AUTHORIZATION_CODE,IMPLICIT,RESOURCE_OWNER_PASSWORD_CREDENTIALS or CLIENT_CREDENTIALS | AUTHORIZATION_CODE | {nbsp}
+| Scopes | String | A comma separated list of supported scopes | {nbsp} | {nbsp}
+| Default Scopes | String | A comma separated list of scopes to apply to clients if they don't define their own | {nbsp} | {nbsp}
+| Client Validation Rate Limiter | Client Validation Rate Limiter | Rate limiter to control access to validate client operations. It will control that failures calls within a certain period do not exceed a maximum count. After that number of failures is reached, the requests will be rejected | Period rate limiter with duration = 600 secs and maximum failure count = 5 | {nbsp}
+| Authorization Config | Authorization Config | Configuration related to authorization code handling | {nbsp} | {nbsp}
+| Token Config | Token Config | Configuration related to token handling | {nbsp} | {nbsp}
 |======================
+
+
+=== Security Providers
+
+As seen in the <<general-configuration>>, two security providers should be defined in the application in order to be referenced by the OAuth2 Configuration element.
+
+One way of doing this is by using the Spring Framework, defining both security providers and then using the link:spring-module.adoc[Spring Module] to add them to the Mule Security Manager as so:
+
+[source, xml]
+----
+<spring:security-manager>
+    <spring:delegate-security-provider name="clientSecurityProvider"
+                                       delegate-ref="clientAuthenticationManager"/>
+    <spring:delegate-security-provider name="resourceOwnerSecurityProvider"
+                                       delegate-ref="resourceOwnerAuthenticationManager"/>
+</spring:security-manager>
+----
+
+=== Client Validation Rate Limiter
+
+Allows to configure a mechanism to prevent the continuous client validation when it's using invalid credentials.
+
+As for this moment, only a  `period-rate-limiter` is implemented that handles rate limiting based on a time period definition.
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Duration | Number | The time to wait before resetting the rate limiter. That means that during time intervals of _duration_ lenth, every time a client validation fails, it will be added to the failure count | 600 | {nbsp}
+| Duration Time Unit | Time Unit | The time unit for the duration attribute | SECONDS | {nbsp}
+| Maximum Failure Count | Number | Maximum number of failures allowed within the period before preemptively rejecting requests | {nbsp} | {nbsp}
+|======================
+
+
+=== Client Store
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|=safasdfasdf {nbsp}
+| Maximum Failure Count | Number | Maximum number of failures allowed within the period before preemptively rejecting requests | {nbsp} | {nbsp}
+|======================
+
+=== Authorization Code Configuration
+
+Configuration related to authorization code handling.
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| loginPage | String |  Relative path to the web page for the resource owner to provide it's credentials  | 600 | {nbsp}
+| Duration Time Unit | Time Unit | The time unit for the duration attribute | SECONDS | {nbsp}
+| Maximum Failure Count | Number | Maximum number of failures allowed within the period before preemptively rejecting requests | {nbsp} | {nbsp}
+|======================
+
+
+=== Token Configuration
+
 
 
 == Operations
