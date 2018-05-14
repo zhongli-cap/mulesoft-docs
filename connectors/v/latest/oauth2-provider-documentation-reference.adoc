@@ -175,267 +175,174 @@ A new refresh token will be generated every time a refresh token request is exec
 | Object Store | Object Store | A reference to a globally defined object store or a definition of a private object store. It's used to store generated refresh tokens | A persistent object store created from the ObjectStoreManager with an entry TTL of 86400 SECONDS | {nbsp}
 |======================
 
+=== Clients
+[source, xml]
+----
+<oauth2-provider:clients>
+    <oauth2-provider:client clientId="clientId1"
+                            clientName="someClient"
+                            secret="clientSecret1"
+                            principal="clusr"
+                            description="Some test client"
+                            type="CONFIDENTIAL">
+        <oauth2-provider:client-redirect-uris>
+            <oauth2-provider:client-redirect-uri value="http://fake/redirect"/>
+        </oauth2-provider:client-redirect-uris>
+        <oauth2-provider:client-authorized-grant-types>
+            <oauth2-provider:client-authorized-grant-type value="AUTHORIZATION_CODE"/>
+        </oauth2-provider:client-authorized-grant-types>
+        <oauth2-provider:client-scopes>
+            <oauth2-provider:client-scope value="USER"/>
+        </oauth2-provider:client-scopes>
+    </oauth2-provider:client>
+</oauth2-provider:clients>
+----
+
+All the registered clients that are authorized to request tokens. The list can be modified in runtime by the operations <<create-client>> and <<delete-client>>.
+
+Each registered client will have an entry with the following information.
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Config | String | The name of a globally defined OAuth Provider configuration to use for token validation | {nbsp}| *x*{nbsp}
+| Client Id | String | The Id to assign to the created client | {nbsp} | *x*{nbsp}
+| Client Name | String | The client friendly name | {nbsp} | {nbsp}
+| Principal | String | For some security providers, the clientId can't be used for the client username. In those cases, the client's principal is used for authentication | {nbsp} | {nbsp}
+| Description | String | A short description of a client | {nbsp} | {nbsp}
+| Type | Client Type | The type of the client. Allowed values are PUBLIC (Clients incapable of maintaining the confidentiality of their credentials) or CONFIDENTIAL (Clients capable of maintaining the confidentiality of their credentials). | PUBLIC | {nbsp}
+| Secret | String | The client's secret (password) used for authentication. | {nbsp} | Only if the client type is CONFIDENTIAL
+| Client Redirect Uris | Redirect Uri | One or multiple redirect Uris to use for the client's requests | Empty List | {nbsp}
+| Client Authorized Grant Types | Authorized Grant Type | Authorized grant types that will be allowed for the client. Valid values are: AUTHORIZATION_CODE,REFRESH_TOKEN, TOKEN, PASSWORD, CLIENT_CREDENTIALS. | Empty List | {nbsp}
+| Client Scopes | Client Scope |  One or multiple client scopes for which the client will be able to request tokens . If none provider, the default scopes of the <<general-configuration>> will be used | Empty List | {nbsp}
+|======================
+
+Keep in mind that for Client Redirect Uris, Client Authorized Grant Types or Client Scopes, each new value should be given in a new XML tag as shown in the example.
+
+The form should be:
+
+`<oauth2-provider:client-redirect-uri value="http://fake/redirect"/>`
+
+`<oauth2-provider:client-authorized-grant-type value="AUTHORIZATION_CODE"/>`
+
+`<oauth2-provider:client-scope value="USER"/>`
+
+
 == Operations
 
 [[validate-token]]
 === Validate Token
 [source, xml]
 ----
-<aggregators:size-based-aggregator  name="sizeBasedAggregator"
-                                    maxSize="10"
-                                    timeout="60"
-                                    timeoutUnit="MINUTES"
-                                    objectStore="exampleObjectStore">
-    <aggregators:content>
-        #[message]
-    </aggregators:content>
-    <aggregators:incremental-aggregation>
-        ...
-    </aggregators:incremental-aggregation>
-    <aggregatos:aggregation-complete>
-        ...
-    </aggregators:aggregation-complete>
-</aggregators:size-based-aggregator>`
+<oauth2-provider:validate-token config="OAuthProviderConfiguration"
+                                token="#[vars.accessToken]"
+                                scopes="#[vars.scopes]"
+                                resourceOwnerRoles=#[vars.resourceOwnerRoles]/>
 ----
 
-Aggregates elements until a pre-defined size is reached, executing the routes and listeners.
-
+Validates that the given token was granted and is in a valid state. Also, if defined, checks that the token scopes or resource owner roles match match the provided ones.
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
-| Name | String | The name of the aggregator. It can later be used to be referenced by an aggregator listener | {nbsp}| *x*{nbsp}
-| Content | Expression | The expression that defines what is going te be aggregated. The result of the evaluation will be the value stored in the aggregation | #[message] | {nbsp}
-| Max Size | Number | The total number of elements to be aggregated before considering the aggregation complete | {nbsp} | *x*{nbsp}
-| Timeout | Number |  A max time to wait for the aggregation to complete. If the timeout is reached before the total number of elements is equal to max size, the aggregation will be considered complete regarding that. A value of 0 is not supported since the group would be timing out constantly | -1(UNLIMITED) | {nbsp}
-| Timeout unit | Time Unit | The time unit in which to measure the timeout |  SECONDS | {nbsp}
-| Object Store | Object Store |  Either a name to reference a global object store or a definition of a private object store where the aggregated elements will be stored |  Default Object Store partition | {nbsp}
-| Aggregation Complete Route | Route | Components chain that will be executed once the aggregation is complete | {nbsp} | *x*{nbsp}
-| Incremental Aggregation Route | Route | Components chain that will be executed for every new element that is aggregated. The payload will be the list of aggregated elements until this moment | {nbsp} | {nbsp}
+| Config | String | The name of a globally defined OAuth Provider configuration to use for token validation | {nbsp}| *x*{nbsp}
+| Token | Expression | The expression that resolves to the token that will be validated. The default location to look for the token is in the first value of the 'authorization' HTTP header | #[(attributes.headers['authorization'] splitBy ' ')[1]] | {nbsp}
+| Scopes | Expression | An expression that resolves to a list of scopes to enforce when validating the token | Empty List | {nbsp}
+| Resource Owner Roles | Expression |  An expression that resolves to a list of resource owner roles to enforce when validating the token | Empty List | {nbsp}
 |======================
 
 
 ==== Raises
-* AGGREGATORS:AGGREGATOR_CONFIG
+* SERVER_SECURITY:TOKEN_UNAUTHORIZED
 +
-{nbsp} Whenever maxSize or timeout have invalid values(e.g: maxSize < 0).
+{nbsp} When the token being validated is not valid.
 
 
 [[revoke-token]]
 === Revoke Token
+
 [source, xml]
 ----
-<aggregators:time-based-aggregator  name="timeBasedAggregator"
-                                    period="60"
-                                    periodUnit="MINUTES"
-                                    maxSize="10"
-                                    objectStore="exampleObjectStore">
-    <aggregators:content>
-        #[message]
-    </aggregators:content>
-    <aggregators:incremental-aggregation>
-        ...
-    </aggregators:incremental-aggregation>
-</aggregators:time-based-aggregator>`
+<oauth2-provider:revoke-token  config="OAuthProviderConfiguration"
+                               token="#[vars.token]"/>
 ----
 
-
-Aggregates elements until a time period is completed, executing the routes and listeners.
-
+Revokes an existing access token and the associated refresh token. Either of them can be given to expire both.
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
-| Name | String | The name of the aggregator. It can later be used to be referenced by an aggregator listener | {nbsp}| *x*{nbsp}
-| Content | Expression | The expression that defines what is going te be aggregated. The result of the evaluation will be the value stored in the aggregation | #[message] | {nbsp}
-| Period | Number |  A time period to wait until considering the aggregation complete| {nbsp} | *x*{nbsp}
-| Period unit | Time Unit | The time unit in which to measure the time period |  SECONDS | {nbsp}
-| Max Size | Number | The total number of elements to be aggregated before considering the aggregation complete | -1(UNLIMITED) | {nbsp}
-| Object Store | Object Store |  Either a name to reference a global object store or a definition of a private object store where the aggregated elements will be stored |  Default Object Store partition | {nbsp}
-| Incremental Aggregation Route | Route | Components chain that will be executed for every new element that is aggregated. The payload will be the list of aggregated elements until this moment | {nbsp} | {nbsp}
+| Config | String | The name of a globally defined OAuth Provider configuration to use for token validation | {nbsp}| *x*{nbsp}
+| Token | String | Token to be revoked | {nbsp} | *x*{nbsp}
 |======================
 
 ==== Raises
-* AGGREGATORS:AGGREGATOR_CONFIG
+* INVALID_TOKEN
 +
-{nbsp} Whenever period or maxSize have invalid values(e.g: Period = 0)
+{nbsp} When the token to be revoked is not a valid one.
 
 [[create-client]]
 === Create Client
 [source, xml]
 ----
-<aggregators:group-based-aggregator name="groupBasedAggregator"
-                                    groupId="#[correlationId]"
-                                    groupSize="#[itemSequenceInfo.sequenceSize]"
-                                    evictionTime="180"
-                                    evictionTimeUnit="SECONDS"
-                                    timeout="60"
-                                    timeoutUnit="MINUTES"
-                                    objectStore="exampleObjectStore">
-    <aggregators:content>
-        #[message]
-    </aggregators:content>
-    <aggregators:incremental-aggregation>
-        ...
-    </aggregators:incremental-aggregation>
-    <aggregatos:aggregation-complete>
-        ...
-    </aggregators:aggregation-complete>
-</aggregators:group-based-aggregator>`
+<oauth2-provider:create-client config="OAuthProviderConfiguration"
+                               clientId="#[payload.clientId]"
+                               clientName="#[payload.clientName]"
+                               principal="#[payload.clientPrincipal]"
+                               description="#[payload.clientDescription]"
+                               type="#[payload.clientType]"
+                               secret="#[payload.clientSecret]"
+                               redirectUris="#[payload.redirectUris]"
+                               authorizedGrantType="#[payload.authorizedGrantTypes]"
+                               scopes="#[payload.scopes]
+                               failIfPresent="false"/>
 ----
 
-
-Aggregates elements in different groups according to a group Id.
-
-Every time a new event arrives to the aggregator, the id of the element will be resolved. If a group with that id already exists in the aggregator, the value will be added to that group. Otherwise, a new group with that id will be created and the received element will be the first element in that group aggregation.
-
-Some new important concepts appear with the group based aggregator :
-
-* _Group timeout_ is when a group has to be released since all the necessary events of the group did not arrive within the expected time. If a group has timed out but is not yet evicted, it will reject any new elements that want to be added to that group.
-
-* _Group eviction_ is when a group is removed from the aggregator regardless of if it was completed or timed out. If a new element with that group's id is recieved by the aggregator, the group will be created again.
-
-Lastly, as the elements that arrive to group based aggregators are usually related to an splitted sequence, if the events have a *_sequenceNumber_*, they are sorted in increasing order prior to the aggregation release.
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
-| Name | String | The name of the aggregator. It can later be used to be referenced by an aggregator listener | {nbsp}| *x*{nbsp}
-| Content | Expression | The expression that defines what is going te be aggregated. The result of the evaluation will be the value stored in the aggregation | #[message] | {nbsp}
-| Group Id | Expression | The expression to be evaluated for every new message received in order to get the id for the group where it should be aggregated | #[correlationId] | {nbsp}
-| Group Size | Number | The max size to assign to the group with the group ID resolved. All messages with the same group ID must have the same group size. If not, only the first resolved group size will be considered as correct and a warning will be logged for every one that does not match it | #[itemSequenceInfo.sequenceSize] | {nbsp}
-| Eviction Time | Number | The time to remember a group ID once it was completed or timed out (0 means: don't remember, -1: remember forever) | 180 | {nbsp}
-| Eviction Time Unit | Time Unit | The time unit for the Eviction Time | SECONDS | {nbsp}
-| Timeout | Number |  A max time to wait for the aggregation of a group to complete. If the timeout is reached before the total number of elements in that group is equal to the group's size, the aggregation will be considered complete regarding that. A value of 0 is not supported since the group would be timing out constantly | -1(UNLIMITED) | {nbsp}
-| Timeout unit | Time Unit | The time unit in which to measure the timeout |  SECONDS | {nbsp}
-| Object Store | Object Store |  Either a name to reference a global object store or a definition of a private object store where the aggregated elements will be stored |  Default Object Store partition | {nbsp}
-| Aggregation Complete Route | Route |  Components chain that will be executed once the aggregation is complete | {nbsp} | *x*{nbsp}
-| Incremental Aggregation Route | Route | Components chain that will be executed for every new element that is aggregated. The payload will be the list of aggregated elements until this moment | {nbsp} | {nbsp}
+| Config | String | The name of a globally defined OAuth Provider configuration to use for token validation | {nbsp}| *x*{nbsp}
+| Client Id | String | The Id to assign to the created client | {nbsp} | *x*{nbsp}
+| Client Name | String | The client friendly name | {nbsp} | {nbsp}
+| Principal | String | For some security providers, the clientId can't be used for the client username. In those cases, the client's principal is used for authentication | {nbsp} | {nbsp}
+| Description | String | A short description of a client | {nbsp} | {nbsp}
+| Type | Client Type | The type of the client. Allowed values are PUBLIC (Clients incapable of maintaining the confidentiality of their credentials) or CONFIDENTIAL (Clients capable of maintaining the confidentiality of their credentials). | PUBLIC | {nbsp}
+| Secret | String | The client's secret (password) used for authentication. | {nbsp} | Only if the client type is CONFIDENTIAL
+| Redirect Uris | Expression | An expression that resolves to a list of redirect uris used for when the client makes requests to the OAuth Provider | Empty List | {nbsp}
+| Authorized Grant Types | Expression | An expression that resolves to a list of the authorized grant types that the client can use to request a token. Valid values are: AUTHORIZATION_CODE,REFRESH_TOKEN, TOKEN, PASSWORD, CLIENT_CREDENTIALS. | Empty List | {nbsp}
+| Scopes | Expression |  An expression that resolves to a list of supported scopes by the client. If none provider, the default scopes of the <<general-configuration>> will be used | Empty List | {nbsp}
+| Fail if Present | Boolean | Defines what to do if the a client with the same Id is already registered. If true, an error will be raised. Otherwise, the client will be updated | false | {nbsp}
 |======================
 
 ==== Raises
-* AGGREGATORS:GROUP_COMPLETED
+* CLIENT_ALREADY_EXISTS
 +
-{nbsp} When a new element has to be added to an already completed group (And the group was not yet evicted)
-* AGGREGATORS:GROUP_TIMED_OUT
+{nbsp} If a client already exists with the same client ID, and the flag: failIfPresent is set to true
+* INVALID_CONFIGURATION
 +
-{nbsp} When a new element has to be added to a group that timed out (And the group was not yet evicted)
-* AGGREGATORS:NO_GROUP_ID
-+
-{nbsp} When the expression that resolves to the group Id returns null
-* AGGREGATORS:NO_GROUP_SIZE
-+
-{nbsp} When the expression that resolves to the group size returns null
-* AGGREGATORS:AGGREGATOR_CONFIG
-+
-{nbsp} When the group size or timeout have invalid values (e.g: groupSize < 0)
+{nbsp} If the provided parameters are not valid, as having an authorizationGrantType of AUTHORIZATION_CODE and no redirect uri.
 
 [[delete-client]]
 === Delete Client
 
+Deletes a the client with the given Id. As a consequence, any new request that comes from the deleted client will be rejected and tokens granted to that client will no longer be valid.
 
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Config | String | The name of a globally defined OAuth Provider configuration to use for token validation | {nbsp}| *x*{nbsp}
+| Client Id | String | The Id of the client to be deleted | {nbsp} | *x*{nbsp}
 
-//== Sources
-//
-//[[aggregator-listener]]
-//=== Aggregator Listener
-//`<aggregators:aggregator-listener aggregatorName="exampleAggregator" includeTimedOutGroups="false">`
-//
-//
-//Once the aggregator that is referenced by the listener completes an aggregation, the listener will be triggered with a list of all the elements.
-//The aggregation listener can be used for any kind of aggregator but is really important for time driven aggregations. Those will be triggered asynchronously and not within an event context, hence, not executing any aggregator route and only being able to reach components in flows with an aggregator listener as source.
-//
-//
-//==== Parameters
-//[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
-//|======================
-//| Name | Type | Description | Default Value | Required
-//| Aggregator Name | String | The name of the aggregator to listen to. Once that aggregator releases it's elements the listener will be executed. Each listener can only reference one aggregator and each aggregator can only be referenced by at most one listener | {nbsp} | *x*{nbsp}
-//| Include Timed Out Groups | Boolean | It tells if the listener should be triggered due to a group being released by a timeout | false | {nbsp}
-//|======================
-//
-//== Aggregation attributes
-//Each time a message goes through an aggregation, some attributes will be added to it with information about the aggregation.
-//
-//[cols=".^20%,.^20%,.^35%", options="header"]
-//|======================
-//| Name | Type | Description
-//| Aggregation ID | String | The ID from the group where the element was aggregated. If the aggregation strategy does not aggregate by group, then this field will be an autogenerated value kept until the aggregation is released (e.g: group-based and time-based aggregators)
-//| First Item Arrival Time | Date | The time when the first value was aggregated
-//| Last Item Arrival Time | Date | The time when the last value was aggregated
-//| Is Group Complete | Boolean | True if the aggregation is complete, False otherwise
-//|======================
-//
-//
-//
-//== Time vs Event driven aggregations
-//
-//There is a key concept needed to be understood in order to properly work with aggregators. As seen in the configurations, an
-//aggregation can be considered complete based on a new value being added to the list (a max size was specified) or because some timeout or time period was completed.
-//That separates 2 different kind of triggers for aggregations, sync or event driven and async or time driven. This is important because the type of aggregation will define
-//which chain of components will be executed with that list of elements.
-//
-//First of all, it should be noted that for any time counter associated with an aggregator, it will start counting from the moment the first message of a group arrives. Once the aggregation is complete, it will be reset and wait again until the next element arrives.
-//In the case of single group aggregators (time and size based) there will only be one time counter but for the group based aggregator, there is one counter per group.
-//
-//If an aggregation is released by a time period or timeout completion, it will never execute the routes in it's definition.
-//That would lead to an unwanted scenario where only a piece of a flow is executed, starting from the processor's chain
-//configured inside the aggregator and continuing with the components that follow it but without having executed
-//any precious one from the flow's source to the aggregator itself.
-//Meaning that the event must have been created within the aggregator and that is not something we want to do. Besides, if we consider the case of an aggregator inside a try scope where a transaction is started, the transaction context would not be available in the context of the MPs inside the aggregator.
-//
-//That is why the aggregator listener exists and why the time-based-aggregator does not accept an aggregation-complete-route.
-//
-//On the other hand, if an aggregation is completed due to a new event being added to the aggregated elements list and reaching a max size,
-//then both the aggregation-complete route will be executed and the aggregator listener that is hooked to that aggregator (in case there is one). That is possible because in order to have reached the aggregator,
-//the message must have gone through every message processor prior to it and we can be sure that the whole flow was executed from it's source forward.
-//
-//Bottomline, if expecting an aggregation to be completed synchronously, then you can either define how to process it in a processor's chain inside the very same aggregator (aggregation-complete route) or
-//in another flow with an aggregation listener as it source (or both).
-//Otherwise, if the aggregation will be triggered by a time period completion, the only way it will be processed is with a processor's chain defined in a separete flow and with an aggregator listener as it source.
-//
-//
-//== Aggregators in a cluster
-//
-//The module is developed to work in a cluster out of the box but there are some configuration details that need to be taken into account to prevent it to work unexpectedly.
-//
-//Whenever there is a time driven aggregation defined, once the first event arrives, it will be scheduled in the primary node of the cluster. Since new events will arrive in any node of the cluster, we need some way to notify the primary node and make it schedule that aggregation.
-//In order to do that, there is another task in the primary node that checks at a fixed rate if a new aggregation should be scheduled.
-//That could lead to a problem because if the interval between checks for new aggregation scheduling is much bigger than the actual timeout of the aggregation, that aggregation could be over before is even scheduled, or there may be big errors in the time computation.
-//
-//Given all this, there is a way to configure how frequently the primary node will check for new aggregations to be scheduled.
-//You can either define this value by a global configuration property (in ms) : `aggregatorsSchedulingPeriod`
-//or with a system property `-M-Dmule.aggregatorsSchedulingPeriod`
-//
-//
-//== Object store configuration
-//
-//For any aggregator, an object store can be configured either by referencing a global OS or creating a private one.
-//
-//* Global
-//[source, xml]
-//----
-//<aggregators:size-based-aggregator name="globalOSAggregator"
-//                                   maxSize="10"
-//                                   objectStore="aGlobalObjectStore">
-//
-//----
-//
-//* Private
-//[source, xml]
-//----
-//<aggregators:size-based-aggregator  name="privateOSAggregator" maxSize="10">
-//    ...
-//    <aggregators:object-store>
-//        <os:private-object-store alias="privateObjectStore" persistent="false"/>
-//    </aggregators:object-store>
-//</aggregators:group-based-aggregator>
-//----
+==== Raises
+* NO_SUCH_CLIENT
++
+{nbsp} If the client to be deleted does not exist.
 
 
 [[see_also]]
 == See Also
-* link:aggregator-examples[Aggregators usage examples]
