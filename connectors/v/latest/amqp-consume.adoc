@@ -16,15 +16,15 @@ The syntax to consume a message from a Queue is:
 The operation above consumes the first available message in the Queue identified by the queueName, and then converts it to a `AmqpMessage` resulting in the following structure:
 
 * The message's content as payload.
-* The message's metadata in the message attribute
+* The message's metadata in the message attributes
 
 Once received, the Message will be immediately ACKed by default. If you want to control the ACK of the Message after some processing, then `ackMode` should be set to `MANUAL`
-For more information regarding a Message ACK, check the link:amqp-ack[How to handle Acknowledgement].
+For more information regarding a Message ACK, see link:amqp-ack[How to handle Acknowledgement].
 
 == Waiting for a Message
 
-By default, the maximum wait time is configured in 10 seconds, producing a `AMQP:TIMEOUT` error if no message is available in that period.
-In order to configure a timeout that fits better your use case, customize the `maximumWait` and `maximumWaitUnit` parameters.
+By default, the maximum wait time is configured in 10 seconds, producing an `AMQP:TIMEOUT` error if no message is available in that period.
+In order to configure a timeout that fits your use case better, customize the `maximumWait` and `maximumWaitUnit` parameters.
 
 In order to wait indefinitely for a Message to arrive, the `maximumWait` value has to be set to `-1`. In this case, no `TIMEOUT` error will be thrown.
 
@@ -40,16 +40,16 @@ The same process works for encoding. By default, the connector will assume that 
 
 By default, the `consume` operation will fail in case the defined queue does not exist with an `AMQP:QUEUE_NOT_FOUND` error.
 
-For cases where the queue has to be declared, a definition for the entity should be referenced or inline defined so that the queue is declared.
+For cases where the queue has to be declared, a definition for the entity should be referenced or defined inline so that the queue is declared.
 
 [source, xml, linenums]
 ----
 <amqp:consume config-ref="Amqp_Config" queueName="testQueue">
-	<amqp:fallback-queue-definition removalStrategy="SHUTDOWN" exchangeToBind="exchangeToBind" />
+	<amqp:fallback-queue-definition removalStrategy="SHUTDOWN" exchangeToBind="exchangeToBindToQueue" />
 </amqp:consume>
 ----
 
-Notice that in the definition of the queue a binding can be created using the parameter exchangeToBind.
+Notice that in the definition of the queue a binding can be created using the parameter `exchangeToBind`.
 
 The queue can also be defined as a high level element:
 
@@ -60,46 +60,9 @@ The queue can also be defined as a high level element:
 <amqp:consume  config-ref="AMQP_Config" queueName="testQueue" fallbackQueueDefinition="targetQueueDefinition">
 ----
 
-A high level element can also be referenced using an expression.
-
-[source, xml, linenums]
-----
-<amqp:consume  config-ref="AMQP_Config" queueName="testQueue" fallbackQueueDefinition="#[targetQueueDefinition]">
-----
-
 == How to avoid changing the AMQP Topography
 
-You can set the `createFallbackQueue` global config properties so that any declaration of AMQP queues is disabled. This parameter has been added for those scenarios where it must be guaranteed that no changes to the AMQP topography will be attempted. In those cases, both the declaration of queues which does not previously exist will result in an `AMQP:CREATION_NOT_ALLOWED` error.
-
-Take for example the following flow:
-
-[source, xml, linenums]
-----
-<amqp:config name="Amqp_Config" createFallbackQueue="false" >
-	<amqp:connection host="localhost" username="guest" password="guest" />
-</amqp:config>
-
-
-<flow name="mule-no-create-fallback-queue">
-	<http:listener doc:name="Listener"config-ref="HTTP_Listener_config" path="/"/>
-	<amqp:consume config-ref="Amqp_Config" queueName="testQueue">
-		<amqp:fallback-queue-definition removalStrategy="SHUTDOWN" exchangeToBind="exchangeToBind" />
-	</amqp:consume>
-</flow>
-----
-
-If the `testQueue` exchange does not exist and the createFallbackQueue is set to false, an invocation of the consume operation shall derive in a `AMQP:CREATION_NOT_ALLOWED` error. 
-Notice that the createFallbackQueue can be overridden at the operation level and it can get an expression as a value. For example:
-
-[source, xml, linenums]
-----
-<flow name="mule-no-create-fallback-queue">
-	<http:listener doc:name="Listener"config-ref="HTTP_Listener_config" path="/"/>
-	<amqp:consume config-ref="Amqp_Config" queueName="testQueue" createFallbackQueue="true">
-		<amqp:fallback-queue-definition removalStrategy="SHUTDOWN" exchangeToBind="exchangeToBind" />
-	</amqp:consume>
-</flow>
-----
+You can set the `createFallbackQueue` global config to prevent changes to the AMQP topography resulting from the definition of fallback queues, see link:amqp-topography[How to avoid changing the AMQP Topography].
 
 == Incoming Message Metadata
 
