@@ -87,7 +87,7 @@ Note: If the app should behave as the Client in the OAuth2 Dance, then the Oauth
 
 === Security Providers
 
-As seen in the <<general-configuration>>, two security providers should be defined in the application in order to be referenced by the OAuth2 Configuration element.
+As seen in the <<general-configuration>>, two security providers should be defined in the application to be later referenced by the OAuth2 Configuration element.
 
 One way of doing this is by using the Spring Framework, defining both security providers and then using the link:spring-module.adoc[Spring Module] to add them to the Mule Security Manager as so:
 
@@ -105,7 +105,7 @@ One way of doing this is by using the Spring Framework, defining both security p
 
 Allows to configure a mechanism to prevent the continuous client validation when it's using invalid credentials.
 
-As for this moment, only a  `period-rate-limiter` is implemented that handles rate limiting based on a time period definition.
+As for this moment, only a  `period-rate-limiter` is implemented that handles rate limiting based on a time period.
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
@@ -117,34 +117,65 @@ As for this moment, only a  `period-rate-limiter` is implemented that handles ra
 |======================
 
 
-=== Client Store
-
-==== Parameters
-[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
-|=safasdfasdf {nbsp}
-| Maximum Failure Count | Number | Maximum number of failures allowed within the period before preemptively rejecting requests | {nbsp} | {nbsp}
-|======================
-
 === Authorization Code Configuration
 
-Configuration related to authorization code handling.
+Configuration related to authorization code handling and the authorization endpoint.
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
-| loginPage | String |  Relative path to the web page for the resource owner to provide it's credentials  | 600 | {nbsp}
-| Duration Time Unit | Time Unit | The time unit for the duration attribute | SECONDS | {nbsp}
-| Maximum Failure Count | Number | Maximum number of failures allowed within the period before preemptively rejecting requests | {nbsp} | {nbsp}
+| Login Page | String | Relative file path to the web page for the resource owner to provide it's credentials  | www-static/auth.html | {nbsp}
+| Path | String | The Url relative path to the authorization endpoint in the HTTP server for listening to authorization requests | /authorize | {nbsp}
+| Authorization Code Store | Object Store | A reference to a globally defined object store or a definition of a private object store. It's used to store generated authorization codes | A persistent object store created from the ObjectStoreManager with an entry TTL of 600 SECONDS | {nbsp}
 |======================
-
 
 === Token Configuration
 
+Configuration related to token handling and the token endpoint.
 
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Path | String | The Url relative path to the token endpoint in the HTTP server for listening to token requests | /token | {nbsp}
+| Token Store | Object Store | A reference to a globally defined object store or a definition of a private object store. It's used to store generated tokens | A persistent object store with an entry TTL of 86400 SECONDS | {nbsp}
+| Token Ttl | Number | The time for a granted token to be considered valid after granting it. The value should be the same as the entryTtl of the token store if a custom one is configured | 86400 | {nbsp}
+| Token Ttl Time Unit | Time Unit | The Time Unit to use for the token TTL. It should be the same as the entryTtlTimeUnit of the token store if a custom one was configured | SECONDS | {nbsp}
+| Refresh Token Strategy | Refresh Token Strategy | Configures how refresh tokens should be handled in every refresh token request | No Refresh Token | {nbsp}
+|======================
+
+==== Refresh Token Strategy
+
+The refresh token strategy configures how refresh tokens are granted and how they should be handled every time a refresh token request is executed.
+
+===== No Refresh Token
+
+There will be no refresh token granted with every access token. As a consequence,  when a refresh token request comes, it will always be rejected.
+
+===== Single Refresh Token
+
+For every new access token that is granted, a single refresh token will be associated with it. That same refresh token should be used every time the access token is refreshed.
+
+====== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Object Store | Object Store | A reference to a globally defined object store or a definition of a private object store. It's used to store generated refresh tokens | A persistent object store created from the ObjectStoreManager with an entry TTL of 86400 SECONDS | {nbsp}
+|======================
+
+===== Multiple Refresh Token
+
+A new refresh token will be generated every time a refresh token request is executed. After that, the previous refresh token will be invalidated.
+
+====== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Object Store | Object Store | A reference to a globally defined object store or a definition of a private object store. It's used to store generated refresh tokens | A persistent object store created from the ObjectStoreManager with an entry TTL of 86400 SECONDS | {nbsp}
+|======================
 
 == Operations
-
 
 [[validate-token]]
 === Validate Token
