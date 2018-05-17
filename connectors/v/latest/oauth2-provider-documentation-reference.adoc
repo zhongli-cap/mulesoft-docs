@@ -12,12 +12,12 @@
 The OAuth2 Provider Module allows a Mule Application to be configured as an Authentication Manager in an OAuth2 Dance.
 With this role, the application will be able to authenticate previously registered clients, grant tokens and validate them or register and delete clients, all during the execution of a flow.
 
-Since the OAuth dance is donde through HTTP, the OAuth2 Provider makes use of the link:connectors/v/latests/http-connector.adoc[Mule HTTP Connector].
+Since the OAuth dance is done through HTTP, the OAuth2 Provider makes use of the link:connectors/v/latests/http-connector.adoc[Mule HTTP Connector].
 As a consequence, apart from the definition of an OAuth2 provider configuration , the mule application must also have an HTTP Listener configuration to be used by the provider.
 
 Once configured, the provider works as follows: +
-Two HTTP endpoints are created for listening to Authentication Code and Token request as stated by the OAuth2 definition. Those will work independently of the mule application and will respond via HTTP. +
-Apart from that, the provider defines an operation: <<validate-token>> that can check if a token is authorized. That operation can be added anywhere in a flow to control it's execution. If the token is indeed authorized
+Two HTTP endpoints are created for listening to Authentication Code and Token request as stated by the OAuth2 definition. Those will work independently from the mule application and will respond via HTTP. +
+Apart from that, the provider defines an operation: <<validate-token>> that can check if a token is authorized. That operation can be added anywhere in a flow to control it's execution. If the token is indeed authorized,
 the flow will keep executing, otherwise, an error will be raised. Is up to the developer to add that operation in parts of the application that need token authentication. +
 Lastly, additional operations are provided to add or delete clients and to revoke tokens in case it's needed.
 
@@ -121,9 +121,9 @@ As for this moment, only a  `period-rate-limiter` is implemented that handles ra
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
-| Duration | Number | The time to wait before resetting the rate limiter. That means that during time intervals of _duration_ lenth, every time a client validation fails, it will be added to the failure count | 600 | {nbsp}
+| Duration | Number | The time to wait before resetting the rate limiter. That means that during time intervals of _duration_ length, every time a client validation fails, it will be added to the failure count | 600 | {nbsp}
 | Duration Time Unit | Time Unit | The time unit for the duration attribute | SECONDS | {nbsp}
-| Maximum Failure Count | Number | Maximum number of failures allowed within the period before preemptively rejecting requests | {nbsp} | {nbsp}
+| Maximum Failure Count | Number | Maximum number of failures allowed within the period before preemptively rejecting requests | 5 | {nbsp}
 |======================
 
 
@@ -215,6 +215,7 @@ Each registered client will have an entry with the following information.
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
+| Name | Type | Description | Default Value | Required
 | Config | String | The name of a globally defined OAuth Provider configuration to use for token validation | {nbsp}| *x*{nbsp}
 | Client Id | String | The Id to assign to the created client | {nbsp} | *x*{nbsp}
 | Client Name | String | The client friendly name | {nbsp} | {nbsp}
@@ -264,7 +265,7 @@ Validates that the given token was granted and is in a valid state. Also, if def
 
 
 ==== Raises
-* SERVER_SECURITY:TOKEN_UNAUTHORIZED
+* OAUTH2-PROVIDER:TOKEN_UNAUTHORIZED(OAUTH_SERVER_SECURITY)
 +
 {nbsp} When the token being validated is not valid.
 
@@ -289,7 +290,7 @@ Revokes an existing access token and the associated refresh token. Either of the
 |======================
 
 ==== Raises
-* INVALID_TOKEN
+* OAUTH2-PROVIDER:INVALID_TOKEN(OAUTH_SERVER_SECURITY)
 +
 {nbsp} When the token to be revoked is not a valid one.
 
@@ -306,7 +307,7 @@ Revokes an existing access token and the associated refresh token. Either of the
                                secret="#[payload.clientSecret]"
                                redirectUris="#[payload.redirectUris]"
                                authorizedGrantType="#[payload.authorizedGrantTypes]"
-                               scopes="#[payload.scopes]
+                               scopes="#[payload.scopes]"
                                failIfPresent="false"/>
 ----
 
@@ -329,7 +330,7 @@ Revokes an existing access token and the associated refresh token. Either of the
 |======================
 
 ==== Raises
-* CLIENT_ALREADY_EXISTS
+* OAUTH2-PROVIDER:CLIENT_ALREADY_EXISTS(OAUTH_SERVER_SECURITY)
 +
 {nbsp} If a client already exists with the same client ID, and the flag: failIfPresent is set to true
 * INVALID_CONFIGURATION
@@ -350,7 +351,7 @@ Deletes a the client with the given Id. As a consequence, any new request that c
 |======================
 
 ==== Raises
-* NO_SUCH_CLIENT
+* OAUTH2-PROVIDER:NO_SUCH_CLIENT(OAUTH_SERVER_SECURITY)
 +
 {nbsp} If the client to be deleted does not exist.
 
