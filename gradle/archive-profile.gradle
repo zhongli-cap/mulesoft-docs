@@ -1,0 +1,110 @@
+// Command to execute in CI:
+// ./gradlew -g .gradle --no-search-upward -Pprofile=prod -PbuildTag=$BUILD_TAG -PmaxHeapSize=4g clean publish
+// ./gradle/consolidate-publish-repo.sh -q
+ext {  
+  assetsRepoUri = 'https://github.com/mulesoft/mulesoft-docs-site-assets'
+  assetsRepoBranchName = 'archive-doc-site-banner'
+  assetsRepoCommit = 'b4ee374a62e44d1a9fc34cc96aeb0fec45fd6cdb'  
+  publishCommitMessage = project.hasProperty('buildTag') ? project.property('buildTag') : 'publish changes'
+  publishRepoBranchName = 'master'
+  publishRepoUri = 'git@github.com:mulesoft-sites/docs-archive-mulesoft-com.git'
+  siteDir = '_publish'
+  siteUri = 'https://docs-archive.staging.mulesoft.com/'
+}
+
+task clonePublishRepo {
+  outputs.dir(siteDir).upToDateWhen { false }
+  doLast {
+    if (file("$siteDir/.git").directory) {
+      //git "fetch -q origin $publishRepoBranchName", siteDir
+      println "About to checkout branch repo already exists"
+      git "checkout -B $branchName", siteDir
+      gitcheckremote "ls-remote --heads $publishRepoUri $branchName", siteDir
+      if(remoteExists) {
+        println "Setting upstream of branch"
+        git "branch --set-upstream-to=origin/$branchName", siteDir
+        //println "remote exists, about to do a pull"
+        //git "pull origin $branchName", siteDir
+        println "About to do hard reset"
+        git "reset --hard origin/$branchName", siteDir
+        println "About to fetch branch as it exists"
+        //git "fetch -q origin $branchName", siteDir
+        println "About to do a pull"
+        git "pull origin $branchName", siteDir
+        //git "reset --hard origin/$branchName", siteDir
+      }
+      else {
+        println "REMOTE DOESN'T EXIST "
+      }
+    }
+    else {
+      // NOTE not using --depth 1 because we need full history to consolidate (for now)
+      //git "clone -q $publishRepoUri $siteDir", file(siteDir).parent
+      println "About to clone the output repo"
+      git "clone -q $publishRepoUri $siteDir", file(siteDir).parent
+      println "About to checkout branch or create it"
+      git "checkout -B $branchName", siteDir
+      gitcheckremote "ls-remote --heads $publishRepoUri $branchName", siteDir
+      if(remoteExists) {
+        git "reset --hard origin/$branchName", siteDir
+        println "About to fetch branch as it exists"
+        //git "fetch -q origin $branchName", siteDir
+        git "pull origin $branchName", siteDir
+        println "About to do hard reset"
+        git "reset --hard origin/$branchName", siteDir
+      }
+      else {
+        println "REMOTE DOESN'T EXIST AFTER CLONE"
+      }
+    }
+  }
+}
+
+task prepareSiteDir {
+  inputs.dir siteDir
+  doLast {
+    ant.delete(includeemptydirs: true) {
+      fileset(dir: siteDir, defaultexcludes: false) {
+        exclude(name: '.git/**')
+      }
+    }
+  }
+}
+
+//JN: to start we need to prevent Google crawl the beta site
+task disallowRobots(group: 'Build', description: 'Disallows robots from crawling the site') {
+  doLast {
+    File robotsConfig = file("$siteDir/robots.txt")
+    if (robotsConfig.file) robotsConfig.text = "User-agent: Swiftbot\nDisallow:\n\nUser-agent: *\nDisallow: /\nSitemap: https://docs.archive.mulesoft.com/sitemap.xml"
+  }
+}
+
+task publishSiteDir {
+  println "About to publish the site"
+  // Have taken out for now
+  onlyIf { !git('status --porcelain', siteDir, true).empty }
+  doLast {
+    git 'add .', siteDir
+
+    // Print all the files
+    //println fileTree( dir: siteDir ).files
+
+    println "About to commit"
+    git "commit -m \"$publishCommitMessage\"", siteDir
+    //if (!dryRun) git "push -q origin $publishRepoBranchName", siteDir
+    if (!dryRun) git "push --set-upstream origin $branchName", siteDir
+  }
+}
+
+task publish(group: 'Build', description: 'Builds site and commits changes to publisher repository.')
+
+afterEvaluate {
+  build.dependsOn disallowRobots
+  disallowRobots.mustRunAfter copyAssets
+  clean.delete.retainAll(clean.delete - siteDir) // don't delete _publish directory
+  //copyAssets.outputs.upToDateWhen { false }
+  prepareSiteDir.dependsOn clonePublishRepo
+  publish.dependsOn prepareSiteDir, build, publishSiteDir
+  build.mustRunAfter prepareSiteDir
+  publishSiteDir.mustRunAfter build
+}
