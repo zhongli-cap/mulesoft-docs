@@ -12,17 +12,22 @@
 The OAuth2 Provider Module allows a Mule Application to be configured as an Authentication Manager in an OAuth2 Dance.
 With this role, the application will be able to authenticate previously registered clients, grant tokens and validate them or register and delete clients, all during the execution of a flow.
 
+
+[WARNING]
+The following documentation assumes a basic knowledge of the OAuth2 authorization protocol. If you are not familiar with the it, the RFC specification can be found in: link:https://tools.ietf.org/html/rfc6749[RFC6749] +
+Also, if the app should behave as the *Client in the OAuth2 Dance*, then the OAuth Module should be used.
+
 Since the OAuth dance is done through HTTP, the OAuth2 Provider makes use of the link:connectors/v/latests/http-connector.adoc[Mule HTTP Connector].
 As a consequence, apart from the definition of an OAuth2 provider configuration , the mule application must also have an HTTP Listener configuration to be used by the provider.
 
-Once configured, the provider works as follows: +
+Once configured, the provider works as follows:
+
 Two HTTP endpoints are created for listening to Authentication Code and Token request as stated by the OAuth2 definition. Those will work independently from the mule application and will respond via HTTP. +
 Apart from that, the provider defines an operation: <<validate-token>> that can check if a token is authorized. That operation can be added anywhere in a flow to control it's execution. If the token is indeed authorized,
-the flow will keep executing, otherwise, an error will be raised. Is up to the developer to add that operation in parts of the application that need token authentication. +
+the flow will keep executing, otherwise,a *TOKEN_UNAUTHORIZED* error will be raised. It's up to the developer to add that operation in parts of the application that need token authorization. +
+Also, since token validation is almost always going to be used together with an HTTP Listener, in case it fails, the listener's response mechanism can handle that error and properly respond to the requester. Additional logic can be added handling that type of Error. +
 Lastly, additional operations are provided to add or delete clients and to revoke tokens in case it's needed.
 
-
-Note: If the app should behave as the Client in the OAuth2 Dance, then the OAuth Module should be used.
 
 == Configurations
 
@@ -81,7 +86,7 @@ Note: If the app should behave as the Client in the OAuth2 Dance, then the OAuth
 |======================
 | Name | Type | Description | Default Value | Required
 | Name | String | The name for the OAuth2 Provider | {nbsp}| *x*{nbsp}
-| Provider Name | String | The name supplied to the customers of the API. This is used as some responses of the OAuth2 API | Same as Name | {nbsp}
+| Provider Name | String | The name supplied to the customers of the API. This is used for some responses of the OAuth2 API | Same as Name | {nbsp}
 | Listener Config | String | The name of an Http Listener Config to reference. It'll handle the token and authorization endpoints | {nbsp} | *x*{nbsp}
 | Resource Owner Security Provider | String | A reference to the Security Provider used to authenticate resource owners. Not needed if only CLIENT_CREDENTIALS grant type is used | {nbsp} | {nbsp}
 | Client Security Provider | String | A reference to the Security Provider used to authenticate clients. Not needed if only public clients or private clients with secrets are used | {nbsp} | {nbsp}
@@ -208,7 +213,7 @@ A new refresh token will be generated every time a refresh token request is exec
 </oauth2-provider:clients>
 ----
 
-All the registered clients that are authorized to request tokens. The list can be modified in runtime by the operations <<create-client>> and <<delete-client>>.
+All the registered clients that are authorized to request tokens. The list can be modified in runtime by the <<create-client>> and <<delete-client>> operations.
 
 Each registered client will have an entry with the following information.
 
@@ -225,12 +230,10 @@ Each registered client will have an entry with the following information.
 | Secret | String | The client's secret (password) used for authentication. | {nbsp} | Only if the client type is CONFIDENTIAL
 | Client Redirect Uris | Redirect Uri | One or multiple redirect Uris to use for the client's requests | Empty List | {nbsp}
 | Client Authorized Grant Types | Authorized Grant Type | Authorized grant types that will be allowed for the client. Valid values are: AUTHORIZATION_CODE,REFRESH_TOKEN, TOKEN, PASSWORD, CLIENT_CREDENTIALS. | Empty List | {nbsp}
-| Client Scopes | Client Scope |  One or multiple client scopes for which the client will be able to request tokens . If none provider, the default scopes of the <<general-configuration>> will be used | Empty List | {nbsp}
+| Client Scopes | Client Scope |  One or multiple client scopes for which the client will be able to request tokens . If none provided, the default scopes of the <<general-configuration>> will be used | Empty List | {nbsp}
 |======================
 
-Keep in mind that for Client Redirect Uris, Client Authorized Grant Types or Client Scopes, each new value should be given in a new XML tag as shown in the example.
-
-The form should be:
+Keep in mind that for Client Redirect Uris, Client Authorized Grant Types or Client Scopes, each new value should be given in a new XML tag as shown in the example below:
 
 `<oauth2-provider:client-redirect-uri value="http://fake/redirect"/>`
 
@@ -251,7 +254,7 @@ The form should be:
                                 resourceOwnerRoles=#[vars.resourceOwnerRoles]/>
 ----
 
-Validates that the given token was granted and is in a valid state. Also, if defined, checks that the token scopes or resource owner roles match match the provided ones.
+Validates that the given token was granted and is in a valid state. Also, if defined, checks that the token scopes or resource owner roles match the provided ones.
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
@@ -279,7 +282,7 @@ Validates that the given token was granted and is in a valid state. Also, if def
                                token="#[vars.token]"/>
 ----
 
-Revokes an existing access token and the associated refresh token. Either of them can be given to expire both.
+Revokes an existing access token and the associated refresh token. Either of them can be provided to revoke both.
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
@@ -325,7 +328,7 @@ Revokes an existing access token and the associated refresh token. Either of the
 | Secret | String | The client's secret (password) used for authentication. | {nbsp} | Only if the client type is CONFIDENTIAL
 | Redirect Uris | Expression | An expression that resolves to a list of redirect uris used for when the client makes requests to the OAuth Provider | Empty List | {nbsp}
 | Authorized Grant Types | Expression | An expression that resolves to a list of the authorized grant types that the client can use to request a token. Valid values are: AUTHORIZATION_CODE,REFRESH_TOKEN, TOKEN, PASSWORD, CLIENT_CREDENTIALS. | Empty List | {nbsp}
-| Scopes | Expression |  An expression that resolves to a list of supported scopes by the client. If none provider, the default scopes of the <<general-configuration>> will be used | Empty List | {nbsp}
+| Scopes | Expression |  An expression that resolves to a list of supported scopes by the client. If none provided, the default scopes of the <<general-configuration>> will be used | Empty List | {nbsp}
 | Fail if Present | Boolean | Defines what to do if the a client with the same Id is already registered. If true, an error will be raised. Otherwise, the client will be updated | false | {nbsp}
 |======================
 
@@ -340,7 +343,7 @@ Revokes an existing access token and the associated refresh token. Either of the
 [[delete-client]]
 === Delete Client
 
-Deletes a the client with the given Id. As a consequence, any new request that comes from the deleted client will be rejected and tokens granted to that client will no longer be valid.
+Deletes the client with the given Id. As a consequence, any new request that comes from the deleted client will be rejected and tokens granted to that client will no longer be valid.
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
