@@ -3,22 +3,22 @@
 
 *Available since version 1.1*
 
-The module transforms the arguments given to a Java invocation when they don't exactly
-match the expected by the java method but there is a way to infer how to transform the
+The Java Module transforms the arguments given to a Java invocation when they don't exactly
+match the type expected by the java method but there is a way to infer how to transform the
 given parameter to what the method expects.
 
 == When Will The Arguments Be Transformed?
 
-For every parameter given, the module will check wether it is what the method expects
-or not. If it is not what the method expects, the module will try to transform it to
-what is expected.
+For every parameter given, the module will check whether its type matches the type
+expected by the method for that parameter or not. If it is not what the method expects, the
+module will try to transform it to what is expected.
 
 == Simple Example of Argument Transformation
 
 Let's see a simple example where one of the arguments is transformed:
 
-In this case we will call the 'min' static method from the 'Math' class with a number
-and a String:
+We will call the the 'min' static method from the 'Math' class, which expects
+to receive two `int` parameters, with a Number and a String
 
 [source, xml, linenums]
 ----
@@ -38,8 +38,10 @@ before calling the java method.
 
 == Custom POJO Passed to the Module as a Map
 
-When working with custom POJOs, you had to explicitly tell in the DataWeave expression
-to transform your data to that type. Here is an example of when a Map parameter is transformed
+Previously, when working with custom POJOs, you had o explicitly declare in the DataWeave
+expression to what type your data should be transformed. Now, the Java Module automatically
+recognizes what is the expected type for a given argument and tries to transform the given
+data to the expected type. Here is an example of when a Map parameter is transformed
 into a custom POJO by the module.
 
 Here is the class of the POJO:
@@ -50,14 +52,6 @@ public class Car {
   private String doors;
   private String wheels;
   private String engine;
-
-  public Car() {}
-
-  public Car(String doors, String wheels, String engine) {
-    this.doors = doors;
-    this.wheels = wheels;
-    this.engine = engine;
-  }
 
   public String getDoors() {
     return doors;
@@ -78,10 +72,8 @@ A Java class declares a static method that receives an instance of the POJO defi
 [source, java, linenums]
 ----
 public class CarUtils {
-  private static String CAR_DESCRIPTION = "This are the car parts:\nEngine: %s\nWheels: %s\nDoors:%s";
-
   public static String describeCar(Car car) {
-    return String.format(CAR_DESCRIPTION, car.getEngine(), car.getWheels(), car.getDoors());
+    return "This are the car has: " + car.getEngine() + "," + car.getWheels() + "," + car.getDoors();
   }
 }
 ----
@@ -115,10 +107,11 @@ passed to the java method did not match its signature.
 The Module will check that every element of the Collection and every entry of the map honors
 the Java Generic declared by the Method Signature. If any element fails this check, the whole
 Collection or Map will have to be created and repopulated with the transformed elements.
-This means that the Java method will be called with another instance of the Collection or
-Map(not the same as the one passed in the Mule flow). This is particularly important if the
-method called is expected to add or remove elements in the Collection or Map and you need to
-be able to reference this Collection or Map after the invocation.
+[WARNING]
+The Java method will be called with another instance of the Collection or
+Map if a transformation is needed(not the same as the one passed in the Mule flow). This
+is particularly important if the method called is expected to add or remove elements in
+the Collection or Map and you need to be able to reference this Collection or Map after the invocation.
 
 == Example Where a List is Transformed
 
