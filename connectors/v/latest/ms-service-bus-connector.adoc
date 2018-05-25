@@ -1,10 +1,9 @@
 = Microsoft Service Bus Connector
-:keywords: anypoint studio, connector, endpoint, microsoft, azure, windows service bus, windows
 :imagesdir: ./_images
 
 _Select_
 
-The Microsoft Service Bus connector enables message integration with Windows Service Bus on-premises and Azure Service Bus on the cloud. The connector supports communication with queues, topics, and event hubs through AMQP 1.0. In addition, dynamic discovery and provisioning of Service Bus objects is possible using the built-in management API.
+The Microsoft Service Bus connector enables message integration with Windows Service Bus on-premises and Azure Service Bus on the cloud. This connector supports communication with queues, topics, and event hubs through AMQP 1.0. In addition, dynamic discovery and provisioning of Service Bus objects is possible using the built-in management API.
 
 == Prerequisites
 
@@ -35,12 +34,12 @@ Support for Mule 4 has been added.
 
 . Click a trigger such as an HTTP Listener or Scheduler trigger. 
 +
-// image:trigger.png[Trigger options]
+image:ms-service-bus-trigger.png[Trigger options]
 +
 . If needed, you can create a global element by selecting Reusable Configuration.
 . To configure an HTTP Listener for the connector, set these fields:
 +
-// image:httpListener.png[Http Listener configuration]
+image:ms-service-bus-http-listener.png[Http Listener configuration]
 +
 ** Protocol: Protocol selected for the HTTP endpoint, it can be HTTP or HTTPS (secure).
 ** Host: IP address where your Mule application listens for requests.
@@ -49,7 +48,7 @@ Support for Mule 4 has been added.
 +
 . Click the plus sign to add a component.
 +
-// image:plusSign.png[add connector]
+image:ms-service-bus-plus-sign.png[add connector]
 +
 . Select the connector as a component.
 . Configure one of Global elements for the connector.
@@ -58,7 +57,7 @@ Support for Mule 4 has been added.
 +
 General:
 +
-// image:SAS-1.png[General]
+image:ms-service-bus-sas-1.png[General]
 +
 [%header%autowidth.spread]
 |===
@@ -68,7 +67,7 @@ General:
 +
 Blob Storage Connection:
 +
-// image:SAS-2.png[Blob Storage Connection]
+image:ms-service-bus-sas-2.png[Blob Storage Connection]
 +
 [%header%autowidth.spread]
 |===
@@ -80,7 +79,7 @@ Blob Storage Connection:
 +
 Connection:
 +
-// image:SAS-3.png[Connection]
+image:ms-service-bus-sas-3.png[Connection]
 +
 [%header%autowidth.spread]
 |===
@@ -93,7 +92,7 @@ Connection:
 +
 General:
 +
-// image:UP-1.png[General]
+image:ms-service-bus-up-1.png[General]
 +
 [%header%autowidth.spread]
 |===
@@ -103,7 +102,7 @@ General:
 +
 Blob Storage Connection:
 +
-// image:UP-2.png[Blob Storage Connection]
+image:ms-service-bus-up-2.png[Blob Storage Connection]
 +
 [%header%autowidth.spread]
 |===
@@ -115,7 +114,7 @@ Blob Storage Connection:
 +
 Connection:
 +
-// image:UP-3.png[Connection]
+image:ms-service-bus-up-3.png[Connection]
 +
 [%header%autowidth.spread]
 |===
@@ -129,7 +128,7 @@ Connection:
 +
 General:
 +
-// image:WINDOWS-2.png[General]
+image:ms-service-bus-windows-2.png[General]
 +
 [%header%autowidth.spread]
 |===
@@ -139,7 +138,7 @@ General:
 +
 Connection:
 +
-// image:WINDOWS-1.png[Connection]
+image:ms-service-bus-windows-1.png[Connection]
 +
 [%header%autowidth.spread]
 |===
@@ -147,10 +146,10 @@ Connection:
 |Service Namespace |Enter the name of the service namespace to address Service Bus resources within your application.
 |Username |Enter the user to use for authentication.
 |Password |Enter the password of the user.
-|Fully Qualified Domain Name |Enter the fully qualified domain name of your Windows Service Bus server
+|Fully Qualified Domain Name |Enter the fully qualified domain name of your Windows Service Bus server.
 |Port |Enter the server port number.
 |Disable SSL Certificate Validation |If you are using a self-signed SSL certificate, select this check box.
-|Skip connectivity test |In case you have limited access to Windows Service Bus resources and you want to skip the connectivity test performed at startup you need to set this setting to true.
+|Skip connectivity test |In case you have limited access to Windows Service Bus resources and you want to skip the connectivity test performed at startup you need to set this setting to `true`.
 |===
 
 == To Connect in Anypoint Studio 7
@@ -169,7 +168,7 @@ You can ensure a Maven dependency was added for this connector:
 . Open your Mule project in Anypoint Studio.
 . Ensure that the connector as a dependency is in the pom.xml file:
 +
-[source, linenums]
+[source,xml,linenums]
 ----
 <dependency>
   <groupId>com.mulesoft.connectors</groupId>
@@ -184,9 +183,73 @@ You can ensure a Maven dependency was added for this connector:
 . Drag and drop the connector to the Studio Canvas.
 . Configure the Global element for the connector
 +
-Configuration values for each Connection type are the same as in To Connect in Design Center section.
+Configuration values for each Connection type are the same as in <<To Connect in Design Center>> section.
 
-// image:STUDIO-1.png[General]
+image:ms-service-bus-studio-1.png[General]
+
+
+== Service Bus Authentication Through AMQP
+
+To send and receive messages through the Service Bus connector, authentication is performed through AMQP.
+
+For the REST Management API, the authentication scheme differs based on the Microsoft Service Bus version. The Windows Service Bus running on premises uses OAuth and the Azure Service Bus running in the cloud uses a Shared Access Key token.
+
+The Windows Service Bus uses a self-signed SSL certificate to secure the communication via AMQP and HTTPS. The connector won’t run if this certificate is not locally imported in the box running Mule, unless the Ignore SSL warning check is enabled.
+
+== Enabling SSL Checks By Importing The Certificate
+
+. Use the PowerShell cmdlet Get-SBAutoGeneratedCA to download the certificate locally to the computer running the Windows Service Bus. For the purposes of this tutorial, assume the certificate file is exported to `%temp%\AutoGeneratedCA.cer`. A download link for the cmdlet is provided in the See Also section of this guide.
+. Go to `%programfiles%\Java\jre8`. Verify that the `bin\keytool.exe` tool exists, and that `lib\security\cacerts` exists. Note that you must be running as Administrator to perform a certificate import with Keytool.exe. Otherwise, an Access Denied error occurs.
+. Enter the following command: `bin\keytool.exe –list –keystore lib\security\cacerts`
+. Import the auto-generated Service Bus certificate by running the following command:  `bin\keytool.exe –importcert –alias AppServerGeneratedSBCA –file %temp%\AutoGeneratedCA.cer –keystore lib\security\cacerts –v`
+. You are prompted for the password (the default is “changeit”).  If you do not know the password, you cannot perform the import. When the tool asks you whether to trust the certificate, enter Y (Yes).
+
+== About SAS Based Authentication
+
+In addition to the connection schemes that require a username and password, the connector provides a connection in which authentication is SAS based (only for Azure) which allows you to set the authentication token for the Service Bus Service without requiring the username and password for it.
+
+As the SAS token schema is URI based (that is, you can assign different authorization access to your resources based on their URIs) the connection supports multiple ways of providing the authentication tokens needed. The most trivial and simple case is when you have a single profile that authorizes access to all your resources by using an specific root URI which is the base endpoint that your service exposes. If you need to provide different access tokens on different resources, use a setting that allows you to configure them according to the resources the connector needs while running.
+
+Extending the mechanisms described above to provide the authentication token, you can implement a custom token provider to allow the connector requests for security tokens as needed. You need to resolve each request and return a fresh token every time the connector asks for one. As the token has an expiration time within it, this mechanism allows the connector to re-authenticate with the target resource when the token expires. This is not allowed with the previous mechanisms described above where the tokens are fixed at configuration time before the flow runs.
+
+The following are the available settings for the Shared Access Signature connection:
+
+* Service Namespace: The namespace for the Azure Service Bus Service within your subscription.
+* Shared Access Signature: (Optional) The unique security token when you set up just one security profile to access all your service resources. In this case when the token has expired, the connector cannot reconnect automatically and you need to stop running the flow to update this configuration setting with a new token.
+
+Within the advanced section you can find:
+
+* SAS Tokens List: (Optional) The list of security tokens the connector needs to access for the different URIs when the security profiles for each are different. When any of the tokens expires, the connector cannot reconnect to the URI linked to that token and you need to stop running the flow to update this configuration setting with a new set of tokens.
+* SAS Tokens Provider: (Optional) A Spring bean reference implementing the `org.mule.modules.microsoftservicebus.connection.providers.SharedAccessSignatureProvider` interface. If you set an instance of a token provider here, it is your responsibility to provide a fresh token for each URI the connector requires access to (according to your security profiles). In this case each time a token expires, the connector requests a new one, which is provided by your implementation, and reconnection to the target URI is done seamlessly. 
+* Max Connections: (Optional) Maximum number of connections to keep in pool to be reused by producer. If set to "-1" it creates a new connection each
+time.
+
+NOTE: At least one of the optional settings shown above must be provided.
+
+In all cases, the token format you should provide is a string that must comply with the following pattern:
+
+[source,xml]
+----
+SharedAccessSignature sr=[resource_uri]&sig=[signature]&se=[ttl]&skn=[profile]
+----
+
+The `sr` parameter value can start with an `https` or `amqps` protocol depending on the operation you perform on the target resource.
+
+For example:
+[source,xml]
+----
+SharedAccessSignature sr=amqps%3a%2f%2fmynamespace.servicebus.windows.net%2fMyQueue&sig=pSrfJn5uRTiepgOTjBpjcf2gw%2bG34S1MYdCfkQkTC8A%3d&se=101&skn=OperationalPolicyKey`
+----
+
+== About Performance Considerations
+
+The Claims Based Security mechanism required to authenticate to Azure Service Bus uses a SAS token that exchanges messages with a special node. The latest impacts on connector's performance as tokens are exchanged per request to achieve connection security setup using targeted tokens related to the resource being accessed. This has been optimized, starting from version 1.2, to impact performance as least as possible. If your scenario requires sending several messages with high throughput, use a connection strategy that requires setting the username and password. This is the simpler way to authenticate to Azure Service Bus with the connector while achieving better throughput, although it requires you to write the password for the shared access key name you are using.
+
+NOTE: As said before, if you are experiencing performance issues when using the SAS strategy, update to version 1.2 or higher. The optimized mechanism has lower performance impact on receiving and sending operations as the AMQP container and cache (respectively) keep the connection alive and token exchange messages occur only when setting up the connection and/or in case of token expiration.
+
+== About Restricted Access Policies
+
+If you have restricted access to your resources and have a security policy with permissions only at resource level, the connector cannot perform its connectivity test when it starts. The test targets the root level of your namespace which might be forbidden due to the customized policy applied to the shared access key. For these scenarios, skip the connectivity test with the configuration option available for this purpose, otherwise the connector cannot start up.
 
 == Use Case: Get Queue list
 
@@ -204,8 +267,8 @@ image:ms-service-bus-flow.png[Use Case Studio Flow]
 |===
 +
 . Click Save.
-. Assign your new  Global configuration to your HTTP Listener.
-. Fill in HTTP Listener path with `/servicebus` value.
+. Assign your new Global configuration to your HTTP Listener.
+. Specify the HTTP Listener path as the `/servicebus` value.
 . Drag and drop a new Service Bus component into the flow.
 . Configure the Service Bus connector global element with its environment values.
 . Add a transform message before the Connector and add an output like this:
@@ -270,71 +333,268 @@ payload]]></ee:set-payload>
 </mule>
 ----
 
-== About Service Bus Authentication
+== Use Case: Azure Service Bus AMQP
 
-To send and receive messages through the Service Bus connector,  authentication is performed through AMQP.
+image:ms-service-bus-demo-1.png[Studio 7 flows for the Azure Service Bus AMQP demo]
 
-For the REST Management API, the authentication scheme differs based on the Microsoft Service Bus version. The Windows Service Bus running on premises uses OAuth and the Azure Service Bus running in the cloud uses a Shared Access Key token.
+XML for this flow:
 
-NOTE: The Windows Service Bus uses a self-signed SSL certificate to secure the communication via AMQP and HTTPS. The connector won’t run if this certificate is not locally imported in the box running Mule, unless the Ignore SSL warning check is enabled.
-
-== To Enable SSL Checks By Importing The Certificate
-
-. Use the PowerShell cmdlet Get-SBAutoGeneratedCA to download the certificate locally to the computer running the Windows Service Bus. For the purposes of this tutorial, assume the certificate file is exported to `%temp%\AutoGeneratedCA.cer`. A download link for the cmdlet is provided in the See Also section of this guide.
-. Go to `%programfiles%\Java\jre8`. Verify that the `bin\keytool.exe` tool exists, and that `lib\security\cacerts` exists. Note that you must be running as Administrator to perform a certificate import with Keytool.exe. Otherwise, an Access Denied error occurs.
-. Enter the following command: `bin\keytool.exe –list –keystore lib\security\cacerts`
-. Import the auto-generated Service Bus certificate by running the following command:  `bin\keytool.exe –importcert –alias AppServerGeneratedSBCA –file %temp%\AutoGeneratedCA.cer –keystore lib\security\cacerts –v`
-. You are prompted for the password (the default is “changeit”).  If you do not know the password, you cannot perform the import. When the tool asks you whether to trust the certificate, enter Y (Yes).
-
-== About SAS Based Authentication
-
-In addition to the connection schemes that require a username and password, the connector provides a connection in which authentication is SAS based (only for Azure) which allows you to set the authentication token for the Service Bus Service without requiring the username and password for it.
-
-As the SAS token schema is URI based (that is, you can assign different authorization access to your resources based on their URIs) the connection supports multiple ways of providing the authentication tokens needed. The most trivial and simple case is when you have a single profile that authorizes access to all your resources by using an specific root URI which is the base endpoint that your service exposes. If you need to provide different access tokens on different resources, use a setting that allows you to configure them according to the resources the connector needs while running.
-
-Extending the mechanisms described above to provide the authentication token, you can implement a custom token provider to allow the connector requests for security tokens as needed. You need to resolve each request and return a fresh token every time the connector asks for one. As the token has an expiration time within it, this mechanism allows the connector to re-authenticate with the target resource when the token expires. This is not allowed with the previous mechanisms described above where the tokens are fixed at configuration time before the flow runs.
-
-The following are the available settings for the Shared Access Signature connection:
-
-* Service Namespace: The namespace for the Azure Service Bus Service within your subscription.
-* Shared Access Signature: (Optional) The unique security token when you set up just one security profile to access all your service resources. In this case when the token has expired, the connector cannot reconnect automatically and you need to stop running the flow to update this configuration setting with a new token.
-
-Within the advanced section you can find:
-
-* SAS Tokens List: (Optional) The list of security tokens the connector needs to access for the different URIs when the security profiles for each are different. When any of the tokens expires, the connector cannot reconnect to the URI linked to that token and you need to stop running the flow to update this configuration setting with a new set of tokens.
-* SAS Tokens Provider: (Optional) A Spring bean reference implementing the `org.mule.modules.microsoftservicebus.connection.providers.SharedAccessSignatureProvider` interface. If you set an instance of a token provider here, it is your responsibility to provide a fresh token for each URI the connector requires access to (according to your security profiles). In this case each time a token expires, the connector requests a new one, which is provided by your implementation, and reconnection to the target URI is done seamlessly. 
-* Max Connections: (Optional) Maximum number of connections to keep in pool to be reused by producer. If set to "-1" it creates a new connection each
-time.
-
-NOTE: At least one of the optional settings shown above must be provided.
-
-In all cases, the token format you should provide is a string that must comply with the following pattern:
-
-[source]
+[source,xml,linenums]
 ----
-SharedAccessSignature sr=[resource_uri]&sig=[signature]&se=[ttl]&skn=[profile]
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" 
+xmlns:servicebus="http://www.mulesoft.org/schema/mule/servicebus"
+xmlns:http="http://www.mulesoft.org/schema/mule/http"
+xmlns="http://www.mulesoft.org/schema/mule/core" 
+xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core 
+http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http 
+http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/servicebus 
+http://www.mulesoft.org/schema/mule/servicebus/current/mule-servicebus.xsd
+http://www.mulesoft.org/schema/mule/ee/core 
+http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<configuration-properties file="mule-app.properties" doc:name="Configuration properties"/>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config">
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<servicebus:config name="Microsoft_Service_Bus_Config" doc:name="Microsoft Service Bus Config">
+		<servicebus:username-password-connection 
+			userName="${azure.keyname}" 
+			password="${azure.key}" 
+			namespace="${azure.namespace}" >
+			<servicebus:caching-strategy >
+				<servicebus:no-caching-configuration />
+			</servicebus:caching-strategy>
+		</servicebus:username-password-connection>
+	</servicebus:config>
+	<flow name="load-http-form-flow">
+		<http:listener doc:name="Root Endpoint" config-ref="HTTP_Listener_config" 
+			path="/" />
+		<parse-template doc:name="Web Form" location="form.html" />
+	</flow>
+	<flow name="queue-endpoint-flow">
+		<http:listener doc:name="Queue Endpoint" config-ref="HTTP_Listener_config" 
+			path="/pushMessageQueue" />
+		<ee:transform doc:name="Convert Payload to Java Object">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<servicebus:queue-send doc:name="Queue send" config-ref="Microsoft_Service_Bus_Config" 
+			destinationQueue="#[payload.queue]">
+			<servicebus:message >
+				<servicebus:body ><![CDATA[#[payload.message]]]></servicebus:body>
+			</servicebus:message>
+		</servicebus:queue-send>
+	</flow>
+	<flow name="topic-endpoint-flow">
+		<http:listener doc:name="Topic Endpoint" config-ref="HTTP_Listener_config" 
+			path="/pushMessageTopic"/>
+		<ee:transform doc:name="Convert Payload to Java Object">
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<servicebus:topic-send doc:name="Topic send" config-ref="Microsoft_Service_Bus_Config" 
+			destinationTopic="#[payload.topic]" 
+			transactionalAction="NOT_SUPPORTED" 
+			sendCorrelationId="AUTO">
+			<servicebus:message >
+				<servicebus:body ><![CDATA[#[payload.message]]]></servicebus:body>
+			</servicebus:message>
+		</servicebus:topic-send>
+	</flow>
+	<flow name="queue-receive-flow">
+		<servicebus:listener 
+			sourceType="Queue" 
+			destination="${queue.name}" 
+			doc:name="Queue receive" 
+			config-ref="Microsoft_Service_Bus_Config" 
+			ackMode="AUTO" subscription="NONE" 
+			numberOfConsumers="1"/>
+		<logger level="INFO" doc:name="Log the message" message="#[payload]"/>
+	</flow>
+	<flow name="topic-receive-flow">
+		<servicebus:listener sourceType="Topic" doc:name="Topic receive" 
+			config-ref="Microsoft_Service_Bus_Config" 
+			ackMode="AUTO" destination="${topic.name}" 
+			subscription="${subscription.name}"/>
+		<logger level="INFO" doc:name="Log the message" message="#[payload]"/>
+	</flow>
+</mule>
 ----
 
-The `sr` parameter value can start with an `https` or `amqps` protocol depending on the operation you perform on the target resource.
+== Use Case: Azure Serice Bus Management
 
-For example:
-[source]
+image:ms-service-bus-demo-2.png[Azure Management Studio 7 Flow]
+
+XML flow:
+
+[source,xml,linenums]
 ----
-SharedAccessSignature sr=amqps%3a%2f%2fmynamespace.servicebus.windows.net%2fMyQueue&sig=pSrfJn5uRTiepgOTjBpjcf2gw%2bG34S1MYdCfkQkTC8A%3d&se=101&skn=OperationalPolicyKey`
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:servicebus="http://www.mulesoft.org/schema/mule/servicebus"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" 
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core 
+	http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http 
+http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/servicebus 
+http://www.mulesoft.org/schema/mule/servicebus/current/mule-servicebus.xsd
+http://www.mulesoft.org/schema/mule/ee/core 
+http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<configuration-properties file="mule-app.properties" 
+	doc:name="Configuration properties"/>
+	<http:listener-config name="HTTP_Listener_config" 
+	doc:name="HTTP Listener config">
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<servicebus:config name="Microsoft_Service_Bus_Config" 
+	doc:name="Microsoft Service Bus Config">
+		<servicebus:username-password-connection 
+		userName="${azure.keyname}" 
+		password="${azure.key}" 
+		namespace="${azure.namespace}" >
+			<servicebus:caching-strategy >
+				<servicebus:no-caching-configuration />
+			</servicebus:caching-strategy>
+		</servicebus:username-password-connection>
+	</servicebus:config>
+	<flow name="azure-service-bus-management-demoFlow">
+		<http:listener doc:name="Topic Create Endpoint" 
+		config-ref="HTTP_Listener_config" 
+		path="/topic"/>
+		<ee:transform doc:name="Set ServiceBusTopicDescription">
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	defaultMessageTimeToLive: "P10675199DT2H48M5.4775807S",
+	duplicateDetectionHistoryTimeWindow: "PT10M",
+	enableBatchedOperations: false,
+	maxSizeInMegabytes: 1024,
+	requiresDuplicateDetection: false,
+	sizeInBytes: null
+} as Object {
+	class : "com.mulesoft.connectors.microsoft.servicebus.extension.api.entity.ServiceBusTopicDescription"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<servicebus:topic-create doc:name="Topic create" 
+		config-ref="Microsoft_Service_Bus_Config" 
+		topicPath="${topic.name}">
+		</servicebus:topic-create>
+		<ee:transform doc:name="Object to Json">
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	author: payload.author,
+	id: payload.id,
+	title: payload.title
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" message="#[payload]"/>
+	</flow>
+	<flow name="azure-service-bus-management-demoFlow1">
+		<http:listener doc:name="Subscription Create Endpoint" 
+		config-ref="HTTP_Listener_config" 
+		path="/subscription"/>
+		<ee:transform doc:name="Set ServiceBusSubscriptionDescription">
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	lockDuration: "PT4M",
+	requiresSession: false,
+	deadLetteringOnMessageExpiration: false,
+	deadLetteringOnFilterEvaluationExceptions: null,
+	enableBatchedOperations: false,
+	defaultMessageTimeToLive: "P10675199DT2H48M5.4775807S",
+	maxDeliveryCount: null
+} as Object {
+	class : "com.mulesoft.connectors.microsoft.servicebus.extension.api.entity.ServiceBusSubscriptionDescription"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<servicebus:subscription-create 
+		topicPath="${topic.name}" 
+		doc:name="Subscription create" 
+		config-ref="Microsoft_Service_Bus_Config" 
+		subscriptionPath="${subscription.name}"/>
+		<ee:transform doc:name="Object to Json">
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	linik: payload.link,
+	id: payload.id,
+	title: payload.title
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" message="#[payload]"/>
+	</flow>
+	<flow name="azure-service-bus-management-demoFlow2">
+		<http:listener doc:name="Rule Create Endpoint" 
+		config-ref="HTTP_Listener_config" 
+		path="/rule"/>
+		<ee:transform doc:name="Set ServiceBusRuleDescription">
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	action: {
+		sqlExpression: "set MyProperty2 = 'ABC'",
+		"type": "SqlRuleAction"
+	},
+	filter: {
+		correlationId: null,
+		sqlExpression: "property1 = 'ok'",
+		"type": "SqlFilter"
+	}
+} as Object {
+	class : "com.mulesoft.connectors.microsoft.servicebus.extension.api.entity.ServiceBusRuleDescription"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<servicebus:rule-create topicPath="${topic.name}" doc:name="Rule create" config-ref="Microsoft_Service_Bus_Config" rulePath="${rule.name}" subscriptionPath="${subscription.name}"/>
+		<ee:transform doc:name="Object to Json">
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	link: payload.link,
+	id: payload.id,
+	title: payload.title
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" message="#[payload]"/>
+	</flow>
+</mule>
 ----
-
-== About Performance Considerations
-
-The Claims Based Security mechanism required to authenticate to Azure Service Bus uses a SAS token that exchanges messages with a special node. The latest impacts on connector's performance as tokens are exchanged per request to achieve connection security setup using targeted tokens related to the resource being accessed. This has been optimized, starting from version 1.2, to impact performance as least as possible. If your scenario requires sending several messages with high throughput, use a connection strategy that requires setting the username and password. This is the simpler way to authenticate to Azure Service Bus with the connector while achieving better throughput, although it requires you to write the password for the shared access key name you are using.
-
-NOTE: As said before, if you are experiencing performance issues when using the SAS strategy, update to version 1.2 or higher. The optimized mechanism has lower performance impact on receiving and sending operations as the AMQP container and cache (respectively) keep the connection alive and token exchange messages occur only when setting up the connection and/or in case of token expiration.
-
-== About Restricted Access Policies
-
-If you have restricted access to your resources and have a security policy with permissions only at resource level, the connector cannot perform its connectivity test when it starts. The test targets the root level of your namespace which might be forbidden due to the customized policy applied to the shared access key. For these scenarios, skip the connectivity test with the configuration option available for this purpose, otherwise the connector cannot start up.
-
 
 == See Also
 
 * https://msdn.microsoft.com/library/azure/jj248762%28v=azure.10%29.aspx[Get-SBAutoGeneratedCA]
-
