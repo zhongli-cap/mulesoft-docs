@@ -1,7 +1,7 @@
 = XML SDK Modules
 :keywords:
 
-:toc:
+:toc:                        
 
 The XML SDK is for creating custom modules, similar to the way you create a Mule app. In fact, you can use existing Mule components in the module. The framework simply adds a few syntactic idioms as XML elements that enclose the main parts of module, such as `<module>`, `<operation>`, and `<parameter>` elements. For example, this snippet defines a single operation in the `Hello XML SDK`:
 
@@ -18,26 +18,14 @@ The XML SDK is for creating custom modules, similar to the way you create a Mule
 </module>
 ----
 
-
-////
-TODO: SUGGESTION: MIGHT MAKE MORE SENSE TO DEFINE the operation hello-smart-connector before
-PROVIDING THIS EXAMPLE
-////
-
 You use a Mule SDK component in a Mule flow the same way that you use any other component. In this example, execution of the flow `"random-flow"` sets the payload to `"Hello World!"`, as defined in the operation `<hello-smart-connector:say-hello>`.
 
-////
-TODO: ISSUE: THE ELEMENTS ARE ARE MISMATCHED: SEE flow opening vs module closing element
-////
 [source,xml,linenums]
 ----
 <flow name="random-flow">
   <hello-smart-connector:say-hello>
-</module>
+</flow>
 ----
-
-//TODO: THIS TIP SEEMS OUT OF PLACE HERE:
-Tip: Reusing components can make it easier to find an error when you are debugging an XML SDK component.
 
 Note that the XML SDK is strongly typed, so the data type of defined parameters for every operation is statically set for both the input and output.
 
@@ -63,10 +51,6 @@ Keep in mind that these parameters are the only data that the message processors
 * Errors: Declares the error types the XML SDK can raise (or map) within the `<body>`.
 
 The following XML SDK module takes two numbers as parameters and has a single operation that sums them together:
-
-////
-TODO: CHECK SET PAYLOAD ELEMENT
-////
 
 [source,xml,linenums]
 ----
@@ -94,10 +78,6 @@ To use an XML SDK module in a Mule app, you simply add it to a Mule flow, for ex
   <!-- payload here is 15 -->
 </flow>
 ----
-
-////
-TODO: See type below: What is a catalog?
-////
 
 .Attributes of <parameter>
 [%header,cols="20,20,30,70a"]
@@ -236,13 +216,13 @@ TODO: VERIFY THAT httpn is correct and not http
   <property name="username" type="string" doc:description="Username credential."/>
   <property name="password" type="string" password="true" doc:description="Password credential"/>
 
-  <httpn:request-config name="github-httpreq-config" basePath="/">
-    <httpn:request-connection host="api.github.com" protocol="HTTPS" port="443">
-      <httpn:authentication>
-        <httpn:basic-authentication username="#[vars.username]" password="#[vars.password]"/>
-      </httpn:authentication>
-    </httpn:request-connection>
-  </httpn:request-config>
+  <http:request-config name="github-httpreq-config" basePath="/">
+    <http:request-connection host="api.github.com" protocol="HTTPS" port="443">
+      <http:authentication>
+        <http:basic-authentication username="#[vars.username]" password="#[vars.password]"/>
+      </http:authentication>
+    </http:request-connection>
+  </http:request-config>
 
   <operation name="get-user" doc:description="Lists public and private profile information when authenticated.">
     <body>
@@ -256,13 +236,7 @@ TODO: VERIFY THAT httpn is correct and not http
 The example references a `<property>` that is defined in the module:
 
 * In a global element as the value for a `request-config`.
-* In an operation as the value to a `config-ref` attribute in an `httpn-request`.
-
-////
-TODO: WHERE DOES github:config come from? Should it be github:github-httpreq-config instead maybe?
-
-TODO: VERIFY SECOND SENTENCE BELOW. I ADDED IT BECAUSE THE EXAMPLE WAS CONFUSING. SEEMED TO USE IDEAS AND INFO NOT YET DISCUSSED.
-////
+* In an operation as the value to a `config-ref` attribute in an `http-request`.
 
 The following Mule app uses XML SDK module. Note that the `github` prefix (for example, `github:get-user`) is derived from the `name` of the module.
 
@@ -369,16 +343,6 @@ Note that incorrect credentials return this error response from GitHub:
 | NA
 | Documentation for the `<property>`.
 |===
-
-
-////
-TODO: NOT CLEAR WHERE THIS BELONGS OR WHAT ITS PURPOSE IS (I FIXED LINK AND HID THIS BUT OTHERWISE DID NOT TOUCH THE CONTENT):
-link:/mule4-user-guide/v/4.1/global-elements[Global elements], such as `<http:requester-config ../>` delegate connectivity to, allowing the use of any other connector in an XML SDK.
-
-
-There are cases where several operations need to handle a single state between them. This is the case of a connector that handles session to an external API.
-
-////
 
 === Module
 
@@ -500,7 +464,7 @@ This `hello with spaces` module above can be used in a Mule app, for example:
 To create an XML SDK module:
 
 
-. Uuse Maven (`mvn`) from to execute the following command:
+. Use Maven (`mvn`) from to execute the following command:
 +
 [source,Maven,linenums]
 ----
@@ -573,14 +537,9 @@ This command also runs the suite through MUnit for the operation defined in the 
 ➜  hello-smart-connector
 ----
 
-Note: Minor issues from using Aether with MUnit can cause the `hello-smart-connector` build to return a `FAILURE` in the `Hello XML SDK Mule Application Integration Test` project. If this error occurs, you can fix it by running `mvn clean install` from the `smart-connector-it` subdirectory, rather than from the parent `hello-smart-connector` directory.
+== Consuming Mule Plugin from an XML SDK Module
 
-== Consuming Mule Connectors from an XML SDK Module
-
-//TODO: SENTENCE BELOW UNCLEAR.
-//We previously show that it is possible to leverage code into a working connector from an XML SDK, which is quite similar to what happens in a Mule Application.
-
-To consume a Mule connector from within an XML SDK module:
+To consume a Mule plugin from within an XML SDK module:
 
 . Add the dependency into the POM file for the XML SDK module.
 +
@@ -592,14 +551,14 @@ For example, for an XML SDK module to use the HTTP connector and the OAuth modul
   <dependency>
     <groupId>org.mule.connectors</groupId>
     <artifactId>mule-http-connector</artifactId>
-    <version>0.8.0-SNAPSHOT</version>
+    <version>1.2.1</version>
     <classifier>mule-plugin</classifier>
     <scope>compile</scope>
   </dependency>
   <dependency>
     <groupId>org.mule.modules</groupId>
     <artifactId>mule-oauth-module</artifactId>
-    <version>0.8.0-SNAPSHOT</version>
+    <version>1.1.2</version>
     <classifier>mule-plugin</classifier>
     <scope>compile</scope>
   </dependency>
@@ -623,13 +582,9 @@ For example, for an XML SDK module to use the HTTP connector and the OAuth modul
 ----
 
 == Reusing Operations
-
-//TODO: THE SENTENCE BELOW IS UNCLEAR.
-//In some cases, operations will have repeated message processors, to which we could rely if they were encapsulated in an new operation and call it from other places.
+In some cases, operations will have repeated message processors, to which we could rely if they were encapsulated in an new operation and call it from other places.
 
 Each `<operation>` defined in a `<module>` can be reused in the _same_ `<module>` if the operation does not have cyclic dependencies.
-
-//TODO: ADD EXAMPLE OF CYCLIC DEPENDENCIES?
 
 For example, assume that a `<module>` validates input parameters before performing inserts and updates. Notice that validations in the next example are repeated in the operations `validate-and-insert` and `validate-and-update`.
 
@@ -759,7 +714,6 @@ Note that the value must map the target namespace of the current module.
 </module>
 ----
 
-//TODO: NEED TO EXPLAIN WHAT THIS MEANS? config-ref not in Validate body or what?
 Note that the `config-ref` is not included because this is a reference to the _same_ module, which implies all global instances will be shared among operations.
 
 == Providing a Test Connection
@@ -815,10 +769,6 @@ If a module contains two or more global elements that provide a test connection,
 == Handling Errors
 
 In some cases, operations within the `<body>` throw error codes that should not be propagated as-is. In this case, you need to remap the codes to something more meaningful to the end user. In other cases, the issues might pertain to conditions within the `<operation>`.
-
-//TODO: NOT CLEAR:
-//In other cases, scenarios might be preconditions inside the `<operation>`.
-//In other cases, the issues might pertain to conditions within the `<operation>`.
 
 The XML SDK relies on link:/mule4-user-guide/v/4.1/mule-error-concept#about-error-mappings[error mappings] for the former. For the latter, the link:/mule4-user-guide/v/4.1/raise-error-component-reference[raise error component] is used.
 
@@ -1030,7 +980,6 @@ To perform the DataWeave transformation from JSON to XML (shown within `<ee:tran
 </dependency>
 ----
 
-//TODO: WHY IS THIS INFO HERE?
 To use the operations from the <<example, example>> above in a Mule app, it is necessary to feed values to them, for example:
 
 [source,xml,linenums]
@@ -1503,9 +1452,3 @@ The SDK currently has the following limitations:
 
 * XML SDK only provides outbound operations, not sources (such as a `<scheduler>`) or routers.
 * Operations do not support recursive calls.
-
-////
-TODO? RELATED LINKS?
-== See Also
-???
-////
