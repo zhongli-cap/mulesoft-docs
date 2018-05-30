@@ -24,7 +24,7 @@ Once configured, the provider works as follows:
 
 Two HTTP endpoints are created for listening to Authentication Code and Token request as stated by the OAuth2 definition. Those will work independently from the mule application and will respond via HTTP. +
 Apart from that, the provider defines an operation: <<validate-token>> that can check if a token is authorized. That operation can be added anywhere in a flow to control it's execution. If the token is indeed authorized,
-the flow will keep executing, otherwise,a *TOKEN_UNAUTHORIZED* error will be raised. It's up to the developer to add that operation in parts of the application that need token authorization. +
+the flow will keep executing, setting token information in the payload, otherwise, a *TOKEN_UNAUTHORIZED* error will be raised. It's up to the developer to add that operation in parts of the application that need token authorization. +
 Also, since token validation is almost always going to be used together with an HTTP Listener, in case it fails, the listener's response mechanism can handle that error and properly respond to the requester. Additional logic can be added handling that type of Error. +
 Lastly, additional operations are provided to add or delete clients and to revoke tokens in case it's needed.
 
@@ -255,6 +255,18 @@ Keep in mind that for Client Redirect Uris, Client Authorized Grant Types or Cli
 ----
 
 Validates that the given token was granted and is in a valid state. Also, if defined, checks that the token scopes or resource owner roles match the provided ones.
+
+If the token provided is valid then the operation will set the payload as a JSON with the following information.
+[options="header"]
+|============
+| Key | Value | Always
+| expires_in | time remaining for the token to be considered invalid, in seconds | yes
+| scope | space separated scopes associated with the token | yes
+| client_id | Id of the client that requested this token | only if present
+| username | Username of the resource owner that authorized this token to be requested | only if present
+|============
+
+In case you want to preserve the payload set before executing the operation, the attributes _target_ and _targetValue_ can be used to set this JSON information in a variable instead of overwriting the payload.
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
