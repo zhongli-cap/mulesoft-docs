@@ -3,204 +3,204 @@
 
 This page describes how to deploy your Mule applications on a Websphere Application server.
 
+== Install and Configure Websphere
+
+You can follow the link:https://developer.ibm.com/wasdev/downloads/#asset/WAS_traditional_for_Developers[steps] to install WebSphere Application Server for developers. A full-featured no-charge install that just requires an IBM ID registration, not a purchase. (see link:https://www.ibm.com/developerworks/downloads/ws/wasdevelopers/faq-wasdevelopers.html[FAQ])
+
+. First install the IBM Installation Manager. +
+:: Use the _userinst_ executable to install it in a non-privileged directory location, so that root access is not required. For example, install it at:
++
+*Main location*: $HOME/opt/IBM/InstallationManager/ +
+*Shared resources*: $HOME/opt/IBM/IMShared/ +
+*Data files*: $HOME/var/ibm/InstallationManager/
+. Then run the installation manager to install WebSphere 9.0 at `$HOME/opt/IBM/WebSphere/AppServer/`. +
+:: You need to run the script in `$HOME/opt/IBM/InstallationManager/eclipse/IBMID` +
+Use the userinst script, so it is installed on a local user folder (not system-wide)
+
+Once installed, you can continue to install Mule on websphere.
+
 == Installing Mule on Websphere as a service
 
-WebSphere has many concepts: nodes, cells, server, agents, etc. Just
-follow the steps below, and you should be up and running quickly.
+These instructions assume the following unless explicitly specified otherwise:
 
-For example, you can follow the https://developer.ibm.com/wasdev/downloads/#asset/WAS_traditional_for_Developers[steps] 
-to install WebSphere Application Server for developers, a full-featured
-no-charge install that just requires an IBM ID registration, not a purchase. (see https://www.ibm.com/developerworks/downloads/ws/wasdevelopers/faq-wasdevelopers.html[FAQ])
+*Profiles are stored at*: $HOME/tmp/websphere_profiles +
+*Commands are run from the directory*: $HOME/opt/IBM/WebSphere/AppServer +
+*MULE_HOME is configured at*: $HOME/opt/mule-enterprise-standalone-3.9.1
 
-First install the IBM Installation Manager. Use the userinst executable to install in a non-privileged directory location, so that root access is not required. Install  e.g. at
-
+. Create profile for admin_agent and websphere application server.
++
+::
++
+[source,bash,linenums]
+----
+bin/manageprofiles.sh -create \
+     -profileName admin1 \
+     -profilePath $HOME/tmp/websphere_profiles/admin1 \
+     -templatePath management \
+     -serverName adminagent \
+     -serverType ADMIN_AGENT \
+     -nodeName adminnode1 \
+     -cellName cell1 \
+     -hostName localhost \
+     -startingPort 31000
+----
++
+[source,bash,linenums]
+----
+bin/manageprofiles.sh -create  \
+    -profileName default1 \
+    -profilePath $HOME/tmp/websphere_profiles/default1 \
+    -templatePath default \
+    -serverName server1 \
+    -nodeName node1 \
+    -cellName cell1 \
+    -hostName localhost \
+    -isDefault \
+    -keyStorePassword ugorji \
+    -startingPort 32000
+----
++
+When managing profiles, you can see status of the profiles created or deleted in the folder $HOME/opt/IBM/WebSphere/AppServer/logs/manageprofiles:
++
+[source]
+----
+<profile_name>_create.log
+<profile_name>_delete.log
+----
+. Start the administration server.
+:: This performs sysadmin functions for the actual worker server.
++
 [source, bash]
 ----
-   Main location: $HOME/opt/IBM/InstallationManager/
-   shared resources: $HOME/opt/IBM/IMShared/
-   Data files: $HOME/var/ibm/InstallationManager/
+bin/startServer.sh -profileName admin1 adminagent
 ----
-
-Then run the installation manager to install WebSphere 9.0 at 
-   $HOME/opt/IBM/WebSphere/AppServer/
-
+. Go to the profile folder for the administration agent and register the application server profile.
++
+::
++
 [source, bash]
 ----
-   Run Script: $HOME/opt/IBM/InstallationManager/eclipse/IBMID
-   Use the userinst script, so it is installed on a local user folder (not system-wide)
+cd $HOME/tmp/websphere_profiles/admin1/bin \
+./registerNode.sh -profilePath $HOME/tmp/websphere_profiles/default1
 ----
-
-Once installed, you will need to do the following steps. For these steps, 
-we assume the following unless explicitly specified otherwise:
-
+. Check the status of all servers in all profiles
++
+::
++
 [source, bash]
 ----
-Profiles are stored at: $HOME/tmp/websphere_profiles
-Commands are run from the directory: $HOME/opt/IBM/WebSphere/AppServer
-MULE_HOME: $HOME/opt/mule-enterprise-standalone-3.9.1
+bin/serverStatus.sh -all -profileName admin1
+----
++
+[source,bash,linenums]
+----
+bin/serverStatus.sh -all
 ----
 
-Create profile for admin_agent and websphere application server:
-
-[source, bash]
-----
-   bin/manageprofiles.sh -create \
-       -profileName admin1 \
-       -profilePath $HOME/tmp/websphere_profiles/admin1 \
-       -templatePath management \
-       -serverName adminagent \
-       -serverType ADMIN_AGENT \
-       -nodeName adminnode1 \
-       -cellName cell1 \
-       -hostName localhost \
-       -startingPort 31000
-
-   bin/manageprofiles.sh -create  \
-       -profileName default1 \
-       -profilePath $HOME/tmp/websphere_profiles/default1 \
-       -templatePath default \
-       -serverName server1 \
-       -nodeName node1 \
-       -cellName cell1 \
-       -hostName localhost \
-       -isDefault \
-       -keyStorePassword ugorji \
-       -startingPort 32000 
-----
-
-When managing profiles, you can see status of the profiles created or deleted in the folder $HOME/opt/IBM/WebSphere/AppServer/logs/manageprofiles: 
-
-[source, bash]
-----
-   <profile_name>_create.log
-   <profile_name>_delete.log
-----
-
-Start the administration server, which will perform sysadmin functions  for the actual worker server
-
-[source, bash]
-----
-   bin/startServer.sh -profileName admin1 adminagent
-----
-
-Go to the profile folder for the administration agent and register the application server profile
-
-[source, bash]
-----
-   cd $HOME/tmp/websphere_profiles/admin1/bin
-   ./registerNode.sh -profilePath $HOME/tmp/websphere_profiles/default1
-----
-
-Check the status of all servers in all profiles
-
-[source, bash]
-----
-   bin/serverStatus.sh -all -profileName admin1
-   bin/serverStatus.sh -all
-----
 
 == License Validation
 
-   As Classloading policies differ among WAS versions, in particular due to changes in equinox, the most direct way to validate the license is to use the default java Preferences API so that the license is installed in the default preferences api location ($HOME/.java in linux, the registry in Windows, etc.)
+As Classloading policies differ among WAS versions, in particular due to changes in equinox, the most direct way to validate the license is to use the default java Preferences API so that the license is installed in the default preferences api location ($HOME/.java in linux, the registry in Windows, etc.)
 
-   You can now install a license in the preferences API route through the command:
-
-[source, bash]
-----
-   -M-Duse.default.preferences.factory=true 
-----
-
-   Using this parameter every operation concerning license management (install, uninstall, validation) is performed taking into account the default location for each environment
-Start up the application server
+You can now install a license in the preferences API route through the command:
 
 [source, bash]
 ----
-   bin/startServer.sh server1
+-M-Duse.default.preferences.factory=true
 ----
+This parameter performs every operation concerning license management (install, uninstall, validation) taking into account the default location for each environment.
 
-For sanity, restart the administration agent
-
+. Start up the application server
++
+::
++
+[source, bash]
+----
+bin/startServer.sh server1
+----
+. For sanity, restart the administration agent.
++
+::
++
 [source, bash]
 ----
    bin/stopServer.sh -profileName admin1 adminagent
    bin/startServer.sh -profileName admin1 adminagent
 ----
-Log into the adminagent   https://localhost:31001/ibm/console  
-   
-   Log in as the user: _system_ (no credentials).  
-   You also want to select _node1_  
-   so you can “administer” the application server (not the adminagent).
-   
-Configure the CustomService so that Mule starts and shutsdown during WebSphere startup and shutdown.
-   
-    	On left navigation tree, click: 
-    Servers -> Server Types -> WebSphere application servers
-    In table of servers, click on _server1_
-    Under 'Server Infrastructure', expand 'Administration' and select 'Custom services'
-    Create a new one with the configuration below:  
-       Note that any property that starts with sysprop. will denote a system property (that we will set).
-       Mule uses some system properties at startup.
+. Log into the adminagent at `+https://localhost:31001/ibm/console+` +
+:: Log in as the user: _system_ (no credentials) and select _node1_ so you can “administer” the application server (not the adminagent).
+. Configure the CustomService so that Mule starts and shutsdown during WebSphere startup and shutdown.
++
+::
++
+.. On left navigation tree, click: Servers -> Server Types -> WebSphere application servers.
+.. In table of servers, click on _server1_
+.. Under 'Server Infrastructure', expand 'Administration' and select 'Custom services'.
+.. Create a new one with the configuration below: +
+::: Any property that starts with sysprop denotes a system property that we will set. +
+Mule uses some system properties at startup:
++
+[%header,cols="a,a"]
+|===
+|Property |Value
+| Check | Enable service at server startup
+| Classname | WebSphereMuleCustomService
+| Display Name | WebSphereMuleCustomService
+| Description | Service for starting up and shutting down Mule within Websphere process image
+| Classpath | mule-in-foreign-jvm.jar:websphere-to-mule.jar +
+*Use the absolute paths for both files*
+|===
+.. Click 'Custom properties' and add the following name/value pairs (give any description you want):
++
+:::
++
+[%header,cols="a,a"]
+|===
+| Property | Value
+| sysprop.mule.home | $HOME/opt/mule-enterprise-standalone-3.8.5
 
-[source, bash]
-----
-       Check: Enable service at server startup
-       Classname: WebSphereMuleCustomService
-       Display Name: WebSphereMuleCustomService
-       Description: Service for starting up and shutting down Mule within Websphere process image
-       Classpath: mule-in-foreign-jvm.jar:websphere-to-mule.jar **(use the absolute paths for both files)**
-       
-       Click 'Custom properties' and add the following name/value pairs (give any description you want):
-       
-          sysprop.mule.home = $HOME/opt/mule-enterprise-standalone-3.8.5
-          
-          sysprop.anypoint.platform.client_id = 
-          sysprop.anypoint.platform.client_secret = 
-          (passes credentials for communicating with a management plane, else you will see NullPointerExc during shutdown)
-          
-          sysprop.mule.agent.enabled = false
-          (disable MMC agent, if you do NOT use MMC, for faster startup)
+| sysprop.anypoint.platform.client_id +
+sysprop.anypoint.platform.client_secret |
+Configure your credentials to communicate with your management plane, else you will see NullPointerExc during shutdown.
 
-          mule.log.errors.on.shutdown = true
-          (log all errors caught during shutdown to standard error stream)
-          (Also, sometimes, log4j throws errors during shutdown, due to its use of shutdown hooks. 
-          This is a log4j bug fixed in v2.7, but Mule uses log4j v2.5. 
-          You can disable log4j's shutdown hooks to resolve this if it shows up. 
-          Just modify the log4j2.xml and update the top element to <Configuration shutdownHook="disable" >)
-          
-       Note that you should look at your wrapper.conf and reproduce your configurations here appropriately,
-       as the wrapper.conf is NOT read. The appropriate wrapper.java.additional.<n>=-Dname=value lines in wrapper.conf
-       should be updated to sysprop.name=value accordingly. 
-       
-       For example, to modify the MMC bind port and configure mule for fips140-2, you should set the following:
-          sysprop.mule.mmc.bind.port=7890
-          sysprop.mule.security.model=fips140-2
-       
-----
-    
-Restart the application server, and verify that Mule starts up
+| sysprop.mule.agent.enabled | false
 
+[TIP]
+Disable MMC agent, if you do NOT use MMC, for faster startup.
+
+| mule.log.errors.on.shutdown | true
+
+[NOTE]
+Log all errors caught during shutdown to standard error stream. +
+Sometimes, log4j throws errors during shutdown, due to its use of shutdown hooks. This is a log4j bug fixed in v2.7, but Mule uses log4j v2.5. You can disable log4j's shutdown hooks to resolve this if it shows up, by modifying the log4j2.xml and update the top element to <Configuration shutdownHook|"disable">
+
+|===
++
+Note that you should look at your wrapper.conf and reproduce your configurations here appropriately, as the wrapper.conf is NOT read. +
+The appropriate `wrapper.java.additional.<n>=-Dname=value` lines in wrapper.conf should be updated to sysprop.name=value accordingly. For example, to modify the MMC bind port and configure mule for fips140-2, you should set the following:
++
+[source]
+--
+sysprop.mule.mmc.bind.port=7890
+sysprop.mule.security.model=fips140-2
+--
+. Restart the application server, and verify that Mule starts up
++
 [source, bash]
 ----
    bin/stopServer.sh server1
    bin/startServer.sh server1
 ----
-   
-Look at the log files as necessary, and also to see that Mule is running in the WebSphere application server. 
-   
-   Log files should by default, be in 
-
- 
-[source, bash]
++
+. Look at the log files as necessary, and also to see that Mule is running in the WebSphere application server.
+Log files should by default, be in
++
+[source]
 ----
-   $HOME/tmp/websphere_profiles/default1/logs/server1/
-       SystemOut.log
-       SystemErr.log
+$HOME/tmp/websphere_profiles/default1/logs/server1/
+ SystemOut.log
+ SystemErr.log
 ----
 
-   By default, Mule logs to standard output. You can configure it to go elsewhere 
-   by updating the log4j configuration for Mule.
-   
-   You should see Mule startup messages, culminating with a list of the Mule domains and applications
-   as is familiar for standalone Mule startup.
-
-    
+By default, Mule logs to standard output. You can configure it to go elsewhere by updating the log4j configuration for Mule. +
+You should see Mule startup messages, culminating with a list of the Mule domains and applications as is familiar for standalone Mule startup.
