@@ -1,7 +1,10 @@
 = Deploying Mule as a Service to Websphere
 :keywords: deploy, deploying, websphere
 
-This page describes how to deploy your Mule applications on a Websphere Application server.
+This page describes how to deploy your Mule applications on a Websphere Application server. This is intended to run an isolated fully-functional mule container embedded into the foreign Websphere JVM.
+
+image:jvm-isolated-solution.png[jvm-isolated-solution]
+
 
 == Install and Configure Websphere
 
@@ -97,19 +100,6 @@ bin/serverStatus.sh -all -profileName admin1
 bin/serverStatus.sh -all
 ----
 
-
-== License Validation
-
-As Classloading policies differ among WAS versions, in particular due to changes in equinox, the most direct way to validate the license is to use the default java Preferences API so that the license is installed in the default preferences api location ($HOME/.java in linux, the registry in Windows, etc.)
-
-You can now install a license in the preferences API route through the command:
-
-[source, bash]
-----
--M-Duse.default.preferences.factory=true
-----
-This parameter performs every operation concerning license management (install, uninstall, validation) taking into account the default location for each environment.
-
 . Start up the application server
 +
 ::
@@ -147,7 +137,7 @@ Mule uses some system properties at startup:
 | Classname | WebSphereMuleCustomService
 | Display Name | WebSphereMuleCustomService
 | Description | Service for starting up and shutting down Mule within Websphere process image
-| Classpath | mule-in-foreign-jvm.jar:websphere-to-mule.jar +
+| Classpath | mule-external-container-support-base-VERSION.jar:websphere-to-mule-VERSION.jar +
 *Use the absolute paths for both files*
 |===
 .. Click 'Custom properties' and add the following name/value pairs (give any description you want):
@@ -157,7 +147,7 @@ Mule uses some system properties at startup:
 [%header,cols="a,a"]
 |===
 | Property | Value
-| sysprop.mule.home | $HOME/opt/mule-enterprise-standalone-3.8.5
+| sysprop.mule.home | $HOME/opt/mule-enterprise-standalone-3.9.1
 
 | sysprop.anypoint.platform.client_id +
 sysprop.anypoint.platform.client_secret |
@@ -184,6 +174,18 @@ The appropriate `wrapper.java.additional.<n>=-Dname=value` lines in wrapper.conf
 sysprop.mule.mmc.bind.port=7890
 sysprop.mule.security.model=fips140-2
 --
+
+. Setup the following JVM system properties
+
+In Application servers -> server -> Java and Process Management -> Process Definition -> Additional Properties -> Java Virtual Machine -> Generic JVM argument
+Set the following system properties with your digested license:
+
+-Dmule.license.content=2+W35iUhD9mRa1RQ5yxMSrQVEwYxW/LzSrcxKktNvezmZKH2EYUlW3rCow122a+w0oRF+S7xZVl1gquXZkYmhbJTb4j36nD9ywLdAdeiBZI3ZbMtFD+NYvswXsMA5JeN6hR0piREnVJI6TYQ6LRwN5OJrbpwLo+ldx2Nlo0NGcCUnL0QNWxNBOeQDKbZ/pINK2q157+uIvdd5mVJrFTuWwElDQahlZAp7iOxwDqpEo4K/NPR8FA5IPM43p5clTnL//Th+xGVQO9HvRPNcWQn8s7+J25LZOzM8qbIe/691IDZ2NR2EUa3AeolUnIZ4YEzMdhMyU4D2vDEa0y/ddM3xs0mJax48zJ28l2RuZDUPyE2K21AchiL4HwWK/48iRjc/fnUfQk/vUNCNqEWwVm3rRTJ2kltmS6RYYog8LRr1/Fyi/ZSs+l/k18RVkOuBMRdAYGUzkxRK42Jv+D4NdMfqLf6n2TXubM8HOFinSEyowRcr2y1ismzIcZHGq9OZEhCg5VyEevKGz7shqpqEfJ2AYSrna5uOta9ldxbihfGb3BH6Oh1TalGGD8EO6i9+ruSNtMh6vVT1jwP0Ns0rBKjIjn5DhGH9YQYYjwRTZ/1fqhhc22ssqs2JvK9R7MMVvyRvhxQM3fRJhsh8yPJz0Y0Ccn8J9aAmyMTml1+AHBj67lM2xqlWKmmxJZMIgnkO0Ck+28vvEoMhcZsE9oJPgdr2UHJBNv2T6622RKwNaFsvtdhgtF1/dU5keZjyZx8RnlFHfMJDQHmFijv7RzGPB497QvhuibS560zTWf3p+iJDjYU8rjXuFW7RLrNQXAdGDEn2c9PYw+Gj7BfcvBW1e8l5w== 
+
+You can also set the an external filename for the license:
+
+-Dmule.license.content=/home/user/muleLicense.xml
+
 . Restart the application server, and verify that Mule starts up
 +
 [source, bash]
