@@ -4,7 +4,7 @@
 CloudHub features a backend load-balancing service designed to automate the provisioning of infrastructure components. You can use this service to deploy one or more custom load-balancers within a link:/runtime-manager/virtual-private-cloud[VPC].
 
 [NOTE]
-You must have at least one VPC defined in your organization before you can configure a dedicated load balancer. 
+You must have at least one VPC defined in your organization before you can configure a dedicated load balancer.
 
 Each dedicated load balancers allows you to:
 
@@ -23,12 +23,12 @@ Check the <<Creating and Configuring a Dedicated Load Balancer>> section for mor
 
 == Load Balancer Architecture
 
-A CloudHub Dedicated Load Balancer can be used to route both internal and external traffic, and can route requests for multiple deployed Mule applications. 
+A CloudHub Dedicated Load Balancer can be used to route both internal and external traffic, and can route requests for multiple deployed Mule applications.
 
-A CloudHub Dedicated Load Balancer is assigned to a particular Virtual Private Cloud (VPC). The dedicated load balancer then routes traffic to that particular VPC within the particular service region of the VPC. 
+A CloudHub Dedicated Load Balancer is assigned to a particular Virtual Private Cloud (VPC). The dedicated load balancer then routes traffic to that particular VPC within the particular service region of the VPC.
 
 [NOTE]
-For a Mule application to be managed by the dedicated load balancer, the Mule application must be deployed into the VPC for the dedicated load balancer.  
+For a Mule application to be managed by the dedicated load balancer, the Mule application must be deployed into the VPC for the dedicated load balancer.
 
 
 Your CloudHub Dedicated Load Balancer has an internal domain name to be used by applications and clients within the VPC.
@@ -63,11 +63,81 @@ To associate an SSL endpoint you need to provide:
 [CAUTION]
 The private key file needs to be _passphraseless_
 
-Each SSL Endpoint can have multiple CA certificates and CRLs. Each of these certificates needs to be provided in a single unencrypted, _pem_ encoded file. Ordering for independent CA certificates is not important, but certificates in a chain of trust must be concatenated together.
+
+For example, you can create both a PEM encoded and not encyrpted certificate file and a private key using openssl. Here is an example of creating a self-signed certificate and corresponding private key: 
+
+[source,json,linenums]
+----
+openssl req -newkey rsa:2048 -nodes -keyout example-com-private.pem -x509 -days 3000 -out example-com-crt.pem 
+----
+
+This command prompts you for the certificate information. 
+
+You can also store the certificate information in a configuration file and pass that configuration file in to the openssl command. 
+
+For example, here is a certificate configuration file named `example-com.cfg` for the DNS domain example.com that includes some SAN (Subject Alternate Names) for two Mule applications app1.example.com and app2.example.com:
+
+[source,json,linenums]
+----
+[ req ]
+default_bits       = 2048
+distinguished_name = req_distinguished_name
+req_extensions     = req_ext
+prompt = no
+[ req_distinguished_name ]
+countryName                 = US
+stateOrProvinceName         = California
+localityName               = San Francisco
+organizationName           = MuleSoft
+commonName                 = example.com
+
+[ req_ext ]
+subjectAltName = @alt_names
+[alt_names]
+DNS.1   = app1.example.com
+DNS.2   = app2.example.com
+----
+
+Alternatively, here is an example of a wildcard certificate to support any subdomain name to example.com:
+
+[source,json,linenums]
+----
+[ req ]
+default_bits       = 2048
+distinguished_name = req_distinguished_name
+prompt = no
+[ req_distinguished_name ]
+countryName                 = US
+stateOrProvinceName         = California
+localityName               = San Francisco
+organizationName           = MuleSoft
+commonName                 = *.example.com
+----
+
+This wildcard ceritifcate is configured to support any subdomain request to example.com, so this would include `app1.example.com` and `app2.example.com`, as well as any future subdomain names.
+
+You can then pass the certificate configuration file in to the openssl command:
+
+[source,json,linenums]
+----
+openssl req -newkey rsa:2048 -nodes -keyout example-com-private.pem -x509 -days 3000 -out example-com-crt.pem -config example-com.cfg
+----
+
+Then you can decrypt the private key using openssl:
+
+[source,json,linenums]
+----
+openssl rsa -in example-com-private.pem -out example-com-private-decrypted.pem
+----
+
+=== Configuring Certificates for Production
+
+In a production environment you would normally have your certificate signed by a valid Certificate Authority (CA).
+Each SSL Endpoint can have multiple CA certificates and CRLs (Certificate Revocation Lists). You need to provide each of these certificates in a single unencrypted, _pem_ encoded file. Ordering for independent CA certificates is not important, but certificates in a chain of trust must be concatenated together.
 
 === Uploading Certificates
 
-The certificate that you upload to your Load Balancer must be contained in one _pem_ encoded and unencrypted file.
+The certificate that you upload to your Load Balancer must be contained in one _pem_ encoded and unencrypted file. +
 This file could contain the entire certificate chain ordered one after the other, similar to the example section below:
 
 [%header,cols="30a,70a"]
@@ -131,15 +201,6 @@ You can send a `PATCH` request to the `/organizations/{orgid}/vpcs/{vpcId}/loadb
 ]
 ----
 
-[NOTE]
---
-It is recommended to use the CloudHub REST API to programmatically update your revocation lists. +
-In order to get the necessary vpcId, and loadbalancerId from the CLI, you can use a link:/runtime-manager/anypoint-platform-cli#cloudhub-vpc-describe-json[vpc JSON describe] and link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-describe-json[load-balancer JSON describe] command respectively.
---
-
-You can send a PATCH request to your load balancer's endpoint to update any other property.
-
-
 === Certificate Ciphers
 
 A list of recommended ciphers suites with a good balance between compatibility and security for your SSL endpoint are below: +
@@ -185,7 +246,7 @@ By using proxy rules, you can map a domain or subdomain to one of your Mule appl
 A pattern is a string that defines a template for matching an input text. Whatever is placed into curly brackets (`{   }`) is treated like a variable.
 These variables can contain only letters (a-z) and cannot contain any other characters, such as digits, slashes, etc. The variable values can contain the following characters ‘a-z0-1.&?-_’ but no slashes.
 
-Suppose you have set up a DNS CNAME records from  `example.com` to `<lb-name>.lb.anypointdns.net`. Then you can map `app.example.com` to a different deployed CloudHub Mule application name. 
+Suppose you have set up a DNS CNAME records from  `example.com` to `<lb-name>.lb.anypointdns.net`. Then you can map `app.example.com` to a different deployed CloudHub Mule application name.
 
 For example, you can literally bind two hostnames for redirect:
 
@@ -194,6 +255,8 @@ For example, you can literally bind two hostnames for redirect:
 ‘app.example.com’ ->  application: `app` URI: `/example’
 ----
 
+In this case, external requests to `https://app.example.com` would be directed to http://app.cloudhub.io/example
+
 Or you can define a pattern to hold the input value:
 
 [source,Example,linenums]
@@ -201,7 +264,7 @@ Or you can define a pattern to hold the input value:
 ‘example.com/{mypattern}’ -> application: `app-{mypattern}` URI: /data
 ----
 
-The example above ensures both ’example.com/bookings’ and ‘example.com/sales’ match to `app-bookings/data` and `app-sales/data` respectively, as the variable `mypattern` holds these values. +
+The example above ensures both ’example.com/bookings’ is directed to `app-bookings.cloudhub.io/data` and ‘example.com/sales’ is directed to ``app-sales.cloudhub.io/data`, as the variable `mypattern` holds these values. +
 
 For input=”bookings.example.com”, the pattern can be resolved by assigning `_mypattern_=”bookings” and for input=`sales.example.com`, the pattern is resolved to assign `_mypattern_=”sales”
 
@@ -231,14 +294,11 @@ Both input and output URLs can be defined using patterns or literal Strings.
 Mapping rules are attributes of the load balancer's SSL endpoint, which is identified by the certificate name. +
 When you create a mapping rule, you need to specify a certificate CN. Omitting the `[certificateName]` parameter adds the mappings to the default endpoint.
 
-If your SSL endpoint sets a link:https://en.wikipedia.org/wiki/Wildcard_certificate[wildcard certificate], and you want to use the subdomain portion in a mapping rule, you can use the pre-defined `{subdomain}` variable.
-
-The rule which is defined first has high priority against other ones defined after it. This means that the first matched rule will be applied. +
-You can create, view and delete existing rules using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-add[mappings add], link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-describe[mappings describe] and link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-remove[mappings remove] commands respectively.
+In the list of mapping rules, the rule which is defined first has high priority against other ones defined after it. This means that the first matched rule will be applied. +
+You can create, view, and delete existing rules using the link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-add[mappings add], link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-describe[mappings describe] and link:/runtime-manager/anypoint-platform-cli#cloudhub-load-balancer-mappings-remove[mappings remove] commands respectively.
 
 === Mapping Rule Examples
 
-For these examples, suppose you have already configured a DNS CNAME record to route `example.com` to `lb-name.lb.anypointdns.net`. 
 
 The table below contains some mapping rule examples:
 
@@ -261,9 +321,10 @@ You can pass the app name as an input URI and map it directly to the app name in
 | 0 | /{app}/    | {app}             | /
 |===
 
-This rule maps `lb-demo.lb.anypointdns.net/{app}` to `{app}.cloudhub.io`. +
-{app} being a pattern for application name you choose to pass.
+This rule maps `example.com/{app}` to `{app}.cloudhub.io`. +
+{app} being a pattern for any application name you choose to pass in the inbound request.
 
+This example assumes that you configured a DNS CNAME record to route `example.com` to `lb-name.lb.anypointdns.net`, and that you configured the SSL endpoint with a certificate for the common name example.com.
 
 ==== Host Mapping
 
@@ -273,7 +334,7 @@ If you have a wildcard certificate (like `*.example.com`), you can use the ´sub
 |===
 |Rule # |Input URL 2+^| Output URL
 |   |  *URI*   |       *appName*    |  *appURI*
-| 0 | /        | {subdomain}   | /
+| 0 | /        | {subdomain}        | /
 |===
 This rule automatically maps any request passed to a subdomain of example.com to the corresponding appName. For example:
 
@@ -281,7 +342,9 @@ This rule automatically maps any request passed to a subdomain of example.com to
 * Passing `application.example.com` is mapped to `application.cloudhub.io`.
 
 The same applies for the link:https://en.wikipedia.org/wiki/Subject_Alternative_Name[Subject Alternative Names] (SANs) of your SSL Endpoints. +
-If you have different SANs configured for a certificate's common name, you can use the ´subdomain´ variable to map the subdomain portion of your domain name to your application. For this to work, however, your applications need to have the same name as the common portion of your domain name.
+
+
+Instead of using a wildcard certificate, which permits any subdomain application name to be passed through the dedicated load balancer, you can restrict the allowed subdomain names. To do this, you must have different SANs configured for a certificate's common name, you can use the ´subdomain´ variable to map the subdomain portion of your domain name to your application.
 
 For example, having:
 
