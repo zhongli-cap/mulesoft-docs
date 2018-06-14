@@ -2,27 +2,32 @@
 = Migrating to the JMS Connector
 
 // Explain generally how and why things changed between Mule 3 and Mule 4.
-The JMS transport was completely reshaped and evolved away from the Mule 3 transport model into an operation based connector with a simplified UX and fully DataSense enabled Message information. 
+The JMS transport was completely reshaped and evolved away from the Mule 3 transport model into an operation based connector with a simplified UX and fully DataSense enabled Message information.
 This means not only that using JMS now provides the same experience regarding connection and configuration that any other connector, but also that producing and consuming messages is simpler based on the structured Message information.
 
 Also, the new version of JMS Connector provides support for the much desired JMS 2.0 spec, with all the new capabilities like shared subscriptions.
 
+////
+Not needed as the right nav bar covers these topics
+
 What's covered in this section:
 
-* <<Configuring The Connector>>
-* <<Connecting To A Broker>>
-* <<Sending Messages>>
-* <<Listening For New Messages>>
-* <<Consuming Messages>>
-* <<Handling Topic Subscriptions>>
-* <<Responding To Incomming Messages>>
-* <<Doing Request-Reply>>
-* <<Using Transactions>>
+* <<ConfiguringTheConnector>>
+* <<ConnectingToABroker>>
+* <<SendingMessages>>
+* <<ListeningForNewMessages>>
+* <<ConsumingMessages>>
+* <<HandlingTopicSubscriptions>>
+* <<RespondingToIncomming Messages>>
+* <<DoingRequest-Reply>>
+* <<UsingTransactions>>
 
-[[Configuring The Connector]]
+////
+
+[[ConfiguringTheConnector]]
 == Configuring The Connector
 
-Moving from a 3.x transport configuration to a JMS Connector configuration in Mule 4 implies basically using the same exact parameters, but declaring them in a more cohesive way. 
+Moving from a 3.x transport configuration to a JMS Connector configuration in Mule 4 implies basically using the same exact parameters, but declaring them in a more cohesive way.
 This means for example that parameters that are used for consuming Messages are declared in a 'consumer-config' group, while general authentication parameters are configured in the General group. Also, a separation has been made between the parameters that affect the behaviour of the connector (present in the config) from those that affect only how the connection is stablished (present at connection level):
 
 .Mule 3 Example: Configuring The Connector
@@ -61,7 +66,7 @@ This same configuration is achieved in Mule 4 setting the same parameters in the
 </jms:config>
 ----
 
-[[Connecting To A Broker]]
+[[ConnectingToABroker]]
 == Connecting To A Broker
 
 In the JMS Connector for Mule 4, the distinction between a generic JMS connection and the simplified ActiveMQ connection still exists, but with a much more more focused set of parameters that are associated only to the connection. We'll see first how to configure this simplified connection and then move on to the generic approach.
@@ -72,11 +77,11 @@ Using the transport, the only way to configure ActiveMQ specific parameters was 
 .Mule 3 Example: Connecting To ActiveMQ
 [source, xml, linenums]
 ----
-<spring:bean name="connectionFactory" 
+<spring:bean name="connectionFactory"
              class="org.apache.activemq.ActiveMQConnectionFactory">
-    <property name="brokerURL" 
+    <property name="brokerURL"
               value="tcp://activemqserver:61616"/>
- 
+
     <property name="redeliveryPolicy">
         <spring:bean class="org.apache.activemq.RedeliveryPolicy">
             <property name="initialRedeliveryDelay"
@@ -100,10 +105,10 @@ With the new JMS Connector, this properties can be configured directly in the ac
 ----
 <jms:config name="JMS_Config">
   <jms:active-mq-connection>
-      <jms:factory-configuration brokerUrl="tcp://activemqserver:61616" 
+      <jms:factory-configuration brokerUrl="tcp://activemqserver:61616"
                                  initialRedeliveryDelay="20000" redeliveryDelay="20000"  maxRedelivery="10"/>
   </jms:active-mq-connection>
-</jms:config>        
+</jms:config>
 ----
 
 If you need to migrate a transport configuration that is using a Connection Factory not yet supported out of the box in the JMS Connector, you can still do use the 'connectionFactory' attribute in the 'activemq-connection' to pass a reference to any Connection Factory bean.
@@ -111,7 +116,7 @@ If you need to migrate a transport configuration that is using a Connection Fact
 
 === Using A Different Broker
 
-Both Mule 3 JMS transport and Mule 4 JMS Connector allow you to define a generic connection to any Connection Factory that you need. 
+Both Mule 3 JMS transport and Mule 4 JMS Connector allow you to define a generic connection to any Connection Factory that you need.
 
 We have two ways of doing this, the first one is creating a Connection Factory using spring beans and then referencing it as the Connection Factory:
 
@@ -132,7 +137,7 @@ Mule 4's version is almost identical:
 
 <jms:config name="JMS_Config">
   <jms:generic-connection connectionFactory="customConnectionFactory"/>
-</jms:config>        
+</jms:config>
 ----
 
 Another way of creating a generic connection is using a Connection Factory that is discovered using JNDI. In this case, the functionality remains the same, but syntax changes from transport to connector:
@@ -188,7 +193,7 @@ Three main differences arise from this example:
 * Parameters are now present in the context for which they are relevant, like the 'jndiProviderUrl' being part of the 'name-resolver'.
 
 
-[[Sending Messages]]
+[[SendingMessages]]
 == Sending Messages
 
 JMS Transport relied in the payload to contain the body of a JMS Message, and used Mule's outbound properties to customize the JMS Properties and Headers. With the new Mule 4 approach, the JMS 'publish' operation relies only on its input parameters to completely build the JMS Message to be published.
@@ -254,10 +259,10 @@ Differences to be noted:
 As a summary, when publishing a Message in 3.x with the JMS transport, we relied on the MuleMessage payload, and outbound properties to configure the creation of the JMS Message, which meant a deeper knowledge of how the transport worked. In 4.x, the JMS Connector exposes every configurable element as a parameter in the scope were it belongs, thus exposing all the JMS functionality in a clearer way.
 
 
-[[Consuming Messages]]
+[[ConsumingMessages]]
 == Consuming Messages
 
-[[Listening For New Messages]]
+[[ListeningForNewMessages]]
 === Listening For New Messages
 
 The JMS transport `inbound-endpoint` allows you to wait for new Messages on a given topic or queue. The output of this listener will contain the body of the message in the payload, and all the JMS headers and properties as `inboundProperties`.
@@ -318,7 +323,7 @@ Now, the flow has fewer components and is not required to modify the Message pay
 <3> We use the message 'attributes' POJO instead of the 'inboundProperties', which now differentiate the 'headers' of the JMS Messsage from the 'properties'.
 
 
-[[Consuming Messages]]
+[[ConsumingMessages]]
 === Consuming Messages
 
 Consuming Messages mid-flow from a given destination was not supported by Mule's 3 JMS transport, and the way to go was also adding the 'Mule Requester Module' to your application, which would then handle the mid-flow message consume.
@@ -333,7 +338,7 @@ So, for example, if you wanted to expose your JMS Queue behind a new REST API, y
 
 <flow name="ordersFromJMS">
   <http:inbound-endpoint exchange-pattern="request-response" path="orders" host="localhost" port="8081"/>
-  <mulerequester:request config-ref="Mule_Requester" 
+  <mulerequester:request config-ref="Mule_Requester"
                          resource="jms://Orders?selector=shipped%3D'#[message.inboundProperties.'shipped']'"/>
   <logger level="INFO" message="CorrelationId: #[message.inboundProperties.'JMSCorrelationId']"/>
 </flow>
@@ -341,7 +346,7 @@ So, for example, if you wanted to expose your JMS Queue behind a new REST API, y
 
 Some things to notice here are:
 
-* All metadata regarding JMS Message is completely lost, so logging the CorrelationId relies on you knowing the syntax for obtaining the Header. 
+* All metadata regarding JMS Message is completely lost, so logging the CorrelationId relies on you knowing the syntax for obtaining the Header.
 * Dynamic filterying by 'selector' has to be done in the 'resource' url of the requester, so multiple arguments end up with an error prone configuration.
 * We need both the JMS and Mule Requester configurations.
 
@@ -360,7 +365,7 @@ Mule 4 comes out of the box with the capability of consuming messages mid-flow b
 Now we only needed a the JMS Connector, configured the 'consume' operation with the 'selector' parameter using the metadata from the listener, and also were able to log the correlationId with metadata support in the Message attributes.
 
 
-[[Handling Topic Subscriptions]]
+[[HandlingTopicSubscriptions]]
 === Handling Topic Subscriptions
 
 Topics used as inbound endpoints in 3.x allowed the user to configure if the subscription to the Topic had to be done as a `durable` subscription or not. There were different ways of doing so, and it had the issue of exposing the `durable` configuration for `queues` too, which made no sense.
@@ -399,7 +404,7 @@ But in this case, the `topic-consumer` configuration allows us to also set a `sh
 </jms:listener>
 ----
 
-[[Responding To Incomming Messages]]
+[[RespondingToIncommingMessages]]
 == Responding To Incomming Messages
 
 When the listener for new JMS Messages receives a Message with the 'JMSReplyTo' header configured, then it is expected that a response is emitted to the reply destination once the processing of the Message is completed.
@@ -436,7 +441,7 @@ Mule 4 instead allows you to configure all the parameters associated to the resp
 </flow>
 ----
 
-[[Doing Request-Reply]]
+[[DoingRequestReply]]
 == Doing Request-Reply
 
 JMS allows you to use the `JMSReplyTo` header to perform a synchronous communication. This can be done either with a temporary destination that is created on the fly by the client, or using an already existing destination.
@@ -459,7 +464,7 @@ In Mule 3, for the first case where the reply destination is a temporary queue t
         costumer: message.inboundProperties."http.query.params".costumer_id
         }]]></dw:set-payload>
   </dw:transform-message>
-  <object-to-string-transformer/> 
+  <object-to-string-transformer/>
   <jms:outbound-endpoint exchange-pattern="request-response" queue="invoiceProcessor" connector-ref="Active_MQ"/>
   <logger level="INFO" message="Status: #[payload]">
 </flow>
@@ -506,7 +511,7 @@ Doing a request-reply with an explicit `reply-to` destination was a little bit m
         costumer: message.inboundProperties."http.query.params".costumer_id
         }]]></dw:set-payload>
   </dw:transform-message>
-  <object-to-string-transformer/> 
+  <object-to-string-transformer/>
   <request-reply> // <1>
     <jms:outbound-endpoint connector-ref="Active_MQ" exchange-pattern="one-way" queue="invoiceProcessor"/>
     <jms:inbound-endpoint connector-ref="Active_MQ" exchange-pattern="one-way" topic="processedInvoiceEvents"/>
@@ -540,19 +545,19 @@ For the case of Mule's 4 JMS Connector with the new `publish-consume` operation,
 
 In this example we set the reply destination header (<1>) to a well-known Topic, to ilustrate that a known destination may be used by others to do things like event tracking or post-processing triggers.
 
-[[Using Transactions]]
+[[UsingTransactions]]
 == Using Transactions
 
 Transactions support is quite similar in its configuration when moving from 3.x to 4.x, with the expected change from it being configured in the `inbound-endpoint` and `outbound-endpoint` to the normalized Mule 4 approach for operations transactions:
 
-.Mule 3 Example: Using Transactions 
+.Mule 3 Example: Using Transactions
 [source, xml, linenums]
 ----
 <flow name="transactedJmsFlow">
     <jms:inbound-endpoint queue="${in}">
-        <jms:transaction action="ALWAYS_BEGIN" /> //<1> 
+        <jms:transaction action="ALWAYS_BEGIN" /> //<1>
     </jms:inbound-endpoint>
-    <set-variable variableName="originalPayload" value="#[payload]"/> //<2> 
+    <set-variable variableName="originalPayload" value="#[payload]"/> //<2>
     <dw:transform-message> //<3>
         <dw:set-payload><![CDATA[%dw 1.0
           %output application/xml
@@ -587,7 +592,7 @@ Things to note are:
 
 Same scenarion can be implemented in Mule 4 with the following approach:
 
-.Mule 4 Example: Using Transactions 
+.Mule 4 Example: Using Transactions
 [source, xml, linenums]
 ----
 <flow name="transactedJmsFlow">
@@ -612,7 +617,7 @@ Same scenarion can be implemented in Mule 4 with the following approach:
 
 == See Also
 
-link:migration-examples[Migration Examples]
+// link:migration-examples[Migration Examples]
 
 link:migration-patterns[Migration Patterns]
 
