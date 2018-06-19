@@ -54,7 +54,7 @@ Your infrastructure will begin be created and configured. Follow these steps to 
 
 You should be able to see the list of infrastructure and its cooresponding status as it's being provisioned. Click the "Refresh" button to periodicaly refresh the pane and status.
 
-=== Common errors
+=== Common Errors
 Depending on the policies set and the quotas defined with your Azure account, you may encounter errors during the provisioning process. Consult your operations team as needed.
 
 * Exceed max core quota: File a ticket with Azure Support to increase quota for your deployment region.
@@ -70,25 +70,55 @@ After the required infrastructure has been provisioned successfully, you can now
 ssh rtf-user@<PUBLIC-IP-ADDRESS> -i <private_key.pem>
 ----
 +
-. Change directory to the tmp directory.
+. Change directory to the `/tmp` directory.
 +
 ----
 cd /tmp
 ----
 +
-. 
+. Create a directory named `installer` and unpack the `installer.tar.gz` file in that directory. This is the same installer you downloaded from Runtime Manager.
++
+----
+mkdir -p installer && tar -xzf installer.tar.gz -C ./installer
+----
++
+. Upload your private key as a PEM file that is associated to the public key used earlier in the provisioning step into the `/tmp/installer` directory. A secure method to transfer files is by using an SCP utility, such as WinSCP.
++
+[NOTE]
+If your private key is not a PEM file, you can typically convert it using a utility such as PuTTYgen.
++
+. Change directory to the `/tmp/installer` directory.
+. Start the installation by setting the following variables and executing the `auto_installer.py` script:
++
+----
+RTF_PRIVATE_IPS="10.3.0.4 10.3.0.5 10.3.0.6" \
+WORKER_PRIVATE_IPS="10.3.0.11 10.3.0.12 10.3.0.13" \
+FLAVOR=prod \
+USER=rtf-user \
+KEY=key.pem \
+python auto_installer.py
+----
++
+Using the following values:
++
+[%header,cols="2*a"]
+|===
+|Parameter | Description
+|RTF_PRIVATE_IPS | Specifies the private IP address for each virtual machine running Runtime Fabric.
+|WORKER_PRIVATE_IPS | Specifies the private IP address for each virtual machine dedicated to running Mule runtimes.
+|FLAVOR | Specifies the function for the installer. Valid values are: `prod`, `dev`, and `demo`.
+|USER | Specifies the username on the virtual machines.
+|KEY | Specifies the path for the private ssh key pair.
+|===
++
+[NOTE]
+This step will install Runtime Fabric across all servers to form a cluster. It may take 15-25 minutes or longer to complete.
 
+== Registering Runtime Fabric
 
+After the installation script has completed, you'll need to register Runtime Fabric to Anypoint Runtime Manager.
 
-Step 1: Provision infrastructure
-Run script to provision infrastructure, based on the Flavors above
-Can be Azure Resource Template (early testing confirms Azure customers are fluent with this)
-Can be Terraform
-Supported configured fields:
-Remove Public IPs from VMs
-Adjust Network Security Group binding to NIC and/or VM
-Machine Images
-Disk space for all block devices (increase)
-Machine types (increase only)
-Step 2: Run the installer
-Mount and format block devices
+. Navigate to Runtime Manager, select the Runtime Fabrics tab, and select the "Create Runtime Fabric" button.
+. Near the registration script, choose a name for your Runtime Fabric. Copy the script to your clipboard.
+. SSH onto a virtual machine running Runtime Fabric and paste and run the registration script. This process may take up to 15 minutes to complete.
+. After the script completes the registration process, Runtime Fabric should be registered and visible on the "Runtime Fabrics" tab in Runtime Manager.
