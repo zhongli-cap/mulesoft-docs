@@ -40,7 +40,7 @@ var combined = (function, msg="universe") -> function(msg ++ " WORLD")
    msg2: msg2(),
    toUpper: toUpper(msg),
    combined: combined(toUpper, "hello"),
-   combined2: combined((x) -> lower(x) ++ " Today", msg)
+   combined2: combined(((x) -> lower(x) ++ " Today")), msg)
 ]
 ----
 
@@ -72,17 +72,17 @@ In these examples:
 
 
 * The `msg` var is assigned to a constant.
-* `msg2` is assigned to an expression that maps to a constant, so `msg2()`` behaves the same way as `msg`, without the `()`.
+* `msg2` is assigned to an expression that maps to a constant, so `msg2()` behaves the same way as `msg`, without the `()`.
 * The `toUpper` variable maps an input parameter to the DataWeave `upper` function. So it is used like a more traditional function in other languages as `toUpper(aString)`.
-* The `combined` var accepts a function name as an input parameter, then applies that function name to the second `msg` argument. The second `msg` argument is optional because a default value `universe` is specified.
+* The `combined` variable accepts a function as an input parameter, then applies that function name to the second `msg` argument. The second `msg` argument is optional because a default value `universe` is specified.
 
-The result of the expression `combined(toUpper, " world")` is to apply the `toUpper` function defined earlier in the header to the `msg` parameter value `world`. The supplied second argument `world` overrides the `msg="universe"` default value, so the result is `HELLO WORLD`.
+The result of the expression `combined(toUpper, " world")` is to apply the `toUpper` function defined earlier in the header to the `msg` parameter value `world`. The supplied second argument `world` overrides the `msg="universe"` default value, so the result is `HELLO WORLD`. The expression `combined(toUpper)`, which omits the second argument, uses the default `msg` value to return `"combined": "UNIVERSE WORLD"`.
 
-The final `combined2` key is the expression `combined((x) -> lower(x) ++ " today", msg)`. Now, instead of passing in an already defined function, you can define the lambda expression “anonymously”, without any name. Lambda expressions allow you to reuse more generalized expressions in different contexts. In this example, the combined key used an already defined variable named `toUpper`, while the `combined2` key defines the expression “inplace” at the time the function is called. So in this example, instead of converting the string `world` to `HELLO WORLD`, it is instead converted to `hello world today`å.
+The `combined2: combined(((x) -> lower(x) ++ " Today")), msg)`  defines the lambda expression that you can reuse in different contexts. In the example, `combined2` key defines the expression “in place” at the time the function is called.
 
-Note that these types of “inplace” expressions are called closures in languages like JavaScript.
+Note that these types of “in place” expressions are called closures in languages like JavaScript.
 
-DataWeave includes syntactic sugar to access lambda expressions assigned to a variable as functions. To do this, you replace the `var` directive with the `fun` directive, and replace the arrow `->` in the lambda expression with and `=` sign. You also move the lambda expression arguments next to the function name so the syntax looks like a function declaration in other procedural programming languages. This allows you to use variables as if they are functions. So the previous example can be equivalently written as:
+DataWeave includes syntactic sugar to make it easier to access lambda expressions that are assigned to a variable as functions. To do this, you replace the `var` directive with the `fun` directive, and replace the arrow `->` in the lambda expression with an equal  sign (`=`). You also move the lambda expression arguments next to the function name so the syntax looks like a function declaration in other procedural programming languages. This allows you to use variables as if they were functions. So the previous example can be equivalently written as:
 
 ////
 OLD, SIMPLER EXAMPLE
@@ -113,11 +113,14 @@ fun combined(function, msg="universe") = function(msg ++ " world")
 ----
 %dw 2.0
 output application/json
-var msg = "hello"
+var msg = "Hello"
+
+var toUpper = (aString) -> upper(aString)
+var toLower = (aString) -> lower(aString)
 
 fun msg2(optParm = "ignore") = "hello"
 
-fun toTitle(text: String) = toUpper(text[0]) ++ toLower(text[1 to -1])
+fun toTitle(text: String) = toLower(text[0]) ++ toUpper(text[1 to -1])
 
 fun combined(function, msg="universe") = function(msg ++ " world")
 ---
@@ -137,13 +140,13 @@ This example produces the same result:
 ----
 [
   {
-    "msg": "hello"
+    "msg": "Hello"
   },
   {
     "msg2": "hello"
   },
   {
-    "toUpper": "HELLO"
+    "toUpper": "hELLO"
   },
   {
     "combined": "HELLO WORLD"
