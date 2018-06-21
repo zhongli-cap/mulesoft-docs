@@ -45,6 +45,10 @@ Queues in each region are separate from those in other regions. You can name que
 In Anypoint Platform > MQ > Message Browser you can fetch up to 50 non-FIFO messages. Up to 10 FIFO messages can be fetched.
 The FIFO restriction is because there can only be up to 10 in flight FIFO messages. For more information on in flight messages, see xref:inflights[How many in flight messages can I have per queue?]
 
+== If I have X messages in a queue where X < 10 and I do batchSize=10, why do I only get 3 messages?
+
+Anypoint MQ is a highly distributed messaging system, so the results of any one API call to receive messages are not guaranteed to be entirely representative of what is fully in the queue.  Anypoint MQ operates in a best-effort case. For example, if there are 5 messages in a queue, the system returns anywhere from 0-5 messages in a single API call depending on what distributed subsystems are accessed by that request.  Subsequent API calls retrieve more messages and if you keep asking then you get all of them.  Normally in high throughput cases this happens extremely fast.  The MQ connector for example continuously polls the MQ backend for new messages and from the user perspective the messages process nearly instantly even though under the hood that could have resulted in many API calls.
+
 == Can messages be bigger than 10 MB?
 
 Anypoint MQ limits messages to 10 MB. If a larger size is required, you can split the payload into multiple messages, or implement a claim check style service where you store the payload in a file system or blob storage, and then put a pointer to the payload in the message so it can be downloaded later.  However, you need to manage access control to the blob storage for both the sender and receiver. You also need to consider that messages can be received unordered unless you use a FIFO queue.
