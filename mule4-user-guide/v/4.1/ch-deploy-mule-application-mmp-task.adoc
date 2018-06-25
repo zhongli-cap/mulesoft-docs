@@ -51,6 +51,89 @@ The example is using placeholder values. Configure each value with your own Clou
 To redeploy the application, run the same command as you did to deploy. +
 CloudHub rewrites the application you had deployed.
 
+== Encrypting credentials
+
+To use encrypted credentials when deploying to CloudHub you need to set up your Maven master encrypted password and your settings-security.xml file.
+
+. Create a master password for your Maven configuration.
+::
++
+[source]
+----
+> mvn --encrypt-master-password <yourMasterPassword>
+----
++
+Maven returns your master password encrypted:
++
+[source]
+----
+{l9vZ2uM5SdgHy+H12z4pX7LEOZn3Kbnqmt3kIquLjnQ=}
+----
+. Create a settings-security.xml file in your ~/.m2 repository and add your encrypted master password.
+::
++
+[source,xml,linenums]
+----
+<settingsSecurity>
+  <master>{l9vZ2uM5SdgHy+H12z4pX7LEOZn3Kbnqmt3kIquLjnQ=}</master>
+</settingsSecurity>
+----
+. Encrypt your Anypoint platform password:
+::
++
+[source]
+----
+> mvn --encrypt-password <yourAnypointPlatformPassword>
+----
++
+Maven returns your Anypoint platform password encrypted:
++
+[source]
+----
+{HTWFGH5BG9QmvJ1B=}
+----
+. Add your encrypted Anypoint Platform password to your settings.xml file in the <server> section:
++
+[source,xml,linenums]
+----
+<settings>
+...
+  <servers>
+...
+    <server>
+      <id>my.anypoint.credentials</id>
+      <username>my.anypoint.username</username>
+      <password>{HTWFGH5BG9QmvJ1B=}</password>
+    </server>
+...
+  </servers>
+...
+</settings>
+----
+. In your the configuration deployment, reference the credentials id injecting the server id:
+
+[source,xml,linenums]
+----
+<plugin>
+  ...
+    <configuration>
+        <cloudHubDeployment>
+            <uri>https://anypoint.mulesoft.com</uri>
+            <muleVersion>${mule.version}</muleVersion>
+            <server>my.anypoint.credentials</server>
+            <applicationName>${cloudhub.application.name}</applicationName>
+            <environment>${environment}</environment>
+            <properties>
+                <key>value</key>
+            </properties>
+        </cloudHubDeployment>
+    </configuration>
+
+</plugin>
+----
+
+NOTE: Make sure that username and password are not set in the deployment configuration, as they have precedence over the defined server id.
+
 == See Also
 
 * link:cloudhub-deployment-mmp-reference[CloudHub Deployment Reference (Mule Maven Plugin)]
