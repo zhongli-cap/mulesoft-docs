@@ -2,20 +2,32 @@
 :keywords: studio, anypoint, esb, transform, transformer, format, aggregate, rename, split, filter convert, xml, json, csv, pojo, java object, metadata, dataweave, data weave, datamapper, dwl, dfl, dw, output structure, input structure, map, mapping
 
 //TODO: NEED TO MERGE THIS INFO WITH THE CORE TYPES. DISCUSS WITH MDA.
-DataWeave supports a number of data types for elements, including arrays, Booleans, objects, dates, times, and many others described here. Note that more detail on these types is available in link:dw-core-types[Core Types (dw::Core)].
+The built-in DataWeave functions support a number of data types for elements, including arrays, Booleans, objects, dates, times, and many others described here.
 
-== Any
+== Supported Types
 
-`Any` is the top-level type. `Any` extends all of the system types. That means anything can be assigned to a `Any` typed variable.
+Core types from the `dw::Core`) are available to most built-in DataWeave function modules. Some of the other modules define their own types.
 
-//.Definition
+* link:dw-core-types[Core Types (dw::Core)]
+* link:dw-runtime-types[Runtime Types (dw::Runtime)]
+* link:dw-url-types[URL Types (dw::core::URL)]
+* link:dw-diff-types[Diff Types (dw::core::Diff)]
+* link:dw-timer-types[Timer Types (dw::core::Timer)]
 
-== Array
+The remaining sections below provide more detail on data types that are commonly used or sometimes misunderstood. They also cover some important topics that relate to the data type, for example:
 
-An array is a sequence of elements. It requires a Type(T) to represent the elements of the list. For example: `Array<Number>`` represents an array of numbers.
-// TODO: NEED MORE INFO AND PROBABLY AN EXAMPLE that shows what we're talking about with Type(T)
+* Conditional elements that use `if` expressions for <<conditional_elements_array, arrays>> and <<conditional_elements_object, objects>>.
+* <<string_interpolation>>.
+* <<date_decomposition>> for accessing different parts of a date.
+* <<date_format_change>>.
+* <<dynamic_keys>> and <<dynamic_elements>>, which allow you to access parts of an object dynamically.
+* Use of <<dw_type_regex>> expressions.
 
-.Example
+== Array (dw::Core Type)
+
+An array can hold elements of any supported type. Here is an example of an array:
+
+.Example: DataWeave Array
 [source,DataWeave,linenums]
 ----
 %dw 2.0
@@ -25,13 +37,14 @@ var x = "words"
 [ "My", "three", x ]
 ----
 
+[[conditional_elements_array]]
 === Conditional Elements
 
-Arrays can define elements that appear or don't, based on a condition.
+Arrays can define elements that appear (or not) based on a condition.
 
-Conditional elements have the form `(value) if condition
+Conditional elements take the form `(value) if condition`, for example:
 
-.Transform
+.Example: if Condition
 [source,DataWeave,linenums]
 ----
 %dw 2.0
@@ -46,20 +59,15 @@ output application/json
 [1]
 ----
 
-[[dw_type_binary]]
-== Binary
-
-`Binary` is the type for a blob.
-
 [[dw_type_boolean]]
-== Boolean
+== Boolean (dw::Core Type)
 
 A `Boolean` is defined by the keywords `true` and `false`.
 
 [[dw_type_cdata]]
-== CData
+== CData (dw::Core Type)
 
-XML defines a custom type named `CData`, which inherits from and extends `String`. It  is used to identify a CDATA XML block. It can be used to tell the writer to wrap the content inside CDATA or to check if the input string arrives inside a CDATA block.
+XML defines a custom type named `CData`, which inherits from and extends `String`. It is used to identify a CDATA XML block. It can be used to tell the writer to wrap the content inside CDATA or to check if the input string arrives inside a CDATA block.
 
 .Transform
 [source,DataWeave, linenums]
@@ -93,32 +101,20 @@ output application/xml
 String {cdata: true}
 ----
 
-[[dw_type_comparable]]
-== Comparable
-
-`Comparable` is a union type that represents all the types that can be compared to each other.
-
-//.Definition
-
-[source]
-----
-String | Number | Boolean | DateTime | LocalDateTime | LocalTime | Time | TimeZone
-----
-
 [[dw_type_dates]]
-== Date and Time
+== Date and Time (dw::Core Types)
 
 Dates in DataWeave follow the link:https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html[ISO-8601 standard] and literals are defined between `|` characters.
 
 The language has the following native date types:
 
-* `Date
-* `DateTime
-* `LocalDateTime
-* `LocalTime
-* `Period
-* `Time
-* `TimeZone
+* `Date`
+* `DateTime`
+* `LocalDateTime`
+* `LocalTime`
+* `Period`
+* `Time`
+* `TimeZone`
 
 [[dw_type_dates_date]]
 === Date
@@ -162,8 +158,8 @@ A `Time` in the current `TimeZone`.
 
 Periods have the form:
 
-- `P[n]Y[n]M[n]DT[n]H[n]M[n]S
-- `P<date>T<time>
+- `P[n]Y[n]M[n]DT[n]H[n]M[n]S`
+- `P<date>T<time>``
 
 Where the [n] is replaced by the value for each of the date and time elements that follow the [n].
 
@@ -218,9 +214,10 @@ The `Time` relative to Greenwich Mean Time (GMT). A `TimeZone` must include a `+
 |-08:00|
 ----
 
+[[date_decomposition]]
 === Date Decomposition
 
-In order to access the different parts of the date, special selectors must be used.
+To access the different parts of the date, special selectors must be used.
 
 .Transform
 [source,DataWeave, linenums]
@@ -264,6 +261,7 @@ var myDate = |2003-10-01T23:57:59.700-03:00|
 }
 -----------------------------------------------------------------
 
+[[date_format_change]]
 === Changing the Format of a Date
 
 You can specify a date to be in any format you prefer through using *as* in the following way:
@@ -311,21 +309,8 @@ type Mydate = String { format: "YYYY/MM/dd" }
 
 Note that type names are case-sensitive.
 
-[[dw_type_dictionary]]
-== Dictionary
-Generic Dictionary interface.
-
-//.Definition
-// QUESTION: Internal???
-////
-[source]
-----
-{ _?: T }
-----
-////
-
 [[dw_type_enum]]
-== Enum
+== Enum (dw::Core Type)
 
 This type is based on the link:https://docs.oracle.com/javase/7/docs/api/java/lang/Enum.html[Enum Java class].
 It must always be used with the `class` property, specifying the full Java class name of the class, as shown in this example.
@@ -339,54 +324,20 @@ output application/java
 "Male" as Enum {class: "com.acme.GenderEnum"}
 ----
 
-//.Definition
-////
-[source]
-----
-String {enumeration: true}
-----
-////
-
 [[dw_type_iterator]]
-== Iterator
+== Iterator (dw::Core Type)
 
 The `Iterator` type is based on the link:https://docs.oracle.com/javase/8/docs/api/java/util/Iterator.html[Iterator Java class], that iterates through arrays. `Iterator` contains a collection and includes methods to iterate through and filter it.
 
 Note that like the Java class, the iterator is designed to be consumed only once. For example, if you then pass this value to a logger would result in consuming it and it would no longer be readable to further elements in the flow.
 
-[[dw_type_key]]
-== Key
-
-A `Key` type of an `Object`. See also, the `Object` and `Value` types.
-
-//.Definition
-
-[[dw_type_namespace]]
-== Namespace
-
-A `Namespace` type, represented by a URI and a Prefix.
-
-//.Definition
-
-[[dw_type_nothing]]
-== Nothing
-
-The `Nothing` type is the bottom-level type. It can be assigned to all the types.
-//.Definition
-
-[[dw_type_null]]
-== Null
-
-`Null` type.
-// TODO
-
 [[dw_type_number]]
-== Number
+== Number (dw::Core Type)
 
 There is only one number type that supports both floating point and integer numbers. There is no loss of precision in any operation, the engine always stores the data in the most performant way that does not compromise precision.
 
 [[dw_type_object]]
-== Object
+== Object (dw::Core Type)
 
 Represents any object as a collection of `key:value` pairs.
 
@@ -416,10 +367,10 @@ output application/json
 name: "Annie"
 ---------------------------------------------------------
 
+[[conditional_elements_object]]
 === Conditional Elements
 
-Objects can define conditional *key*: *value* pairs based on a conditional expression.
-Conditional elements have the form `(key:value) if condition
+Objects can define conditional key-value pairs based on a conditional expression. Conditional elements have the form `(key:value) if` condition.
 
 [source,DataWeave,linenums]
 ---------------------------------------------------------
@@ -453,9 +404,10 @@ If absent:
 </file>
 --------------------------------------------------------
 
+[[dynamic_keys]]
 === Dynamic Keys
 
-In order to specify a key via an expression, the expression should be wrapped in parentheses.
+To specify a key through an expression, you need to wrap the expression in parentheses.
 
 .Transform
 [source,DataWeave,linenums]
@@ -477,6 +429,7 @@ var dynamicKey = "language"
 }
 ----
 
+[[dynamic_elements]]
 === Dynamic Elements
 
 Dynamic elements allow you to add the result of an expression as `key:value` pairs of an object. That expression must be either an `object` or an `array of objects`.
@@ -489,7 +442,7 @@ output application/json
 var x = [
   {b: "b"},
   {c: "c", d: "d"}
-],
+]
 var y = {e: "e"}
 ---
 {
@@ -515,8 +468,7 @@ It is important to note that the expression between the _parentheses_ (such as `
 
 === Conditional XML Attributes
 
-You might want your output to only include certain XML attributes based on a condition.
-Conditional elements have the form `(key:value) if condition
+You might want your output to only include certain XML attributes based on a condition. Conditional elements have the form `(key:value) if condition
 
 .Transform
 [source,DataWeave,linenums]
@@ -568,38 +520,13 @@ transformation @((payload)): "Transform from anything to anything"
 <transformation company="Mule" product="DataWeave">Transform from anything to anything</transformation>
 ----
 
-[[dw_type_range]]
-== Range
-
-A Range type represents a sequence of numbers.
-
-//.Definition
-////
-[source]
-----
-Range
-----
-////
-
 [[dw_type_regex]]
-== Regex
+== Regex (dw::Core Type)
 
 Regular Expressions are defined between `/`. For example `/\d+/` represents multiple numerical digits from 0-9. These may be used as arguments in certain operations that act upon strings, like Matches or Replace, or on operations that act upon objects and arrays, such as filters.
 
-[[dw_type_simpletype]]
-== SimpleType
-
-A union type that represents all the simple types.
-
-//.Definition
-
-[source]
-----
-String | Boolean | Number | DateTime | LocalDateTime | Date | LocalTime | Time | TimeZone | Period
-----
-
 [[dw_type_string]]
-== String
+== String (dw::Core Type)
 
 A string can be defined by the use of double quotes or single quotes.
 
@@ -611,9 +538,10 @@ A string can be defined by the use of double quotes or single quotes.
 }
 --------------------------------------------------------
 
+[[string_interpolation]]
 === String Interpolation
 
-String interpolation allows you to embed variables or expressions directly in a string.
+String interpolation allows you to embed variables or expressions directly in a string. The expression need to be enclosed (`$( <expression> )`), and it should always return String type or something that is coercible to String.
 
 .Transform
 [source,DataWeave, linenums]
@@ -638,12 +566,11 @@ var name = "Shoki"
 --------------------------------------------------------
 
 [[dw_type_tryresult]]
-== TryResult
+== TryResult (dw::Runtime Type)
 
 Evaluates the delegate and returns an object with the result or an error message. See the `try` example. A successful `TryResult` contains the `result` field and a `success` value of `true`. An unsuccessful `TryResult` contains the `error` field  and a `success` value of `false`.
 
 .Definition
-
 [source,Dataweave, linenums]
 ----
 {
@@ -658,216 +585,8 @@ Evaluates the delegate and returns an object with the result or an error message
 }
 ----
 
-[[dw_type_type]]
-== Type
-
-Represents a data type in the DataWeave Type System.
-
-// TODO.
-
-[[dw_type_uri]]
-== Uri
-
-A URI, specified as `Uri`.
-
-//.Definition
-////
-[source]
-----
-Uri
-
-----
-////
-
 == See Also
 
-* link:dataweave-language-introduction[DataWeave Language Introduction]
-// * link:dw-functions-core[DataWeave Core Functions]
-* https://www.anypoint.mulesoft.com/exchange/?search=dataweave[Anypoint Exchange (List of Projects that use DataWeave)]
+link:dataweave-language-introduction[DataWeave Language Introduction]
 
-////
-==
-Expressions can also be complex, meaning that they can be composed of other expressions. This can be achieved by either nesting expressions inside Arrays or Objects, or through the use of operators.
-In complex expressions, the result of one expression sets the context for the subsequent execution of other expressions. You just need to remember that each expression produces an Object, an Array, or a Variable. When you understand the structure of these data types are constructed from DataWeave expressions, you effectively understand how to use DataWeave.
-
-
-
-
-
-=== Simple Values
-
-Simple values can be of the following types:
-
-* link:dataweave-types#string[*String*] : Double quoted ("Hello") or Single quoted ('Hello')
-* link:dataweave-types#boolean[*Boolean*] : Literals true or false
-* link:dataweave-types#number[*Number*] : Decimal and Integer values are supported (ex: 2.0)
-* link:dataweave-types#dates[*Date*] : IS0-8601 enclosed by "|" (ex:|2003-10-01T23:57:59Z|)
-* link:dataweave-types#regular-expressions[*Regex*] : Regex expression enclosed by "/" (ex:/(\d+)-(\d+)/)
-
-=== Arrays
-
-Arrays are represented as a sequence of value expressions.
-
-.Input
-[source, dataweave]
---------------------------------------------------------------------
-[ 1, 2 + 2, 3 * 3, $x ]
---------------------------------------------------------------------
-
-.Transform
-[source, dataweave, linenums]
-----
-%dw 2.0
-output application/json
----
-[ "My", "three", "words" ]
-----
-
-See link:dataweave-types#array[DataWeave types] for more details on arrays.
-
-=== Objects
-
-These are represented as a comma separated sequence of key: value pairs surrounded by curly brackets { }.
-
-.Transform
-[source, dataweave, linenums]
----------------------------------------------------------------------
-%dw 2.0
-output application/xml
----
-myoutput:{
-  name : "Jill",
-  payload : payload.id + 3
-  }
----------------------------------------------------------------------
-
-.Output
-[source,xml,linenums]
----------------------------------------------------------------------
-<?xml version="1.0" encoding="UTF-8"?>
-<myoutput>
-  <name>Jill</name>
-  <payload>5</payload>
-</myoutput>
----------------------------------------------------------------------
-
-Note that both the keys and the values may be *expressions*.
-
-See link:dataweave-types#object[DataWeave types] for more details on objects.
-
-
-== Variables
-
-=== Constants
-
-In the DataWeave header, you define constants as directives, these can then be referenced as variables in any part of your transform body, just as you do with input variables.
-The following creates an XML document and inserts the constant value for Language "Español" in the output language element.
-
-
-
-=== Scoped Variables
-
-Variables declared in the Transform's header always have a global scope, to declare and initialize a variable with a limited scope, you can do so in any part of the transform's body.
-
-You can initialize these variables using literal expressions, variable reference expressions, or functional expressions. They may reference any other scoped variables or any of the input variables or constants in their initialization. The declaration and initialization can be prepended to any literal expression, but you must be aware that the literal they are prepended to delimits their scope. You cannot reference a variable outside its scope.
-
-To declare a variable in the DataWeave body, the following syntax is supported: *using (<variable-name> = <expression>)* and it must be written before defining the contents of the literal that it exists in.
-To reference an already initialized variable, you can just call it by the name you defined for it as with any other variable, or you can also write it in the form *$<variable-name>*.
-
-Consider the following examples:
-
-*Scoped to Simple Value*
-
-[source, dataweave, linenums]
-----
-%dw 2.0
-output application/json
----
-using (x = 2) 3 + x # <1>
-----
-<1> Result is simply 5
-
-*Scoped to Array literal*
-
-[source, dataweave, linenums]
-----
-%dw 2.0
-output application/json
----
-using (x = 2) [1, x, 3]
-----
-
-*Scoped to Object literal*
-
-[source, dataweave, linenums]
-----
-%dw 2.0
-output application/xml
----
-{
-  person: using (user = "Greg", gender = "male") { # <1>
-    name: user, # <2>
-    gender: gender
-  }
-}
-----
-
-<1> Declaration and initialization.
-<2> *user* is a valid reference because it is within the object *person* for which it was declared.
-
-*Invalid Reference outside of Scope*
-
-[source, dataweave, linenums]
-----
-%dw 2.0
-output application/xml
----
-entry: using (firstName = "Annie", lastName = "Point") {
-  person: using (user = firstName, gender = "male") {
-    name: user,
-    gender: gender
-  },
-  sn: lastName, # <1>
-  gen: gender # <2>
-}
-----
-
-<1> The reference *lastName* is valid because it is within scope.
-<2> The reference *gender* is invalid because gender was declared in the *person* object, and this reference exists outside the scope of that object.
-
-== Expressions
-
-DataWeave allows you to put logic in your script using expression values.
-All expressions in DataWeave return a value, these can be categorized into:
-
-* <<Operators>>
-* <<Selectors>>
-* <<Flow Control Expressions>>
-////
-
-////
-= DataWeave Types:
-== String
-== Boolean
-== Number
-== Range
-== Namespace
-== Uri
-== DateTime
-== LocalDateTime
-== Date
-== LocalTime
-== Time
-== TimeZone
-== Period
-== Binary
-== Null
-== Regex
-== Nothing
-== Any
-== Array
-== Object
-== Type
-
-==TryResult
-////
+https://www.anypoint.mulesoft.com/exchange/?search=dataweave[Anypoint Exchange (List of Projects that use DataWeave)]
