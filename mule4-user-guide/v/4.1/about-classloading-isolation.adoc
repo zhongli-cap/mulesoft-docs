@@ -1,69 +1,68 @@
-= About Classloading Isolation
+= About Class Loading Isolation
+
+The Mule Runtime engine is developed using Java and many other third party libraries. Mule apps can also contain other Java libraries, particularly extensions that provide integration functionality, such as the HTTP connector. These extensions can also contain other JAR libraries.
 
 == The Problem
 
-The Mule Runtime engine is developed using Java and many other third party libraries. New integrations created are bundled as Mule Applications. Those Mule Applications may also contains other Java libraries but in particular they will contain Mule extensions that provide most of the integration functionality, as for example, the HTTP connector. These extensions can also contain JAR libraries.
-
-One of the main problems with Java in these kind of scenarios is that as many JARs are placed together and as each artifact (the runtime, applications and extensions) are developed and released independently, they may contain conflicting versions of the same JAR files. For example, an application may decide to use commons collections 2.1. Later on, a new extension is added to the application that requires commons collections 3.1. Since commons collections 2.1 and commons collections 3.1 have conflicting resources, the application won't work as expected.
-
-All these problems exist because of the default classloading mechanism of the JVM.
+The default class loading mechanism of the JVM makes it possible to have conflicting versions of the same JAR files. In Mule, each artifact (the runtime, the Mule apps, and Mule extensions) is developed and released independently, but the JARs for these artifacts are together in the same location. For example, a Mule app might use Apache Commons Collections 2.1. If an extension you use requires Apache Commons Collections 3.1, the app might not work as expected because Commons Collections 2.1 and Commons Collections 3.1 have conflicting resources.
 
 == Mule 3 Solution
 
-Mule 3 provided a partial solution to this problem. It basically defined a hierarchical organization of classloaders. Applications are able to see its extensions and the libraries bundled within it and the runtime libraries but can't access other applications libraries. This solves the problem of clashing of resources between different applications but the clashing of libraries between different extensions, extensions and the applications libraries or the applications libraries and the runtime libraries still remains.
+To solve the problem of clashes between different apps, Mule 3 relied on hierarchical organization of class loaders. Though Mule apps can see their extensions, the libraries bundled within them, and their runtime libraries, Mule apps cannot access other app libraries.
+
+Other potential conflicts remained in Mule 3, such as clashes between libraries from different extensions, clashes between extension and app libraries, and clashes between app and runtime libraries.
 
 == Mule 4 Solution
 
-In Mule 4 the classloading mechanism has been changed radically in order to support all the problems depicted previously.
+In Mule 4, the class loading mechanism addresses all the problems depicted above for Mule 3.
 
 === API Definition
 
-The Mule Runtime and the different artifacts (applications, domains, policies, extensions) need to have a clear API definition. This API definition defines the contract of each artifact and also limits the exposure of the artifact content to other artifacts.
+The Mule runtime and artifacts (apps, domains, policies, and extensions) need to have a clear API definition that specifies a contract for each artifact and limits the exposure of the artifact content to other artifacts.
 
-*By defining a clear API for each artifact we can limit the scope of classes and libraries so we can create specific classloaders that do not share everything and avoid clashing.*
+A clear API for each artifact provides a way to limit the scope of classes and libraries, which in turn makes it possible to create class loaders that do not share everything.
 
 ==== Mule 4 API
 
-Mule 3 exposes all the classes bundled within its libraries to end users. This caused problems when upgrading from one runtime to another since changes in the runtime could affect custom Java classes from users.
+Mule 3 exposes all the classes that are bundled within its libraries. This exposure caused problems when upgrading from one runtime to another because changes in the runtime could potentially affect any of your custom Java classes.
 
-Mule 4 includes a new, well defined API. These make it easier for you to extend Mule and provides clarity on what the proper extension points are.
+Mule 4 provides a well-defined API that makes it easier for you to extend Mule and provides clarity on the proper extension points:
 
 * Core API: Mule message.
-* Extensions API: Modules, message processors, transforms and other elements to extend Mule Runtime 4.
-* Tooling API: All DataSense metadata and propagation is now part of Mule Runtime 4. This API is bundled with the Mule Agent. 
+* Extensions API: Modules, message processors, transforms, and other elements to extend Mule Runtime 4.
+* Tooling API: All DataSense metadata and propagation is now part of Mule Runtime 4. This API is bundled with the Mule Agent.
 
 ==== Artifact API
 
-Whenever you create an artifact (application, domain, policy, extension) you need to declare the public API of that module. 
+When you create an artifact (app, domain, policy, or extension), you need to declare the public API of that module.
 
-===== How to define the public API
+===== How To Define the Public API
 
 Go to link:how-to-export-resources[this page] to learn how to export a resource from an artifact.
 
 ===== Considerations
 
-* Resources and classes not exported will not be visible from other artifacts.
+* Resources and classes that are not exported are not visible from other artifacts.
 * Expose the minimum required set of packages and resources from your artifact.
-* Do not export third party libraries unless really required.
-* Never expose common third party libraries like guava, common-collections, etc. Doing so will cause clashing with other artifacts.
-* Ideally expose only classes from your artifact (or the JDK).
+* Do not export third-party libraries unless required.
+* Never expose common third-party libraries like Guava, Apache common-collections, and so on. Doing so will cause clashes with other artifacts.
+* Ideally, expose only classes from your artifact (or the JDK).
 
 ==== Semver
 
 Mule 4 follows https://semver.org/[Semantic Versioning 2.0.0] for all the provided APIs.
 
-IMPORTANT: You need to take into account the API restrictions defined for the API you are consuming. This restrictions were created to have greater flexibitility into the API changes that can be done between different versions.
-
 ==== API restrictions
 
-All public APIs may have restrictions. These restrictions limits how you can use the API. See https://github.com/mulesoft/api-annotations[API annotations module] for more details.
+All public APIs might have restrictions. These restrictions limit how you can use the API. See https://github.com/mulesoft/api-annotations[API annotations module] for more details.
 
+IMPORTANT: You need to take into account the API restrictions defined for the API you are consuming, as they ensure greater flexibility among API changes that can occur between different versions.
 
-=== Classloading Isolation mechanism
+=== Class Loading Isolation Mechanism
 
-Once APIs are clearly defined we can prevent access to internal classes of the artifact and only make the public API accessible from outside. In order to protect the APIs we have build a custom classloading mechanism.
+Once APIs are clearly defined, you can prevent access to internal classes of the artifact and only make the public API accessible from outside. To protect the APIs, Mule 4 uses a custom class loading mechanism.
 
-Lets suppose we have the following extension file structure:
+Suppose you have the following extension file structure:
 
 ----
 com/example/extension/api/MyClass.class
@@ -82,40 +81,38 @@ And the following `mule-artifact.json` descriptor file for the extension:
     "minMuleVersion": "4.0.0",
     "classLoaderModelLoaderDescriptor": {
         "id": "mule",
-        "attributes": {        
+        "attributes": {
             "exportedResources": [
                 "transformations/customer-to-user.dwl"
             ],
             "exportedPackages": [
                 "com/example/extension/api"
-            ]        
+            ]
         }
-    }   
+    }
 }
 ----
 
-Then for this extension the following diagram apply:
+Though somewhat oversimplified, this diagram shows how resources exported by `mule-artifact.json` are applied within an app:
 
 image:simple_classloading_diagram.png[Simple classloading diagram]
 
 Artifact Class Loader::
-    This is a regular Java Class Loader pointing to the JAR files included in the extension. All files and classes of the extension will be loaded by this class loader.
+    A regular Java class loader pointing to the JAR files included in the extension.  This class loader will load all files and classes of the extension.
 
 Artifact Filtering Class Loader::
-    This is a wrapper created over the Artifact Class Loader which will enforce the access restrictions to the extension code for foreign artifacts (the application or other plugins). It uses the content of the `mule-artifact.json` descriptor to know what things are public.
+    A wrapper created over the Artifact class loader, which will enforce the access restrictions to the extension code for foreign artifacts (the app or other plugins). It uses the content of the `mule-artifact.json` descriptor to determine what is public.
 
 Extension code::
-    This is were the Mule extension code lives. It will use Artifact Class Loader which does not have any restriction and it's only able to locate resources of the plugin itself.
+    The Mule extension code. It uses Artifact class loader (which does not have any restriction), and it is only able to locate resources of the plugin itself.
 
 Application Code::
-    This is were the Mule application code lives. In order to avoid the application from accessing restricted code or resources it uses the Artifact Filtering Class Loader of the extension.
-
-NOTE: This is an oversimplification of the whole mechanism but provides a clear view of how `mule-artifact.json` exported resources are apply within an application.
+    The Mule app code. It uses the Artifact Filtering class loader of the extension to prevent the app from accessing restricted code or resources.
 
 
 == See Also
 
 * link:/mule-user-guide/v/3.9/classloader-control-in-mule[Mule 3 classloading]
-* link:/mule-sdk/v/1.1/isolation[Mule SDK - About classloading isolation]
+* link:/mule-sdk/v/1.1/isolation[Mule SDK - About Class Loading Isolation]
 
 //* link:TODO documentation on how the packager automatically export resources
