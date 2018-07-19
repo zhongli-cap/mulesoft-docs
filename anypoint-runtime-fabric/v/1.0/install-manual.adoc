@@ -2,6 +2,15 @@
 
 This topic describes how to install and register Anypoint Runtime Fabric on VMs hosted in your data center.
 
+== Prerequisites
+. Provision the necessary hardware for the controller VMs and worker VMs as outlined in the system requirements page.
+. Ensure the required disks are listed as a block device for each VM.
+. Runtime Fabric supports RedHat v7.4 or CentOS v7.4. Each VM should be running a compatible operating system.
+. The necessary ports should be opened as described on the port requirements page.
+. A public key should be added to each VM, associated with your local private key, to enable shell access to each VM via SSH.
+. The private key is assumed to be a PEM file.
+. The IP addresses for each VM should be gathered ahead of time.
+
 [WARNING]
 ====
 Before running the installer, ensure that your infrastructure meets the minimum hardware requirements. An operations specialist may be needed to provision the required infrastructure.
@@ -19,94 +28,125 @@ The installer package includes the necessary scripts and binaries needed to inst
 [NOTE]
 The extension for the installer is packaged as `tar.gz`. You'll need a utility to unpack tar files.
 
-The contents inside the installation binary include the following:
+You'll find a directory named `manual` inside the installer, which contains the following:
 
-* `auto_installer.py`: the installation bootstrap script.
-* `controller-init.sh`: a script to configure each VM serving as a controller.
+* `installer-init.sh`: a script to configure the controller VM designated to bootstrap the installation.
+* `controller-init.sh`: a script to configure each remaining VM serving as a controller.
 * `worker-init.sh`: a script to configure each VM serving as a worker.
 * `README.md`: a markdown file containing instructions to aid with installation.
 
-== Running the Command Line Installation
+== Prepare VMs for Installation
+The initialization scripts contained in the `manual` directory in the installer perform the following actions:
+* Formats the dedicated disks.
+* Mounts the dedicated disks to the appropriate path.
+* Sets iptable rules.
+* Enables the required kernel modules.
+* Adds UUIDs for each formatted disk as environment variables.
+* Enables and reloads system services.
 
-. Copy and run the `controller-init.sh` script, in proviledged mode, to each VM acting as a controller. The script accepts 2 parameters which are required. The first parameter describes the disk block device path for _Disk 1_, while the second parameter describes the same for _Disk 2_. After running the script, you may be prompted to accept the changes. 
+. SSH into the first VM acting as a controller VM for Runtime Fabric.
 +
 ----
-chmod +x setup.sh
-sudo ./setup.sh /dev/sdc /dev/sdd
+ssh rtf-user@<controller-ip-address> -i ~/.ssh/key.pem
 ----
 +
-[NOTE]
-To help identify the paths to your block devices, use `lsblk`.
-+
-
-. Copy the `installer.tar.gz` binary, the `auto-installer.py` script, and your private key to a single server or virtual machine. The installer URL can be found by navigating to Anypoint Runtime Manager, selecting the *Runtime Fabric* tab, and clicking the *Create Runtime Fabric* button.
+. Transfer the `installer-init.sh` script to the `/tmp` directory of the installer VM. You may need to use an SCP utility to transfer files.
+. Ensure the script is executable by using `chmod`. 
 +
 ----
-wget <installer_URL> -O installer.tar.gz
-----
-
-. Move the `installer.tar.gz` binary to the user's home directory.
-+
-----
-mv installer.tar.gz ~
+chmod 600 /tmp/installer-init.sh
 ----
 +
-[NOTE]
-Ensure the installation binary file name is equal to `installer.tar.gz`.
-+
-
-. Move `auto-installer.py` to a temp directory, and change to that directory.
+. Run the script in privileged mode, inputting the two required parameters:
 +
 ----
-mv auto-installer.py /tmp/
-cd /tmp/
+sudo ./installer-init.sh <DOCKER_DISK_PATH> <ETCD_DISK_PATH>
 ----
-
-. Run the following command on the same server or virtual machine to start the `auto-installer.py` script. This script requires Python 2.7 to run. The private and public IP addresses, admin username for the servers, the block device path for _Disk 2_, and the private ssh key pair should be filled in as environment variables before running.
-+
-----
-PRIVATE_IPS="<private-ip-1> <private-ip-2> <private-ip-3> \
- PUBLIC_IPS="<public-ip-1> <public-ip-2> <public-ip-3>" \
- FLAVOR=three \
- USER=<username> \
- KEY=</path/to/private/ssh/key> \
- DOCKER_DEVICE=</dev/sdd> \
- python auto_installer.py
-----
-+
-Using the following values:
 +
 [%header,cols="2*a"]
 |===
 |Parameter | Description
-|PRIVATE_IPS | Specifies the private IP address for each server.
-|PUBLIC_IPS | Specifies the public IP address for each server.
-|FLAVOR | Specifies the number of nodes in your cluster. Valid values are: `one`, `three`, and `six`.
-|USER | Specifies the username on the servers.
-|KEY | Specifies the path for the private ssh key pair.
-|DOCKER_DEVICE | Specifies the path to _Disk 2_ device on each server. Use `lsblk` to list the available devices.
+|DOCKER_DISK_PATH | Specifies the block device path for the dedicated disk used for Docker, supporting 1000 provisioned IOPS.
+|ETCD_DISK_PATH | Specifies the block device path for the dedicated disk used for etcd, supporting 3000 provisioned IOPS.
 |===
 +
 [NOTE]
-This step will install the Project Worker Cloud appliance across all servers to form a cluster. It may take 10-15 minutes or longer to complete.
+To help identify the block device paths to your disks, use `lsblk`.
++
+. After completed, there should be a new directory in the `/tmp` location named `installer`. Change to that working directory.
++
+----
+cd /tmp/installer
+----
++
+. Transfer the private key (PEM File) cooresponding to the public key on each VM to the working directory. Restrict the permissions for the file.
++
+----
+chmod 600 <key.pem>
+----
++
+. Exit out of the installer VM. Transfer and execute the `controller-init.sh` script on each of the remaining VMs acting as a controller in privileged mode. The script will take in the same parameters as the `installer-init.sh` script.
++
+----
+sudo ./controller-init.sh <DOCKER_DISK_PATH> <ETCD_DISK_PATH>
+----
++
+. Exit out of the controller VM. Transfer and execute the `worker-init.sh` script on each of the VMs acting as a worker in privileged mode. The script will take in a single parameter for the dedicated disk used for Docker.
++
+----
+sudo ./worker-init.sh <DOCKER_DISK_PATH>
+----
 
-== Registering the Project Worker Cloud appliance
+== Start the Installation
 
-After the installation script has completed, you'll need to register the Project Worker Cloud appliance to Anypoint Runtime Manager.
-
-. Navigate to Runtime Manager, select the Worker Clouds tab, and select the Create Worker Cloud button.
-. On Step 3, choose a name for your Project Worker Cloud appliance. Copy the script to your clipboard.
-. On a server running the appliance, paste and run the registration script with a privledged user.
-. After the script completes the registration process, your appliance should be registered and visible on the Worker Clouds tab in Runtime Manager.
+. Exit out of the worker VM, and SSH into the installer VM and change the working directory to `/tmp/installer`.
+. Use an editor, such as vim, to open and modify the variables specified in the `start_installation.sh` file.
++
+----
+vim start_installation.sh
+----
++
+[%header,cols="2*a"]
+|===
+|Parameter | Description
+|RTF_PRIVATE_IPS | Specifies the private IP address for each controller VM. The first IP address should be the installer.
+|RTF_PUBLIC_IPS | Specifies the public IP address for each controller VM. The order should match the private IPs. This parameter is optional.
+|WORKER_PRIVATE_IPS | Specifies the private IP address for each worker VM.
+|WORKER_PUBLIC_IPS | Specifies the public IP address for each worker VM. The order should match the private IPs. This parameter is optional.
+|USER | Specifies the username on the VMs. Default is set to `rtf-user`.
+|KEY | Specifies the path for the private ssh key pair.
+|===
 +
 [NOTE]
-A new sandbox environment must be created with the name `Worker-Cloud-beta` in order to deploy applications to the Project Worker Cloud appliance. This is a limitation placed during the beta program.
+Ensure you save your modified changes to the `start_installation.sh` script.
++
+. Start the installation by executing the `start_installation.sh` script.
++
+----
+./start_installation.sh
+----
++
+[NOTE]
+This step will install Runtime Fabric across all VMs to form a cluster. It may take 15-25 minutes or longer to complete.
 
-== Known Issues
+== Register Runtime Fabric
 
-The following are issues which may be present during the beta program for Project Worker Cloud. 
+After the installation script has completed, you must register Runtime Fabric to Anypoint Runtime Manager.
 
-* The `region` parameter of the registration script may need to be manually set to `us-east-1`. 
-* In Runtime Manager, stopping an application deployed to a Project Worker Cloud appliance will not alter its state.
-* Applications must be uploaded to Anypoint Exchange before they can be deployed to Project Worker Cloud.
-* When deleting a Project Worker Cloud appliance which has been disconnected from the Anypoint Control Plane, you may encounter an error asking to remove all applications. Reach out to the Product/Engineering team to help resolve this issue.
+. Navigate to Runtime Manager, select the Runtime Fabric tab, then select Create Runtime Fabric.
+. Choose a name for your Runtime Fabric.
+. Copy the script to your clipboard.
+. SSH into one of the virtual machines running Runtime Fabric and paste and run the registration script. This process may take up to 15 minutes to complete.
+. After the script completes the registration process, Runtime Fabric should be registered and visible on the Runtime Fabric tab in Runtime Manager.
+
+== Associate Environments to Runtime Fabric
+
+After registering Runtime Fabric to Anypoint Runtime Manager, you must associate it with one or more environemnts.
+
+. Navigate to Runtime Manager, select the Runtime Fabric tab, then select the Runtime Fabric based on the name used during registration.
+. On the Environments tab, select the environemnt you want to associate with this Runtime Fabric and click Add.
+. Click Apply to confirm the changes.
+
+== Add a Mule license key to Runtime Fabric
+
+After associating Runtime Fabric to one or more environments, you must add your Mule license key in order to deploy Mule applications to it.
