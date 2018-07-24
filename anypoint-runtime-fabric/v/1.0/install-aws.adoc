@@ -1,1 +1,74 @@
-= Install a Runtime Fabric on AWS
+= Install Runtime Fabric on AWS
+
+This topic describes how to install and register Anypoint Runtime Fabric on your AWS account.
+
+[WARNING]
+====
+Before running the installer, ensure that your infrastructure meets the minimum hardware requirements. An operations specialist may be needed to provision the required infrastructure.
+====
+
+== Download Installer
+The installer package includes the necessary scripts and binaries needed to install Runtime Fabric.
+
+. Log in to Anypoint platform and navigate to Runtime Manager.
+. On the left navigation pane, select "Runtime Fabrics".
+. Click "Create Runtime Fabric".
+. Click the installer link to begin the download.
+. Once downloaded, unpack the installer using `mkdir installer && tar -zxf /path/to/installer -C installer`
+
+[NOTE]
+The extension for the installer is packaged as `tar.gz`. You'll need a utility to unpack tar files.
+
+You'll find a directory named `aws` inside the installer, which contains the following:
+
+* `fabric.tf`: a [terraform](https://terraform.io/) script to provision infrastructure on your AWS account.
+* `README.md`: a markdown file containing installation instructions.
+
+== Provision Infrastructure
+Use the included Azure Resource Manager Template to easily provision the required hardware and network settings needed to install and operate Runtime Fabric.
+
+There are multiple methods to apply the Azure Resource Manager Template to your Azure account. Below are instructions to apply the template via the Azure Portal.
+
+[NOTE]
+You'll need a [key pair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) to provision the VMs. This is required to enable secure access to your VMs via SSH (Secure Shell).
+
+You'll need to configure AWS API access in your shell. For example, make sure you have `AWS_ACCESS_KEY` etc defined.
+
+You can either run `terraform` natively, or via `docker`.
+
+=== With terraform
+```
+terraform apply \
+  -var cluster_name= \
+  -var key_pair= \
+  -var workers= \
+  -var controllers= \
+  -var installer_url= \
+  -state=rtf.tfstate
+```
+
+=== With Docker
+```
+docker run -v $(pwd)/:/rtf \
+  -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY_ID .. \
+  hashicorp/terraform:0.9.6 apply \
+  -var cluster_name=<cluster-name> \
+  -var key_pair=poseidon-installer \
+  -var controllers=1 \
+  -var workers=0 \
+  -var installer_url=<url> \
+  -state=/rtf/rtf.tfstate \
+  /rtf/
+```
+
+[NOTE]
+This step will install Runtime Fabric across all servers to form a cluster. It may take 15-25 minutes or longer to complete.
+
+== Registering Runtime Fabric
+
+After the installation script has completed, you'll need to register Runtime Fabric to Anypoint Runtime Manager.
+
+. Navigate to Runtime Manager, select the Runtime Fabrics tab, and select the "Create Runtime Fabric" button.
+. Near the registration script, choose a name for your Runtime Fabric. Copy the script to your clipboard.
+. SSH onto a virtual machine running Runtime Fabric and paste and run the registration script. This process may take up to 15 minutes to complete.
+. After the script completes the registration process, Runtime Fabric should be registered and visible on the "Runtime Fabrics" tab in Runtime Manager.
