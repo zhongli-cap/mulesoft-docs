@@ -1,29 +1,47 @@
-= Enable Edge for Anypoint Runtime Fabric
+= Enable an Edge Endpoint for Anypoint Runtime Fabric
 
-Anypoint Edge lets you configure the security required by Runtime Fabric to enable inbound requests to your APIs. +
-You cannot expose any endpoints until you configured Edge.
+All connection requests to your Mule applications deployed in a Runtime Fabric must use TLS. To guarantee that all inbound requests follow this requirement, you need to configure an edge endpoint for your Runtime Fabric to enable inbound requests to your APIs. +
+You cannot expose any endpoints until you configured an edge endpoint.
 
 == Before You Begin
 
-* Verify that your account has at least one Anypoint Runtime Fabric installed and configured. See link:/project-worker-cloud/install-about[Install Anypoint Runtime Fabric] for more information.
-* Edge requires you to configure TLS context and a certificate for your instance. Make sure you uploaded a keystore and a TLS Context configuration into a secret group using Anypoint Secrets Manager. +
-Follow the link:edge-create-certificate-tls[Configure Security for Anypoint Edge Security] steps for a quick overview of this process.
-//_COMBAK: Should This task be documented in the Edge documentation?
-* Ensure that you have read permissions on the environment where your secret group was created.
+* Verify that your account has at least one Anypoint Runtime Fabric installed and configured.
+See link:/anypoint-runtime-fabric/v/1.0/installation[Install Anypoint Runtime Fabric] for more information.
+* To validate TLS connections, your edge endpoint must have a TLS Context configured. +
+Essentially, your TLS Context needs to be set up to point to a keystore that holds the certificate used to identify your edge endpoint for public key cryptography. +
+You need to set up these secret types within a secret group using Anypoint Secrets Manager. Follow the link:edge-create-certificate-tls[Configure Secrets for Your Edge Endpoint].
+* Ensure that you have the *Manage Runtime Fabrics* permission for your user account. +
+Additionally, if you are creating configuring the TLS context, make sure you have *Grant access to secrets*, *Manage secret groups*, *Write secrets*, and *Read secrets metadata* permissions enabled for your user.
 
 == Procedure
 
-. In your Runtime Manager UI, select Runtime Fabrics on the left navigation bar.
-. Select the name of your Runtime Fabric to which you want to enable Edge.
-. Select the Edge Configuration tab, and select the Enable Edge checkbox.
-. Under Basic Configuration:
-.. Select the number of replicas you want.
-//_COMBAK: Is this the amount of Edge replicas? Why is it important. How to know what's optimum?
-. Under TLS Configuration:
+. In your Runtime Manager UI, select *Runtime Fabrics* on the left navigation bar.
+. Select the name of your Runtime Fabric to which you want to enable edge.
+. Select the *Edge Configuration* tab, and select the *Enable Edge* checkbox.
+. Under *Basic Configuration*:
+.. Configure your secure and non-secure ports. +
+By default, secure port is 443 and the non-secure port is 80. +
+Your edge endpoint only accepts HTTPS requests. If you receive an HTTPS request through your non-secure port, your edge endpoint redirects the request using a 301 to port 443.
++
+[CAUTION]
+--
+HTTP Requests through your edge endpoint are not permitted. +
+The edge endpoint returns an error on port 443 if the request is not using HTTPS.
+--
+.. Select the number of replicas you want. +
+Edge endpoints can only run in controller nodes. If you have more than one controller node, you can set up more replicas to split traffic across replicas of your edge endpoint.
+.. Determine your resource allocation. +
+Determine how many cores and memory from your controller node to assign to your edge endpoint.  +
+Consider that TLS connections are resource expensive. You can increase the processing capacity for your inbound connections by using more cores.
+. Under *TLS Configuration*: +
+Your edge endpoint uses this TLS Configuration for all inbound requests to your application. +
+This configuration must be stored in a secret group. Follow the link:edge-create-certificate-tls[Configure Secrets for Your Edge Endpoint] if you don't have a TLS configuration yet.
 .. In the Environment drop-down menu, select the environment of the secret group that stores the Keystore and TLS Context for your Edge instance.
 .. In the Secret Group drop-down menu, select the secret group that stores the keystore and TLS Context for your Edge instance.
 .. In the TLS Context drop-down menu, select the TLS Context for your Edge instance.
-//_TODO: Document Advanced Options Configuration (DOCS-2429).
+
+Additionally you can configure *Advanced Options* and *Logs*.
+
 == Advanced Options
 
 
@@ -95,10 +113,6 @@ The values to configure here depends on your scenario:
 *Default Value*: blank and unchecked.
 
 |===
-//_TODO: Document Logs Options (DOCS-2428).
-. Click Deploy. +
-The platform displays a "Request to Deployer Sent Successfully" message.
-//_COMBAK: What does this mean? What happens next?
 
 == Logs
 
@@ -128,5 +142,5 @@ The platform displays a "Request to Deployer Sent Successfully" message.
 
 == See Also
 
-//_COMBAK: Should we link to Secrets Manager docs?
-* Anypoint Secrets Manager
+
+* link:edge-create-certificate-tls[Configure Secrets for Your Edge Endpoint].
