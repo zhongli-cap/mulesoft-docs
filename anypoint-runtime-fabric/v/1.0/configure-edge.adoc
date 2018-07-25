@@ -7,11 +7,16 @@ You cannot expose any endpoints until you configured an edge endpoint.
 
 * Verify that your account has at least one Anypoint Runtime Fabric installed and configured.
 See link:/anypoint-runtime-fabric/v/1.0/installation[Install Anypoint Runtime Fabric] for more information.
-* To validate TLS connections, your edge endpoint must have a TLS Context configured. +
+* To enable TLS connections, you must configure a TLS Context for your edge endpoint. +
 Essentially, your TLS Context needs to be set up to point to a keystore that holds the certificate used to identify your edge endpoint for public key cryptography. +
-You need to set up these secret types within a secret group using Anypoint Secrets Manager. Follow the link:edge-create-certificate-tls[Configure Secrets for Your Edge Endpoint].
-* Ensure that you have the *Manage Runtime Fabrics* permission for your user account. +
-Additionally, if you are creating configuring the TLS context, make sure you have *Grant access to secrets*, *Manage secret groups*, *Write secrets*, and *Read secrets metadata* permissions enabled for your user.
+You need to set up these secret types within a secrets group using Anypoint Secrets Manager. Follow the link:edge-create-certificate-tls[Configure Secrets for Your Edge Endpoint].
+* Ensure that you have the *Manage Runtime Fabrics* permission for your user account, and for the environment containing the TLS Context.
++
+Addtionally, if your Secrets Group and TLS context does not exist, or you need to modify them, you will need additional "Secrets Manager" permissions:
++
+** "Manage Secret Groups" to create a new secrets group.
+** "Write secrets" and "Read secrets" to create or modify the TLS Context or Keystore.
+
 
 == Procedure
 
@@ -35,9 +40,9 @@ Determine how many cores and memory from your controller node to assign to your 
 Consider that TLS connections are resource expensive. You can increase the processing capacity for your inbound connections by using more cores.
 . Under *TLS Configuration*: +
 Your edge endpoint uses this TLS Configuration for all inbound requests to your application. +
-This configuration must be stored in a secret group. Follow the link:edge-create-certificate-tls[Configure Secrets for Your Edge Endpoint] if you don't have a TLS configuration yet.
-.. In the Environment drop-down menu, select the environment of the secret group that stores the Keystore and TLS Context for your Edge instance.
-.. In the Secret Group drop-down menu, select the secret group that stores the keystore and TLS Context for your Edge instance.
+This configuration must be stored in a secrets group. Follow the link:edge-create-certificate-tls[Configure Secrets for Your Edge Endpoint] if you don't have a TLS configuration yet.
+.. In the Environment drop-down menu, select the environment of the secrets group that stores the Keystore and TLS Context for your Edge instance.
+.. In the Secrets Group drop-down menu, select the secrets group that stores the keystore and TLS Context for your Edge instance.
 .. In the TLS Context drop-down menu, select the TLS Context for your Edge instance.
 
 Additionally you can configure *Advanced Options* and *Logs*.
@@ -81,18 +86,18 @@ To ensure that this feature works as expected, this value should always be lower
 
 | *Max Pipeline Depth*
 | The maximum amount of requests that you allow from the same client. +
-This value lets you define how many simultaneous requests can send a client, before getting a response. +
+This value lets you define how many simultaneous requests a client can send. +
 If a client exceeds this number, the exceeding requests will not be read until the requests in the queue receive a response.
 
 *Default Value*: 10
 
 | *Source IP Header Name* and *Enable Proxy Protocol*
-| You can use these configurations if your Runtime fabric is sitting behind a load balancer.
+| You can use these configurations if your Runtime fabric is behind a load balancer.
 
 The values to configure here depends on your scenario:
 
 . Your Runtime Fabric is not behind a load balancer. +
-:: If your Runtime Fabric is not sitting behind a load balancer, you should not configure these values.
+:: If your Runtime Fabric is not deployed behind a load balancer, you should not configure these values.
 +
 *Source IP Header Name*: blank +
 *Enable Proxy Protocol*: Unchecked
@@ -102,7 +107,7 @@ The values to configure here depends on your scenario:
 *Source IP Header Name*: blank +
 *Enable Proxy Protocol*: checked
 . Your Runtime Fabric is behind a different type of Load Balancer. +
-:: If your Runtime Fabric is deployed behind another type of Load Balancer (for example F5, or nginx), you need to provide two common source IP header:
+:: If your Runtime Fabric is deployed behind another type of Load Balancer (for example F5, or nginx), you need to provide the source IP header name. Two common source IP headers are:
 +
 * Forwarded: An RFC7239 compliant ip header.
 * X-Forwarded-For: Non-standard pre-2014 header containing one or more IPs from a Load Balancer (For example: “192.16.23.34, 172.16.21.36")
@@ -118,24 +123,26 @@ The values to configure here depends on your scenario:
 
 You can define the log levels for your edge endpoint. Avaialble values are:
 
-* TRACE
-* DEBUG
-* VERBOSE
-* INFO
-* WARNING
-* ERROR
 * FATAL
+* ERROR
+* WARNING
+* INFO
+* VERBOSE
+* DEBUG
+* TRACE
 
-Additionally, you can apply filters to your logs. +
-By default, your edge endpoint has no log filters. This means that the activity of all IPs behind your endpoint is being tracked. If you have a high amount of traffic and you don't want to use a lot of vCPU resources of your node, you can apply a filter so only specific IP addresses are tracked. +
-This feature is also helpful if you are trying to debug a connection for a specific o limited number of IP addresses.
+Keep in mind that more verbose log levels between "WARNING" and "TRACE" consume more CPU resources for each request, therefore you should raise log levels carefully. +
+By default, the activity of all IPs behind your endpoint is being tracked. To help you reduce the vCPU usage when you need to use more verbose log levels, you can configure IP filters. +
+If you have a high amount of traffic and you don't want to use a lot of vCPU resources of your node, you can apply a filter so only specific IP addresses are tracked.
+
+This feature is also helpful for reducing the quantity of logs when you need to debug a connection for a specific or limited number of IP addresses.
 
 === Configuring Logs
 
 . Click the Add Filter.
 . in the *IP* field, enter the IP addresses or sub-set of addresses using CIDR notation.
 . Select the log level you want for this filter.
-. Clikc OK.
+. Click OK.
 
 After you finish configuring all these values, click *Deploy*. +
 The platform displays a "Request to Deployer Sent Successfully" message.
