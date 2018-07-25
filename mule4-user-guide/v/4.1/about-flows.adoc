@@ -1,32 +1,39 @@
 = About Flows and Subflows
 :keywords: anypoint studio, studio, mule esb, orchestration
 
-Mule apps process messages and other parts of Mule events through Mule components, connectors, and modules that are set up within the scope of
+Mule apps process messages and other parts of Mule events through Mule components, 
+connectors, and modules that are set up within the scope of
 link:flow-component[Flow and Subflow components] within an app.
 
-An app can consist of a single flow, or it can break up processing into discrete
-flows and subflows that you add to the app and link together, often with
-link:flowref-about[Flow Ref] components. Mule apps in production environments
-typically use multiple flows and subflows to divide the app into functional
-modules or for <<error_handling, error-handling>> purposes. For example, one
-flow might receive a record and transform data into a given format that another
+Mule apps in production environments typically use multiple flows and subflows 
+to divide the app into functional modules or for 
+<<error_handling, error-handling>> purposes. For example, one flow might 
+receive a record and transform data into a given format that another
 flow processes in some special way.
 
-In addition to calling flows or subflows through the Flow Ref, you can
-also use DataWeave `lookup` function within expressions and transformations
-to pass the current event to another flow for further event processing. In 
-this way, you can think of a flow or subflow as a function call that accepts
-an event as input and then returns the modified event.
+An app can consist of a single flow, or it can break up processing into 
+discrete flows and subflows that you add to the app and connect together.
+
+that you add to the app and link together, 
+often with  components. 
+
+You can connect and trigger their execution with link:flowref-about[Flow Ref] 
+components or by using the DataWeave `lookup` function within expressions and 
+transformations. The function passes the current event to another flow for 
+further event processing. In this way, you can think of a flow or subflow 
+as a function call that accepts an event as input and then returns the
+modified event.
 
 == Using Flows
 
 Flows can have sources (such as an HTTP listener receiving a request) 
-that trigger the execution of a flow. However, sources are not mandatory. 
-Instead of using an event source in a flow, you can trigger it through 
-Flow Ref components or the `lookup` function, just as you can trigger a 
-Subflow. In addition, for cases where you do not want a source to start a 
-flow right away, you can configure your flow as initially stopped and 
-start it later through link:/runtime-manager/flow-management[Runtime Manager]. 
+that trigger the execution of a flow. For cases where you do not want 
+a source to start a flow right away, you can configure your flow as 
+initially stopped and start it later through 
+link:/runtime-manager/flow-management[Runtime Manager].
+
+You typically use Flow Ref component or `lookup` function only for 
+triggering flows that lack a source. 
 
 Like functions or methods in other programming languages, it is a best practice
 to focus your flows on specific (perhaps reusable) activities, such as receiving
@@ -34,17 +41,6 @@ an API request from a web client, processing the event, then returning an
 appropriate response. If the event processing gets complicated, or must call
 out to other services, you might factor out that behavior into other (perhaps
 reusable) flows.
-
-[[error_handling]]
-Each flow (but not subflow) can have its own error handling. One reason to
-call a flow through a Flow Ref component is to separate out the error
-handling to different contexts. For example, a parent flow that receives web
-client requests might define HTTP-related error handling. If the parent flow
-then calls a JMS queue for further processing, you can put the JMS event
-processors in a separate child flow and call that flow with a Flow Ref
-component. This child flow can then define its own JMS-related error handling.
-This practice is similar to the way you handle or propagate errors in other
-programming languages, like Java.
 
 == Using Subflows
 
@@ -54,7 +50,17 @@ does not have an event source, and it does not have its own error handling.
 Subflows are always called from another flow or subflow through a Flow Ref
 component or from a DataWeave `lookup` call.
 
-== Granular Error Handling using Try Scopes within a Flow or Subflow
+== Error Handling
+
+Each flow (but not subflow) can have its own error handling. One reason for
+calling a flow through a Flow Ref component is to separate out the error
+handling to different contexts. For example, a parent flow that receives web
+client requests might define HTTP-related error handling. If the parent flow
+then calls a JMS queue for further processing, you can put the JMS event
+processors in a separate child flow and call that flow with a Flow Ref
+component. This child flow can then define its own JMS-related error handling.
+This practice is similar to the way you handle or propagate errors in other
+programming languages, like Java.
 
 Like a flow or subflow, a link:try-scope-concept[Try scope] also groups
 together a sequence of event processors with its own error handling. You can
@@ -65,9 +71,10 @@ which makes it harder to reuse between other flows or subflows.
 
 In both cases, calling a flow or including a Try scope isolates the error 
 handling, similar to the use of Try-Catch blocks inside Java code. For
-example, placing JMS queue event processing (described above) in a flow or 
-a Try scope results in exactly the same error handling behavior, but any 
-event processors in a Try scope cannot be called from another flow.
+example, placing JMS queue event processing (described above) in its own 
+flow or within a Try scope results in exactly the same error handling 
+behavior, but the event processors in a Try scope cannot be called from 
+another flow.
 
 == Branching Event Processing
 
