@@ -1,60 +1,66 @@
-= To Listen For A Reply
+= Listening For A Reply
 :keywords: jms, ibm mq, mq connector, publish, consume, request, reply
-:toc:
-:toc-title:
 
-Request/Reply is a widespread pattern between applications, thus the new IBM MQ
-Connector provides an operation specially designed for that, called `publish-consume`.
-The `publish-consume` operation allows you to publish a Message to any destination,
-and then wait for a reply on a different Destination.
+Request and reply is a widespread pattern between applications, thus the new IBM MQ
+connector provides an operation for that, called `publish-consume`.
+The publish-consume operation allows you to publish a message to any destination,
+and then wait for a reply on a different destination.
 
-When using this operation, the _JMSReplyTo_ header of the outgoing Message will
-contain the id of the Destination on which our application will be waiting for a
+When using the publish-consume operation, the JMSReplyTo header of the outgoing message 
+contains the ID of the destination at which an application waits for a
 response. This destination may be a well-known destination, or it may be a
 temporary destination created on the fly with the only purpose of receiving a
 single response message.
 
-Finally, the result of the operation will be the Message received as a response,
-with the same structure as if a `consume` operation was invoked.
+The result of the operation is the message received as a response,
+with the same structure as if a consume operation was invoked.
 
 == Waiting For A Reply On A Temporary Queue
 
-Using a temporary Queue to wait for a response is very simple, just configure the
-message being sent and the operation will automatically wait for a response in a
-temporary Queue:
+Using a temporary queue to wait for a response is very simple, just configure the
+message being sent and the operation automatically waits for a response in a
+temporary queue:
+
 [source, xml, linenums]
 ----
-<ibm-mq:publish-consume config-ref="config" destination="targetDestination" maximumWait="20" maximumWaitUnit="SECONDS"/>
+<ibm-mq:publish-consume 
+     config-ref="config" 
+     destination="targetDestination" 
+     maximumWait="20" 
+     maximumWaitUnit="SECONDS"/>
 ----
 
-In this example, the operation will `publish` a Message with the current `payload`
-as its *body* and the *JMSReplyTo header* configured to a temporary destination,
+In this example, the operation publishes a message with the current payload
+as its body and the JMSReplyTo header configured to a temporary destination,
 to the `targetDestination`.
-Then, it will automatically try to consume the response from that temporary
-Queue until a Message is consumed or the `maximumWait` is reached (in which case
-it will fail with a `IBM-MQ:TIMEOUT` error).
+Then, it automatically tries to consume the response from that temporary
+queue until a message is consumed or the maximumWait is reached (in which case
+the operation fails with a IBM-MQ:TIMEOUT error).
 
 == Receiving The Reply On A Known Queue
 
-In many cases, is not wanted reply queues to be created per request basis,
-but instead a well-known Queue is used for replies.
+In many cases, reply queues do not need to be created for each request,
+but instead a well-known queue is used for replies.
 For this cases, all you have to do is to configure the `reply-to` parameter on
-the outgoing Message:
+the outgoing message:
+
 [source, xml, linenums]
 ----
-<ibm-mq:publish-consume config-ref="config" destination="targetDestination">
+<ibm-mq:publish-consume config-ref="config" 
+     destination="targetDestination">
     <ibm-mq:message>
         <ibm-mq:reply-to destination="replyToDestination"/>
     </ibm-mq:message>
 </ibm-mq:publish-consume>
 ----
 
-Now the operation will `publish` a Message to the `targetDestination` with the
-current `payload` as its *body* and the `JMSReplyTo` *header* configured with
+The operation publishes a message to the `targetDestination` with the
+current payload as its body and the JMSReplyTo header configured with
 the `replyToDestination`.
-Then, it will automatically try to consume the response from the
-`replyToDestination` Queue until a Message is consumed or the `maximumWait`
-is reached (in which case it will fail with a `IBM-MQ:TIMEOUT` error).
+
+The operation automatically tries to consume the response from the
+replyToDestination queue until a message is consumed or the maximumWait
+is reached (in which case tthe operation fails with a IBM-MQ:TIMEOUT error).
 
 == See Also
 
