@@ -4,12 +4,9 @@ This topic describes how to install and register Anypoint Runtime Fabric on VMs 
 
 == Prerequisites
 . Provision the necessary hardware for the controller VMs and worker VMs as outlined in the system requirements page.
-. Ensure the required disks are listed as a block device for each VM.
+. Ensure the required disks are listed as a block device for each VM. The disks do not need to be mounted or formatted.
 . Runtime Fabric supports RedHat v7.4 or CentOS v7.4. Each VM should be running a compatible operating system.
 . The necessary ports should be opened as described on the port requirements page.
-. A public key should be added to each VM, associated with your local private key, to enable shell access to each VM via SSH.
-. The private key is assumed to be a PEM file.
-. The IP addresses for each VM should be gathered ahead of time.
 
 [WARNING]
 ====
@@ -23,125 +20,78 @@ The installer package includes the necessary scripts and binaries needed to inst
 . On the left navigation pane, select "Runtime Fabrics".
 . Click "Create Runtime Fabric".
 . Click the installer link to begin the download.
-. Once downloaded, unpack the installer file to view its contents.
-
-[NOTE]
-The extension for the installer is packaged as `tar.gz`. You'll need a utility to unpack tar files.
+. Once downloaded, unpack the installer using `mkdir installer && tar -zxf /path/to/installer -C installer`
 
 You'll find a directory named `manual` inside the installer, which contains the following:
 
-* `installer-init.sh`: a script to configure the controller VM designated to bootstrap the installation.
-* `controller-init.sh`: a script to configure each remaining VM serving as a controller.
-* `worker-init.sh`: a script to configure each VM serving as a worker.
+* `generate-configs.sh`: a script to configure each VM serving as a worker.
 * `README.md`: a markdown file containing instructions to aid with installation.
 
 == Prepare VMs for Installation
-The initialization scripts contained in the `manual` directory in the installer perform the following actions:
+The initialization process perform the following actions:
 * Formats the dedicated disks.
 * Mounts the dedicated disks to the appropriate path.
 * Sets iptable rules.
 * Enables the required kernel modules.
-* Adds UUIDs for each formatted disk as environment variables.
 * Enables and reloads system services.
 
-. SSH into the first VM acting as a controller VM for Runtime Fabric.
-+
-----
-ssh rtf-user@<controller-ip-address> -i ~/.ssh/key.pem
-----
-+
-. Transfer the `installer-init.sh` script to the `/tmp` directory of the installer VM. You may need to use an SCP utility to transfer files.
-. Ensure the script is executable by using `chmod`. 
-+
-----
-chmod 600 /tmp/installer-init.sh
-----
-+
-. Run the script in privileged mode, inputting the two required parameters:
-+
-----
-sudo ./installer-init.sh <DOCKER_DISK_PATH> <ETCD_DISK_PATH>
-----
-+
-[%header,cols="2*a"]
-|===
-|Parameter | Description
-|DOCKER_DISK_PATH | Specifies the block device path for the dedicated disk used for Docker, supporting 1000 provisioned IOPS.
-|ETCD_DISK_PATH | Specifies the block device path for the dedicated disk used for etcd, supporting 3000 provisioned IOPS.
-|===
-+
+Execute `generate-configs.sh`. This tool helps you to generate the properties required on each machine.
+
 [NOTE]
 To help identify the block device paths to your disks, use `lsblk`.
-+
-. After completed, there should be a new directory in the `/tmp` location named `installer`. Change to that working directory.
-+
-----
-cd /tmp/installer
-----
-+
-. Transfer the private key (PEM File) cooresponding to the public key on each VM to the working directory. Restrict the permissions for the file.
-+
-----
-chmod 600 <key.pem>
-----
-+
-. Exit out of the installer VM. Transfer and execute the `controller-init.sh` script on each of the remaining VMs acting as a controller in privileged mode. The script will take in the same parameters as the `installer-init.sh` script.
-+
-----
-sudo ./controller-init.sh <DOCKER_DISK_PATH> <ETCD_DISK_PATH>
-----
-+
-. Exit out of the controller VM. Transfer and execute the `worker-init.sh` script on each of the VMs acting as a worker in privileged mode. The script will take in a single parameter for the dedicated disk used for Docker.
-+
-----
-sudo ./worker-init.sh <DOCKER_DISK_PATH>
-----
 
-== Start the Installation
-
-. Exit out of the worker VM, and SSH into the installer VM and change the working directory to `/tmp/installer`.
-. Use an editor, such as vim, to open and modify the variables specified in the `start_installation.sh` file.
-+
-----
-vim start_installation.sh
-----
-+
+=== Required environment variables:
 [%header,cols="2*a"]
 |===
 |Parameter | Description
-|RTF_PRIVATE_IPS | Specifies the private IP address for each controller VM. The first IP address should be the installer.
-|RTF_PUBLIC_IPS | Specifies the public IP address for each controller VM. The order should match the private IPs. This parameter is optional.
-|WORKER_PRIVATE_IPS | Specifies the private IP address for each worker VM.
-|WORKER_PUBLIC_IPS | Specifies the public IP address for each worker VM. The order should match the private IPs. This parameter is optional.
-|USER | Specifies the username on the VMs. Default is set to `rtf-user`.
-|KEY | Specifies the path for the private ssh key pair.
+`RTF_INSTALLER_IP` | ip address of the installer node
 |===
+
+=== Optional environment variables:
+[%header,cols="3*a"]
+|===
+|Parameter | Description | Default
+|`RTF_ETCD_DEVICE` |  Block device path for the dedicated disk used for Docker, supporting 1000 provisioned IOPS.   | /dev/xvdb
+| `RTF_DOCKER_DEVICE` |  Block device path for the dedicated disk used for etcd, supporting 3000 provisioned IOPS.     | /dev/xvdc)
+| `RTF_TOKEN` |               Token used by nodes to auto-join the cluster | my-cluster-token
+| `RTF_INSTALL_PACKAGE_URL` | Url to download the installation package from. |
+| `RTF_NAME` |                Name to give this cluster. | runtime-fabric)
+| `RTF_NODE_WAIT_COUNT` |     Number of nodes expected to form the cluster | 6
+| `RTF_AUTH_TOKEN` |          Anypoint authentication to register this cluster. | `bearer 53668b3c-ce9b-4429-84cf-03646c34d796`
+| `RTF_ORG_ID` |              Anypoint organization id to register this cluster with |
+| `RTF_REGION` |              Region to register this cluster | us-east-1
+|===
+
+The script will generate a configuration snippet for the `installer`, `controller`, and `worker` machine roles. Execute the snippet on each machine based on its desired role.
+
+Transfer the `installer/scripts/init.sh` file to `/opt/anypoint/runtimefabric` on each machine:
+```
+scp installer/scripts/init.sh <user>@<machine-ip>:/opt/anypoint/runtimefabric
+```
 +
-[NOTE]
-Ensure you save your modified changes to the `start_installation.sh` script.
-+
-. Start the installation by executing the `start_installation.sh` script.
+. Run the script in privileged mode, on the `installer` node:
 +
 ----
-./start_installation.sh
+sudo /opt/anypoint/runtimefabric/init.sh
 ----
 +
+
++
+. Once the installer machine has successfully completed its checks and is running the installation process, run the init script in privileged mode on all the other nodes. This can be done concurrently on all the nodes.
++
+----
+sudo /opt/anypoint/runtimefabric/init.sh
+----
++
+
 [NOTE]
 This step will install Runtime Fabric across all VMs to form a cluster. It may take 15-25 minutes or longer to complete.
 
-== Register Runtime Fabric
-
-After the installation script has completed, you must register Runtime Fabric to Anypoint Runtime Manager.
-
-. Navigate to Runtime Manager, select the Runtime Fabric tab, then select Create Runtime Fabric.
-. Choose a name for your Runtime Fabric.
-. Copy the script to your clipboard.
-. SSH into one of the virtual machines running Runtime Fabric and paste and run the registration script. This process may take up to 15 minutes to complete.
-. After the script completes the registration process, Runtime Fabric should be registered and visible on the Runtime Fabric tab in Runtime Manager.
+When the process is completed, you will have a Runtime Fabric instance registered in your Anypoint environment. 
 
 == Associate Environments to Runtime Fabric
 
-After registering Runtime Fabric to Anypoint Runtime Manager, you must associate it with one or more environemnts.
+Before using your Runtime Fabric, you must associate it with one or more environemnts.
 
 . Navigate to Runtime Manager, select the Runtime Fabric tab, then select the Runtime Fabric based on the name used during registration.
 . On the Environments tab, select the environemnt you want to associate with this Runtime Fabric and click Add.
