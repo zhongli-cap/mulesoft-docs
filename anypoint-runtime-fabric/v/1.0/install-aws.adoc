@@ -8,14 +8,30 @@ Before running the installer, ensure that your infrastructure meets the minimum 
 ====
 
 == Overview
-To best understand how Runtime Fabric is installed on your infrastructure, below is a list of details which occur during this process:
+The installation process is broken down into a few stages:
+. Provisioning infrastructure
+. Setting up each VM (operating system, disks)
+. Installing Runtime Fabric across VMs
+. Registering Runtime Fabric
+. Adding your Mule license key
 
-* To help provision the required infrastructure, a Terraform script is included in the installer. It is configured to create a new VPC and run contained in its own network, but this can be adjusted per your company's requirements by modifying the script.
-* The Terraform script requires a set of parameters which will be added to each VM as environment variables. These variables will be consumed by a script which runs automatically on each VM.
-* The script formats and mounts each block device, adds entries to /etc/fstab, adds iptable rules, enables specific kernel modules, and starts the installation.
-* Each VM will act as one of two roles. Controller VMs are dedicated to operate and run Runtime Fabric services. Worker VMs are dedicated to run Mule applications.
-* One controller VM will act as a leader during the installation, and will download the installer. Each other VM will join the installer VM, copy the installer files from it, and form a cluster.
-* The installer will run a series of pre-flight checks to verify the minimum requirements for Runtime Fabric. If these requirements are not met, the installer will fail.
+The installation uses the included Azure Resource Manager (ARM) templates with scripts to combine the first three steps. Below are more details on what occurs during installation to better understand the process:
+
+* To help provision the required infrastructure, a Terraform script (fabric.tf) is included with the installer. It is configured to create a new VPC and run within its own network, but this can be adjusted per your company's requirements by modifying the script.
+* By default, the Terraform script also adds public IP addresses to each VM to make it easy to access across environments. This can also be safely removed by adjusting the script.
+* The Terraform script requires a set of parameters which will be added to VMs as environment variables. These variables will be consumed by a setup script which will be executed automatically on each VM.
+* The setup script performs the following actions:
+** Formats and mounts each dedicated disk
+** Adds mount entries to /etc/fstab
+** Adds iptable rules
+** Enables required kernel modules
+** Starts the installation
+* Each VM will act as one of two roles:
+** Controller VMs are dedicated to operate and run Runtime Fabric services. The internal load balancer also runs within these VMs.
+** Worker VMs are dedicated to run Mule applications.
+* One controller VM will act as a leader during the installation. This VM will download the installer and make it accessible for each other VM via HTTPS using port 32009.
+* All other VMs will copy the installer files from the installer VM, perform the installation, and join the installer VM to form a cluster.
+* During the installation, a set of pre-flight checks will run to verify the minimum hardware, operating system, and network requirements for Runtime Fabric as ./install-sys-reqs.adoc[defined]. If these requirements are not met, the installer will not succeed.
 
 == Download Installer
 The installer package includes the necessary scripts and binaries needed to install Runtime Fabric.
