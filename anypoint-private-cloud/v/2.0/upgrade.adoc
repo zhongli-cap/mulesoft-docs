@@ -1,0 +1,99 @@
+= To Migrate to Anypoint Platform Private Cloud, Version 1.7.1
+
+This topic provides information about upgrading Anypoint Platform Private Cloud Edition to the most recent version. This version supports the following migration paths:
+
+[%header%autowidth.spread]
+|===
+| Base Version | Intermediate Version | Target Version | Comments
+| 1.7.0 | N/A | 1.7.1 | Direct migration is supported
+| 1.6.1 | N/A | 1.7.1 | Direct migration is supported
+| 1.6.0 | N/A | 1.7.1 | Direct migration is supported
+| 1.5.2 | 1.6.1 | 1.7.1 | Must upgrade to 1.6.1 first
+| 1.5.1 | 1.6.1 | 1.7.1 | Must upgrade to 1.6.1 first
+|===
+
+See link:/anypoint-private-cloud/v/1.6/upgrade[About Migrating Anypoint Platform Private Cloud Edition] for information on upgrading to version 1.6.1.
+
+[WARNING]
+During the migration process, there will be some downtime as each node is updated.
+
+
+== Prerequisites
+
+Before migrating, ensure that you have performed and met the following prerequisites:
+
+* Perform a backup of your system as described in link:backup-and-disaster-recovery[About Backup and Recovery].
+
+* Ensure that your environment meets all of the system and network requirements described in link:/anypoint-private-cloud/v/1.7/prereq-workflow[Workflow: Install and Verify Prerequisites for Physical Servers]
+
+* Enable TCP ports `53`, `3011`, `3012` intra-node to allow communication with the database cluster.
+
+* Ensure you have permission to run the `sudo` command on the node where you launch the migration tool.
+
+* Ensure the `kubectl` command is available in the node where you are performing the migration. To verify that `kubectl` is installed, run the following:
++
+----
+$ sudo gravity enter
+$ kubectl
+----
+
+== Upgrading Anypoint Private Cloud
+
+. Obtain a link to the installer from your customer success representative.
+
+. Use `ssh` to login to the master node of your cluster.
++
+In a 3-node environment, all nodes are master nodes. To find the master nodes in a 6-node environment, run the following command:
++
+----
+kubectl get node --show-labels | grep gravitational.io/k8s-role=master
+----
++
+By performing these procedures from the master node, the upgrade scripts are able to update the entire platform.
+
+. Uncompress the application archive.
++
+----
+tar -xvf anypoint-1.7.1-installer.tar.gz
+----
+
+. Navigate to the `anypoint-1.7.1` directory, then run the upload script.
++
+----
+cd anypoint-1.7.0
+sudo ./upgrade
+----
++
+This command updates the platform to the current version and restarts each pod in the cluster.
++
+----
+$ sudo ./upgrade
+-> initializing upload
+-> uploading update package
+importing anypoint:1.7.1
+synchronizing anypoint:1.7.1 with Docker registry at 172.31.0.26:5000
+synchronizing anypoint:1.7.1 with Docker registry at 172.31.0.45:5000
+synchronizing anypoint:1.7.1 with Docker registry at 172.31.0.5:5000
+anypoint:1.7.0 has been uploaded
+updating anypoint from 1.6.1 to 1.7.1
+update operation (bae00abf-98a7-4ca9-b0d2-06f3bfea3024) has been started
+the cluster is updating in background
+----
++
+Depending on your network configuration, this command may take a while to complete. Wait until the command finishes before proceeding to the next step.
+
+. Verify that the migration was successful by performing one of the following:
++
+* Run the following command from the node where you performed the upgrade:
++
+----
+$ sudo gravity enter
+$ kubectl get pods
+----
++
+* Login to the Ops Center at the following URL:
++
+----
+https://{platform-host}:9500
+----
+
