@@ -1,11 +1,10 @@
 = Install Runtime Fabric on AWS
-:noindex:
 
 This topic describes how to install and register Anypoint Runtime Fabric on your AWS account.
 
 [WARNING]
 ====
-Before running the installer, ensure that your infrastructure meets the minimum hardware, operating system, and networking requirements. An operations specialist may be needed to provision the required infrastructure.
+Before running the installer, ensure that your infrastructure meets the minimum hardware requirements. An operations specialist may be needed to provision the required infrastructure.
 ====
 
 == Overview
@@ -36,111 +35,96 @@ The installation process is divided into the following stages:
 == Download Installer
 The installer package includes the necessary scripts and binaries needed to install Runtime Fabric.
 
-[NOTE]
-Ensure your Anypoint user account has the Manage Runtime Fabrics permission or the Organization Administrators role.
-
 . Log in to Anypoint platform and navigate to Runtime Manager.
 . On the left navigation pane, select "Runtime Fabrics".
 . Click "Create Runtime Fabric".
 . Click the installer link to begin the download.
-. Once downloaded, unpack the installer.
-.. On Mac or Linux, run: `mkdir installer && tar -zxf /path/to/installer -C installer`.
-.. On Windows, use your favorite archive utility to unpack to a new directory named `installer`.
+. Once downloaded, unpack the installer using `mkdir installer && tar -zxf /path/to/installer -C installer`
 
 [NOTE]
-The extension for the installer is packaged as `tar.gz`. You'll need a utility to unpack tar.gz files.
+The extension for the installer is packaged as `tar.gz`. You'll need a utility to unpack tar files.
 
-Inside the `installer` directory, you'll find a directory named `aws` which contains the following:
+You'll find a directory named `aws` inside the installer, which contains the following:
 
 * `fabric.tf`: a https://terraform.io/[Terraform] script to provision infrastructure on your AWS account.
 * `README.md`: a markdown file containing installation instructions.
 
-== Provision Infrastructure and Install
-Run the included Terraform script to easily provision the required hardware and network settings to install and operate Runtime Fabric.
+== Provision Infrastructure
+Use the included Terraform script to easily provision the required hardware and network settings needed to install and operate Runtime Fabric.
 
 [NOTE]
-Your AWS account will need access to create EC2 instances, VPCs, Security Groups, and disks. A https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html[key pair] is also required to provision the instances. This is required to enable secure access to your VMs via SSH (Secure Shell).
+You'll need a https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html[key pair] to provision the VMs. This is required to enable secure access to your VMs via SSH (Secure Shell).
 
-To run the script, AWS API access should be configured in your shell. Define your values for `AWS_ACCESS_KEY`, `AWS_ACCESS_SECRET_KEY`, or other environment variables to access the AWS API for your account. As a test, you should be able to run the `aws-cli` tool, if installed on your machine.
+You'll need to configure AWS API access in your shell. For example, make sure you have `AWS_ACCESS_KEY`, `AWS_ACCESS_SECRET_KEY`, etc defined. You should be able to run the `aws` cli tool, for example.
 
-=== Variables to Define
+=== Variables
 
-* `cluster_name`: the name of the Runtime Fabric cluster (e.g. rtf-aws).
-* `key_pair`: name of the keypair in the AWS region you're deploying to (e.g. my-cluster-key).
-* `controllers`: number of controller VMs to provision. (e.g. 3)
-* `workers`: number of worker VMs to provision. (e.g. 3)
-* `installer_url`: the URL of the Runtime Fabric installation package. Navigate to the Create Runtime Fabrics page in Anypoint Runtime Manager to copy the link for the installer download.
-* `state`: the file used by Terraform to store state changes. It's important to keep this file safe.
+* `cluster_name`: name of cluster (e.g. rtf).
+* `key_pair`: name of the aws keypair (e.g. my-cluster-key)
+* `workers`: number of worker machines to provision. (e.g. 3)
+* `controllers`: number of controller machines to provision. (e.g. 3)
+* `installer_url`: url of the RTF installation package
 
-To run the Terraform script, either run `terraform` natively, or use `docker`.
+_(Optional - will auto-register your cluster to Anypoint platform during provisioning)_
 
-=== Using native Terraform
+* `registration_org_id`: Anypoint Organization Id (eg `13b68b3c-ce9b-4429-84cf-03646c34dabc`)
+* `registration_token`: Anypoint bearer token (eg `bearer 53668b3c-ce9b-4429-84cf-03646c34d796`)
+* `node_wait_join_count`: Total number of nodes to wait for before cluster is registered
 
-----
+You can either run `terraform` natively, or via `docker`.
+
+=== With terraform
+```
 terraform apply \
   -var cluster_name=<cluster-name> \
   -var key_pair=<keypair-name> \
-  -var installer_url=<url> \
   -var controllers=3 \
   -var workers=3 \
+  -var installer_url=<url> \
+  -var registration_org_id=<orgid> \
+  -var registration_token=<token> \
   -var node_wait_join_count=6 \
   -state=tf-data/rtf.tfstate
-----
+```
 
-=== Using Docker to run Terraform
-
-. Initialize the script:
-+
-----
+=== With Docker
+```
 docker run -v $(pwd):/src -w /src/aws \
   -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY \
   hashicorp/terraform:0.11.7 init
-----
+```
 
-. Provision the infrastructure:
-----
+```
 docker run -v $(pwd):/src -w /src/aws \
   -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY \
   hashicorp/terraform:0.11.7 apply \
   -var cluster_name=<cluster-name> \
   -var key_pair=<keypair-name> \
-  -var installer_url=<url> \
   -var controllers=3 \
   -var workers=3 \
+  -var installer_url=<url> \
+  -var registration_org_id=<orgid> \
+  -var registration_token=<token> \
   -var node_wait_join_count=6 \
   -state=tf-data/rtf.tfstate
-----
+```
 
 [NOTE]
 This step will install Runtime Fabric across all servers to form a cluster. It may take 15-25 minutes or longer to complete.
 
-=== Monitor the Installation
-
+=== Monitoring the installation
 `cloud-init` executes the Runtime Fabric installation script. As it progresses, it can be monitored by tailing its log file.
-
-. SSH onto the installer VM.
-. Tail the log output file.
-+
-----
+```
 tail -f /var/log/rtf-init.log
-----
-
-[NOTE]
-You can run the above commands on each VM to view their progress.
+```
 
 When the installation completes successfully, the file `/opt/anypoint/runtimefabric/init-succeeded` is touched.
-To verify Runtime Fabric has been set up, SSH onto one of the controller VMs and run `gravity status`. If you see `healthy` next to each VM created during the installation, Runtime Fabric has installed successfully and is ready to be registered.
 
 == Registering Runtime Fabric
 
 After the installation script has completed, you'll need to register Runtime Fabric to Anypoint Runtime Manager.
 
 . Navigate to Runtime Manager, select the Runtime Fabrics tab, and select the "Create Runtime Fabric" button.
-+
-[NOTE]
-If you have this page open, refresh the page to ensure you're currently logged into Anypoint Platform.
-
-. On Step 3, choose a name for your Runtime Fabric, and copy the script to your clipboard.
-. SSH onto the installer VM and paste and run the registration script. This process may take up to 5 minutes to complete.
+. Near the registration script, choose a name for your Runtime Fabric. Copy the script to your clipboard.
+. SSH onto the installer machine (first controller) running Runtime Fabric and paste and run the registration script. This process may take up to 5 minutes to complete.
 . After the script completes the registration process, Runtime Fabric should be registered and visible on the "Runtime Fabrics" tab in Runtime Manager.
-. You'll see details for how to access the administration portal for Runtime Fabric. Store these details in a safe place for reference.
