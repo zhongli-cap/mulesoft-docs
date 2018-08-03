@@ -1,5 +1,54 @@
 = Install Anypoint Runtime Fabric
 
+Anypoint Runtime Fabric is a container service built for running Mule applications and API gateways on a set of VMs. The installation procedure varies slightly based on the infrastructure provider used, but the steps performed and the result are the same.
+
+=== Overview
+The installation process is divided into the following steps:
+
+. Provision and set up infrastructure
+. Install Runtime Fabric across each VM
+. Register Runtime Fabric
+. link:/anypoint-runtime-fabric/v/1.0/install-add-license.html[Add Mule license key]
+. link:/anypoint-runtime-fabric/v/1.0/configure-log-forwarding.html[Configure log forwarding]
+. link:/anypoint-runtime-fabric/v/1.0/configure-alerting.html[Configure alerting]
+. link:/anypoint-runtime-fabric/v/1.0/associate-environments.html[Associate Runtime Fabric to environments]
+. link:/anypoint-runtime-fabric/v/1.0/enable-inbound-traffic.html[Enable inbound traffic]
+
+The installation uses the included Terraform script to combine the first three steps. Below are more details on each step of the installation process:
+
+* To help provision the required infrastructure, a Terraform script (`fabric.tf`) is included with the installer. It is configured to create a new VPC and run Runtime Fabric within its own network, but this can be adjusted per your company's requirements by modifying the script.
+* By default, the Terraform script also adds public IP addresses to each VM to make it easy to access across environments. This can also be safely removed by adjusting the script.
+* The Terraform script requires a set of parameters which will be added to VMs as environment variables. These variables will be consumed by a setup script which will be executed automatically on each VM.
+* The setup script performs the following actions:
+** Formats and mounts each dedicated disk
+** Adds mount entries to /etc/fstab
+** Adds iptable rules
+** Enables required kernel modules
+** Starts the installation
+* Each VM will act as one of two roles:
+** Controller VMs are dedicated to operate and run Runtime Fabric services. The internal load balancer also runs within these VMs.
+** Worker VMs are dedicated to run Mule applications.
+* One controller VM will act as a leader during the installation. This VM will download the installer and make it accessible for each other VM on port 32009.
+* All other VMs will copy the installer files from the installer VM, perform the installation, and join the installer VM to form a cluster.
+* During the installation, a set of pre-flight checks will run to verify the minimum hardware, operating system, and network requirements for Runtime Fabric as ./install-sys-reqs.adoc[defined]. If these requirements are not met, the installer will not succeed.
+
+== Before you Begin
+
+Ensure the following criteria have been met before beginning the installation:
+
+* You're familiar with using Anypoint Runtime Manager to deploy and manage applications.
+* Your Anypoint user account has either the Organizational Administration role or the Manage Runtime Fabrics permission.
+* If you plan to configure the internal load balancer, you'll also need the following permissions for the Secrets Manager:
+** Grant Access to Secrets
+** Manage Secret Groups
+** Read Secrets Metadata
+** Write Secrets
+* Your AWS user has access to create EC2 instances, Disks, VPCs, Security Groups.
+* Your AWS account has enough quota for the infrastructure being provisioned.
+* If your organization does not allow using public IPs, you may need to pass in an existing VPC in the Terraform. See [here] for instructions.
+* Your organization's Mule license key.
+* Details on how to forward logs to your organization's logging provider.
+
 * link:/anypoint-runtime-fabric/v/1.0/install-sys-reqs[Verify System Requirements for Anypoint Runtime Fabric]
 * link:/anypoint-runtime-fabric/v/1.0/install-port-reqs[Network Port Requirements for Anypoint Runtime Fabric]
 //* link:/anypoint-runtime-fabric/v/1.0/install-aws[Install a Runtime Fabric on AWS]
