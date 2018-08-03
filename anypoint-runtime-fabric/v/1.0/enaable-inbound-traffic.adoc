@@ -15,48 +15,41 @@ This configuration ensures high availability, protects against failures, and gra
 [NOTE]
 Controller VMs are virtual machines dedicated to run the components which power Anypoint Runtime Fabric.
 
-All inbound traffic entering Anypoint Runtime Fabric is encrypted using TLS. A TLS certificate must be configured before enabling inbound traffic.
+All inbound traffic entering Anypoint Runtime Fabric is encrypted using TLS. A TLS certificate must be configured before enabling inbound traffic. HTTP requests 
+sent to Runtime Fabric will receive a 301 response to redirect to HTTPS on port 443.
 
 == Before You Begin
 
+* Ensure your Anypoint organization has the desired TLS certificate stored in the link:add-tls-secret-manager[Secrets Manager]. If you need to add the TLS certificate, you'll need the following permissions on your user account under the Secrets Manager tab in Access Management. The environemnt field should be scoped to the environment you wish to be associated to the certificate.
+** *Manage Secrets Groups*
+** *Write Secrets*
+** *Read Secrets*
+* Your user will also require the *Manage Runtime Fabrics* permission under Runtime Manager, or the *Organization Administrator* role.
 * Verify your account has Runtime Fabric installed and registered to your Anypoint organization.
 ** Visit Anypoint Runtime Manager and click on "Runtime Fabrics" on the left bar to view your registered Runtine Fabrics.
-* Ensure your Anypoint account has the desired TLS certificate stored in the link:add-tls-secret-manager[Secrets Manager].
-* Ensure you have the *Manage Runtime Fabrics* permission in Access Management under Runtime Manager. Also verify ias well as *Read Secrets* for your user account, and for the environment scoped to the TLS Context.
-* Addtionally, if your Secrets Group and TLS context does not exist, or you need to modify them, you will need additional "Secrets Manager" permissions:
-+
-** "Manage Secret Groups" to create a new secrets group.
-** "Write secrets" and "Read secrets" to create or modify the TLS Context or Keystore.
 
+[NOTE]
+Use Access Management to manage permissions for Anypoint users. You may need to request permissions from your administrator.
 
 == Procedure
 
-. In your Runtime Manager UI, select *Runtime Fabrics* on the left navigation bar.
-. Select the name of your Runtime Fabric to which you want to enable edge.
-. Select the *Edge Configuration* tab, and select the *Enable Edge* checkbox.
-. Under *Basic Configuration*:
-.. Configure your secure and non-secure ports. +
-By default, secure port is 443 and the non-secure port is 80. +
-Your edge endpoint only accepts HTTPS requests. If you receive an HTTPS request through your non-secure port, your edge endpoint redirects the request using a 301 to port 443.
-+
-[CAUTION]
---
-HTTP Requests through your edge endpoint are not permitted. +
-The edge endpoint returns an error on port 443 if the request is not using HTTPS.
---
-.. Select the number of replicas you want. +
-You can set up more replicas to split traffic across replicas of your edge endpoint.
-.. Determine your resource allocation. +
-Determine how many cores and memory from your controller node to assign to your edge endpoint.  +
-Consider that TLS connections are resource expensive. You can increase the processing capacity for your inbound connections by using more cores.
-. Under *TLS Configuration*: +
-Your edge endpoint uses this TLS Configuration for all inbound requests to your application. +
-This configuration must be stored in a secrets group. Follow the link:edge-create-certificate-tls[Configure Secrets for Your Edge Endpoint] if you don't have a TLS configuration yet.
-.. In the Environment drop-down menu, select the environment of the secrets group that stores the Keystore and TLS Context for your Edge instance.
-.. In the Secrets Group drop-down menu, select the secrets group that stores the keystore and TLS Context for your Edge instance.
-.. In the TLS Context drop-down menu, select the TLS Context for your Edge instance.
+. Under Anypoint Runtime Manager, navigate to *Runtime Fabrics* by clicking on the link in the bottom of the left side bar.
+. Select the name of the Runtime Fabric to enable inbound traffic to, and click *Manage* on the right side bar.
+. Select the *Edge Configuration* tab and toggle *Enable Edge*.
 
-Additionally you can configure *Advanced Options* and *Logs*.
+. Under *Basic Configuration*:
++
+.. Set the number of replicas to run the internal load balancer with. A minimum of 2 replicas is required for production environments. These replicas will only run on the controller VMs.
+.. Determine the amount of CPU and memory to allocate for each replica of the internal load balancer.+
++
+[NOTE]
+TLS termination is computationally expensive. Allocate more CPU to increase throughput and decrease latency by allocating more CPU to each replica.
++
+. Under *TLS Configuration*:
+.. In the Environment drop-down menu, select the environment of where the secrets group was created under in the Secrets Manager.
+.. In the Secrets Group drop-down menu, select the secrets group that stores the keystore and TLS Context.
+.. In the TLS Context drop-down menu, select the TLS Context to be used for Runtime Fabric.
+. Click *Deploy* to begin the deployment on Runtime Fabric.
 
 == Advanced Options
 
