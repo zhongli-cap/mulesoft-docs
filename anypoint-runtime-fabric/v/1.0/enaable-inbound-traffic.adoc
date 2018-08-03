@@ -1,19 +1,29 @@
-= Enable an Edge Endpoint for Anypoint Runtime Fabric
+= Enable Inbound Traffic on Anypoint Runtime Fabric
 :noindex:
 
-All connection requests to your Mule applications deployed in a Runtime Fabric must use TLS. To guarantee that all inbound requests follow this requirement, you need to configure an edge endpoint for your Runtime Fabric to enable inbound requests to your APIs. +
-You cannot expose any endpoints until you configured an edge endpoint.
+Anypoint Runtime Fabric includes built-in load balancing capabilities to manage inbound traffic to its Mule applications and API gateways. These capabilities load balance inboud traffic across multiple replicas of your application, which by default reside across different worker VMs. 
+
+[NOTE]
+This capability is disabled by default, and will need to be enabled before inbound requests can be received by Mule applications and API gateways.
+
+== Overview
+
+Each controller VM is able to run a replica of the internal load balancer, and is configured to listen on port 443 on each VM. When running multiple controller VMs, it's required to run an external load balancer outside Runtime Fabric to front each of the controller VMs. The external load balancer should support TCP load balancing and be configured with a server pool containing the IP addresses of each controller VM. A health check should also be set up on the external load balancer by listening on port 443. 
+
+This configuration ensures high availability, protects against failures, and gracefully handles automated failover in the event a replica of the internal load balancer were to restart or become evicted and rescheduled on aother controller VM.
+
+[NOTE]
+Controller VMs are virtual machines dedicated to run the components which power Anypoint Runtime Fabric.
+
+All inbound traffic entering Anypoint Runtime Fabric is encrypted using TLS. A TLS certificate must be configured before enabling inbound traffic.
 
 == Before You Begin
 
-* Verify that your account has at least one Anypoint Runtime Fabric installed and configured.
-See link:/anypoint-runtime-fabric/v/1.0/installation[Install Anypoint Runtime Fabric] for more information.
-* To enable TLS connections, you must configure a TLS Context for your edge endpoint. +
-Essentially, your TLS Context needs to be set up to point to a keystore that holds the certificate used to identify your edge endpoint for public key cryptography. +
-You need to set up these secret types within a secrets group using Anypoint Secrets Manager. Follow the link:edge-create-certificate-tls[Configure Secrets for Your Edge Endpoint].
-* Ensure that you have the *Manage Runtime Fabrics* permission for your user account, and for the environment containing the TLS Context.
-+
-Addtionally, if your Secrets Group and TLS context does not exist, or you need to modify them, you will need additional "Secrets Manager" permissions:
+* Verify your account has Runtime Fabric installed and registered to your Anypoint organization.
+** Visit Anypoint Runtime Manager and click on "Runtime Fabrics" on the left bar to view your registered Runtine Fabrics.
+* Ensure your Anypoint account has the desired TLS certificate stored in the link:add-tls-secret-manager[Secrets Manager].
+* Ensure you have the *Manage Runtime Fabrics* permission in Access Management under Runtime Manager. Also verify ias well as *Read Secrets* for your user account, and for the environment scoped to the TLS Context.
+* Addtionally, if your Secrets Group and TLS context does not exist, or you need to modify them, you will need additional "Secrets Manager" permissions:
 +
 ** "Manage Secret Groups" to create a new secrets group.
 ** "Write secrets" and "Read secrets" to create or modify the TLS Context or Keystore.
