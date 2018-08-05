@@ -1,7 +1,7 @@
 = Enable Inbound Traffic on Anypoint Runtime Fabric
 :noindex:
 
-Anypoint Runtime Fabric includes built-in load balancing capabilities to manage inbound traffic to its Mule applications and API gateways. These capabilities load balance inboud traffic across multiple replicas of your application, which by default reside across different worker VMs. 
+Anypoint Runtime Fabric includes built-in load balancing capabilities to manage inbound traffic to its Mule applications and API gateways. These capabilities load balance inbound traffic across multiple replicas of your application, which by default reside across different worker VMs. 
 
 [NOTE]
 This capability is disabled by default, and will need to be enabled before inbound requests can be received by Mule applications and API gateways.
@@ -10,7 +10,7 @@ This capability is disabled by default, and will need to be enabled before inbou
 
 Each controller VM is able to run a replica of the internal load balancer, and is configured to listen on port 443 on each VM. When running multiple controller VMs, it's required to run an external load balancer outside Runtime Fabric to front each of the controller VMs. The external load balancer should support TCP load balancing and be configured with a server pool containing the IP addresses of each controller VM. A health check should also be set up on the external load balancer by listening on port 443. 
 
-This configuration ensures high availability, protects against failures, and gracefully handles automated failover in the event a replica of the internal load balancer were to restart or become evicted and rescheduled on another controller VM.
+This configuration ensures high availability, protects against failures, and gracefully handles automated fail-over in the event a replica of the internal load balancer were to restart or become evicted and rescheduled on another controller VM.
 
 [NOTE]
 Controller VMs are virtual machines dedicated to run the components which power Anypoint Runtime Fabric.
@@ -20,7 +20,7 @@ sent to Runtime Fabric will receive a 301 response to redirect to HTTPS on port 
 
 == Before You Begin
 
-* Ensure your Anypoint organization has the desired TLS certificate stored in the link:add-tls-secret-manager[Secrets Manager]. To add a TLS certificate, you'll need the following permissions on your user account under the Secrets Manager tab in Access Management. The environment field should be scoped to the environment you wish to be associated with the certificate.
+* Ensure your Anypoint organization has the desired TLS certificate stored in the link:add-tls-secrets-manager[Secrets Manager]. To add a TLS certificate, you'll need the following permissions on your user account under the Secrets Manager tab in Access Management. The environment field should be scoped to the environment you wish to be associated with the certificate.
 ** *Manage Secrets Groups*
 ** *Write Secrets*
 ** *Read Secrets*
@@ -50,10 +50,38 @@ TLS termination is computationally expensive. Allocate more CPU to increase thro
 .. In the Environment drop-down menu, select the environment of where the secrets group was created under in the Secrets Manager.
 .. In the Secrets Group drop-down menu, select the secrets group that stores the keystore and TLS Context.
 .. In the TLS Context drop-down menu, select the TLS Context to be used for Runtime Fabric.
-. Click *Deploy* to begin the deployment on Runtime Fabric.
++
+[NOTE]
+If a wildcard certificate is used (for example, \*.example.com), each application URL would take the format of *_{app-name}_.example.com* Otherwise, the application URL will be in the format of *example.com/_{app-name}_*.
++
+. Click *Deploy* to begin the deployment on Runtime Fabric. A toast message should appear towards the bottom right area of the page to indicate a successful response. The internal load balancer will begin deployment. When the status of the deployment transitions from _Applying_ to _Applied_, the internal load balancer is successfully deployed and inbound traffic has been enabled.
+
+=== Verification
+
+To resolve the Common Name (CN) to applications deployed on Runtime Fabric, DNS will need to be configured to map the CN to the IP address of the external load balancer or of each controller VM. To test inbound traffic for enabled applications before configuring DNS, a request can be sent using the IP address along with a host header set to the domain. The domain will be based on whether a wildcard certificate was used.
+
+* A CN with a wildcard certificate (`\*.example.com`) will require a request header equal to `Host: {app-name}.example.com`. The following is an example cURL command to verify:
++
+====
+curl -Lvk -XGET https://{ip-address}/{path} -H 'Host: {app-name}.example.com'
+====
++
+* A CN without a wildcard certificate (`example.com`) will require a request header equal to `Host: example.com`. The following is an example cURL command to verify:
++
+====
+curl -Lvk -XGET https://{ip-address}/{app-name}/{path} -H 'Host: example.com'
+====
+
+== Next Steps
+
+Runtime Fabric should be configured to route incoming traffic to each enabled application. Below are remaining steps to complete in order for clients to send requests to deployed applications.
+
+* An external load balancer should be set up and configured to load balance HTTPS traffic between each controller VM on Runtime Fabric.
+** The advanced options should be reviewed when adding an external load balancer.
+* DNS should be configured before the Common Name obtained from the TLS certificate can be used to send requests to applications or API gateways deployed to Runtime Fabric. An "A record" should be added to your DNS provider to map the Common Name to the IP address of the external load balancer or controller VM.
+* When deploying new applications or managing existing applications on Runtime Fabric, the _Ingress_ tab will be enabled to determine if inbound traffic should be allowed.
 
 == Advanced Options
-
 
 [%header%autowidth.spread,cols="a,a"]
 |===
@@ -110,22 +138,22 @@ The values to configure here depend on your scenario:
 +
 *Source IP header name*: blank +
 *Enable proxy protocol*: checked
-. Runtime Fabric is behind a different type of load balancer. +
-:: If your Runtime Fabric is deployed behind another type of load balancer (for example F5, or nginx), you need to provide the source IP header name. Two common source IP headers are:
+. Runtime Fabric is behind a non-AWS load balancer. +
+:: If Runtime Fabric is deployed behind another type of load balancer, such as F5 or nginx, the source IP header name will need to be provided. Two common source IP headers are:
 +
-* Forwarded: An RFC7239 compliant ip header.
+* Forwarded: An RFC7239 compliant IP header.
 * X-Forwarded-For: Non-standard pre-2014 header containing one or more IPs from a Load Balancer (For example: “192.16.23.34, 172.16.21.36")
 +
-*Source IP Header Name*: non-blank +
-*Enable Proxy Protocol*: unchecked
+*Source IP header name*: non-blank +
+*Enable proxy protocol*: unchecked
 
-*Default Value*: blank and unchecked.
+*Default value*: blank and unchecked.
 
 |===
 
 == Logs
 
-You can define the log levels for the internal load balancer. Available values are the following:
+You can define the log levels for the internal load balancer. Available values are the following, in ascending order of least verbosity:
 
 * FATAL
 * ERROR
@@ -135,23 +163,23 @@ You can define the log levels for the internal load balancer. Available values a
 * DEBUG
 * TRACE
 
-Keep in mind that more verbose log levels between "WARNING" and "TRACE" consume more CPU resources for each request, therefore you should raise log levels carefully. +
-By default, the activity of all IPs behind your endpoint is being tracked. To help you reduce the vCPU usage when you need to use more verbose log levels, you can configure IP filters. +
-If you have a high amount of traffic and you don't want to use a lot of vCPU resources of your node, you can apply a filter so only specific IP addresses are tracked.
+The more verbose log levels ("WARNING" to "TRACE") consume more CPU resources for each request; consider this when adjusting the log level and allocating resources for the internal load balancer. +
+By default, the activity across all IPs addresses behind your endpoint are logged. To help reduce CPU consumption when using more verbose log levels, IP filters can be added to only log specific IP addresses. +
 
 This feature is also helpful for reducing the quantity of logs when you need to debug a connection for a specific or limited number of IP addresses.
 
 === Configuring Logs
 
-. Click the Add Filter.
-. in the *IP* field, enter the IP addresses or sub-set of addresses using CIDR notation.
-. Select the log level you want for this filter.
-. Click OK.
+. Under the Edge Configuration tab in the Manage Runtime Fabrics page, click the "Logs +" link.
+. Click the *Add Filter* button.
+. In the *IP* field, enter a single IP address or subset of addresses using CIDR notation.
+. Select the log level to apply for this IP filter.
+. Click *OK*.
 
-After you finish configuring all these values, click *Deploy*. +
-The platform displays a "Request to Deployer Sent Successfully" message.
+After all values have been configured, click the *Deploy* button. +
+A toast message should be displayed towards the bottom right area of the page to indicate a successful response. The internal load balancer will redeploy with the new changes.
 
 == See Also
 
 
-* link:add-tls-secret-manager[Add a TLS certificate to the Secrets Manager].
+* link:add-tls-secrets-manager[Add a TLS certificate to the Secrets Manager].
