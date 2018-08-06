@@ -14,7 +14,7 @@ Prepare the necessary steps and understand the core concepts prior to installing
 * Review the link:./installation/[installation details] to ensure you're ready to install Runtime Fabric.
 * Your AWS user has access to create EC2 instances, Disks, VPCs, Security Groups.
 * Your AWS account has enough quota for the infrastructure being provisioned.
-* If your organization does not allow using public IPs, you may need to pass in an existing VPC in the Terraform script. 
+* If your organization does not allow using public IPs for VMs, you may need to use an existing VPC. The Terraform script can be modified to reference an existing VPC ID. 
 
 == Download Script
 
@@ -37,33 +37,32 @@ Use the included Terraform script to easily provision the required hardware and 
 [NOTE]
 You'll need a https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html[key pair] to provision the VMs. This is required to enable secure access to your VMs via SSH (Secure Shell).
 
-You'll need to configure AWS API access in your shell. For example, make sure you have `AWS_ACCESS_KEY`, `AWS_ACCESS_SECRET_KEY`, etc. defined. You should be able to run the `aws` CLI tool, for example.
-
 To run the Terraform script, AWS API access should be configured in your terminal. Define your values for `AWS_ACCESS_KEY`, `AWS_ACCESS_SECRET_KEY`, or other environment variables (such as `AWS_SESSION_TOKEN`) to access the AWS API for your account. As a test, you should be able to run the `aws-cli` tool, if installed on your machine.
 
 === Variables to Define
 
-Some of the values for the variables below are available on the Install Runtime Fabric page on Anypoint Runtime Manager.
+Some of the values for the variables below are available on the Create Runtime Fabric page on Anypoint Runtime Manager.
 
 [%header,cols="3*a"]
 |===
 |Variable | Description | Example
-| `cluster_name` | The name for your Runtime Fabric cluster. | rtf-aws
-| `key_pair` | The name of the keypair in the AWS region you’re deploying to. | my-keypair
-| `enable_public_ips` | Provision public IP addresses for each VM. | false
-| `registration_org_id` | The ID for your Anypoint organization, available on the Create Runtime Fabrics page. | None
-| `registration_token` | An active Bearer token of your Anypoint user, available on the Create Runtime Fabrics page. | None
-| `region` | The AWS region you're deploying to, available on the Create Runtime Fabrics page. | us-east-1
-| `installer_url` | The URL of the Runtime Fabric installation package. | https://s3.amazonaws.com/runtimefabric/...
-| `controllers` | The number of controller VMs to provision. | 3
-| `workers` | The number of worker VMs to provision. | 3
-| `node_wait_join_count` | The number of VMs to have joined before completing the installer. | 6
+| `cluster_name` | The name for your Runtime Fabric cluster. | `rtf-aws`
+| `key_pair` | The name of the keypair in the AWS region you’re deploying to. | `my-keypair`
+| `enable_public_ips` | Provision public IP addresses for each VM. | `FALSE`
+| `registration_org_id` | The ID for your Anypoint organization, available on the Create Runtime Fabric page. | `2f99d26-a3c2-4023-b303-5528sdd5v022`
+| `registration_token` | An active Bearer token for your Anypoint user, available on the Create Runtime Fabric page. | `Bearer 626d7810-0730-498b-bd48-544490c2226b`
+| `region` | The Anypoint control plane region you're registering to, available on the Create Runtime Fabrics page. | `us-east-1`
+| `installer_url` | The URL of the Runtime Fabric installation package. | `https://s3.amazonaws.com/runtimefabric/...`
+| `controllers` | The number of controller VMs to provision. | `3`
+| `workers` | The number of worker VMs to provision. | `3`
+| `node_wait_join_count` | The number of VMs to have joined before completing the installer. | `6`
+| `mule_license` | The digest of your organization's Mule Enterprise license key. | 
 
 |===
 
 === Running Terraform
 
-There are a couple of ways to run the Terraform script:
+There are a couple of methods to run the Terraform script:
 * If you have Terraform installed on your machine, use the native terraform method.
 ** Check the version of terraform installed is `0.11.7` or higher by running `terraform --version` on your terminal.
 * If you do not have Terraform installed, but have Docker installed, use the Docker method.
@@ -80,14 +79,15 @@ Regardless of which option you choose to run the Terraform, keep the state file 
 terraform apply \
   -var cluster_name= \
   -var key_pair= \
+  -var enable_public_ips= \
+  -var registration_org_id= \
+  -var registration_token= \
   -var region= \
   -var installer_url=> \
   -var controllers=3 \
   -var workers=3 \
-  -var installer_url= \
-  -var registration_org_id=> \
-  -var registration_token= \
   -var node_wait_join_count=6 \
+  -var mule_license= \
   -state=tf-data/rtf.tfstate
 ----
 +
@@ -102,15 +102,18 @@ terraform apply \
 
 This method is preferred if you don't have Terraform installed on your machine. 
 
+. Open a terminal/shell on the machine containing the Terraform script.
+. Verify your current directory is the unzipped directory. When running `dir` command, you should see the `aws` directory show up, along with other directories (`azure`, `manual`).
 . Initialize the script:
 +
 ----
 docker run -v $(pwd):/src -w /src/aws \
   -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN \
   hashicorp/terraform:0.11.7 init
-```
+----
 
-```
+. Run the Terraform script:
+----
 docker run -v $(pwd):/src -w /src/aws \
   -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY \
   hashicorp/terraform:0.11.7 apply \
@@ -124,14 +127,33 @@ docker run -v $(pwd):/src -w /src/aws \
   -var registration_token=<token> \
   -var node_wait_join_count=6 \
   -state=tf-data/rtf.tfstate
-```
+----
+
+This step will execute the Terraform script to provision the infrastructure and run the installation script on each VM. 
+The installer VM will download the installer package, unpack it and begin installation. The other VMs will wait for the installer VM to progress with installation until it's able to make the installer files transferrable. Each VM would then transfer the files from the installer VM and carry out their own installation procedure.
+
+When installation has been completed, a cluster will be formed across all VMs. The installer VM will then carry out the registration step using the Anypoint Organization ID, Token, and region specified. 
+
+After registration has completed, you'll see Runtime Fabric in Anypoint Runtime Manager, under the Runtime Fabrics tab. The installation script on the installer VM will proceed to insert the Mule Enterprise license digest in Runtime Fabric.
+
+When finished, verify the installation by running this command to view the health of the Runtime Fabric cluster on any VM:
+----
+gravity status
+----
 
 [NOTE]
 This step will install Runtime Fabric across all servers to form a cluster. It may take 15-25 minutes or longer to complete.
 
 === Monitoring the installation
-`cloud-init` executes the Runtime Fabric installation script. As it progresses, it can be monitored by tailing its log file.
-```
+
+The `cloud-init` library is used to execute the Runtime Fabric installation script. It's useful to monitor the installation on the installer VM to verify all preflight checks have passed; if an error were to occur during installation, it's likely to be visible by viewing the installer VM's log output.
+
+To view the progress during the installation, you can tail the output log on each VM:
+
+. Open a shell (or SSH session) to the VM.
+. Tail the output log, located at `/var/log/rtf-init.log`
++
+----
 tail -f /var/log/rtf-init.log
 ----
 
@@ -140,12 +162,9 @@ You can tail the log on each VM to view its progress.
 
 When the installation completes successfully, the file `/opt/anypoint/runtimefabric/init-succeeded` is touched.
 
-== Registering Runtime Fabric
+== Next steps
 
-After the installation script has completed, you'll need to register Runtime Fabric to Anypoint Runtime Manager.
+Before deploying applications on Anypoint Runtime Fabric, you'll need to perform the following steps:
 
-. Navigate to Runtime Manager, select the Runtime Fabrics tab, and select the "Create Runtime Fabric" button.
-. Near the registration script, choose a name for your Runtime Fabric. Copy the script to your clipboard.
-. SSH onto the installer machine (first controller) running Runtime Fabric and paste and run the registration script. This process may take up to 5 minutes to complete.
-. After the script completes the registration process, Runtime Fabric should be registered and visible on the "Runtime Fabrics" tab in Runtime Manager.
- 
+* Associate an environment to Runtime Fabric
+* Enable inbound traffic to Runtime Fabric
