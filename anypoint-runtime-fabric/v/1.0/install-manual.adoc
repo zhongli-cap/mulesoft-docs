@@ -15,15 +15,22 @@ Before running the installer, ensure that your infrastructure meets the minimum 
 
 == Download Script
 
-The installer script ZIP file includes the necessary scripts needed to install Runtime Fabric.
+The installer script ZIP file includes the necessary scripts needed to install Runtime Fabric. Download it to a controller VM you wish to act as the leader during the installation. It'll be referred to as the installer VM.
 
 . Log in to Anypoint platform and navigate to Runtime Manager.
 . On the left navigation pane, select "Runtime Fabrics".
 . Click "Create Runtime Fabric".
-. Click the "Download files" link.
-. Once downloaded, unzip the `rtf-install-scripts-\*.zip` file.
+. Copy the "Download files" link.
+.. Right-click the button and select an option closet to "Copy link location".
+. Download the file to the installer VM.
+.. Open a shell (SSH session) to the installer VM.
+.. Download the file: `curl {INSTALLER_URL} --output rtf-install-scripts.zip`
+. Once downloaded, unzip the `rtf-install-scripts.zip` file in a separate directory.
+----
+mkdir -p ./rtf-install-scripts && unzip rtf-install-scripts.zip -d ./rtf-install-scripts
+----
 
-You'll find a directory named `manual` containing the following:
+Inside `rtf-install-scripts/`. you'll find a directory named `manual` containing the following:
 
 * `generate-configs.sh`: a script to help generate environment variables for each VM.
 * `README.md`: a markdown file containing instructions to aid with installation.
@@ -38,9 +45,6 @@ The initialization process perform the following actions:
 * Enables and reloads system services.
 
 To begin, we will run a configuration tool. This aids in generating the environment variables required on each machine. The script reads these variables during execution.
-
-[CAUTION]
-The `generate-config.sh` script is a shell script. If your local machine is running Windows, transfer the contents of this script to a controller VM before proceeding.
 
 === Variables to specify:
 [%header,cols="3*a"]
@@ -58,41 +62,48 @@ The `generate-config.sh` script is a shell script. If your local machine is runn
 | `RTF_AUTH_TOKEN` | An active Bearer token for your Anypoint user, available on the Create Runtime Fabric page. | `Bearer 626d7810-0730-498b-bd48-544490c2226b`
 | `RTF_ORG_ID` | The ID for your Anypoint organization, available on the Create Runtime Fabric page. | `2f99d26-a3c2-4023-b303-5528sdd5v022`
 | `RTF_REGION` | The Anypoint control plane region you're registering to, available on the Create Runtime Fabrics page. | `us-east-1`
+| `RTF_MULE_LICENSE` | The digest (`muleLicenseKey.lic`) of your organization's Mule Enterprise license key. Learn more on how to link:/mule-user-guide/v/3.9/installing-an-enterprise-license[install a Mule Enterprise license]. |
 |===
 
 [NOTE]
 To help identify the block device paths to your disks, use the `lsblk` command on the VMs.
 
-. Open a shell and navigate to the `manual` directory from the unzipped directory.
-. Fill in the values to each variable while executing `generate-configs.sh`. It may be easier to paste the command in a text editor to fill in the variables.
+. If needed, open a shell/SSH on the installer VM and navigate to the `manual` directory from the unzipped directory.
+. Fill in the values to each variable and execute `generate-configs.sh`. It may be easier to paste the command in a text editor to fill in the variables.
 ----
 RTF_CONTROLLER_IPS="" \
 RTF_WORKER_IPS="" \
-RTF_DOCKER_DEVICE \
+RTF_DOCKER_DEVICE= \
 RTF_ETCD_DEVICE= \
 RTF_TOKEN= \
 RTF_INSTALL_PACKAGE_URL= \
-RTF_NAME="" \
+RTF_NAME= \
 RTF_NODE_WAIT_COUNT= \
-RTF_AUTH_TOKEN= \
+RTF_AUTH_TOKEN="" \
 RTF_ORG_ID= \
 RTF_REGION= \
+RTF_MULE_LICENSE="" \
 ./generate-configs.sh
 ----
++
+. The output is a configuration snippet for the `installer`, `controller`, and `worker` VMs. Execute the snippet on each VM based on its desired role to add the expected environment variables.
+.. On the `installer` VM, paste and execute the `installer` snippet to prepare it for the installation script.
+.. On the `controller` VM(s), paste and execute the `controller` snippet.
+.. On the `worker` VMs, paste and execute the `worker` snippet.
+. On each VM, copy the `installer/scripts/init.sh` file to `/opt/anypoint/runtimefabric`, and ensure the script is executable:
++
+----
+mkdir -p /opt/anypoint/runtimefabric && cp ./rtf-install-scripts/scripts/init.sh /opt/anypoint/runtimefabric/init.sh && chmod +x /opt/anypoint/runtimefabric/init.sh
+----
 
-The output is a configuration snippet for the `installer`, `controller`, and `worker` machine roles. Execute the snippet on each machine based on its desired role.
+== Installation
 
-Transfer the `installer/scripts/init.sh` file to `/opt/anypoint/runtimefabric` on each machine:
-```
-scp installer/scripts/init.sh <user>@<machine-ip>:/opt/anypoint/runtimefabric
-```
-
-1. Run the script in privileged mode, on the `installer` node:
+. Run the `init.sh` script in privileged mode, on the `installer` VM:
 ----
 sudo /opt/anypoint/runtimefabric/init.sh
 ----
 
-2. Once the installer machine has successfully completed its checks and is running the installation process, run the init script in privileged mode on all the other nodes. This can be done concurrently on all the nodes.
+2. Once the installer machine has successfully completed its checks and is running the installation process, run the `init.sh` script in privileged mode on all the other VMs. This can be done concurrently on all the nodes.
 ----
 sudo /opt/anypoint/runtimefabric/init.sh
 ----
@@ -104,7 +115,7 @@ When the process is completed, you will have a Runtime Fabric instance registere
 
 == Associate Environments to Runtime Fabric
 
-Before using your Runtime Fabric, you must associate it with one or more environemnts.
+Before using your Runtime Fabric, you must associate it with one or more environments.
 
 . Navigate to Runtime Manager, select the Runtime Fabric tab, then select the Runtime Fabric based on the name used during registration.
 . On the Environments tab, select the environment you want to associate with this Runtime Fabric and click Add.
