@@ -13,18 +13,19 @@ This topic describes how to install and register Anypoint Runtime Fabric on VMs 
 Before running the installer, ensure that your infrastructure meets the minimum hardware requirements. An operations specialist may be needed to provision the required infrastructure.
 ====
 
-== Download Installer
-The installer package includes the necessary scripts and binaries needed to install Runtime Fabric.
+== Download Script
+
+The installer script ZIP file includes the necessary scripts needed to install Runtime Fabric.
 
 . Log in to Anypoint platform and navigate to Runtime Manager.
 . On the left navigation pane, select "Runtime Fabrics".
 . Click "Create Runtime Fabric".
-. Click the installer link to begin the download.
-. Once downloaded, unpack the installer using `mkdir installer && tar -zxf /path/to/installer -C installer`
+. Click the "Download files" link.
+. Once downloaded, unzip the `rtf-install-scripts-\*.zip` file.
 
-You'll find a directory named `manual` inside the installer, which contains the following:
+You'll find a directory named `manual` containing the following:
 
-* `generate-configs.sh`: a script to configure each VM serving as a worker.
+* `generate-configs.sh`: a script to help generate environment variables for each VM.
 * `README.md`: a markdown file containing instructions to aid with installation.
 
 == Prepare VMs for Installation
@@ -36,40 +37,47 @@ The initialization process perform the following actions:
 * Enables the required kernel modules.
 * Enables and reloads system services.
 
-To begin, we will run a configuration tool. This aids in generating the properties required on each machine.
+To begin, we will run a configuration tool. This aids in generating the environment variables required on each machine. The script reads these variables during execution.
 
-=== Required environment variables:
-[%header,cols="2*a"]
-|===
-|Parameter | Description
-| `RTF_INSTALLER_IP` | ip address of the installer node
-|===
+[CAUTION]
+The `generate-config.sh` script is a shell script. If your local machine is running Windows, transfer the contents of this script to a controller VM before proceeding.
 
-=== Optional environment variables:
+=== Variables to specify:
 [%header,cols="3*a"]
 |===
-|Parameter | Description | Default
-| `RTF_DOCKER_DEVICE` |  Block device path for the dedicated disk used for etcd, supporting 1000 provisioned IOPS.     | `/dev/xvdc`
-|`RTF_ETCD_DEVICE` |  Block device path for the dedicated disk used for Docker, supporting 3000 provisioned IOPS.   | `/dev/xvdb`
-| `RTF_TOKEN` |               Token used by nodes to auto-join the cluster. | my-cluster-token
-| `RTF_INSTALL_PACKAGE_URL` | URL to download the installation package from. 
-
-_If this is not specified, the installer will expect you to manually copy the installation package to_ `/opt/anypoint/runtimefabric/installer.tar.gz` |
-| `RTF_NAME` |                Name to give this cluster. | runtime-fabric
-| `RTF_NODE_WAIT_COUNT` |     Number of nodes expected to form the cluster. | 6
-| `RTF_AUTH_TOKEN` |          Anypoint authentication to register this cluster.
-
-_Example: `bearer 53668b3c-ce9b-4429-84cf-03646c34d796`_ | 
-| `RTF_ORG_ID` |              Anypoint organization id to register this cluster to. |
-| `RTF_REGION` |              Region to register this cluster. | us-east-1
+|Parameter | Description | Example
+| `RTF_CONTROLLER_IPS` | IP addresses of the controller VMs, separated by whitespace. | `"10.3.0.4 10.3.0.5 10.3.0.6"`
+| `RTF_WORKER_IPS` | IP addresses of the worker VMs, separated by whitespace. | `"10.3.0.11 10.3.0.12 10.3.0.13"`
+| `RTF_DOCKER_DEVICE` |  Block device path for the dedicated disk used for Docker, supporting 1000 provisioned IOPS. | `/dev/xvdc`
+| `RTF_ETCD_DEVICE` |  Block device path for the dedicated disk used for etcd, supporting 3000 provisioned IOPS. | `/dev/xvdb`
+| `RTF_TOKEN` | The token used by VMs to auto-join the cluster. | `my-cluster-token`
+| `RTF_INSTALL_PACKAGE_URL` | URL to download the installation package from available on the Create Runtime Fabrics page. | `https://s3.amazonaws.com/runtimefabric/...`
+| _If this is not specified, the installer will expect you to manually copy the installation package to_ `/opt/anypoint/runtimefabric/installer.tar.gz` |
+| `RTF_NAME` | The name of your Runtime Fabric cluster. | `runtime-fabric`
+| `RTF_NODE_WAIT_COUNT` |  The number of VMs to have joined before completing the installer. | `6`
+| `RTF_AUTH_TOKEN` | An active Bearer token for your Anypoint user, available on the Create Runtime Fabric page. | `Bearer 626d7810-0730-498b-bd48-544490c2226b`
+| `RTF_ORG_ID` | The ID for your Anypoint organization, available on the Create Runtime Fabric page. | `2f99d26-a3c2-4023-b303-5528sdd5v022`
+| `RTF_REGION` | The Anypoint control plane region you're registering to, available on the Create Runtime Fabrics page. | `us-east-1`
 |===
 
 [NOTE]
-To help identify the block device paths to your disks, use `lsblk`.
+To help identify the block device paths to your disks, use the `lsblk` command on the VMs.
 
-Please provide any overrides to the defaults listed above, then execute `generate-configs.sh`:
+. Open a shell and navigate to the `manual` directory from the unzipped directory.
+. Fill in the values to each variable while executing `generate-configs.sh`. It may be easier to paste the command in a text editor to fill in the variables.
 ----
-RTF_INSTALLER_IP=1.2.3.4 RTF_NAME=my-name  generate-configs.sh
+RTF_CONTROLLER_IPS="" \
+RTF_WORKER_IPS="" \
+RTF_DOCKER_DEVICE \
+RTF_ETCD_DEVICE= \
+RTF_TOKEN= \
+RTF_INSTALL_PACKAGE_URL= \
+RTF_NAME="" \
+RTF_NODE_WAIT_COUNT= \
+RTF_AUTH_TOKEN= \
+RTF_ORG_ID= \
+RTF_REGION= \
+./generate-configs.sh
 ----
 
 The output is a configuration snippet for the `installer`, `controller`, and `worker` machine roles. Execute the snippet on each machine based on its desired role.
