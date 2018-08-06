@@ -1,0 +1,231 @@
+= Migration Tool
+
+The Migration tool (migrator) helps facilitate migrations of Mule 3 projects
+(Mule apps written for the Mule 3 runtime) to Mule 4. Instead of performing a
+completely manual migration, you can use the tool to handle the migration
+components, connector, and module configurations from Mule 3 to Mule 4.
+
+The migrator runs a sequence of tasks over a Mule project and then outputs
+a migrated project with a report about the migration.
+
+After migrating a project, the tool produces a Migration report that you can
+use to identify and perform any manual migration tasks that remain. When the
+tool detects something it cannot migrate, it provides feedback about the problem
+and links to information about the steps you need to take. The tool also comments
+on and provides guidance for any cases that the tool is able to migrate without
+following the best practices.
+
+//TODO: FROM RODRO: we want them to migrate to a point where the compatibility plugin can be dropped from an application
+
+//TODO: QUESTION: WILL THEY ASK PEOPLE IF THEY WANT TO MIGRATE CASES WHERE BEST PRACTICES ARE NOT FOLLOWED?
+
+//TODO: QUESTION: A LOT ISN'T COVERED. ARE THE CONNECTOR TEAMS.
+//TODO: DO WE HAVE DOC ON THE COMPATIBILITY MODULE?
+
+
+Note that the Migration tool is different from the Compatibility module, which
+is for supporting some key Mule 3 functionality, such as MEL expressions, in
+Mule 4 projects. The Compatibility module is meant as a temporary bridge for
+to use until you complete your migration, and it does not cover all Mule 4
+functionality.
+
+//TODO: QUESTION: API for the tool? Tool consists of an execution engine,
+//a proprietary API to allow extensions of it, and a reporting framework.
+
+//* Task: A set of steps.
+//* Step: An operation that changes, removes, or updates a resource or content
+//in a Mule project.
+
+== About the Migration tool
+
+The migrator is a command-line tool. You simply input a Mule 3 project and
+output the results.
+
+.Command-line Options
+|===
+| `-destinationProjectBasePath <arg>` | Required. Directory for the migrated project.
+| `-help` | For displaying the help.
+| `-muleVersion <arg>` | Required. The Mule version to which you are migrating: `4.1.3`.
+| `-projectBasePath <arg>` | Required. Directory of the project to to migrate.
+|===
+
+
+== Getting Started
+
+
+[[min_reqs]]
+Minimum requirements:
+
+* Java 8
+* Maven 3.3.9
+
+=== Installing the Migration Tool
+
+To install the Migration tool:
+
+*TODO: NEED TO KNOW HOW CUSTOMER WILL ACQUIRE THE TOOL*
+
+
+=== Migrating a Project
+
+//TODO: PREREQUISITES
+
+To run the Migration tool:
+
+. Make sure that the required software is installed. See <<min_reqs>>.
+. In your console, provide provide a command that specifies all the required parameters, for example:
++
+----
+$ java -jar mule-migration-tool-runner-1.0.0-20180806.163412-176-jar-with-dependencies.jar -projectBasePath /Users/me/AnypointStudio/workspace_studio6/my_project -muleVersion 4.1.3 -destinationProjectBasePath /Users/me/AnypointStudio/studio-workspace-v7/migration_project2
+----
++
+If the migrator runs successfully, you will see a message something like this:
++
+.Successful Migration
+----
+$ java -jar mule-migration-tool-runner-1.0.0-20180806.163412-176-jar-with-dependencies.jar -projectBasePath /Users/me/AnypointStudio/v6/migrator/my-v6-project -muleVersion 4.1.3 -destinationProjectBasePath /Users/me/AnypointStudio/v7/my-migrated-project
+Executing migration...
+...
+===============================================================================
+MIGRATION SUCCESS
+===============================================================================
+Total time: 11.335 s
+Migration report: /Users/me/AnypointStudio/v7/my-migrated-project/report/summary.html
+----
+. Open and check the Migration report (`summary.html`) at the provided URL.
++
+You can any errors and warnings in the <<migration_report>>.
+
+[[migration_report]]
+== Migration Report
+
+Inside each migrated project, the migration tool generates a report that contains a list of migration errors and warnings, for example:
++
+image::migrator-report.png[Mule Migration Tool Report]
++
+The report links to information on any post-migration steps you need to perform.
+
+//TODO BELOW
+
+* Severity (Error/Warning)
+* Description
+* Location (file:line:column)
+* Doc links: Links to useful Mule 4 documentation and the migration guide.
+
+You can click an item to see the line in the XML (in code view) that contains the problem.
+
+Whenever the tool adds an entry to the report (either error or warning), the same information is also added as a comment in the output file. _TODO: Question: what output file?_
+
+== Use Cases
+
+Module migrations include:
+
+////
+//NEW OR IN ANALYSIS on Aha:
+* !!! Migration Tool Beta... !!!
+* Use of the Mule 3 transport in Mule 4: JMS, File, SFTP, VM, FTP, HTTP, SSL, TCP,
+* DataWeave transformations
+* Migrate Mule 3 connectors to Mule 4: DB,
+* Scripting module
+* Mule 3 Gateway proxies to Mule 4
+* ExtensionModel for compatibility plugin
+
+//READY TO START on Aha:
+* Batch jobs from Mule 3 to Mule 4
+* Poll and Watermark from Mule 3 to Mule 4
+* Compatibility modules for filters, transformers, components
+////
+
+* Adding the corresponding module to the POM (if not already added)
+* Adding the necessary namespace definitions on the XML prologs (if not already added)
+
+* Poll (`<poll/>`) replaced by Scheduler (`<scheduler/>`)
+** Any `<processor-chain/>` element removed
+** Cron expressions migrated
+* Watermark
+** If `updateExpression` is present and value is MEL, expression requires manual migration or compatibility module.
+* Batch
+* Legacy scopes (inbound, outbound, session) handled by new component to the compatibility module: `<ee:dump-legacy-properties />`
+
+*
+* Error Handlers
+* Component bindings, Custom Components and Callable not migrated. Mule SDK.
+* Secure Properties Placeholders
+* Reconnection strategies: https://docs.mulesoft.com/mule4-user-guide/v/4.1/migration-patterns-reconnection-strategies
+* Threading profiles removed, except for Batch
+* Transactional Scope replaced with Try.
+* Processing strategies removed.
+* Custom Components not migrated. Mule SDK.
+* Filters
+* Object Store
+* Message properties
+* HTTP
+
+Caveats:
+
+Tool makes best effort to migrate MEL expressions, but when the automatic migration is not possible:
+
+* MEL Expression migration to DW can happen before or after running the tool. Resorting to MEL means:
+** Adding the compatibility module
+** Adding the `mel:` prefix to the expression
+
+
+////
+_TODO: NOT INITIAL GA_
+* API Manager:
+* Proxy apps: For each defined proxy, should have a “Migrate to Mule 4” button which triggers the Migration tool. The tool will attempt to migrate the proxy and all the policies inside.
+* Policies
+
+If the migration is successful (no errors, but warning allowed), the user should get the chance to deploy the migrated proxy to a testing environment to verify it. If the validation succeeded, the migrated proxy should continue the standard promotion process.
+
+If errors were found, then the user should be notified and able to download the migrated project. He can then import that project in Studio and access the migration report to take corrective action.
+////
+
+////
+INTERNAL INFO?
+To build the _TODO_
+
+. From the project root, use this command:
+`$ mvn clean package`
+. Go to the runner module target directory:
+`$ cd mule-migration-tool-runner/target`
+. Run the tool:
+`$ java -jar mule-migration-tool-runner-*CURRENT VERSION*.jar [options]``
+
+Contributing
+There are two ways of contributing
+
+Contributing directly to the migration tool engine;
+Creating new migration tasks that are going to be run by the engine.
+Contributing to the engine
+We welcome pull requests related to the engine.
+
+However, please be aware that migration task contributions are going to be added to this project just as dependencies
+
+Contributing with tasks
+The migration tool locates the tasks using SPI. TO contribute with your own task, follow these steps:
+
+Create your new task contribution project:
+mvn archetype:generate \
+  -DarchetypeGroupId=com.mulesoft.tools \
+  -DarchetypeArtifactId=migration-contribution-archetype \
+  -DarchetypeVersion=<CURRENT VERSION> \
+  -DartifactId=<YOUR MIGRATION ARTIFACT ID> \
+  -DmainTaskClassName=<TASK CLASS NAME>
+The generate project should be composed of:
+A pom file;
+Some steps to start working over;
+A task class that declares the steps above.
+❗️ The generated POM file declares a dependency to the mule-migration-tool-api. This is the only dependency from the migration tool that should be required to create your contribution.
+
+Create/modify the steps that are going to compose the task. A step must be:
+
+An AbstractApplicationModelMigrationStep: works at the configuration file level;
+A PomContribution: works over the project pom;
+A ProjectStructureContribution: works over the project resources.
+When your contribution is ready to be added to the main engine, please deploy the generated jar to https://repository.mulesoft.org/nexus/content/repositories/releases/
+
+Go to the mule-migration-tool-contribution module and add your task class canonical name to META-INF/services/com.mulesoft.tools.migration.task.AbstractMigrationTask and your project dependency to the POM file.
+
+Create a pull request.
+////
