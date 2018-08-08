@@ -106,7 +106,7 @@ You use the following keywords and follow Fowler's _GivenWhenThen_ structure, in
 |`until` |Test step | No
 |===
 
-=== About a Test Block
+=== About Test Blocks
 
 Test blocks have a shorthand name to skip the block described as `x<name>`. For example, the skipped version of `describe` is `xdescribe`.
 
@@ -242,11 +242,46 @@ describe("User trades stocks") in [
         $.response.body.quantity == 150
       ]
     ]
-  ] 
+  ]
 ]
 ----
 
-== To Control Execution and Delete Assets
+== Using Secrets that are Stored in Secrets Manager
+
+To authenticate to test systems and reporting tools using information that you have stored in Secrets Manager, you can the 'secret' function in your tests. The prerequisite to doing so, besides storing secrets in Secrets manager, is running the `bat grant` command to store an access grant in your `bat.yaml` file. This grant allows BAT to retrieve the information needed for authentication.
+
+The syntax of the function is as follows:
+
+[source,code,linenums]
+----
+secret(secrets, '<alias>'[, '<default>'])
+----
+
+* `alias`
++
+Specifies the name to use to identify the grant in the `bat.yaml` file.
+* Default value is optional. In the case secret is not found and default value is absent, the test will fail.
+
+
+Example:
+
+[source,code,linenums]
+----
+import * from bat::BDD
+import * from bat::Assertions
+---
+suite("Hello world suite") in [
+  it must 'answer 200' in [
+    GET `$(config.url)` with {} assert [
+      $.response.status mustEqual 200
+    ] execute [
+     log(secret(secrets, 'ALIAS1', 'N/A'))
+    ]
+  ]
+]
+----
+
+== Controlling Execution and Delete Assets
 
 If you get a failure in the middle of a test, you need to delete any created assets. For example, the user creates an asset, performs a validation, and then deletes it.
 Typically, that validation fails, and since it breaks the test, the asset is not deleted and your database starts  accumulating test data. Typically this means changing a `must` to a `should` so that execution can continue, but not leave
@@ -303,7 +338,7 @@ describe `update project names` in [
 ]
 ----
 
-== To Execute Steps Selectively
+== Executing Steps Selectively
 
 The `assuming` function skips the test if the result is false. This command has the following syntax:
 
@@ -353,7 +388,7 @@ describe `E2E Scenario` in [
 
 == Executing Loop Sentences
 
-The while or until functions run the test while (or until) a condition becomes true or false. 
+The while or until functions run the test while (or until) a condition becomes true or false.
 
 Signature of the while function:
 
@@ -367,7 +402,7 @@ Signature for the until function:
 
 Example:
 
-[source,java,linenums]
+[source,code,linenums]
 ----
 dwl
 import * from bat::BDD
@@ -376,7 +411,7 @@ import * from bat::Types
 ---
 suite("Example for until and while") in [
   it should 'test the while prefix' in [
-    while(() -> GET `http://apimon.cloudhub.io/users` with {}, 
+    while(() -> GET `http://apimon.cloudhub.io/users` with {},
     (x: BATHttpStep) -> x.result.response.status != 200, 10000, 5)
   ],
   it should 'test the while infix' in [
@@ -387,7 +422,7 @@ suite("Example for until and while") in [
     } while ($.response.status != 200)
   ],
   it should 'test the until prefix' in [
-    until(() -> GET `http://apimon.cloudhub.io/users` with {}, 
+    until(() -> GET `http://apimon.cloudhub.io/users` with {},
      (x: BATHttpStep) -> x.result.response.status != 200, 10000, 5)
   ],
   it should 'test the until infix' in [
@@ -396,36 +431,6 @@ suite("Example for until and while") in [
           $.response.status mustEqual 200
         ]
     } until ($.result.response.status != 200)
-  ]
-]
-----
-
-== Use secrets in CSM inside tests
-
-To use secrets inside tests `secret` function could be used for that purpose. Before running tests with secrets please review `bat grant` command to store grants for the secrets.
-
-Syntax:
-[source,java,linenums]
-----
-secret(secrets, '<alias>', '<default value>') 
-----
-Where alias is the one used to store this secret in bat.yaml. Default value is optional. In the case secret is not found and default value is absent, the test will fail.
-
-
-Example:
-
-[source,java,linenums]
-----
-import * from bat::BDD
-import * from bat::Assertions
----
-suite("Hello world suite") in [
-  it must 'answer 200' in [
-    GET `$(config.url)` with {} assert [
-      $.response.status mustEqual 200
-    ] execute [
-     log(secret(secrets, 'ALIAS1', 'N/A'))
-    ]
   ]
 ]
 ----
