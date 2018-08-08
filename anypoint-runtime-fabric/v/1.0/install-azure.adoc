@@ -4,54 +4,68 @@ This topic describes how to install and register Anypoint Runtime Fabric on your
 
 [WARNING]
 ====
-Before running the installer, ensure that your infrastructure meets the minimum hardware requirements. An operations specialist may be needed to provision the required infrastructure.
+Before running the installer, ensure that your infrastructure meets the minimum hardware, operating system, and networking requirements. An operations and networking specialist may be needed to provision the required infrastructure.
 ====
 
-== Download Installer
-The installer package includes the necessary scripts and binaries needed to install Runtime Fabric.
+== Before you Begin
+
+Prepare the necessary steps and understand the core concepts prior to installing Runtime Fabric. In addition, ensure the following criteria have been met before beginning the installation:
+
+* Review the link:./installation/[installation details] to ensure you're ready to install Runtime Fabric.
+* Your Azure user has access to create VMs, Disks, Virtual Networks, Network Security Groups.
+* Your Azure account has enough quota for the infrastructure being provisioned.
+* If your organization does not allow using public IPs for VMs, you may need to use an existing Virtual Network. The Azure Resource Manager template can be modified to reference an existing Virtual Network. 
+
+== Download Script
+
+The installer script ZIP file includes the necessary scripts needed to install Runtime Fabric.
 
 . Log in to Anypoint platform and navigate to Runtime Manager.
 . On the left navigation pane, select "Runtime Fabrics".
 . Click "Create Runtime Fabric".
-. Click the installer link to begin the download.
-. Once downloaded, unpack the installer file to view its contents.
+. Click the "Download files" link.
+. Once downloaded, unzip the `rtf-install-scripts-\*.zip` file.
 
-[NOTE]
-The extension for the installer is packaged as `tar.gz`. You'll need a utility to unpack tar files.
+You'll find a directory named `azure` containing the following:
 
-You'll find a directory named `azure` inside the installer, which contains the following:
-
-* `resource-template.json`: the Azure Resource Template used to provision infrastructure on your Azure account.
-* `auto_installer.py`: the installation bootstrap script.
+* `resource-template-dev.json`: the Azure Resource Manage template used to provision infrastructure per the development configuration requirements on your Azure account.
+* `resource-template-prod.json`: the Azure Resource Manager template used to provision infrastructure per the production configuration requirements on your Azure account.
 * `README.md`: a markdown file containing instructions to install on Azure.
 
 == Provision Infrastructure
-Use the included Azure Resource Manager Template to easily provision the required hardware and network settings needed to install and operate Runtime Fabric.
+Use the included Azure Resource Manager template to easily provision the required hardware and network settings needed to install and operate Runtime Fabric.
 
 There are multiple methods to apply the Azure Resource Manager Template to your Azure account. Below are instructions to apply the template via the Azure Portal.
 
 [NOTE]
 You'll need a private and public key as a PEM file to provision the VMs. This is required to enable secure access to your VMs via SSH (Secure Shell).
 
-. Log into your Azure account.
+. Log into your link:https://portal.azure.com[Azure portal].
 . Navigate to "Create a resource".
 . On the "Search the marketplace" search bar, type in "Template deployment".
 . Click "Create".
 . Select "Build your own template in the editor."
-. On the bar above the editor, click "Load file" and select the `resource-template.json`.
+. On the bar above the editor, click "Load file" and select the desired Azure Resource Manager template from the `azure` directory.
 . After the editor is populated with the contents of the file, click "Save".
 . Verify your Subscription selection, Resource group, and Region for deployment. In most cases, it's recommended to create a separate Resource group.
-. Under Settings, fill in the `Public_keys_data` field with your public key string. This will enable you to SSH into each VM with your associated private key.
+. Under Settings, fill in the following parameters:
++
+
+[%header,cols="3*a"]
+|===
+|Variable | Description | Example
+| `Runtime Fabric Nmae` | The name for your Runtime Fabric cluster. | `rtf-aws`
+| `Public Keys Data` | The public key string. This will enable you to SSH into each VM with your associated private key. | `ssh rsa ...`
+| `Anypoint Organization ID` | The ID for your Anypoint organization, available on the Create Runtime Fabric page. | `2f99d26-a3c2-4023-b303-5528sdd5v022`
+| `Anypoint User Token` | An active Bearer token for your Anypoint user, available on the Create Runtime Fabric page. | `Bearer 626d7810-0730-498b-bd48-544490c2226b`
+| `Anypoint Control Plane Region` | The Anypoint control plane region you're registering to, available on the Create Runtime Fabrics page. | `us-east-1`
+| `Installer URL` | The URL of the Runtime Fabric installation package. | `https://s3.amazonaws.com/runtimefabric/...`
+| `Mule License` | The digest of your organization's Mule Enterprise license key. | 
+
+|===
+
++
 . Review and select the Terms and Conditions on the bottom of the page, and click "Purchase".
-
-Your infrastructure will begin be created and configured. Follow these steps to view the progress:
-
-. On the left navigtion bar, click on "Resource groups".
-. Select the Resource group used to provision your Runtime Fabric infrastructure. 
-. On the Overview pane under Deployments, click on the link below, which may read "1 Deploying".
-. Click on the Deployment Name "Microsoft.Template".
-
-You should be able to see the list of infrastructure and its cooresponding status as it's being provisioned. Click the "Refresh" button to periodicaly refresh the pane and status.
 
 === Common Errors
 Depending on the policies set and the quotas defined with your Azure account, you may encounter errors during the provisioning process. Consult your operations team as needed.
@@ -59,59 +73,55 @@ Depending on the policies set and the quotas defined with your Azure account, yo
 * Exceed max core quota: File a ticket with Azure Support to increase quota for your deployment region. If you believe you have enough quota, ensure the right region is selected with the increased quota. Also, try modifying the Resource Group name to ensure it is unique to your account.
 * Network policy violation: By defualt, the Netowrk Security Groups defined in the Azure Resource Template are associated at the subnet level and the NIC for each VM. Depending on your company's policy, you may need to adjust the template to remove an association.
 
-== Install Runtime Fabric
+== Monitor provisioning
 
-After the required infrastructure has been provisioned successfully, you can now begin the installation process.
+Your infrastructure will begin be created and configured. Follow these steps to view the progress:
 
-. Connect to the `rtf-controller-1` VM using your preferred SSH utility. You may need to reference your private key cooresponding to the public key provided during the provisioning process.
-+
-----
-ssh rtf-user@<PUBLIC-IP-ADDRESS> -i <private_key.pem>
-----
-+
-. Change directory to the `/tmp` directory.
-+
-----
-cd /tmp
-----
-+
-. Upload your private key as a PEM file that is associated to the public key used earlier in the provisioning step into the `/tmp/installer` directory. A secure method to transfer files is by using an SCP utility, such as WinSCP.
-+
-[NOTE]
-If your private key is not a PEM file, you can typically convert it using a utility such as PuTTYgen.
-+
-. Change directory to the `/tmp/installer` directory.
-. Start the installation by setting the following variables and executing the `auto_installer.py` script:
-+
-----
-RTF_PRIVATE_IPS="10.3.0.4 10.3.0.5 10.3.0.6" \
-WORKER_PRIVATE_IPS="10.3.0.11 10.3.0.12 10.3.0.13" \
-FLAVOR=prod \
-USER=rtf-user \
-KEY=key.pem \
-python auto_installer.py
-----
-+
-Using the following values:
-+
-[%header,cols="2*a"]
-|===
-|Parameter | Description
-|RTF_PRIVATE_IPS | Specifies the private IP address for each virtual machine running Runtime Fabric.
-|WORKER_PRIVATE_IPS | Specifies the private IP address for each virtual machine dedicated to running Mule runtimes.
-|FLAVOR | Specifies the function for the installer. Valid values are: `prod`, `dev`, and `demo`.
-|USER | Specifies the username on the virtual machines.
-|KEY | Specifies the path for the private ssh key pair.
-|===
-+
+. On the left navigation bar, click on "Resource groups".
+. Select the Resource group used to provision your Runtime Fabric infrastructure. 
+. On the Overview pane under Deployments, click on the link below, which may read "1 Deploying".
+. Click on the Deployment Name "Microsoft.Template".
+
+You should be able to see the list of infrastructure and its corresponding status as it's being provisioned. Click the "Refresh" button to periodically refresh the pane and status.
+
 [NOTE]
 This step will install Runtime Fabric across all servers to form a cluster. It may take 15-25 minutes or longer to complete.
 
-== Registering Runtime Fabric
+== Installation
 
-After the installation script has completed, you'll need to register Runtime Fabric to Anypoint Runtime Manager.
+The Azure Resource Manager template adds and runs the installation script on each VM after it's provisioned.
+The installer VM will download the installer package, unpack it and begin installation. The other VMs will wait for the installer VM to progress with installation until it's able to make the installer files transferrable. Each VM will then transfer the files from the installer VM and carry out their own installation procedure.
 
-. Navigate to Runtime Manager, select the Runtime Fabrics tab, and select the "Create Runtime Fabric" button.
-. Near the registration script, choose a name for your Runtime Fabric. Copy the script to your clipboard.
-. SSH onto a virtual machine running Runtime Fabric and paste and run the registration script. This process may take up to 15 minutes to complete.
-. After the script completes the registration process, Runtime Fabric should be registered and visible on the "Runtime Fabrics" tab in Runtime Manager.
+When installation has been completed, a cluster will be formed across all VMs. The installer VM will then carry out the registration step using the Anypoint Organization ID, Token, and region specified. 
+
+After registration has completed, you'll see Runtime Fabric in Anypoint Runtime Manager, under the Runtime Fabrics tab. The installation script on the installer VM will proceed to insert the Mule Enterprise license digest in Runtime Fabric.
+
+When finished, verify the installation by running this command to view the health of the Runtime Fabric cluster on any VM; you should see each VM in the cluster with a status equal to `healthy`.
+----
+gravity status
+----
+
+=== Monitoring the installation
+
+It's useful to monitor the installation on the installer VM to verify all preflight checks have passed; if an error were to occur during installation, it's likely to be visible by viewing the installer VM's log output.
+
+To view the progress during the installation, you can tail the output log on each VM:
+
+. Open a shell (or SSH session) to the VM.
+. Tail the output log, located at `/var/log/rtf-init.log`
++
+----
+tail -f /var/log/rtf-init.log
+----
+
+[NOTE]
+You can tail the log on each VM to view its progress.
+
+When the installation completes successfully, the file `/opt/anypoint/runtimefabric/init-succeeded` is touched.
+
+== Next steps
+
+Before deploying applications on Anypoint Runtime Fabric, you'll need to perform the following steps:
+
+* Associate an environment to Runtime Fabric
+* Enable inbound traffic to Runtime Fabric

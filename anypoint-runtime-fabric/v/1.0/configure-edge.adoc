@@ -1,118 +1,132 @@
 = Enable an Edge Endpoint for Anypoint Runtime Fabric
 :noindex:
 
-All connection requests to your Mule applications deployed in a Runtime Fabric must use TLS. To guarantee that all inbound requests follow this requirement, you need to configure an edge endpoint for your Runtime Fabric to enable inbound requests to your APIs. +
-You cannot expose any endpoints until you configured an edge endpoint.
+All connection requests to a Mule applications deployed in a Runtime Fabric must use TLS. To guarantee that all inbound requests follow this requirement, you need to configure an edge endpoint for your Runtime Fabric to enable inbound requests to your APIs.
+
+You cannot expose any endpoints until you configure an edge endpoint.
 
 == Before You Begin
 
+Before enabling and edge endpoint, ensure you have performed the following:
+
 * Verify that your account has at least one Anypoint Runtime Fabric installed and configured.
 See link:/anypoint-runtime-fabric/v/1.0/installation[Install Anypoint Runtime Fabric] for more information.
-* To enable TLS connections, you must configure a TLS Context for your edge endpoint. +
-Essentially, your TLS Context needs to be set up to point to a keystore that holds the certificate used to identify your edge endpoint for public key cryptography. +
-You need to set up these secret types within a secrets group using Anypoint Secrets Manager. Follow the link:edge-create-certificate-tls[Configure Secrets for Your Edge Endpoint].
+* To enable TLS connections, configure a TLS Context for your edge endpoint. +
+Essentially, your TLS Context needs to be set up to point to a keystore that holds the certificate used to identify your edge endpoint for public key cryptography.
++
+Set up these secret types within a secrets group using Anypoint Secrets Manager. Follow the procedures in link:edge-create-certificate-tls[Configure Secrets for Your Edge Endpoint].
 * Ensure that you have the *Manage Runtime Fabrics* permission for your user account, and for the environment containing the TLS Context.
 +
-Addtionally, if your Secrets Group and TLS context does not exist, or you need to modify them, you will need additional "Secrets Manager" permissions:
+Addtionally, if your Secrets Group and TLS context does not exist, or you need to modify them, you  need the *Secrets Manager* permissions:
 +
-** "Manage Secret Groups" to create a new secrets group.
-** "Write secrets" and "Read secrets" to create or modify the TLS Context or Keystore.
+** *Manage Secret Groups* allows you to create a new secrets group.
+** *Write secrets* and *Read secrets* allow you to create or modify the TLS Context or Keystore.
 
 
 == Procedure
 
-. In your Runtime Manager UI, select *Runtime Fabrics* on the left navigation bar.
+. In your Runtime Manager UI, select *Runtime Fabrics* in the left navigation bar.
 . Select the name of your Runtime Fabric to which you want to enable edge.
 . Select the *Edge Configuration* tab, and select the *Enable Edge* checkbox.
-. Under *Basic Configuration*:
-.. Configure your secure and non-secure ports. +
-By default, secure port is 443 and the non-secure port is 80. +
-Your edge endpoint only accepts HTTPS requests. If you receive an HTTPS request through your non-secure port, your edge endpoint redirects the request using a 301 to port 443.
+. Under *Basic Configuration* perform the following:
+.. Configure your secure and non-secure ports.
 +
-[CAUTION]
+By default, the secure port is 443 and the non-secure port is 80.
++
+Your edge endpoint only accepts HTTPS requests. If you receive an HTTPS request through a non-secure port, your edge endpoint redirects the request using a 301 redirect to port 443.
++
+[NOTE]
 --
 HTTP Requests through your edge endpoint are not permitted. +
 The edge endpoint returns an error on port 443 if the request is not using HTTPS.
 --
-.. Select the number of replicas you want. +
+.. Select the number of replicas you want.
++
 You can set up more replicas to split traffic across replicas of your edge endpoint.
-.. Determine your resource allocation. +
-Determine how many cores and memory from your controller node to assign to your edge endpoint.  +
+.. Determine your resource allocation.
++
+Determine how many cores and memory from your controller node to assign to your edge endpoint.
++
 Consider that TLS connections are resource expensive. You can increase the processing capacity for your inbound connections by using more cores.
-. Under *TLS Configuration*: +
-Your edge endpoint uses this TLS Configuration for all inbound requests to your application. +
-This configuration must be stored in a secrets group. Follow the link:edge-create-certificate-tls[Configure Secrets for Your Edge Endpoint] if you don't have a TLS configuration yet.
-.. In the Environment drop-down menu, select the environment of the secrets group that stores the Keystore and TLS Context for your Edge instance.
-.. In the Secrets Group drop-down menu, select the secrets group that stores the keystore and TLS Context for your Edge instance.
-.. In the TLS Context drop-down menu, select the TLS Context for your Edge instance.
+. Configure *TLS Configuration*:
++
+Your edge endpoint uses this TLS Configuration for all inbound requests to your application.
++
+This configuration must be stored in a secrets group. Follow the proccedure in link:edge-create-certificate-tls[Configure Secrets for Your Edge Endpoint] if you have not yet configured TLS.
+.. From the *Environment* drop-down menu, select the environment of the secrets group that stores the Keystore and TLS Context for your Edge instance.
+.. From the *Secrets Group* drop-down menu, select the secrets group that stores the keystore and TLS Context for your Edge instance.
+.. From the *TLS Context* drop-down menu, select the TLS Context for your Edge instance.
 
 Additionally you can configure *Advanced Options* and *Logs*.
 
 == Advanced Options
 
+The following table describes advanced edge endpoint options that you can configure:
 
 [%header%autowidth.spread,cols="a,a"]
 |===
 |Value |Description
 | *Max Connections*
-| The maximum amount of simultaneous connections that you are going to allow.
+| The maximum amount of simultaneous connections allowed.
 
 *Default Value*: 512
 
 | *Max Requests Per Connection*
 | The Maximum amount of requests per connections that you are allowing. +
-Keep in mind that it is resource expensive to take TLS connections up and down. This value lets you reuse a connection.
+Note that it is resource expensive to take TLS connections up and down. This value allows you to reuse a connection.
 
 *Maximum allowed*: 1000 requests per connection.
 
 *Default Value*: 1000
 
 | *Connection Idle Time-out*
-| Maximum amount of time that you allow an idle connection. +
-This value helps you terminate idle connections that take processing capacity for no reason. +
-This value should always be higher than your *read request time-out*. See the option below for more information.
+| Maximum amount of time that a connection can be idle connection.
++
+This value enables you to terminate idle connections that take processing capacity for no reason.
++
+This value must be higher than your *read request time-out*. See the option below for more information.
 
 *Default Value*: 15 (seconds)
 
 
 | *Read Request Time-out*
-| Maximum amount of time that you allow your edge endpoint to read a request before terminating it. +
-This value lets you terminate requests that send a very large message, or requests whose clients are very slow sending the message. +
+| Maximum amount of time that you allow your edge endpoint to read a request before terminating it.
++
+This value terminates requests that send a very large message, or requests whose clients are very slow sending the message.
++
 This is useful to prevent attacks that try to consume all your connections sending very slow requests. Or to prevent clients that don't close the connection after receiving a response.
 
-If your edge endpoint takes longer than the time set here, it will automatically close the connection. +
-To ensure that this feature works as expected, this value should always be lower than the *Connection Idle Time-Out* configured above.
+If your edge endpoint takes longer than the time set here, it automatically closes the connection.
++
+This value should always be lower than the *Connection Idle Time-Out* configured above.
 
 *Default Value*: 10 (seconds)
 
 | *Max Pipeline Depth*
 | The maximum amount of requests that you allow from the same client. +
-This value lets you define how many simultaneous requests a client can send. +
-If a client exceeds this number, the exceeding requests will not be read until the requests in the queue receive a response.
+This value defines how many simultaneous requests a client can send. +
+If a client exceeds this number, the exceeding requests are not read until the requests in the queue receive a response.
 
 *Default Value*: 10
 
 | *Source IP Header Name* and *Enable Proxy Protocol*
-| You can use these configurations if your Runtime fabric is behind a load balancer.
+| Use these configurations if your Runtime fabric is behind a load balancer. The required values depend on your installation:
 
-The values to configure here depends on your scenario:
+* If your Runtime Fabric is not behind a load balancer, do not configure the following values
++
+*Source IP Header Name*: no value
+*Enable Proxy Protocol*: leave unchecked
 
-. Your Runtime Fabric is not behind a load balancer. +
-:: If your Runtime Fabric is not deployed behind a load balancer, you should not configure these values.
+* If your Runtime Fabric is deployed behind an AWS load balancer with a proxy protocol enabled, select the *Enable Proxy Protocol*.
 +
-*Source IP Header Name*: blank +
-*Enable Proxy Protocol*: Unchecked
-. Your Runtime Fabric is behind an AWS Load Balancer with a Proxy Protocol configured. +
-:: If your Runtime Fabric is deployed behind an AWS load balancer with a proxy protocol enabled, you must select the *Enable Proxy Protocol* checkmark.
-+
-*Source IP Header Name*: blank +
+*Source IP Header Name*: no value
 *Enable Proxy Protocol*: checked
-. Your Runtime Fabric is behind a different type of Load Balancer. +
-:: If your Runtime Fabric is deployed behind another type of Load Balancer (for example F5, or nginx), you need to provide the source IP header name. Two common source IP headers are:
+
+* If your Runtime Fabric is deployed behind another type of Load Balancer (for example F5, or nginx), you need to provide the source IP header name. Two common source IP headers are:
 +
-* Forwarded: An RFC7239 compliant ip header.
-* X-Forwarded-For: Non-standard pre-2014 header containing one or more IPs from a Load Balancer (For example: “192.16.23.34, 172.16.21.36")
-+
+** Forwarded: An RFC7239 compliant ip header.
+** X-Forwarded-For: Non-standard pre-2014 header containing one or more IPs from a Load Balancer (For example: “192.16.23.34, 172.16.21.36")
+
 *Source IP Header Name*: non-blank +
 *Enable Proxy Protocol*: unchecked
 
@@ -122,7 +136,7 @@ The values to configure here depends on your scenario:
 
 == Logs
 
-You can define the log levels for your edge endpoint. Avaialble values are:
+You can define the log levels for your edge endpoint. The following log levels are available:
 
 * FATAL
 * ERROR
@@ -132,11 +146,13 @@ You can define the log levels for your edge endpoint. Avaialble values are:
 * DEBUG
 * TRACE
 
-Keep in mind that more verbose log levels between "WARNING" and "TRACE" consume more CPU resources for each request, therefore you should raise log levels carefully. +
-By default, the activity of all IPs behind your endpoint is being tracked. To help you reduce the vCPU usage when you need to use more verbose log levels, you can configure IP filters. +
-If you have a high amount of traffic and you don't want to use a lot of vCPU resources of your node, you can apply a filter so only specific IP addresses are tracked.
+More verbose log levels between "WARNING" and "TRACE" consume more CPU resources for each request, therefore you should raise log levels carefully.
++
+By default, the activity of all IPs behind your endpoint is being tracked. To reduce vCPU usage when you need to use more verbose log levels, configure IP filters.
++
+If you have a high amount of traffic and you do not want to use a lot of the vCPU resources of a node, apply a filter so only specific IP addresses are tracked.
 
-This feature is also helpful for reducing the quantity of logs when you need to debug a connection for a specific or limited number of IP addresses.
+This feature helps reduce the quantity of logs when you need to debug a connection for a specific or limited number of IP addresses.
 
 === Configuring Logs
 
@@ -145,7 +161,8 @@ This feature is also helpful for reducing the quantity of logs when you need to 
 . Select the log level you want for this filter.
 . Click OK.
 
-After you finish configuring all these values, click *Deploy*. +
+After configuring all these values, click *Deploy*.
++
 The platform displays a "Request to Deployer Sent Successfully" message.
 
 == See Also
