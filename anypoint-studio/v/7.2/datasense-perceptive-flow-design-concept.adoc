@@ -15,6 +15,28 @@ Now imagine you are obtaining status update data from a Twitter connector and th
 
 image:payload+autocomplete.png[payload+autocomplete]
 
+In Mule 4 the idea was to be more prescriptive in regard to building reliable (eager detection of errors on design time) and reusable flow artifacts and apps. The way to leverage this without changing runtime semantics was to use metadata. Metadata should act as a prescriptive guidance into building applications with those desired outcomes.
+
+Use metadata declaration only when required and most cohesive to annotated value: this means metadata for a value being defined, metadata for a value being used/expected.
+
+With this concept in mind, for example, transforms should not be defining a metadata contract. Dataweave acts as a data mediation device between the producer and consumer of data, and those boundaries are the ones that define contracts. 
+
+Being more specific. 
+
+Using transform output metadata as expected metadata could be wrong, and it actually masks the actual metadata type of data coming out from transform because we are explicitly declaring a type when DataWeave transform implementation could be completely inferred. 
+
+The right way would be defining expected metadata in the place data is used or consumed when it is not automatically inferred (static/dynamic metadata).
+
+Symmetrically, this applies to DataWeave not defining input metadata. Using DataWeave input metadata as incoming metadata also masks the actual incoming metadata coming into transform to be used on mapping. The right way would be to define metadata in the place data is produced. Again, only when it is not automatically inferred (static/dynamic metadata). In example in the source or the extension operation that generated the actual message payload.
+
+Being consistent with this objective, when data lives outside the scope of the reusable artifact, the rule says that we should also declare that as part of artifact contract. This means flows and subflows are expected to declare their metadata contract, just like any other processor. You should declare your input and output metadata specfying what is the shape of event you require and what is the on of the event you return to caller (Output event declaration, if not specified, is automatically inferred from flow content when not recursive). 
+
+Same as connectors, there are some special cases where flow metadata declaration can be automatically inferred based on related contracts. This is the case of resource flows for API-Kit or SOAP-Kit. In this cases, corresponding API contract is used to infer a metadata contract for resource flow.
+
+As a direct consequence of this, there is no implicit metadata propagation of whole event context through flow-refs to flow. If the flow/sub-flow is expected to be reused, it has to declare its data contract in terms of the input and output event. There are some enhancements being developed in order to provide shortcuts to include parts of call site event into flow data contract.
+
+For those cases where flow/subflow is not expected to be reused but to improve legibility of code or issues regarding visualization, there will be a mule processor structure that will act as a logical grouping of code. In this way we could combine the expectation of having full context of use with a graphical collapse of implementation into a group that has a name and summarizes and hides its implementation. 
+
 == See Also
 
 link:datasense-concept[About DataSense]
